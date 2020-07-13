@@ -14,7 +14,7 @@
 #include <mntent.h>	/* !!TB */
 #endif
 
-#define Y2K			946684800UL		/* seconds since 1970 */
+#define Y2K		946684800L		/* seconds since 1970 */
 
 #define ASIZE(array)	(sizeof(array) / sizeof(array[0]))
 
@@ -218,6 +218,7 @@ enum {
 	MODEL_RTN12D1,
 	MODEL_RTN12VP,
 	MODEL_RTN12K,
+	MODEL_RTN12HP,
 	MODEL_RTN15U,
 	MODEL_RTN16,
 	MODEL_RTN53,

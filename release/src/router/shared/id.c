@@ -87,7 +87,8 @@ RT-N16				BCM4718               0x04cf       45        0x1218    0x0310      har
 RT-N15U				BCM5357               0x052b       45        0x1204    0x80001710|0x1000
 RT-N12A1			BCM4716               0x04cd       45        0x1201    0x????
 RT-N12B1			BCM5357               0x054d       45        0x1101    0x710 // Version B1 / C1 / D1 --> all the same hw basicly; use nvram "hardware_version" to distinguish!
-RT-N12k			BCM53572              0x054d       45        0x1101    0x710 // Version K --> (almost) the same like D1; use nvram "hardware_version" to distinguish!
+RT-N12k				BCM53572              0x054d       45        0x1101    0x710 // Version K --> (almost) the same like D1; use nvram "hardware_version" to distinguish!
+RT-N12HP			BCM53572              0x054d       45        0x1101    // Version HP --> use nvram "hardware_version" to distinguish!
 RT-N10				BCM5356               0x04ec       45        0x1402    0x????
 RT-N10U				BCM5357               0x0550       45        0x1102    0x710
 RT-N10P				BCM53572              0x058e       45        0x1153    0x710
@@ -498,6 +499,7 @@ int get_model(void)
 			if (strncmp(nvram_safe_get("hardware_version"), "RTN12D1", 7) == 0) return MODEL_RTN12D1;
 			if (strncmp(nvram_safe_get("hardware_version"), "RTN12VP", 7) == 0) return MODEL_RTN12VP;
 			if (strncmp(nvram_safe_get("hardware_version"), "RTN12K", 6) == 0) return MODEL_RTN12K;
+			if (strncmp(nvram_safe_get("hardware_version"), "RTN12HP", 7) == 0) return MODEL_RTN12HP;			
 			if (nvram_match("boardrev", "0x1204")) return MODEL_RTN15U;
 			if (nvram_match("boardrev", "0x1442")) return MODEL_RTN53;
 			break;

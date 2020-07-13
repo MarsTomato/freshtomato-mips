@@ -266,7 +266,7 @@ int console_main(int argc, char *argv[])
 
 static void shutdn(int rb)
 {
-	int i;
+	unsigned int i;
 	int act;
 	sigset_t ss;
 
@@ -582,6 +582,7 @@ static int init_vlan_ports(void)
 	case MODEL_RTN12D1:
 	case MODEL_RTN12VP:
 	case MODEL_RTN12K:
+	case MODEL_RTN12HP:
 		dirty |= check_nv("vlan0ports", "3 2 1 0 5*"); /* L1 L2 L3 L4 CPU */
 		dirty |= check_nv("vlan1ports", "4 5"); /* WAN CPU */
 		break;
@@ -1539,6 +1540,18 @@ static int init_nvram(void)
 			nvram_set("sb/1/mcs2gpo5", "0x8866");
 			nvram_set("sb/1/mcs2gpo6", "0x4422");
 			nvram_set("sb/1/mcs2gpo7", "0x8866");
+		}
+		break;
+	case MODEL_RTN12HP:
+		mfr = "Asus";
+		name = "RT-N12 HP";
+		features = SUP_SES | SUP_80211N;
+		if (!nvram_match("t_fix1", (char *)name)) {
+			nvram_set("lan_ifnames", "vlan0 eth1");
+			nvram_set("wan_ifnameX", "vlan1");
+			nvram_set("wl_ifname", "eth1");
+
+			nvram_set("sb/1/ledbh5", "2"); /* WL_LED_ACTIVITY; WiFi LED - active HIGH */
 		}
 		break;
 	case MODEL_RTN15U:
@@ -3908,7 +3921,7 @@ static void sysinit(void)
 	static int noconsole = 0;
 	static const time_t tm = 0;
 	int hardware;
-	int i;
+	unsigned int i;
 	DIR *d;
 	struct dirent *de;
 	char s[256];
@@ -4082,7 +4095,8 @@ static void sysinit(void)
 
 int init_main(int argc, char *argv[])
 {
-	int state, i;
+	unsigned int i;
+	int state;
 	sigset_t sigset;
 
 	/* AB - failsafe? */

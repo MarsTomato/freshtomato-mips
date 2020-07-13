@@ -324,7 +324,13 @@ void set_et_qos_mode(void)
 
 void unload_wl(void)
 {
-	modprobe_r("wl");
+	int model = get_model();
+
+	/* workaround: do not unload RT-N (5.110.x) wifi driver for E3000,
+	 * will cause problems (reboot after saving to nvram) */
+	if ((model != MODEL_WRT610Nv2)) {
+		modprobe_r("wl");
+	}
 }
 
 void load_wl(void)
@@ -1200,7 +1206,8 @@ static int check_wl_client(char *ifname, int unit, int subunit)
 	wl_bss_info_t *bi;
 	char buf[WLC_IOCTL_MAXLEN];
 	struct maclist *mlist;
-	int mlsize, i;
+	unsigned int i;
+	int mlsize;
 	int associated, authorized;
 
 	*(uint32 *)buf = WLC_IOCTL_MAXLEN;

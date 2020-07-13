@@ -167,6 +167,7 @@ int buttons_main(int argc, char *argv[])
 	case MODEL_RTN12D1:
 	case MODEL_RTN12VP:
 	case MODEL_RTN12K:
+	case MODEL_RTN12HP:
 		reset_mask = 1 << 22; /* reset button (active LOW) */
 		ses_mask = 1 << 23; /* wps button (active LOW) */
 		ses_led = LED_AOSS; /* Use LED AOSS (Power LED for Asus Router) for feedback if a button is pushed */

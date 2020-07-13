@@ -128,7 +128,7 @@ static int _nvram_set(const char *name, const char *value)
 
 	if (buf != tmp) free(buf);
 
-	return (ret == count) ? 0 : ret;
+	return (ret == (int) count) ? 0 : ret;
 }
 
 int nvram_set(const char *name, const char *value)
@@ -198,7 +198,8 @@ int nvram_file2nvram(const char *varname, const char *filename)
 {
 	FILE *fp;
 	int c,count;
-	int i=0,j=0;
+	unsigned int i = 0;
+	int j = 0;
 	struct stat stbuf;
 	unsigned char mem[MAX_FS], buf[3 * MAX_FS];
 
@@ -250,7 +251,8 @@ int nvram_nvram2file(const char *varname, const char *filename)
 {
 	int fnum;
 	int c,tmp;
-	int i=0,j=0;
+	unsigned int i = 0;
+	int j = 0;
 	unsigned char *cp;
 	unsigned char mem[MAX_FS], buf[3 * MAX_FS];
 
@@ -260,7 +262,7 @@ int nvram_nvram2file(const char *varname, const char *filename)
 		return(1);
 	}
 	strcpy(buf, cp);
-	while (buf[i] && j < sizeof(mem)-3 ) {
+	while (buf[i] && (j < (int) sizeof(mem)-3)) {
 		if (buf[i] == '\\')  {
 			i++;
 			tmp=buf[i+2];
@@ -297,9 +299,9 @@ int nvram_nvram2file(const char *varname, const char *filename)
 		perror(filename);
 		return (-1);
 	}
-	i = write(fnum, mem + 2*sizeof(mode_t), j- 2* sizeof(mode_t));
-	if (i != j- 2* sizeof(mode_t))
+	i = write(fnum, mem + 2*sizeof(mode_t), j - 2* sizeof(mode_t));
+	if (i != (j - 2* sizeof(mode_t)))
 		perror(filename);
 	close(fnum);
-	return (i != (j- 2* sizeof(mode_t)));
+	return (i != (j - 2* sizeof(mode_t)));
 }

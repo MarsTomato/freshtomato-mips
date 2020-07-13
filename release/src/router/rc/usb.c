@@ -24,6 +24,7 @@
  * Do this here, because Tomato doesn't have the sysctl command.
  * With these values, a disk block should be written to disk within 2 seconds.
  */
+
 void tune_bdflush(void)
 {
 	f_write_string("/proc/sys/vm/dirty_expire_centisecs", "200", 0, 0);
@@ -228,6 +229,10 @@ void stop_usb(void)
 	char tmp[100];
 	char prefix[] = "wanXX";
 
+#ifdef TCONFIG_UPS
+		stop_ups();
+#endif
+
 	// only find and kill the printer server we started (port 0)
 	p9100d_sig(SIGTERM);
 	modprobe_r(USBPRINTER_MOD);
@@ -336,7 +341,6 @@ void stop_usb(void)
 
 }
 
-
 #define MOUNT_VAL_FAIL 	0
 #define MOUNT_VAL_RONLY	1
 #define MOUNT_VAL_RW 	2
@@ -408,10 +412,10 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 				f_write(flagfn, NULL, 0, 0, 0);
 			}
 
+			/* mount at last */
 			ret = mount(mnt_dev, mnt_dir, type, flags, options[0] ? options : "");
 
 #ifdef TCONFIG_NTFS
-			/* try ntfs-3g in case it's installed */
 			if (ret != 0 && strncmp(type, "ntfs", 4) == 0) {
 				sprintf(options + strlen(options), ",noatime,nodev" + (options[0] ? 0 : 1));
 				if (nvram_get_int("usb_fs_ntfs"))
@@ -421,17 +425,13 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 					ret = eval("ntfs-3g", "-o", options, mnt_dev, mnt_dir);
 #endif
 			}
-#endif
+#endif /* TCONFIG_NTFS */
 
 #ifdef TCONFIG_HFS
 			if (ret != 0 && strncmp(type, "hfs", 3) == 0) {
 				ret = eval("mount", "-o", "noatime,nodev", mnt_dev, mnt_dir);
 			}
-
-			if (ret != 0 && strncmp(type, "hfsplus", 7) == 0) {
-				ret = eval("mount", "-o", "noatime,nodev", mnt_dev, mnt_dir);
-			}
-#endif
+#endif /* TCONFIG_HFS */
 
 			if (ret != 0) /* give it another try - guess fs */
 				ret = eval("mount", "-o", "noatime,nodev", mnt_dev, mnt_dir);
@@ -440,6 +440,9 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 				syslog(LOG_INFO, "USB %s%s fs at %s mounted on %s",
 					type, (flags & MS_RDONLY) ? " (ro)" : "", mnt_dev, mnt_dir);
 				return (flags & MS_RDONLY) ? MOUNT_VAL_RONLY : MOUNT_VAL_RW;
+			} else {
+				syslog(LOG_INFO, "USB %s%s fs at %s failed to mount on %s",
+					type, (flags & MS_RDONLY) ? " (ro)" : "", mnt_dev, mnt_dir);
 			}
 
 			if (dir_made) {
@@ -451,14 +454,9 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 	return MOUNT_VAL_FAIL;
 }
 
-
 struct mntent *mount_fstab(char *dev_name, char *type, char *label, char *uuid)
 {
 	struct mntent *mnt = NULL;
-#if 0
-	if (eval("mount", "-a") == 0)
-		mnt = findmntents(dev_name, 0, NULL, 0);
-#else
 	char spec[PATH_MAX+1];
 
 	if (label && *label) {
@@ -485,13 +483,11 @@ struct mntent *mount_fstab(char *dev_name, char *type, char *label, char *uuid)
 				mnt = findmntents(dev_name, 0, NULL, 0);
 		}
 	}
-#endif
 
 	if (mnt)
 		syslog(LOG_INFO, "USB %s fs at %s mounted on %s", type, dev_name, mnt->mnt_dir);
 	return (mnt);
 }
-
 
 /* Check if the UFD is still connected because the links created in /dev/discs
  * are not removed when the UFD is  unplugged.
@@ -519,7 +515,6 @@ static int usb_ufd_connected(int host_no)
 
 	return 0;
 }
-
 
 #ifndef MNT_DETACH
 #define MNT_DETACH	0x00000002      /* from linux/fs.h - just detach from the tree */
@@ -620,7 +615,6 @@ int umount_mountpoint(struct mntent *mnt, uint flags)
 	return (ret == 0);
 }
 
-
 /* Mount this partition on this disc.
  * If the device is already mounted on any mountpoint, don't mount it again.
  * If this is a swap partition, try swapon -a.
@@ -688,59 +682,11 @@ done:
 	return (ret == MOUNT_VAL_RONLY || ret == MOUNT_VAL_RW);
 }
 
-
-#if 0 /* LINUX26 */
-
-/* 
- * Finds SCSI Host number. Returns the host number >=0 if found, or (-1) otherwise.
- * The name and host number of scsi block device in kernel 2.6 (for attached devices) can be found as
- * 	/sys($DEVPATH)/host<host_no>/target<*>/<id>/block:[sda|sdb|...]
- * where $DEVPATH is passed to hotplug events, and looks like
- * 	/devices/pci0000:00/0000:00:04.1/usb1/1-1/1-1:1.2
- *
- * For printers this function finds a minor assigned to a printer
- *	/sys($DEVPATH)/usb:lp[0|1|2|...]
- */
-int find_dev_host(const char *devpath)
-{
-	DIR *usb_devpath;
-	struct dirent *dp;
-	char buf[256];
-	int host = -1;	/* Scsi Host */
-
-	sprintf(buf, "/sys%s", devpath);
-	if ((usb_devpath = opendir(buf))) {
-		while ((dp = readdir(usb_devpath))) {
-			errno = 0;
-			if (strncmp(dp->d_name, "host", 4) == 0) {
-				host = strtol(dp->d_name + 4, (char **)NULL, 10);
-				if (errno)
-					host = -1;
-				else
-					break;
-			}
-			else if (strncmp(dp->d_name, "usb:lp", 6) == 0) {
-				host = strtol(dp->d_name + 6, (char **)NULL, 10);
-				if (errno)
-					host = -1;
-				else
-					break;
-			}
-			else
-				continue;
-		}
-		closedir(usb_devpath);
-	}
-	return (host);
-}
-
-#endif	/* LINUX26 */
-
 int dir_is_mountpoint(const char *root, const char *dir)
 {
 	char path[256];
 	struct stat sb;
-	int thisdev;
+	unsigned int thisdev;
 
 	snprintf(path, sizeof(path), "%s%s%s", root ? : "", root ? "/" : "", dir);
 
@@ -800,8 +746,7 @@ void hotplug_usb_storage_device(int host_no, int action_add, uint flags)
 	}
 }
 
-
-/* This gets called at reboot or upgrade.  The system is stopping. */
+/* This gets called at reboot or upgrade. The system is stopping. */
 void remove_storage_main(int shutdn)
 {
 	if (shutdn)
@@ -809,7 +754,6 @@ void remove_storage_main(int shutdn)
 	/* Unmount all partitions */
 	exec_for_host(-1, 0x02, shutdn ? EFH_SHUTDN : 0, umount_partition);
 }
-
 
 /*******
  * All the complex locking & checking code was removed when the kernel USB-storage
@@ -1036,7 +980,7 @@ void hotplug_usb(void)
 		if (is_block) return;
 		if (strncmp(interface ? : "", "7/", 2) == 0)	/* printer */
 			usbled_proc(device, add);
-		/* Do nothing.  The user's hotplug script must do it all. */
+		/* Do nothing. The user's hotplug script must do it all. */
 		run_nvscript("script_usbhotplug", NULL, 2);
 	}
 }

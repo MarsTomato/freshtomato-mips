@@ -25,7 +25,7 @@ OPENSSLCNF="/etc/openssl.config.$PID"
 
 [ "$(date +%s)" -gt 946684800 ] && {
 	nvram set https_crt_timeset=1
-	DAYS=720
+	DAYS=398
 } || {
 	nvram set https_crt_timeset=0
 	DAYS=3653
@@ -33,7 +33,7 @@ OPENSSLCNF="/etc/openssl.config.$PID"
 
 cd /etc
 
-cp -L openssl.cnf $OPENSSLCNF
+cp -L /etc/ssl/openssl.cnf $OPENSSLCNF
 
 [ "$LANCN" != "" ] && {
 	I=0

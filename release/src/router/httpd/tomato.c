@@ -857,9 +857,6 @@ static const nvset_t nvset_list[] = {
 	{ "wl_channel",			V_RANGE(0, 216)			},
 
 	{ "wl_vifs",			V_LENGTH(0, 64)			},	// multiple/virtual BSSIDs
-#ifndef LINUX26
-	{ "nas_alternate",		V_01				},	// only meaningful for ND/K24 builds
-#endif
 
 	{ "wl_security_mode",		V_LENGTH(1, 32)			},	// disabled, radius, wep, wpa_personal, wpa_enterprise, wpa2_personal, wpa2_enterprise
 	{ "wl_radius_ipaddr",		V_IP				},
@@ -1418,6 +1415,7 @@ static const nvset_t nvset_list[] = {
 	{ "smbd_user",			V_LENGTH(0, 50)			},
 	{ "smbd_passwd",		V_LENGTH(0, 50)			},
 	{ "smbd_ifnames",		V_LENGTH(0, 50)			},
+	{ "smbd_protocol",		V_RANGE(0, 2)			},
 #endif
 
 #ifdef TCONFIG_MEDIA_SERVER

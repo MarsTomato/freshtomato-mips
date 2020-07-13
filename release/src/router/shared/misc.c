@@ -294,6 +294,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    (model == MODEL_E1000v2) ||
 	    (model == MODEL_RTN12B1) ||
 	    (model == MODEL_RTN12C1) ||
+	    (model == MODEL_RTN12HP) ||
 	    (model == MODEL_RTN15U) ||
 	    (model == MODEL_D1800H) ||
 	    (model == MODEL_TDN6) ||

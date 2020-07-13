@@ -1,6 +1,6 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall
+CFLAGS	= -Os -Wall -Wsign-compare
 CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared -ffunction-sections -fdata-sections
 LDFLAGS	= -ffunction-sections -fdata-sections -Wl,--gc-sections
 

@@ -448,8 +448,7 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 
 	// format for javascript
 
-	int i;
-	int k;
+	unsigned int i, k;
 	int left;
 	char macstr[18];
 	NDIS_802_11_NETWORK_TYPE NetWorkType;
@@ -882,7 +881,7 @@ static int _wlchanspecs(char *ifname, char *country, int band, int bw, int ctrls
 	chanspec_t c = 0, *chanspec;
 	int buflen;
 	wl_uint32_list_t *list;
-	int count, i = 0;
+	unsigned int count, i = 0;
 
 	char *buf = (char *)malloc(WLC_IOCTL_MAXLEN);
 	if (!buf)
@@ -939,7 +938,7 @@ static int _wlchanspecs(char *ifname, char *country, int band, int bw, int ctrls
 
 static void _wlchannels(char *ifname, char *country, int band)
 {
-	int i;
+	unsigned int i;
 	wl_channels_in_country_t *cic;
 
 	cic = (wl_channels_in_country_t *)malloc(WLC_IOCTL_MAXLEN);
@@ -1017,7 +1016,7 @@ static int print_wlbands(int idx, int unit, int subunit, void *param)
 	char *phytype, *phylist, *ifname;
 	char comma = ' ';
 	int list[WLC_BAND_ALL];
-	int i;
+	unsigned int i;
 
 	ifname = nvram_safe_get(wl_nvname("ifname", unit, 0));
 	phytype = nvram_safe_get(wl_nvname("phytype", unit, 0));
@@ -1040,7 +1039,7 @@ static int print_wlbands(int idx, int unit, int subunit, void *param)
 		else {
 			if (list[0] > 2)
 				list[0] = 2;
-			for (i = 1; i <= list[0]; i++) {
+			for (i = 1; i <= (unsigned int) list[0]; i++) {
 				web_printf("%c'%d'", comma, list[i]);
 				comma = ',';
 			}

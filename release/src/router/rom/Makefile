@@ -4,23 +4,39 @@ include ../common.mak
 all:
 	@echo "" >rom/etc/motd
 	@echo "" >>rom/etc/motd
-	@echo "Tomato v"`cat ../shared/tomato_version`"" >>rom/etc/motd
+	@echo "FreshTomato `cat ../shared/tomato_version`" >>rom/etc/motd
 
 clean:
 	rm -f rom/etc/motd
 
+certs: dummy
+	others/mk-ca-bundle.pl -fu rom/etc/ssl/certs/ca-certificates.crt
+
+certs-install: certs
+	install -d $(INSTALLDIR)/rom/etc/ssl/certs
+	install -m 0644 rom/etc/ssl/certs/ca-certificates.crt $(INSTALLDIR)/rom/etc/ssl/certs/ca-certificates.crt
+	sed -r '/^\s*(#|$$)/d;/\-BEGIN/{h;d};H;/\-END/{x;/\-BEGIN/p};d' -i $(INSTALLDIR)/rom/etc/ssl/certs/ca-certificates.crt
+	ln -s certs/ca-certificates.crt $(INSTALLDIR)/rom/etc/ssl/cert.pem
+
 install:
 	mkdir -p $(INSTALLDIR)
-	( tar --exclude=.svn --exclude=*.bak --exclude=*.yml -cpf - rom ) | ( cd $(INSTALLDIR) && tar -xpf - )
+	( tar --exclude=.svn --exclude=*.bak -cpf - rom ) | ( cd $(INSTALLDIR) && tar -xpf - )
 
 	# remove comments, compress whitespace
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/services > $(INSTALLDIR)/rom/etc/services
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/protocols > $(INSTALLDIR)/rom/etc/protocols
 
-ifeq ($(TCONFIG_HTTPS),y)
-	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/openssl.cnf > $(INSTALLDIR)/rom/etc/openssl.cnf
+ifneq ($(TCONFIG_STUBBY),y)
+	rm -f $(INSTALLDIR)/rom/etc/stubby.yml
+	rm -f $(INSTALLDIR)/rom/etc/ssl/certs/ca-certificates.crt
 else
-	rm -f $(INSTALLDIR)/rom/etc/openssl.cnf
+	$(MAKE) certs-install
+endif
+
+ifeq ($(TCONFIG_HTTPS),y)
+	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/ssl/openssl.cnf > $(INSTALLDIR)/rom/etc/ssl/openssl.cnf
+else
+	rm -f $(INSTALLDIR)/rom/etc/ssl/openssl.cnf
 endif
 
 ifneq ($(TCONFIG_DNSSEC),y)
@@ -109,8 +125,4 @@ else
 	done
 endif
 
-# Used by Curl/Stubby
-ifeq ($(TCONFIG_STUBBY),y)
-	cp -f others/cacert.pem $(INSTALLDIR)/rom/cacert.pem
-	cp -f rom/etc/stubby.yml $(INSTALLDIR)/rom/etc/stubby.yml
-endif
+.PHONY: dummy
