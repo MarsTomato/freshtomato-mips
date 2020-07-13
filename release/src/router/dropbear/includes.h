@@ -25,6 +25,8 @@
 #ifndef DROPBEAR_INCLUDES_H_
 #define DROPBEAR_INCLUDES_H_
 
+/* uclibc needs _GNU_SOURCE, maybe other things? */
+#define _GNU_SOURCE
 
 #include "options.h"
 #include "debug.h"
@@ -122,6 +124,10 @@
 
 #ifdef HAVE_SYS_UIO_H
 #include <sys/uio.h>
+#endif
+
+#ifdef HAVE_SYS_RANDOM_H
+#include <sys/random.h>
 #endif
 
 #ifdef BUNDLED_LIBTOM

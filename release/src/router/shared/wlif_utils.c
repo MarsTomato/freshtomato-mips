@@ -73,7 +73,8 @@ int
 get_spoof_mac(const char *osifname, char *mac, int maclen)
 {
 	char nvifname[16];
-	int i, unit, subunit;
+	unsigned int i;
+	int unit, subunit;
 	wlif_name_desc_t *wlif_name;
 
 	if (osifname == NULL ||
@@ -132,7 +133,7 @@ get_spoof_ifname(char *mac, char *osifname, int osifnamelen)
 	idx --; /* map to wlif_name_array index */
 	unit = mac[4];
 	subunit = mac[5];
-	if (idx < 0 || idx >= ARRAYSIZE(wlif_name_array))
+	if (idx < 0 || (unsigned int) idx >= ARRAYSIZE(wlif_name_array))
 		return -1;
 
 	/* get nvname format */
@@ -169,7 +170,7 @@ get_real_mac(char *mac, int maclen)
 	idx --; /* map to wlif_name_array index */
 	unit = mac[4];
 	subunit = mac[5];
-	if (idx < 0 || idx >= ARRAYSIZE(wlif_name_array))
+	if (idx < 0 || (unsigned int) idx >= ARRAYSIZE(wlif_name_array))
 		return -1;
 
 	/* get wlx.y mac addr */

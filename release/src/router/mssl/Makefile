@@ -1,6 +1,6 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections
+CFLAGS	= -Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -Wsign-compare
 LIBS =
 LDFLAGS	= -ffunction-sections -fdata-sections -Wl,--gc-sections
 

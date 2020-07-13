@@ -4,7 +4,7 @@
 **Forked off from Tomato by Shibby, builds compiled by pedro**
 .  
   
-For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12 A1/B1/C1/D1/VP/K, N15U, N16, N53, N66U, AC66U **Netgear** WNR3500LV1, WNR3500LV2, R6300V1, WNDR4500V1, WNDR4500V2, WNDR3400/v2/v3, WNDR3700v3 **Linksys** WRT54 series, E800, E900, E1000v2/v2.1, E1200V1, E1200V2, E1500, E2000, E2500, E3000, E3200, E4200 **Tenda** W1800R, N80 **Dlink** DIR-320 **Belkin** F5D8235v3, F7D3301, F7D3302, F7D4302, F9K1102v1/v3.  
+For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12 A1/B1/C1/D1/VP/K/HP, N15U, N16, N53, N66U, AC66U **Netgear** WNR3500LV1, WNR3500LV2, R6300V1, WNDR4500V1, WNDR4500V2, WNDR3400/v2/v3, WNDR3700v3 **Linksys** WRT54 series, E800, E900, E1000v2/v2.1, E1200V1, E1200V2, E1500, E2000, E2500, E3000, E3200, E4200 **Tenda** W1800R, N80 **Dlink** DIR-320 **Belkin** F5D8235v3, F7D3301, F7D3302, F7D4302, F9K1102v1/v3.  
 .  
   
 ***Disclaimer: I am not responsible for any bricked routers, nor do I encourage other people to flash alternative firmwares on their routers. Use at your own risk!***  
@@ -72,7 +72,7 @@ For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12
     $ sudo apt-get install autoconf m4 bison flex g++ libtool sqlite gcc binutils patch bzip2 make gettext unzip zlib1g-dev libc6 gperf automake groff
     $ sudo apt-get install lib32stdc++6 libncurses5 libncurses5-dev gawk gitk zlib1g-dev autopoint shtool autogen mtd-utils gcc-multilib gconf-editor lib32z1-dev pkg-config libssl-dev automake1.11
     $ sudo apt-get install libmnl-dev libxml2-dev intltool libglib2.0-dev libstdc++5 texinfo dos2unix xsltproc libnfnetlink0 libcurl4-openssl-dev libgtk2.0-dev libnotify-dev libevent-dev git
-    $ sudo apt-get install re2c texlive libelf1 nodejs zip mc cmake
+    $ sudo apt-get install re2c texlive libelf1 nodejs zip mc cmake curl
     $ sudo apt-get install linux-headers-$(uname -r)
     ```
   

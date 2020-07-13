@@ -1,6 +1,63 @@
+===========================
 FreshTomato-MIPS Changelog
 ===========================
+(for full changelog, see: https://bitbucket.org/pedro311/freshtomato-mips/src/mips-master/CHANGELOG)
 
+
+
+2020.4          2020.07.10
+--------------------------
+
+- Add Asus RT-N12 HP support
+- adminer: update to 4.7.7
+- libyaml: update to 0.2.5
+- tor: update to 0.4.3.5
+- libcurl: update to 7.71.0
+- e2fsprogs: update to 1.45.6
+- nettle: update to 3.6
+- libexif: update to 0.6.22
+- nano: update to 4.9.3
+- nginx: update to 1.19.0
+- sqlite: update to 3.32.3
+- rp-pppoe: update to 3.14
+- libevent: update to 2.1.11-stable + libs optimization
+- dropbear: update to 2020.80; remove patch 102-fix-cbc_mode-cant-be-fully-disabled - already in upstream
+- libnfsidmap: update to 0.27
+- libjson-c: update to 1c6086a (2020.05.31) snapshot
+- portmap: update to 4836a4a (2014-06-23) snapshot; remove unneeded patch - already in upstream
+- accel-pptp: clean sources of 0.8.5 add patches instead
+- build: openssl-1.1: for AIO targets optimize for speed
+- build: enable PPTP/L2TP for Netgear WNDR 3400/3400v2/3400v3/3700v3 VPN (wndr64-vpn/wndr3400v2-vpn) targets
+- build: enable PPTPD for Netgear WNDR 3400/3400v2/3400v3/3700v3 VPN (wndr64-vpn/wndr3400v2-vpn) targets
+- build: enable JFFS for Netgear WNDR 3400/3400v2/3400v3/3700v3 MiniIPv6 (wndr64/wndr3400v2) targets
+- switch4g: fix modem reset, it works at last
+- SNMP: add device name and FW version to nsExtendOutput table
+- MDU: send User-Agent also in case of Custom url
+- samba: add protocol selection options (SMBv1, SMBv2, SMBv1 + SMBv2); make SMBv2 + SMBv1 the default (no change)
+- samba: configuration tune up: at last with disabled 'sendfile' on RT-N66U increased (read) speed-up from 9,5MB/s to 13,2MB/s (with only SMBv1 enabled, even 14,4MB/s)
+- httpd: limit SSL certificate to 13 months if clock has been set; new Apple initiative to force removal of possibly compromised certs 
+- firewall: openvpn: fix duplicate openvpn rules on wan/openvpn restart
+- firewall: retry failed iptables-restore in a few secs
+- firewall: add a brute force mitigation rule on port defined for GUI remote access
+- openvpn: fix multiple issues in stopping vpn services
+- openvpn: set up firewall in correct order - before starting openvpn but after stopping it
+- openvpn: shutdown all running servers/clients on wan stop and remove tunnel modules
+- openvpn: completely remove logging for the smallest targets to save some space
+- openvpn: ensure duplicate-cn is set as default if not specified
+- openvpn: no longer dump stats to system log
+- dropbear: change allowed encryption algo to AES128 only (for small targets only)
+- dropbear: strip version from ident
+- GUI: Admin Access: SSH Daemon: add ed25519/ecdsa to the allowed authentication keys; also fix the regexp to check the entire field, not just the first line
+- GUI: Administration: Upgrade: fix missing css when loading reboot.asp
+- GUI: Admin Restrictions: change permitted value for Limit Connections Attempts
+- GUI: advanced-wireless.asp - adjust note/comment for transmit power option
+- GUI: basic-network.asp - hide and disable wan options/settings if the user selects/enables wireless bridge mode
+- Makefile: e2500: because of the size, build with the KERN_SIZE_OPT flag
+- router: Makefile: snmp: tune recipe; add only needed mibs; enable logging (/var/log/snmpd.log)
+- router: rc: network.c: do not unload (reload) RT-N (5.110.x) wifi driver for Linksys E3000; note: this is a workaround (only needed for E3000), to avoid a reboot after saving basic settings for example. (No change for all other routers)
+- router: shared: update ifaddrs.c
+- router: www: advanced-routing.asp: remove Mode option - it has "undocumented" secondary effects
+- rom: simplify ca-bundle update
 
 
 2020.3          2020.05.10

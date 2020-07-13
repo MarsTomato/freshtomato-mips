@@ -54,7 +54,7 @@ int wl_probe(char *name)
 int wl_set_val(char *name, char *var, void *val, int len)
 {
 	char buf[WLC_IOCTL_SMLEN];
-	int buf_len;
+	unsigned int buf_len;
 
 	/* check for overflow */
 	if ((buf_len = strlen(var)) + 1 + len > sizeof(buf))
@@ -77,7 +77,7 @@ int wl_get_val(char *name, char *var, void *val, int len)
 	int ret;
 
 	/* check for overflow */
-	if (strlen(var) + 1 > sizeof(buf) || len > sizeof(buf))
+	if ((strlen(var) + 1 > sizeof(buf)) || ((unsigned int) len > sizeof(buf)))
 		return -1;
 	
 	strcpy(buf, var);
@@ -112,7 +112,7 @@ wl_iovar_getbuf(char *ifname, char *iovar, void *param, int paramlen, void *bufp
 {
 	int err;
 	uint namelen;
-	uint iolen;
+	int iolen;
 
 	namelen = strlen(iovar) + 1;	 /* length of iovar name plus null */
 	iolen = namelen + paramlen;
@@ -133,7 +133,7 @@ int
 wl_iovar_setbuf(char *ifname, char *iovar, void *param, int paramlen, void *bufptr, int buflen)
 {
 	uint namelen;
-	uint iolen;
+	int iolen;
 
 	namelen = strlen(iovar) + 1;	 /* length of iovar name plus null */
 	iolen = namelen + paramlen;
@@ -163,7 +163,7 @@ wl_iovar_get(char *ifname, char *iovar, void *bufptr, int buflen)
 	int ret;
 
 	/* use the return buffer if it is bigger than what we have on the stack */
-	if (buflen > sizeof(smbuf)) {
+	if ((unsigned int) buflen > sizeof(smbuf)) {
 		ret = wl_iovar_getbuf(ifname, iovar, NULL, 0, bufptr, buflen);
 	} else {
 		ret = wl_iovar_getbuf(ifname, iovar, NULL, 0, smbuf, sizeof(smbuf));

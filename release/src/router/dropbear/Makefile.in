@@ -53,7 +53,7 @@ CLIOBJS=cli-main.o cli-auth.o cli-authpasswd.o cli-kex.o \
 CLISVROBJS=common-session.o packet.o common-algo.o common-kex.o \
 			common-channel.o common-chansession.o termcodes.o loginrec.o \
 			tcp-accept.o listener.o process-packet.o dh_groups.o \
-			common-runopts.o circbuffer.o list.o netio.o
+			common-runopts.o circbuffer.o list.o netio.o chachapoly.o gcm.o
 
 KEYOBJS=dropbearkey.o
 
@@ -175,7 +175,7 @@ insmulti%: dropbearmulti$(EXEEXT)
 	-rm -f $(DESTDIR)$(bindir)/$*$(EXEEXT) 
 	-ln -s $(bindir)/dropbearmulti$(EXEEXT) $(DESTDIR)$(bindir)/$*$(EXEEXT) 
 	$(INSTALL) -d $(DESTDIR)$(mandir)/man1
-	if test -e $*.1; then $(INSTALL) -m 644 $*.1 $(DESTDIR)$(mandir)/man1/$*.1; fi
+	if test -e $(srcdir)/$*.1; then $(INSTALL) -m 644 $(srcdir)/$*.1 $(DESTDIR)$(mandir)/man1/$*.1; fi
 
 # dropbear should go in sbin, so it needs a separate rule
 inst_dropbear: dropbear
@@ -188,7 +188,7 @@ inst_%: %
 	$(INSTALL) -d $(DESTDIR)$(bindir)
 	$(INSTALL) $*$(EXEEXT) $(DESTDIR)$(bindir)
 	$(INSTALL) -d $(DESTDIR)$(mandir)/man1
-	if test -e $*.1; then $(INSTALL) -m 644 $*.1 $(DESTDIR)$(mandir)/man1/$*.1; fi
+	if test -e $(srcdir)/$*.1; then $(INSTALL) -m 644 $(srcdir)/$*.1 $(DESTDIR)$(mandir)/man1/$*.1; fi
 
 inst_dropbearmulti: $(addprefix insmulti, $(PROGRAMS)) 
 
@@ -236,7 +236,7 @@ $(STATIC_LTC): $(OPTION_HEADERS)
 $(STATIC_LTM): $(OPTION_HEADERS)
 	$(MAKE) -C libtommath
 
-.PHONY : clean sizes thisclean distclean tidy ltc-clean ltm-clean
+.PHONY : clean sizes thisclean distclean tidy ltc-clean ltm-clean lint
 
 ltc-clean:
 	$(MAKE) -C libtomcrypt clean
@@ -261,6 +261,9 @@ distclean: clean tidy
 
 tidy:
 	-rm -f *~ *.gcov */*~
+
+lint:
+	cd $(srcdir); ./dropbear_lint.sh
 
 ## Fuzzing targets
 

@@ -1004,6 +1004,7 @@ const defaults_t defaults[] = {
 	{ "smbd_user",			"nas"				},
 	{ "smbd_passwd",		""				},
 	{ "smbd_ifnames",		"br0"				},
+	{ "smbd_protocol",		"2"				}, /* 0 - SMB1, 1 - SMB2, 2 - SMB1+SMB2 (default) */
 #endif
 
 #ifdef TCONFIG_MEDIA_SERVER

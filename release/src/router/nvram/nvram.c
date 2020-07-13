@@ -669,7 +669,7 @@ static int backup_main(int argc, char **argv)
 
 	strcpy(tmp, "/tmp/nvramXXXXXX");
 	mktemp(tmp);
-	if (f_write(tmp, &data, size, 0, 0) != size) {
+	if (f_write(tmp, &data, size, 0, 0) != (int) size) {
 		printf("Error saving file.\n");
 		return 1;
 	}
@@ -746,7 +746,7 @@ static int restore_main(int argc, char **argv)
 
 	size = f_size(tmp);
 	if ((size <= (sizeof(data) - sizeof(data.buffer))) || (size > sizeof(data)) ||
-		(f_read(tmp, &data, sizeof(data)) != size)) {
+		(f_read(tmp, &data, sizeof(data)) != (int) size)) {
 		unlink(tmp);
 		printf("Invalid data size or read error.\n");
 		return 1;
@@ -792,7 +792,7 @@ CORRUPT:
 		}
 		*bv = '=';
 	}
-	if (((b - data.buffer) + 1) != size) {
+	if (((b - data.buffer) + 1) != (int) size) {
 		printf("Extra data found at the end.\n");
 		return 1;
 	}

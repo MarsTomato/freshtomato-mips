@@ -1234,6 +1234,17 @@ static void filter_input(void)
 		if (n & 2) ipt_write("-A INPUT -p tcp --dport %s -m state --state NEW -j shlimit\n", nvram_safe_get("telnetd_port"));
 	}
 
+/* Protect against brute force on port defined for remote GUI access (use ssh settings) */
+	if (remotemanage) {
+		modprobe("xt_recent");
+
+		ipt_write("-N WWWBFP\n"
+		          "-A WWWBFP -m recent --set --name WWWBFP\n"
+		          "-A WWWBFP -m recent --update --hitcount %d --seconds %s --name WWWBFP -j %s\n",
+		          atoi(hit) + 1, sec, chain_in_drop);
+		ipt_write("-A INPUT -p tcp --dport %s -m state --state NEW -j WWWBFP\n", nvram_safe_get("http_wanport"));
+	}
+
 #ifdef TCONFIG_FTP
 	strlcpy(s, nvram_safe_get("ftp_limit"), sizeof(s));
 	if ((vstrsep(s, ",", &en, &hit, &sec) == 3) && (atoi(en)) && (nvram_get_int("ftp_enable") == 1)) {
@@ -1413,7 +1424,7 @@ static void filter_forward(void)
 	char src[64];
 	char t[512];
 	char *p, *c;
-	int i;
+	unsigned int i;
 
 #ifdef TCONFIG_IPV6
 	ip6t_write("-A FORWARD -m rt --rt-type 0 -j DROP\n");
@@ -1550,7 +1561,7 @@ static void filter_forward(void)
 #endif
 
 	/* IPv4 */
-	for (i = 0; i < wanfaces.count; ++i) {
+	for (i = 0; i < (unsigned int) wanfaces.count; ++i) {
 		if (*(wanfaces.iface[i].name)) {
 			ipt_write("-A FORWARD -i %s -j wanin\n"			/* generic from wan */
 				  "-A FORWARD -o %s -j wanout\n",		/* generic to wan */
@@ -1558,7 +1569,7 @@ static void filter_forward(void)
 		}
 	}
 
-	for (i = 0; i < wan2faces.count; ++i) {
+	for (i = 0; i < (unsigned int) wan2faces.count; ++i) {
 		if (*(wan2faces.iface[i].name)) {
 			ipt_write("-A FORWARD -i %s -j wanin\n"			/* generic from wan */
 				  "-A FORWARD -o %s -j wanout\n",		/* generic to wan */
@@ -1567,14 +1578,14 @@ static void filter_forward(void)
 	}
 
 #ifdef TCONFIG_MULTIWAN
-	for (i = 0; i < wan3faces.count; ++i) {
+	for (i = 0; i < (unsigned int) wan3faces.count; ++i) {
 		if (*(wan3faces.iface[i].name)) {
 			ipt_write("-A FORWARD -i %s -j wanin\n"			/* generic from wan */
 				  "-A FORWARD -o %s -j wanout\n",		/* generic to wan */
 				  wan3faces.iface[i].name, wan3faces.iface[i].name);
 		}
 	}
-	for (i = 0; i < wan4faces.count; ++i) {
+	for (i = 0; i < (unsigned int) wan4faces.count; ++i) {
 		if (*(wan4faces.iface[i].name)) {
 			ipt_write("-A FORWARD -i %s -j wanin\n"			/* generic from wan */
 				  "-A FORWARD -o %s -j wanout\n",		/* generic to wan */
@@ -1616,7 +1627,7 @@ static void filter_forward(void)
 	/* IPv4 only */
 	if (nvram_get_int("upnp_enable") & 3) {
 		ipt_write(":upnp - [0:0]\n");
-		for (i = 0; i < wanfaces.count; ++i) {
+		for (i = 0; i < (unsigned int) wanfaces.count; ++i) {
 			if (*(wanfaces.iface[i].name)) {
 				ipt_write("-A FORWARD -i %s -j upnp\n", wanfaces.iface[i].name);
 			}
@@ -1705,7 +1716,7 @@ static void filter6_input(void)
 	char *en;
 	char *sec;
 	char *hit;
-	int n;
+	unsigned int n;
 	char *p, *c;
 
 	// RFC-4890, sec. 4.4.1
@@ -1738,6 +1749,15 @@ static void filter6_input(void)
 			}
 		}
 		if (n & 2) ip6t_write("-A INPUT -i %s -p tcp --dport %s -m state --state NEW -j shlimit\n", lanface, nvram_safe_get("telnetd_port"));
+	}
+
+/* Protect against brute force on port defined for remote GUI access (use ssh settings) */
+	if (remotemanage) {
+		ip6t_write("-N WWWBFP\n"
+		           "-A WWWBFP -m recent --set --name WWWBFP\n"
+		           "-A WWWBFP -m recent --update --hitcount %d --seconds %s --name WWWBFP -j %s\n",
+		           atoi(hit) + 1, sec, chain_in_drop);
+		ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j WWWBFP\n", nvram_safe_get("http_wanport"));
 	}
 
 #ifdef TCONFIG_FTP
@@ -2107,39 +2127,45 @@ int start_firewall(void)
 		}
 	}
 
+	/* Quite a few functions will blindly attempt to manipulate iptables, colliding with us.
+	 * Retry a few times with increasing wait time to resolve collision.
+	 */
 	notice_set("iptables", "");
-	if (_eval(iptrestore_argv, ">/var/notice/iptables", 0, NULL) == 0) {
-		led(LED_DIAG, LED_OFF);
-		notice_set("iptables", "");
+	for (n = 1; n < 4; n++) {
+		if (_eval(iptrestore_argv, ">/var/notice/iptables", 0, NULL) == 0) {
+			led(LED_DIAG, LED_OFF);
+			notice_set("iptables", "");
+			n = 4;
+		}
+		else {
+			syslog(LOG_INFO, "iptables-restore failed - retrying in %d secs...", n*n);
+			sleep(n*n);
+		}
 	}
-	else {
+	if (n < 5) {
 		sprintf(s, "%s.error", ipt_fname);
 		rename(ipt_fname, s);
 		syslog(LOG_CRIT, "Error while loading rules. See %s file.", s);
 		led(LED_DIAG, LED_ON);
-
-		/*
-
-		-P INPUT DROP
-		-F INPUT
-		-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
-		-A INPUT -i br0 -j ACCEPT
-
-		-P FORWARD DROP
-		-F FORWARD
-		-A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
-		-A FORWARD -i br0 -j ACCEPT
-
-		*/
 	}
 
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled()) {
+		/* Quite a few functions will blindly attempt to manipulate iptables, colliding with us.
+		 * Retry a few times with increasing wait time to resolve collision.
+		 */
 		notice_set("ip6tables", "");
-		if (_eval(ip6trestore_argv, ">/var/notice/ip6tables", 0, NULL) == 0) {
-			notice_set("ip6tables", "");
+		for (n = 1; n < 4; n++) {
+			if (_eval(ip6trestore_argv, ">/var/notice/ip6tables", 0, NULL) == 0) {
+				notice_set("ip6tables", "");
+				n = 4;
+			}
+			else {
+				syslog(LOG_INFO, "ip6tables-restore failed - retrying in %d secs...", n*n);
+				sleep(n*n);
+			}
 		}
-		else {
+		if (n < 5) {
 			sprintf(s, "%s.error", ip6t_fname);
 			rename(ip6t_fname, s);
 			syslog(LOG_CRIT, "Error while loading rules. See %s file.", s);

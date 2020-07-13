@@ -1,32 +1,59 @@
 --- dropbear/localoptions.h
 +++ dropbear/localoptions.h
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,40 @@
 +#define DROPBEAR_X11FWD 0
 +#define INETD_MODE 0
 +#define DROPBEAR_CLI_LOCALTCPFWD 0
 +#define DROPBEAR_CLI_REMOTETCPFWD 0
++
 +#ifndef NO_OPTSIZE
++
 +#define DROPBEAR_SFTPSERVER 0
 +#define DROPBEAR_SVR_LOCALTCPFWD 0
 +#define DROPBEAR_SVR_REMOTETCPFWD 0
 +#define DROPBEAR_SVR_AGENTFWD 0
 +#define DROPBEAR_CLI_AGENTFWD 0
-+#define DROPBEAR_AES128 0
++
++/* encryption algo (only AES128) */
++#define DROPBEAR_AES128 1
 +#define DROPBEAR_AES256 0
++#define DROPBEAR_BLOWFISH 0
++#define DROPBEAR_TWOFISH256 0
++#define DROPBEAR_TWOFISH128 0
++#define DROPBEAR_CHACHA20POLY1305 0
++#define DROPBEAR_3DES 0
++
++/* hostkey/public-key algo (only RSA) */
 +#define DROPBEAR_DSS 0
 +#define DROPBEAR_ECDSA 0
 +#define DROPBEAR_ED25519 0
-+#else
++
++#else /* NO_OPTSIZE */
++
++/* encryption algo (disable 3DES) */
 +#define DROPBEAR_3DES 0
-+#define DROPBEAR_ENABLE_CBC_MODE 0
-+#define DROPBEAR_SHA1_96_HMAC 0
++
 +#define XAUTH_COMMAND "/opt/X11R6/X11/xauth -q"
 +#define SFTPSERVER_PATH "/opt/libexec/sftp-server"
-+#endif
++
++#endif /* NO_OPTSIZE */
++
++#define DROPBEAR_ENABLE_CBC_MODE 0
++#define DROPBEAR_SHA1_96_HMAC 0
 +#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin"
 --- dropbear/sysoptions.h
 +++ dropbear/sysoptions.h
-@@ -315,7 +315,7 @@
+@@ -7,7 +7,9 @@
+ #define DROPBEAR_VERSION "2020.80"
+ #endif
+ 
++#ifndef LOCAL_IDENT
+ #define LOCAL_IDENT "SSH-2.0-dropbear_" DROPBEAR_VERSION
++#endif
+ #define PROGNAME "dropbear"
+ 
+ /* Spec recommends after one hour or 1 gigabyte of data. One hour
+@@ -333,7 +335,7 @@
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__

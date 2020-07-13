@@ -44,11 +44,11 @@ enum {
 };
 
 
-static int waitfor(const char *name)
+static int ovpn_waitfor(const char *name)
 {
 	int pid, n = 5;
 
-	killall_tk(name);
+	killall_tk_period_wait(name, 10); /* wait time in seconds */
 	while ((pid = pidof(name)) >= 0 && (n-- > 0)) {
 		/* Reap the zombie if it has terminated */
 		waitpid(pid, NULL, WNOHANG);
@@ -80,10 +80,14 @@ void start_ovpn_client(int clientNum)
 		return;
 	}
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_INFO, "VPN GUI client backend starting...");
+#endif
 
 	if ((pid = pidof(buffer)) >= 0) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_INFO, "VPN Client %d already running; PID: %d", clientNum, pid);
+#endif
 		return;
 	}
 
@@ -152,7 +156,9 @@ void start_ovpn_client(int clientNum)
 	sprintf(buffer, "openvpn --mktun --dev %s", iface);
 	for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 	if (_eval(argv, NULL, 0, NULL)) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_ERROR, "Creating tunnel interface failed...");
+#endif
 		stop_ovpn_client(clientNum);
 		return;
 	}
@@ -165,7 +171,9 @@ void start_ovpn_client(int clientNum)
 			for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 
 			if (_eval(argv, NULL, 0, NULL)) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 				vpnlog(VPN_LOG_ERROR, "Adding tunnel interface to bridge failed...");
+#endif
 				stop_ovpn_client(clientNum);
 				return;
 			}
@@ -175,7 +183,9 @@ void start_ovpn_client(int clientNum)
 		for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 
 		if (_eval(argv, NULL, 0, NULL)) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 			vpnlog(VPN_LOG_ERROR, "Bringing interface up failed...");
+#endif
 			stop_ovpn_client(clientNum);
 			return;
 		}
@@ -364,7 +374,7 @@ void start_ovpn_client(int clientNum)
 	fprintf(fp,
 		"verb 3\n"
 		"status-version 2\n"
-		"status status 10\n\n"
+		"status status 10\n\n" /* Update status file every 10 sec */
 		"# Custom Configuration\n"
 		"%s",
 		nvram_safe_get(buffer));
@@ -531,14 +541,23 @@ void start_ovpn_client(int clientNum)
 #endif
 	}
 
+#if defined(TCONFIG_BCMARM)
+	/* In case of openvpn unexpectedly dies and leaves it added - flush tun IF, otherwise openvpn will not re-start (required by iproute2) */
+	eval("/usr/sbin/ip", "addr", "flush", "dev", iface);
+#endif
+
 	/* Start the VPN client */
 	sprintf(buffer, "/etc/openvpn/vpnclient%d --cd /etc/openvpn/client%d --config config.ovpn", clientNum, clientNum);
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_INFO, "Starting OpenVPN: %d", clientNum);
+#endif
 
 	for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 	if (_eval(argv, NULL, 0, &pid)) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_ERROR, "Starting OpenVPN failed...");
+#endif
 		stop_ovpn_client(clientNum);
 		return;
 	}
@@ -573,7 +592,9 @@ void start_ovpn_client(int clientNum)
 	allow_fastnat(buffer, 0);
 	try_enabling_fastnat();
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_INFO, "VPN GUI client backend complete.");
+#endif
 }
 
 void stop_ovpn_client(int clientNum)
@@ -588,7 +609,9 @@ void stop_ovpn_client(int clientNum)
 		return;
 	}
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_INFO, "Stopping VPN GUI client backend.");
+#endif
 
 	/* Remove cron job */
 #ifndef TCONFIG_OPTIMIZE_SIZE
@@ -609,7 +632,7 @@ void stop_ovpn_client(int clientNum)
 	vpnlog(VPN_LOG_EXTRA, "Stopping OpenVPN client.");
 #endif
 	sprintf(buffer, "vpnclient%d", clientNum);
-	if (!waitfor(buffer))
+	if (!ovpn_waitfor(buffer))
 #ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_EXTRA, "OpenVPN client stopped.");
 #endif
@@ -629,6 +652,9 @@ void stop_ovpn_client(int clientNum)
 	vpnlog(VPN_LOG_EXTRA, "VPN device removed.");
 #endif
 
+	/* Don't remove tunnel interface in case of multiple servers/clients */
+	//modprobe_r("tun");
+
 	/* Remove firewall rules after VPN exit */
 #ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_EXTRA, "Removing firewall rules.");
@@ -636,7 +662,7 @@ void stop_ovpn_client(int clientNum)
 	sprintf(buffer, "/etc/openvpn/fw/client%d-fw.sh", clientNum);
 	argv[0] = "sed";
 	argv[1] = "-i";
-	argv[2] = "s/-A/-D/g;s/-I/-D/g";
+	argv[2] = "s/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g";
 	argv[3] = buffer;
 	argv[4] = NULL;
 	if (!_eval(argv, NULL, 0, NULL)) {
@@ -647,9 +673,6 @@ void stop_ovpn_client(int clientNum)
 #ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_EXTRA, "Done removing firewall rules.");
 #endif
-
-	// TODO:
-	modprobe_r("tun");
 
 	if (nvram_get_int("vpn_debug") <= VPN_LOG_EXTRA) {
 #ifndef TCONFIG_OPTIMIZE_SIZE
@@ -673,7 +696,9 @@ void stop_ovpn_client(int clientNum)
 	allow_fastnat(buffer, 1);
 	try_enabling_fastnat();
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_INFO, "VPN GUI client backend stopped.");
+#endif
 }
 
 void start_ovpn_server(int serverNum)
@@ -700,10 +725,14 @@ void start_ovpn_server(int serverNum)
 		return;
 	}
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_INFO, "VPN GUI server backend starting...");
+#endif
 
 	if ((pid = pidof(buffer)) >= 0) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_INFO, "VPN Server %d already running; PID: %d", serverNum, pid);
+#endif
 		return;
 	}
 
@@ -762,7 +791,9 @@ void start_ovpn_server(int serverNum)
 	sprintf(buffer, "openvpn --mktun --dev %s", iface);
 	for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 	if (_eval(argv, NULL, 0, NULL)) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_ERROR, "Creating tunnel interface failed...");
+#endif
 		stop_ovpn_server(serverNum);
 		return;
 	}
@@ -773,7 +804,9 @@ void start_ovpn_server(int serverNum)
 		snprintf(buffer, BUF_SIZE, "brctl addif %s %s", nvram_safe_get(buffer2), iface);
 		for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 		if (_eval(argv, NULL, 0, NULL)) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 			vpnlog(VPN_LOG_ERROR, "Adding tunnel interface to bridge failed...");
+#endif
 			stop_ovpn_server(serverNum);
 			return;
 		}
@@ -783,7 +816,9 @@ void start_ovpn_server(int serverNum)
 	sprintf(buffer, "ifconfig %s 0.0.0.0 promisc up", iface);
 	for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 	if (_eval(argv, NULL, 0, NULL)) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_ERROR, "Bringing up tunnel interface failed...");
+#endif
 		stop_ovpn_server(serverNum);
 		return;
 	}
@@ -941,6 +976,8 @@ void start_ovpn_server(int serverNum)
 			sprintf(buffer, "vpn_server%d_ccd_excl", serverNum);
 			if (nvram_get_int(buffer))
 				fprintf(fp, "ccd-exclusive\n");
+			else
+				fprintf(fp, "duplicate-cn\n");
 
 			sprintf(buffer, "/etc/openvpn/server%d/ccd", serverNum);
 			mkdir(buffer, 0700);
@@ -1013,6 +1050,8 @@ void start_ovpn_server(int serverNum)
 			vpnlog(VPN_LOG_EXTRA, "CCD processing complete");
 #endif
 		}
+		else
+			fprintf(fp, "duplicate-cn\n");
 
 		sprintf(buffer, "vpn_server%d_userpass", serverNum);
 		if (nvram_get_int(buffer)) {
@@ -1097,7 +1136,7 @@ void start_ovpn_server(int serverNum)
 	sprintf(buffer, "vpn_server%d_custom", serverNum);
 	fprintf(fp,
 		"status-version 2\n"
-		"status status 10\n\n"
+		"status status 10\n\n" /* Update status file every 10 sec */
 		"# Custom Configuration\n"
 		"%s",
 		nvram_safe_get(buffer));
@@ -1165,21 +1204,6 @@ void start_ovpn_server(int serverNum)
 	}
 #ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_EXTRA, "Done writing certs/keys");
-#endif
-
-	/* Start the VPN server */
-	sprintf(buffer, "/etc/openvpn/vpnserver%d --cd /etc/openvpn/server%d --config config.ovpn", serverNum, serverNum);
-
-	vpnlog(VPN_LOG_INFO, "Starting OpenVPN: %d", serverNum);
-
-	for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
-	if (_eval(argv, NULL, 0, &pid)) {
-		vpnlog(VPN_LOG_ERROR, "Starting VPN instance failed...");
-		stop_ovpn_server(serverNum);
-		return;
-	}
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	vpnlog(VPN_LOG_EXTRA, "Done starting openvpn");
 #endif
 
 	/* Handle firewall rules if appropriate */
@@ -1250,6 +1274,25 @@ void start_ovpn_server(int serverNum)
 #endif
 	}
 
+	/* Start the VPN server */
+	sprintf(buffer, "/etc/openvpn/vpnserver%d --cd /etc/openvpn/server%d --config config.ovpn", serverNum, serverNum);
+
+#ifndef TCONFIG_OPTIMIZE_SIZE
+	vpnlog(VPN_LOG_INFO, "Starting OpenVPN: %d", serverNum);
+#endif
+
+	for (argv[argc=0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
+	if (_eval(argv, NULL, 0, &pid)) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
+		vpnlog(VPN_LOG_ERROR, "Starting VPN instance failed...");
+#endif
+		stop_ovpn_server(serverNum);
+		return;
+	}
+#ifndef TCONFIG_OPTIMIZE_SIZE
+	vpnlog(VPN_LOG_EXTRA, "Done starting openvpn");
+#endif
+
 	/* Set up cron job */
 	sprintf(buffer, "vpn_server%d_poll", serverNum);
 	if ((nvi = nvram_get_int(buffer)) > 0) {
@@ -1278,7 +1321,9 @@ void start_ovpn_server(int serverNum)
 	allow_fastnat(buffer, 0);
 	try_enabling_fastnat();
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_INFO, "VPN GUI server backend complete.");
+#endif
 }
 
 void stop_ovpn_server(int serverNum)
@@ -1293,7 +1338,9 @@ void stop_ovpn_server(int serverNum)
 		return;
 	}
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_INFO, "Stopping VPN GUI server backend.");
+#endif
 
 	/* Remove cron job */
 #ifndef TCONFIG_OPTIMIZE_SIZE
@@ -1309,32 +1356,12 @@ void stop_ovpn_server(int serverNum)
 	vpnlog(VPN_LOG_EXTRA, "Done removing cron job");
 #endif
 
-	/* Remove firewall rules */
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	vpnlog(VPN_LOG_EXTRA, "Removing firewall rules.");
-#endif
-	sprintf(buffer, "/etc/openvpn/fw/server%d-fw.sh", serverNum);
-	argv[0] = "sed";
-	argv[1] = "-i";
-	argv[2] = "s/-A/-D/g;s/-I/-D/g";
-	argv[3] = buffer;
-	argv[4] = NULL;
-	if (!_eval(argv, NULL, 0, NULL))
-	{
-		argv[0] = buffer;
-		argv[1] = NULL;
-		_eval(argv, NULL, 0, NULL);
-	}
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	vpnlog(VPN_LOG_EXTRA, "Done removing firewall rules.");
-#endif
-
 	/* Stop the VPN server */
 #ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_EXTRA, "Stopping OpenVPN server.");
 #endif
 	sprintf(buffer, "vpnserver%d", serverNum);
-	if (!waitfor(buffer))
+	if (!ovpn_waitfor(buffer))
 #ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_EXTRA, "OpenVPN server stopped.");
 #endif
@@ -1354,7 +1381,28 @@ void stop_ovpn_server(int serverNum)
 	vpnlog(VPN_LOG_EXTRA, "VPN device removed.");
 #endif
 
-	modprobe_r("tun");
+	/* Don't remove tunnel interface in case of multiple servers/clients */
+	//modprobe_r("tun");
+
+	/* Remove firewall rules */
+#ifndef TCONFIG_OPTIMIZE_SIZE
+	vpnlog(VPN_LOG_EXTRA, "Removing firewall rules.");
+#endif
+	sprintf(buffer, "/etc/openvpn/fw/server%d-fw.sh", serverNum);
+	argv[0] = "sed";
+	argv[1] = "-i";
+	argv[2] = "s/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g;s/PREROUTING\\ [0-9]\\ /PREROUTING\\g;s/POSTROUTING\\ [0-9]\\ /POSTROUTING\\g";
+	argv[3] = buffer;
+	argv[4] = NULL;
+	if (!_eval(argv, NULL, 0, NULL))
+	{
+		argv[0] = buffer;
+		argv[1] = NULL;
+		_eval(argv, NULL, 0, NULL);
+	}
+#ifndef TCONFIG_OPTIMIZE_SIZE
+	vpnlog(VPN_LOG_EXTRA, "Done removing firewall rules.");
+#endif
 
 	if (nvram_get_int("vpn_debug") <= VPN_LOG_EXTRA) {
 #ifndef TCONFIG_OPTIMIZE_SIZE
@@ -1377,7 +1425,9 @@ void stop_ovpn_server(int serverNum)
 	allow_fastnat(buffer, 1);
 	try_enabling_fastnat();
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	vpnlog(VPN_LOG_INFO, "VPN GUI server backend stopped.");
+#endif
 }
 
 void start_ovpn_eas()
@@ -1397,8 +1447,10 @@ void start_ovpn_eas()
 	/* Parse and start servers */
 	strlcpy(buffer, nvram_safe_get("vpn_server_eas"), sizeof(buffer));
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	if (strlen(buffer) != 0)
 		vpnlog(VPN_LOG_INFO, "Starting OpenVPN servers (eas): %s", buffer);
+#endif
 
 	i = 0;
 	for (cur = strtok(buffer,","); cur != NULL && i <= OVPN_SERVER_MAX; cur = strtok(NULL, ",")) { nums[i++] = atoi(cur); }
@@ -1408,19 +1460,25 @@ void start_ovpn_eas()
 		sprintf(buffer, "vpnserver%d", nums[i]);
 
 		if (pidof(buffer) >= 0) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN server %d (eas)", nums[i]);
+#endif
 			stop_ovpn_server(nums[i]);
 		}
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_INFO, "Starting OpenVPN server %d (eas)", nums[i]);
+#endif
 		start_ovpn_server(nums[i]);
 	}
 
 	/* Parse and start clients */
 	strlcpy(buffer, nvram_safe_get("vpn_client_eas"), sizeof(buffer));
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	if (strlen(buffer) != 0)
 		vpnlog(VPN_LOG_INFO, "Starting clients (eas): %s", buffer);
+#endif
 
 	i = 0;
 	for (cur = strtok(buffer,","); cur != NULL && i <= OVPN_CLIENT_MAX; cur = strtok(NULL, ",")) { nums[i++] = atoi(cur); }
@@ -1430,11 +1488,15 @@ void start_ovpn_eas()
 		sprintf(buffer, "vpnclient%d", nums[i]);
 
 		if (pidof(buffer) >= 0) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN client %d (eas)", nums[i]);
+#endif
 			stop_ovpn_client(nums[i]);
 		}
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_INFO, "Starting OpenVPN client %d (eas)", nums[i]);
+#endif
 		start_ovpn_client(nums[i]);
 	}
 }
@@ -1443,12 +1505,14 @@ void stop_ovpn_eas()
 {
 	char buffer[16], *cur;
 	int nums[OVPN_CLIENT_MAX], i;
-	
+
 	/* Parse and stop servers */
 	strlcpy(buffer, nvram_safe_get("vpn_server_eas"), sizeof(buffer));
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	if (strlen(buffer) != 0)
 		vpnlog(VPN_LOG_INFO, "Stopping OpenVPN servers (eas): %s", buffer);
+#endif
 
 	i = 0;
 	for (cur = strtok(buffer,","); cur != NULL && i <= OVPN_SERVER_MAX; cur = strtok(NULL, ",")) { nums[i++] = atoi(cur); }
@@ -1458,7 +1522,9 @@ void stop_ovpn_eas()
 		sprintf(buffer, "vpnserver%d", nums[i]);
 
 		if (pidof(buffer) >= 0) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN server %d (eas)", nums[i]);
+#endif
 			stop_ovpn_server(nums[i]);
 		}
 	}
@@ -1466,8 +1532,10 @@ void stop_ovpn_eas()
 	/* Parse and stop clients */
 	strlcpy(buffer, nvram_safe_get("vpn_client_eas"), sizeof(buffer));
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 	if (strlen(buffer) != 0)
 		vpnlog(VPN_LOG_INFO, "Stopping OpenVPN clients (eas): %s", buffer);
+#endif
 
 	i = 0;
 	for (cur = strtok(buffer,","); cur != NULL && i <= OVPN_CLIENT_MAX; cur = strtok(NULL, ",")) { nums[i++] = atoi(cur); }
@@ -1477,10 +1545,43 @@ void stop_ovpn_eas()
 		sprintf(buffer, "vpnclient%d", nums[i]);
 
 		if (pidof(buffer) >= 0) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN client %d (eas)", nums[i]);
+#endif
 			stop_ovpn_client(nums[i]);
 		}
 	}
+}
+
+void stop_ovpn_all()
+{
+	char buffer[16];
+	int i;
+
+	/* Stop servers */
+	for (i = 1; i <= OVPN_SERVER_MAX; i++) {
+		sprintf(buffer, "vpnserver%d", i);
+		if (pidof(buffer) >= 0) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
+			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN server %d", i);
+#endif
+			stop_ovpn_server(i);
+		}
+	}
+
+	/* Stop clients */
+	for (i = 1; i <= OVPN_CLIENT_MAX; i++) {
+		sprintf(buffer, "vpnclient%d", i);
+		if (pidof(buffer) >= 0) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
+			vpnlog(VPN_LOG_INFO, "Stopping OpenVPN client %d", i);
+#endif
+			stop_ovpn_client(i);
+		}
+	}
+
+	/* Remove tunnel interface module */
+	modprobe_r("tun");
 }
 
 void run_ovpn_firewall_scripts()
@@ -1488,7 +1589,7 @@ void run_ovpn_firewall_scripts()
 	DIR *dir;
 	struct dirent *file;
 	char *fn;
-	char *argv[3];
+	char *argv[8];
 
 	if (chdir("/etc/openvpn/fw"))
 		return;
@@ -1504,7 +1605,27 @@ void run_ovpn_firewall_scripts()
 		if (fn[0] == '.')
 			continue;
 
+		/* Remove existing firewall rules if they exist */
+#ifndef TCONFIG_OPTIMIZE_SIZE
+		vpnlog(VPN_LOG_EXTRA, "Removing existing firewall rules: %s", fn);
+#endif
+		argv[0] = "sed";
+		argv[1] = "s/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g;s/PREROUTING\\ [0-9]\\ /PREROUTING\\g;s/POSTROUTING\\ [0-9]\\ /POSTROUTING\\g";
+		argv[2] = fn;
+		argv[3] = ">";
+		argv[4] = "/etc/openvpn/fw/clear-fw-tmp.sh";
+		argv[5] = NULL;
+		if (!_eval(argv, NULL, 0, NULL)) {
+			argv[0] = "/etc/openvpn/fw/clear-fw-tmp.sh";
+			argv[1] = NULL;
+			_eval(argv, NULL, 0, NULL);
+		}
+		unlink("/etc/openvpn/fw/clear-fw-tmp.sh");
+
+		/* Add firewall rules */
+#ifndef TCONFIG_OPTIMIZE_SIZE
 		vpnlog(VPN_LOG_INFO, "Running firewall script: %s", fn);
+#endif
 		argv[0] = "/bin/sh";
 		argv[1] = fn;
 		argv[2] = NULL;
@@ -1551,14 +1672,18 @@ void write_ovpn_dnsmasq_config(FILE* f)
 #endif
 				snprintf(buf, sizeof(buf), "vpn_client%d_adns", cur);
 				if (nvram_get_int(buf) == 2) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 					vpnlog(VPN_LOG_INFO, "Adding strict-order to dnsmasq config for client %d", cur);
+#endif
 					fprintf(f, "strict-order\n");
 					break;
 				}
 			}
 
 			if (sscanf(fn, "client%d.con%c", &cur, &ch) == 2) {
+#ifndef TCONFIG_OPTIMIZE_SIZE
 				vpnlog(VPN_LOG_INFO, "Adding Dnsmasq config from %s", fn);
+#endif
 				fappend(f, fn);
 			}
 		}
@@ -1595,7 +1720,9 @@ int write_ovpn_resolv(FILE* f)
 			if ((dnsf = fopen(fn, "r")) == NULL)
 				continue;
 
+#ifndef TCONFIG_OPTIMIZE_SIZE
 			vpnlog(VPN_LOG_INFO, "Adding DNS entries from %s", fn);
+#endif
 			fappend(f, fn);
 
 			if (adns == 3)

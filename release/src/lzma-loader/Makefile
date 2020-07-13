@@ -24,10 +24,16 @@ BZ_TEXT_START	:= 0x80500000
 
 OBJCOPY		:= $(CROSS_COMPILE)objcopy -O binary -R .reginfo -R .note -R .comment -R .mdebug -S
 
-CFLAGS		= -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -O2 \
+ifeq ($(TCONFIG_MIPSR2),y)
+REVFLAGS := -march=mips32r2 -Wa,-32 -Wa,-march=mips32r2 -Wa,-mips32r2
+else
+REVFLAGS := -march=mips32 -Wa,-32 -Wa,-march=mips32 -Wa,-mips32
+endif
+
+CFLAGS		= -D__KERNEL__ -Wall -Wstrict-prototypes -Wno-trigraphs -Os \
 		  -fno-strict-aliasing -fno-common -fomit-frame-pointer -G 0 -mno-abicalls -fno-pic \
 		  -ffunction-sections -pipe -Wa,--trap \
-		  -mabi=32 -march=mips32 -Wa,-32 -Wa,-march=mips32 -Wa,-mips32
+		  -mabi=32 $(REVFLAGS)
 CFLAGS		+= -DLOADADDR=$(TEXT_START) -D_LZMA_IN_CB
 CFLAGS		+= -I$(SRCBASE)/include -I$(SRCBASE)/lzma/C/Compress/Lzma
 
