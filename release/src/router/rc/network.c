@@ -326,9 +326,11 @@ void unload_wl(void)
 {
 	int model = get_model();
 
-	/* workaround: do not unload RT-N (5.110.x) wifi driver for E3000,
+	/* workaround: do not unload RT-N (5.110.x) wifi driver for E3000 and WNDR3400v1/WNDR3700v3
 	 * will cause problems (reboot after saving to nvram) */
-	if ((model != MODEL_WRT610Nv2)) {
+	if ((model != MODEL_WRT610Nv2) &&
+	    (model != MODEL_WNDR3400) &&
+	    (model != MODEL_WNDR3700v3)) {
 		modprobe_r("wl");
 	}
 }
