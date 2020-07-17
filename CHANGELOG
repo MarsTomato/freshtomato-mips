@@ -5,6 +5,26 @@ FreshTomato-MIPS Changelog
 
 
 
+2020.5          2020.07.17
+--------------------------
+
+Note: mainly bugfixes (see *)
+
+- (*) kernel: fix access to unitialized pointer (ported from DD-WRT, Broadcom bug)
+- (*) kernel: patch kernel against CVE-2016-5195
+- (*) kernel: fix reuse-after-free in DCCP
+- kernel: r2q change message from priority WARNING to priority DEBUG
+- build: tune compiler for mips32r2 (see performance comparison: https://bitbucket.org/pedro311/freshtomato-mips/commits/8ec693519c077d2e88ca09a24ae397525302d9e5)
+- (*) firewall: fix commit 9f50277 (brute force mitigation rule on port defined for GUI remote access) - increase hitcount / lower period of time (hardcoded)
+- libevent: update to 2.1.12-stable; tune recipe to solve configure errors (unable to find openssl/zlib)
+- tor: update to 0.4.3.6
+- libcurl: update to 7.71.1
+- httpd: add to log failed GUI login attempts
+- www: tomato.js: add SameSite=Lax when creating cookies
+- (*) www: clearcookies.asp: remove the comment left when debugging
+- (*) rc: network.c: do not unload (reload) RT-N (5.110.x) wifi driver for WNDR3400v1/WNDR3700v3 (similar case like E3000)
+
+
 2020.4          2020.07.10
 --------------------------
 
