@@ -4105,7 +4105,7 @@
  
  static struct option opts[] = {
  	{ "trigger-type", 1, 0, '1' },
-@@ -193,7 +195,9 @@
+@@ -200,7 +202,9 @@
  	.version	= IPTABLES_VERSION,
  	.size		= IPT_ALIGN(sizeof(struct ipt_trigger_info)),
  	.userspacesize	= IPT_ALIGN(sizeof(struct ipt_trigger_info)),
@@ -4354,7 +4354,7 @@
  
  static struct option opts[] = {
  	{ "host", 1, 0, '1' },
-@@ -147,7 +149,9 @@
+@@ -165,7 +167,9 @@
  		IPTABLES_VERSION,
  		IPT_ALIGN(sizeof(struct ipt_webstr_info)),
  		IPT_ALIGN(sizeof(struct ipt_webstr_info)),

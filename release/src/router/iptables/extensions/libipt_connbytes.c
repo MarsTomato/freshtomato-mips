@@ -158,9 +158,11 @@ print(const struct ipt_ip *ip,
 	else
 		printf("connbytes %llu:%llu ",sinfo->count.from,
 			sinfo->count.to);
+
+	fputs("connbytes mode ", stdout);
 	print_mode(sinfo);
 
-	fputs("direction ", stdout);
+	fputs("connbytes direction ", stdout);
 	print_direction(sinfo);
 }
 

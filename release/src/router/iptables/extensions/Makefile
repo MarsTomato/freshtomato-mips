@@ -5,31 +5,8 @@
 # header files are present in the include/linux directory of this iptables
 # package (HW)
 #
-#PF_EXT_SLIB:=ah addrtype comment connlimit connmark conntrack ecn esp hashlimit helper icmp iprange length limit mac mark multiport owner physdev pkttype policy realm rpc sctp standard state tcp tcpmss tos ttl udp unclean CLASSIFY CONNMARK DNAT DSCP ECN LOG MARK MASQUERADE MIRROR NETMAP NFQUEUE NOTRACK REDIRECT REJECT SAME SNAT TARPIT TCPMSS TOS TRACE TTL ULOG
-#PF6_EXT_SLIB:=connmark eui64 hl icmp6 length limit mac mark multiport owner physdev policy standard state tcp udp CONNMARK HL LOG NFQUEUE MARK TRACE
-
-
-PF_EXT_SLIB:=CLASSIFY CONNMARK DNAT DSCP LOG MARK MASQUERADE REDIRECT REJECT BCOUNT
-PF_EXT_SLIB+=ROUTE SNAT TCPMSS TOS TRIGGER TTL NETMAP
-PF_EXT_SLIB+=condition connlimit connmark geoip icmp iprange layer7
-PF_EXT_SLIB+=length limit mac mark multiport recent standard state quota
-PF_EXT_SLIB+=tcp tcpmss time tos u32 udp web dscp connbytes webmon string bcount conntrack
-PF_EXT_SLIB+=IMQ ipp2p
-ifeq ($(CONFIG_LINUX26),y)
-PF_EXT_SLIB+=policy
-PF_EXT_SLIB+=hashlimit NFQUEUE NOTRACK
-PF_EXT_SLIB+=set
-endif
-
-PF_EXT_SLIB+=account
-
-ifeq ($(DO_IPV6), 1)
-PF6_EXT_SLIB:=connmark icmp6 length limit mac mark multiport standard state rt hl web string
-PF6_EXT_SLIB+=tcp udp CONNMARK LOG MARK IMQ TCPMSS REJECT
-ifeq ($(CONFIG_LINUX26),y)
-PF6_EXT_SLIB+=connlimit hashlimit recent NFQUEUE ROUTE HL connbytes iprange webmon dscp
-endif
-endif
+PF_EXT_SLIB:=ah addrtype comment connmark conntrack dscp ecn esp hashlimit helper icmp iprange length limit mac mark multiport owner physdev pkttype policy realm sctp standard state tcp tcpmss tos ttl udp unclean CLASSIFY CONNMARK DNAT DSCP ECN LOG MARK MASQUERADE MIRROR NETMAP NFQUEUE NOTRACK REDIRECT REJECT SAME SNAT TCPMSS TOS TTL ULOG
+PF6_EXT_SLIB:=connmark eui64 hl icmp6 length limit mac mark multiport owner physdev policy standard state tcp udp CONNMARK HL LOG NFQUEUE MARK TCPMSS
 
 ifeq ($(DO_SELINUX), 1)
 PF_EXT_SE_SLIB:=SECMARK CONNSECMARK
@@ -37,8 +14,8 @@ PF6_EXT_SE_SLIB:=SECMARK CONNSECMARK
 endif
 
 # Optionals
-#PF_EXT_SLIB_OPTS:=$(foreach T,$(wildcard extensions/.*-test),$(shell KERNEL_DIR=$(KERNEL_DIR) $(T)))
-#PF6_EXT_SLIB_OPTS:=$(foreach T,$(wildcard extensions/.*-test6),$(shell KERNEL_DIR=$(KERNEL_DIR) $(T)))
+PF_EXT_SLIB_OPTS:=$(foreach T,$(wildcard extensions/.*-test),$(shell KERNEL_DIR=$(KERNEL_DIR) $(T)))
+PF6_EXT_SLIB_OPTS:=$(foreach T,$(wildcard extensions/.*-test6),$(shell KERNEL_DIR=$(KERNEL_DIR) $(T)))
 
 PF_EXT_ALL_SLIB:=$(patsubst extensions/libipt_%.c, %, $(wildcard extensions/libipt_*.c))
 PF6_EXT_ALL_SLIB:=$(patsubst extensions/libip6t_%.c, %, $(wildcard extensions/libip6t_*.c))
@@ -67,6 +44,7 @@ PF_EXT_SLIB+=$(PF_EXT_SLIB_OPTS)
 PF6_EXT_SLIB+=$(PF6_EXT_SLIB_OPTS)
 
 OPTIONALS+=$(patsubst %,IPv4:%,$(PF_EXT_SLIB_OPTS))
+OPTIONALS+=$(patsubst %,IPv6:%,$(PF6_EXT_SLIB_OPTS))
 
 ifndef NO_SHARED_LIBS
 SHARED_LIBS+=$(foreach T,$(PF_EXT_SLIB),extensions/libipt_$(T).so)
@@ -75,7 +53,6 @@ EXTRA_INSTALLS+=$(foreach T, $(PF_EXT_SLIB), $(DESTDIR)$(LIBDIR)/iptables/libipt
 EXTRA_INSTALLS+=$(foreach T, $(PF_EXT_SE_SLIB), $(DESTDIR)$(LIBDIR)/iptables/libipt_$(T).so)
 
 ifeq ($(DO_IPV6), 1)
-OPTIONALS+=$(patsubst %,IPv6:%,$(PF6_EXT_SLIB_OPTS))
 SHARED_LIBS+=$(foreach T,$(PF6_EXT_SLIB),extensions/libip6t_$(T).so)
 SHARED_SE_LIBS+=$(foreach T,$(PF6_EXT_SE_SLIB),extensions/libip6t_$(T).so)
 EXTRA_INSTALLS+=$(foreach T, $(PF6_EXT_SLIB), $(DESTDIR)$(LIBDIR)/iptables/libip6t_$(T).so)

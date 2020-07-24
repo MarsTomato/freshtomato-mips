@@ -1,6 +1,6 @@
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1310,15 +1310,25 @@ int wildcard_match(const char* wildcard,
+@@ -1312,15 +1312,25 @@ int wildcard_match(const char* wildcard,
  #endif
  
  /* log.c */

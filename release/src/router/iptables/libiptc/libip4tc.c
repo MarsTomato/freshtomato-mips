@@ -125,7 +125,6 @@ typedef unsigned int socklen_t;
 
 #define IP_PARTS(n) IP_PARTS_NATIVE(ntohl(n))
 
-#if 0
 int
 dump_entry(STRUCT_ENTRY *e, const TC_HANDLE_T handle)
 {
@@ -175,7 +174,6 @@ dump_entry(STRUCT_ENTRY *e, const TC_HANDLE_T handle)
 	printf("\n");
 	return 0;
 }
-#endif
 
 static unsigned char *
 is_same(const STRUCT_ENTRY *a, const STRUCT_ENTRY *b, unsigned char *matchmask)
@@ -189,7 +187,7 @@ is_same(const STRUCT_ENTRY *a, const STRUCT_ENTRY *b, unsigned char *matchmask)
 	    || a->ip.smsk.s_addr != b->ip.smsk.s_addr
 	    || a->ip.dmsk.s_addr != b->ip.dmsk.s_addr
 	    || a->ip.proto != b->ip.proto
-	    || (a->ip.flags & ~IPT_F_NO_DEF_MATCH) != (b->ip.flags & ~IPT_F_NO_DEF_MATCH)
+	    || a->ip.flags != b->ip.flags
 	    || a->ip.invflags != b->ip.invflags)
 		return NULL;
 

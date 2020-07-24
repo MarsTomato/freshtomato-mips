@@ -259,20 +259,21 @@ const defaults_t defaults[] = {
 
 	/* PPPoE parameters */
 	{ "wan_pppoe_ifname",		""				},	// PPPoE enslaved interface
+	{ "wan_ppp_mru",		"1500"				},	// Negotiate MRU to this value
+	{ "wan_ppp_mtu",		"1500"				},	// Negotiate MTU to the smaller of this value or the peer MRU
+	{ "wan_ppp_ac",			""				},	// PPPoE access concentrator name
+	{ "wan_ppp_static",		"0"				},	// Enable / Disable Static IP
+	{ "wan_ppp_static_ip",		""				},	// PPPoE Static IP
+	{ "wan_ppp_get_ac",		""				},	// PPPoE Server ac name
+	{ "wan_ppp_get_srv",		""				},	// PPPoE Server service name
+
 	{ "wan_ppp_username",		""				},	// PPP username
 	{ "wan_ppp_passwd",		""				},	// PPP password
 	{ "wan_ppp_idletime",		"5"				},	// Dial on demand max idle time (mins)
 	{ "wan_ppp_demand",		"0"				},	// Dial on demand
 	{ "wan_ppp_demand_dnsip",	"198.51.100.1"			},	// IP to which DNS queries are sent to trigger Connect On Demand
 	{ "wan_ppp_redialperiod",	"10"				},	// Redial Period  (seconds)
-	{ "wan_ppp_mru",		"1500"				},	// Negotiate MRU to this value
-	{ "wan_ppp_mtu",		"1500"				},	// Negotiate MTU to the smaller of this value or the peer MRU
 	{ "wan_ppp_service",		""				},	// PPPoE service name
-	{ "wan_ppp_ac",			""				},	// PPPoE access concentrator name
-	{ "wan_ppp_static",		"0"				},	// Enable / Disable Static IP
-	{ "wan_ppp_static_ip",		""				},	// PPPoE Static IP
-	{ "wan_ppp_get_ac",		""				},	// PPPoE Server ac name
-	{ "wan_ppp_get_srv",		""				},	// PPPoE Server service name
 	{ "wan_ppp_custom",		""				},	// PPPD additional options
 	{ "wan_ppp_mlppp",		"0"				},	// PPPoE single line MLPPP
 	{ "wan_pppoe_lei",		"10"				},
@@ -564,20 +565,15 @@ const defaults_t defaults[] = {
 	{ "ct_udp_timeout",		""				},
 	{ "ct_timeout",			""				},
 	{ "ct_max",			""				},
+	{ "ct_hashsize",		"2048"				},
 	{ "nf_ttl",			"0"				},
 	{ "nf_l7in",			"1"				},
-#ifdef LINUX26
 	{ "nf_sip",			"0"				},
-	{ "ct_hashsize",		"2048"				},
-#endif
-#ifdef LINUX26
 	{ "nf_rtsp",			"0"				},
-#else
-	{ "nf_rtsp",			"1"				},
-#endif
 	{ "nf_pptp",			"1"				},
 	{ "nf_h323",			"1"				},
 	{ "nf_ftp",			"1"				},
+	{ "fw_nat_tuning",		"0"				},	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
 /* advanced-adblock */
 	{ "adblock_enable",		"0"				},

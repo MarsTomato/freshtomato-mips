@@ -160,7 +160,7 @@ parse(int c, char **argv, int invert, unsigned int *flags,
 			exit_error(PARAMETER_PROBLEM,
 				   "Unexpected `!' after --to-destination");
 
-		if (*flags & IPT_DNAT_OPT_DEST) {
+		if (*flags) {
 			if (!kernel_version)
 				get_kernel_version();
 			if (kernel_version > LINUX_VERSION(2, 6, 10))
@@ -180,7 +180,6 @@ parse(int c, char **argv, int invert, unsigned int *flags,
 			*flags |= IPT_DNAT_OPT_RANDOM;
 		} else
 			*flags |= IPT_DNAT_OPT_RANDOM;
-		return 1;
 	default:
 		return 0;
 	}

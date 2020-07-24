@@ -281,7 +281,7 @@
        for (i = 0; i < hash_size; i++)
  	for (crecp = hash_table[i], up = &hash_table[i]; 
  	     crecp && ((crecp->flags & F_REVERSE) || !(crecp->flags & F_IMMORTAL));
-@@ -521,9 +524,11 @@ static struct crec *really_insert(char *
+@@ -534,9 +537,11 @@ static struct crec *really_insert(char *
  	  if ((flags & F_IPV4) && (new->flags & F_IPV4) &&
  	      new->addr.addr4.s_addr == addr->addr4.s_addr)
  	    return new;
@@ -293,7 +293,7 @@
  	}
  
        insert_error = 1;
-@@ -897,7 +902,11 @@ struct crec *cache_find_by_addr(struct c
+@@ -910,7 +915,11 @@ struct crec *cache_find_by_addr(struct c
  				time_t now, unsigned int prot)
  {
    struct crec *ans;
@@ -305,7 +305,7 @@
    
    if (crecp) /* iterating */
      ans = crecp->next;
-@@ -1092,12 +1101,14 @@ int read_hostsfile(char *filename, unsig
+@@ -1105,12 +1114,14 @@ int read_hostsfile(char *filename, unsig
  	  addrlen = INADDRSZ;
  	  domain_suffix = get_domain(addr.addr4);
  	}
@@ -320,7 +320,7 @@
        else
  	{
  	  my_syslog(LOG_ERR, _("bad address at %s line %d"), filename, lineno); 
-@@ -1266,7 +1277,7 @@ void cache_reload(void)
+@@ -1279,7 +1290,7 @@ void cache_reload(void)
  	    cache->flags = F_HOSTS | F_IMMORTAL | F_FORWARD | F_REVERSE | F_IPV4 | F_NAMEP | F_CONFIG;
  	    add_hosts_entry(cache, (union all_addr *)&hr->addr, INADDRSZ, SRC_CONFIG, (struct crec **)daemon->packet, revhashsz);
  	  }
@@ -329,7 +329,7 @@
  	if ((hr->flags & HR_6) &&
  	    (cache = whine_malloc(SIZEOF_POINTER_CREC)))
  	  {
-@@ -1275,6 +1286,7 @@ void cache_reload(void)
+@@ -1288,6 +1299,7 @@ void cache_reload(void)
  	    cache->flags = F_HOSTS | F_IMMORTAL | F_FORWARD | F_REVERSE | F_IPV6 | F_NAMEP | F_CONFIG;
  	    add_hosts_entry(cache, (union all_addr *)&hr->addr6, IN6ADDRSZ, SRC_CONFIG, (struct crec **)daemon->packet, revhashsz);
  	  }
@@ -337,7 +337,7 @@
        }
  	
    if (option_bool(OPT_NO_HOSTS) && !daemon->addn_hosts)
-@@ -1373,11 +1385,13 @@ void cache_add_dhcp_entry(char *host_nam
+@@ -1386,11 +1398,13 @@ void cache_add_dhcp_entry(char *host_nam
    int in_hosts = 0;
    size_t addrlen = sizeof(struct in_addr);
  
@@ -351,7 +351,7 @@
    
    inet_ntop(prot, host_address, daemon->addrbuff, ADDRSTRLEN);
    
-@@ -1738,8 +1752,10 @@ void dump_cache(time_t now)
+@@ -1751,8 +1765,10 @@ void dump_cache(time_t now)
  		a = daemon->addrbuff;
  		if (cache->flags & F_IPV4)
  		  inet_ntop(AF_INET, &cache->addr, a, ADDRSTRLEN);
@@ -362,7 +362,7 @@
  	      }
  
  	    if (cache->flags & F_IPV4)
-@@ -1882,9 +1898,14 @@ void log_query(unsigned int flags, char
+@@ -1895,9 +1911,14 @@ void log_query(unsigned int flags, char
  	     sprintf(daemon->addrbuff, "%u", rcode);
  	}
        else
@@ -382,7 +382,7 @@
      dest = arg;
 --- dnsmasq/src/config.h
 +++ dnsmasq/src/config.h
-@@ -136,6 +136,7 @@ HAVE_INOTIFY
+@@ -138,6 +138,7 @@ HAVE_INOTIFY
  
  NO_ID
     Don't report *.bind CHAOS info to clients, forward such requests upstream instead.
@@ -390,7 +390,7 @@
  NO_TFTP
  NO_DHCP
  NO_DHCP6
-@@ -145,8 +146,8 @@ NO_AUTH
+@@ -147,8 +148,8 @@ NO_AUTH
  NO_DUMPFILE
  NO_INOTIFY
     these are available to explicitly disable compile time options which would 
@@ -401,7 +401,7 @@
     with something like "make COPTS=-DNO_SCRIPT" will do the trick.
  NO_GMP
     Don't use and link against libgmp, Useful if nettle is built with --enable-mini-gmp.
-@@ -307,9 +308,29 @@ HAVE_SOCKADDR_SA_LEN
+@@ -309,9 +310,29 @@ HAVE_SOCKADDR_SA_LEN
   
  #endif
  
@@ -431,7 +431,7 @@
  #ifdef NO_TFTP
  #undef HAVE_TFTP
  #endif
-@@ -319,7 +340,7 @@ HAVE_SOCKADDR_SA_LEN
+@@ -321,7 +342,7 @@ HAVE_SOCKADDR_SA_LEN
  #undef HAVE_DHCP6
  #endif
  
@@ -440,7 +440,7 @@
  #undef HAVE_DHCP6
  #endif
  
-@@ -368,6 +389,9 @@ HAVE_SOCKADDR_SA_LEN
+@@ -370,6 +391,9 @@ HAVE_SOCKADDR_SA_LEN
  #ifdef DNSMASQ_COMPILE_OPTS
  
  static char *compile_opts = 
@@ -490,21 +490,20 @@
  	/* At the end */
 --- dnsmasq/src/dnsmasq.c
 +++ dnsmasq/src/dnsmasq.c
-@@ -1873,11 +1873,11 @@ static void check_dns_listeners(time_t n
+@@ -1877,11 +1877,12 @@ static void check_dns_listeners(time_t n
  		  indextoname(listener->tcpfd, if_index, intr_name))
  		{
  		  union all_addr addr;
 -		  
-+		  addr.addr4 = tcp_addr.in.sin_addr;
 +#ifdef HAVE_IPV6
  		  if (tcp_addr.sa.sa_family == AF_INET6)
  		    addr.addr6 = tcp_addr.in6.sin6_addr;
--		  else
--		    addr.addr4 = tcp_addr.in.sin_addr;
+ 		  else
 +#endif
+ 		    addr.addr4 = tcp_addr.in.sin_addr;
  		  
  		  for (iface = daemon->interfaces; iface; iface = iface->next)
- 		    if (iface->index == if_index)
+ 		    if (iface->index == if_index &&
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
 @@ -130,7 +130,9 @@ typedef unsigned long long u64;
@@ -555,7 +554,7 @@
  };
  
  /* bits in flag param to IPv6 callbacks from iface_enumerate() */
-@@ -662,7 +668,9 @@ struct frec {
+@@ -663,7 +669,9 @@ struct frec {
    union all_addr dest;
    struct server *sentto; /* NULL means free */
    struct randfd *rfd4;
@@ -565,7 +564,7 @@
    unsigned int iface;
    unsigned short orig_id, new_id;
    int log_id, fd, forwardall, flags;
-@@ -879,7 +887,9 @@ struct dhcp_bridge {
+@@ -880,7 +888,9 @@ struct dhcp_bridge {
  struct cond_domain {
    char *domain, *prefix;
    struct in_addr start, end;
@@ -575,7 +574,7 @@
    int is6, indexed;
    struct cond_domain *next;
  }; 
-@@ -1190,7 +1200,9 @@ void blockdata_free(struct blockdata *bl
+@@ -1192,7 +1202,9 @@ void blockdata_free(struct blockdata *bl
  
  /* domain.c */
  char *get_domain(struct in_addr addr);
@@ -585,7 +584,7 @@
  int is_name_synthetic(int flags, char *name, union all_addr *addr);
  int is_rev_synth(int flag, union all_addr *addr, char *name);
  
-@@ -1275,9 +1287,11 @@ int hostname_issubdomain(char *a, char *
+@@ -1277,9 +1289,11 @@ int hostname_issubdomain(char *a, char *
  time_t dnsmasq_time(void);
  int netmask_length(struct in_addr mask);
  int is_same_net(struct in_addr a, struct in_addr b, struct in_addr mask);
@@ -597,7 +596,7 @@
  int retry_send(ssize_t rc);
  void prettyprint_time(char *buf, unsigned int t);
  int prettyprint_addr(union mysockaddr *addr, char *buf);
-@@ -1359,7 +1373,9 @@ int loopback_exception(int fd, int famil
+@@ -1361,7 +1375,9 @@ int loopback_exception(int fd, int famil
  int label_exception(int index, int family, union all_addr *addr);
  int fix_fd(int fd);
  int tcp_interface(int fd, int af);
@@ -1017,20 +1016,20 @@
  #if defined(HAVE_LINUX_NETWORK)
      char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
  #elif defined(IP_RECVDSTADDR) && defined(HAVE_SOLARIS_NETWORK)
-@@ -1284,8 +1318,12 @@ void receive_query(struct listener *list
- 		 CMSG_SPACE(sizeof(struct sockaddr_dl))];
+@@ -1285,8 +1319,12 @@ void receive_query(struct listener *list
  #endif
    } control_u;
+   int family = listen->addr.sa.sa_family;
 +#ifdef HAVE_IPV6
     /* Can always get recvd interface for IPv6 */
-   int check_dst = !option_bool(OPT_NOWILD) || listen->family == AF_INET6;
+   int check_dst = !option_bool(OPT_NOWILD) || family == AF_INET6;
 +#else
 +  int check_dst = !option_bool(OPT_NOWILD);
 +#endif
  
    /* packet buffer overwritten */
    daemon->srv_save = NULL;
-@@ -1336,6 +1374,7 @@ void receive_query(struct listener *list
+@@ -1337,6 +1375,7 @@ void receive_query(struct listener *list
        if (source_addr.in.sin_port == 0)
  	return;
      }
@@ -1038,7 +1037,7 @@
    else
      {
        /* Source-port == 0 is an error, we can't send back to that. */
-@@ -1343,12 +1382,13 @@ void receive_query(struct listener *list
+@@ -1344,12 +1383,13 @@ void receive_query(struct listener *list
  	return;
        source_addr.in6.sin6_flowinfo = 0;
      }
@@ -1050,10 +1049,10 @@
        struct addrlist *addr;
 -
 +#ifdef HAVE_IPV6
-       if (listen->family == AF_INET6) 
+       if (family == AF_INET6) 
  	{
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -1357,6 +1397,7 @@ void receive_query(struct listener *list
+@@ -1358,6 +1398,7 @@ void receive_query(struct listener *list
  	      break;
  	}
        else
@@ -1061,15 +1060,15 @@
  	{
  	  struct in_addr netmask;
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -1425,6 +1466,7 @@ void receive_query(struct listener *list
+@@ -1426,6 +1467,7 @@ void receive_query(struct listener *list
  	}
  #endif
        
 +#ifdef HAVE_IPV6
-       if (listen->family == AF_INET6)
+       if (family == AF_INET6)
  	{
  	  for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-@@ -1440,6 +1482,7 @@ void receive_query(struct listener *list
+@@ -1441,6 +1483,7 @@ void receive_query(struct listener *list
  		if_index = p.p->ipi6_ifindex;
  	      }
  	}
@@ -1077,8 +1076,8 @@
        
        /* enforce available interface configuration */
        
-@@ -1503,9 +1546,11 @@ void receive_query(struct listener *list
-       if (listen->family == AF_INET) 
+@@ -1504,9 +1547,11 @@ void receive_query(struct listener *list
+       if (family == AF_INET) 
  	log_query(F_QUERY | F_IPV4 | F_FORWARD, daemon->namebuff, 
  		  (union all_addr *)&source_addr.in.sin_addr, types);
 +#ifdef HAVE_IPV6
@@ -1089,7 +1088,7 @@
  
  #ifdef HAVE_AUTH
        /* find queries for zones we're authoritative for, and answer them directly */
-@@ -1730,9 +1775,11 @@ static int tcp_key_recurse(time_t now, i
+@@ -1731,9 +1776,11 @@ static int tcp_key_recurse(time_t now, i
  	  if (server->addr.sa.sa_family == AF_INET) 
  	    log_query(F_NOEXTRA | F_DNSSEC | F_IPV4, keyname, (union all_addr *)&(server->addr.in.sin_addr),
  		      querystr("dnssec-query", new_status == STAT_NEED_KEY ? T_DNSKEY : T_DS));
@@ -1101,7 +1100,7 @@
  	  
  	  server->flags |= SERV_GOT_TCP;
  	  
-@@ -1797,10 +1844,11 @@ unsigned char *tcp_request(int confd, ti
+@@ -1798,10 +1845,11 @@ unsigned char *tcp_request(int confd, ti
    if (option_bool(OPT_CONNTRACK))
      {
        union all_addr local;
@@ -1114,7 +1113,7 @@
  	local.addr4 = local_addr->in.sin_addr;
        
        have_mark = get_incoming_mark(&peer_addr, &local, 1, &mark);
-@@ -1811,7 +1859,7 @@ unsigned char *tcp_request(int confd, ti
+@@ -1812,7 +1860,7 @@ unsigned char *tcp_request(int confd, ti
    if (option_bool(OPT_LOCAL_SERVICE))
      {
        struct addrlist *addr;
@@ -1123,7 +1122,7 @@
        if (peer_addr.sa.sa_family == AF_INET6) 
  	{
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -1820,6 +1868,7 @@ unsigned char *tcp_request(int confd, ti
+@@ -1821,6 +1869,7 @@ unsigned char *tcp_request(int confd, ti
  	      break;
  	}
        else
@@ -1131,7 +1130,7 @@
  	{
  	  struct in_addr netmask;
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -1874,9 +1923,11 @@ unsigned char *tcp_request(int confd, ti
+@@ -1875,9 +1924,11 @@ unsigned char *tcp_request(int confd, ti
  	  if (peer_addr.sa.sa_family == AF_INET) 
  	    log_query(F_QUERY | F_IPV4 | F_FORWARD, daemon->namebuff, 
  		      (union all_addr *)&peer_addr.in.sin_addr, types);
@@ -1143,7 +1142,7 @@
  	  
  #ifdef HAVE_AUTH
  	  /* find queries for zones we're authoritative for, and answer them directly */
-@@ -2068,9 +2119,11 @@ unsigned char *tcp_request(int confd, ti
+@@ -2069,9 +2120,11 @@ unsigned char *tcp_request(int confd, ti
  		      if (last_server->addr.sa.sa_family == AF_INET)
  			log_query(F_SERVER | F_IPV4 | F_FORWARD, daemon->namebuff, 
  				  (union all_addr *)&last_server->addr.in.sin_addr, NULL); 
@@ -1155,7 +1154,7 @@
  
  #ifdef HAVE_DNSSEC
  		      if (option_bool(OPT_DNSSEC_VALID) && !checking_disabled && (last_server->flags & SERV_DO_DNSSEC))
-@@ -2169,7 +2222,9 @@ static struct frec *allocate_frec(time_t
+@@ -2170,7 +2223,9 @@ static struct frec *allocate_frec(time_t
        f->sentto = NULL;
        f->rfd4 = NULL;
        f->flags = 0;
@@ -1165,7 +1164,7 @@
  #ifdef HAVE_DNSSEC
        f->dependent = NULL;
        f->blocking_query = NULL;
-@@ -2229,8 +2284,11 @@ static void free_frec(struct frec *f)
+@@ -2230,8 +2285,11 @@ static void free_frec(struct frec *f)
    f->rfd4 = NULL;
    f->sentto = NULL;
    f->flags = 0;
@@ -1270,7 +1269,7 @@
  #ifdef HAVE_DHCP6
    if (daemon->doing_ra || daemon->doing_dhcp6)
      addr.nl_groups |= RTMGRP_IPV6_IFADDR;
-@@ -246,6 +247,7 @@ int iface_enumerate(int family, void *pa
+@@ -251,6 +252,7 @@ int iface_enumerate(int family, void *pa
  		      if (!((*callback)(addr, ifa->ifa_index, label,  netmask, broadcast, parm)))
  			callback_ok = 0;
  		  }
@@ -1278,7 +1277,7 @@
  		else if (ifa->ifa_family == AF_INET6)
  		  {
  		    struct in6_addr *addrp = NULL;
-@@ -280,6 +282,7 @@ int iface_enumerate(int family, void *pa
+@@ -285,6 +287,7 @@ int iface_enumerate(int family, void *pa
  					(int) preferred, (int)valid, parm)))
  			callback_ok = 0;
  		  }
@@ -1378,7 +1377,7 @@
  	      }
  	  }
      }
-@@ -422,9 +438,11 @@ static int iface_allowed(struct iface_pa
+@@ -423,9 +439,11 @@ static int iface_allowed(struct iface_pa
        !iface_check(AF_INET, (union all_addr *)&addr->in.sin_addr, label, &auth_dns))
      return 1;
  
@@ -1390,7 +1389,7 @@
      
  #ifdef HAVE_DHCP
    /* No DHCP where we're doing auth DNS. */
-@@ -483,6 +501,7 @@ static int iface_allowed(struct iface_pa
+@@ -484,6 +502,7 @@ static int iface_allowed(struct iface_pa
    return 0;
  }
  
@@ -1398,7 +1397,7 @@
  static int iface_allowed_v6(struct in6_addr *local, int prefix, 
  			    int scope, int if_index, int flags, 
  			    int preferred, int valid, void *vparam)
-@@ -510,6 +529,7 @@ static int iface_allowed_v6(struct in6_a
+@@ -511,6 +530,7 @@ static int iface_allowed_v6(struct in6_a
    
    return iface_allowed((struct iface_param *)vparam, if_index, NULL, &addr, netmask, prefix, flags);
  }
@@ -1406,7 +1405,7 @@
  
  static int iface_allowed_v4(struct in_addr local, int if_index, char *label,
  			    struct in_addr netmask, struct in_addr broadcast, void *vparam)
-@@ -613,7 +633,9 @@ int enumerate_interfaces(int reset)
+@@ -689,7 +709,9 @@ int enumerate_interfaces(int reset)
  
    param.spare = spare;
    
@@ -1416,7 +1415,7 @@
  
    if (ret)
      ret = iface_enumerate(AF_INET, &param, iface_allowed_v4); 
-@@ -718,8 +740,10 @@ static int make_sock(union mysockaddr *a
+@@ -787,8 +809,10 @@ static int make_sock(union mysockaddr *a
    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1 || !fix_fd(fd))
      goto err;
    
@@ -1427,7 +1426,7 @@
    
    if ((rc = bind(fd, (struct sockaddr *)addr, sa_len(addr))) == -1)
      goto err;
-@@ -748,12 +772,15 @@ static int make_sock(union mysockaddr *a
+@@ -817,12 +841,15 @@ static int make_sock(union mysockaddr *a
  #endif
  	}
      }
@@ -1443,7 +1442,7 @@
  int set_ipv6pktinfo(int fd)
  {
    int opt = 1;
-@@ -780,6 +807,7 @@ int set_ipv6pktinfo(int fd)
+@@ -849,6 +876,7 @@ int set_ipv6pktinfo(int fd)
  
    return 0;
  }
@@ -1451,7 +1450,7 @@
  
  
  /* Find the interface on which a TCP connection arrived, if possible, or zero otherwise. */
-@@ -821,6 +849,7 @@ int tcp_interface(int fd, int af)
+@@ -890,6 +918,7 @@ int tcp_interface(int fd, int af)
  	      }
  	}
      }
@@ -1459,7 +1458,7 @@
    else
      {
        /* Only the RFC-2292 API has the ability to find the interface for TCP connections,
-@@ -852,6 +881,7 @@ int tcp_interface(int fd, int af)
+@@ -921,6 +950,7 @@ int tcp_interface(int fd, int af)
                }
  	}
      }
@@ -1467,7 +1466,7 @@
  #endif /* Linux */
   
    return if_index;
-@@ -881,6 +911,7 @@ static struct listener *create_listeners
+@@ -950,6 +980,7 @@ static struct listener *create_listeners
  	  tftpfd = make_sock(addr, SOCK_DGRAM, dienow);
  	  addr->in.sin_port = save;
  	}
@@ -1475,7 +1474,7 @@
        else
  	{
  	  short save = addr->in6.sin6_port;
-@@ -888,6 +919,7 @@ static struct listener *create_listeners
+@@ -957,6 +988,7 @@ static struct listener *create_listeners
  	  tftpfd = make_sock(addr, SOCK_DGRAM, dienow);
  	  addr->in6.sin6_port = save;
  	}  
@@ -1483,7 +1482,7 @@
      }
  #endif
  
-@@ -920,10 +952,11 @@ void create_wildcard_listeners(void)
+@@ -990,10 +1022,11 @@ void create_wildcard_listeners(void)
  
    l = create_listeners(&addr, !!option_bool(OPT_TFTP), 1);
  
@@ -1497,7 +1496,7 @@
    addr.in6.sin6_family = AF_INET6;
    addr.in6.sin6_addr = in6addr_any;
    addr.in6.sin6_port = htons(daemon->port);
-@@ -933,6 +966,7 @@ void create_wildcard_listeners(void)
+@@ -1003,6 +1036,7 @@ void create_wildcard_listeners(void)
      l->next = l6;
    else 
      l = l6;
@@ -1505,7 +1504,7 @@
  
    daemon->listeners = l;
  }
-@@ -1132,6 +1166,7 @@ int random_sock(int family)
+@@ -1236,6 +1270,7 @@ int random_sock(int family)
  		addr.in.sin_len = sizeof(struct sockaddr_in);
  #endif
  	      }
@@ -1513,7 +1512,7 @@
  	    else
  	      {
  		addr.in6.sin6_addr = in6addr_any; 
-@@ -1140,6 +1175,7 @@ int random_sock(int family)
+@@ -1244,6 +1279,7 @@ int random_sock(int family)
  		addr.in6.sin6_len = sizeof(struct sockaddr_in6);
  #endif
  	      }
@@ -1521,7 +1520,7 @@
  	    
  	    if (bind(fd, (struct sockaddr *)&addr, sa_len(&addr)) == 0)
  	      return fd;
-@@ -1164,8 +1200,10 @@ int local_bind(int fd, union mysockaddr
+@@ -1268,8 +1304,10 @@ int local_bind(int fd, union mysockaddr
      {
        if (addr_copy.sa.sa_family == AF_INET)
  	addr_copy.in.sin_port = 0;
@@ -1532,7 +1531,7 @@
      }
    
    if (bind(fd, (struct sockaddr *)&addr_copy, sa_len(&addr_copy)) == -1)
-@@ -1180,7 +1218,7 @@ int local_bind(int fd, union mysockaddr
+@@ -1284,7 +1322,7 @@ int local_bind(int fd, union mysockaddr
            return setsockopt(fd, IPPROTO_IP, IP_UNICAST_IF, &ifindex_opt, sizeof(ifindex_opt)) == 0;
          }
  #endif
@@ -1541,7 +1540,7 @@
        if (addr_copy.sa.sa_family == AF_INET6)
          {
            uint32_t ifindex_opt = htonl(ifindex);
-@@ -1217,10 +1255,12 @@ static struct serverfd *allocate_sfd(uni
+@@ -1321,10 +1359,12 @@ static struct serverfd *allocate_sfd(uni
  	  addr->in.sin_port == htons(0)) 
  	return NULL;
  
@@ -1554,7 +1553,7 @@
      }
  
    if (intname && strlen(intname) != 0)
-@@ -1283,7 +1323,7 @@ void pre_allocate_sfds(void)
+@@ -1387,7 +1427,7 @@ void pre_allocate_sfds(void)
  #endif
        if ((sfd = allocate_sfd(&addr, "")))
  	sfd->preallocated = 1;
@@ -1563,7 +1562,7 @@
        memset(&addr, 0, sizeof(addr));
        addr.in6.sin6_family = AF_INET6;
        addr.in6.sin6_addr = in6addr_any;
-@@ -1293,6 +1333,7 @@ void pre_allocate_sfds(void)
+@@ -1397,6 +1437,7 @@ void pre_allocate_sfds(void)
  #endif
        if ((sfd = allocate_sfd(&addr, "")))
  	sfd->preallocated = 1;
@@ -1571,7 +1570,7 @@
      }
    
    for (srv = daemon->servers; srv; srv = srv->next)
-@@ -1625,6 +1666,7 @@ int reload_servers(char *fname)
+@@ -1729,6 +1770,7 @@ int reload_servers(char *fname)
  	  source_addr.in.sin_addr.s_addr = INADDR_ANY;
  	  source_addr.in.sin_port = htons(daemon->query_port);
  	}
@@ -1579,7 +1578,7 @@
        else 
  	{	
  	  int scope_index = 0;
-@@ -1652,6 +1694,10 @@ int reload_servers(char *fname)
+@@ -1756,6 +1798,10 @@ int reload_servers(char *fname)
  	  else
  	    continue;
  	}
@@ -1757,7 +1756,7 @@
  	else
  	  ret_err(gen_err);
   
-@@ -4077,8 +4103,10 @@ err:
+@@ -4083,8 +4109,10 @@ err:
  	  {
  	    if (strcmp(arg, "4") == 0)
  	      new->family = AF_INET;
@@ -1768,7 +1767,7 @@
  	    else
  	      ret_err_free(gen_err, new);
  	  } 
-@@ -4402,11 +4430,13 @@ err:
+@@ -4408,11 +4436,13 @@ err:
  		new->addr = addr.addr4;
  		new->flags |= HR_4;
  	      }
@@ -1782,7 +1781,7 @@
  	    else
  	      {
  		int nomem;
-@@ -5133,8 +5163,10 @@ void read_opts(int argc, char **argv, ch
+@@ -5139,8 +5169,10 @@ void read_opts(int argc, char **argv, ch
  	  {
  	    if (tmp->source_addr.sa.sa_family == AF_INET)
  	      tmp->source_addr.in.sin_port = htons(daemon->query_port);
@@ -1793,7 +1792,7 @@
  	  }
      } 
    
-@@ -5195,8 +5227,10 @@ void read_opts(int argc, char **argv, ch
+@@ -5201,8 +5233,10 @@ void read_opts(int argc, char **argv, ch
        for(tmp = daemon->if_addrs; tmp; tmp = tmp->next)
  	if (tmp->addr.sa.sa_family == AF_INET)
  	  tmp->addr.in.sin_port = htons(daemon->port);
@@ -2017,13 +2016,13 @@
        addr.pfra_net = 0x20;
 --- dnsmasq/src/tftp.c
 +++ dnsmasq/src/tftp.c
-@@ -61,11 +61,17 @@ void tftp_request(struct listener *liste
-   char *prefix = daemon->tftp_prefix;
+@@ -62,11 +62,17 @@ void tftp_request(struct listener *liste
    struct tftp_prefix *pref;
    union all_addr addra;
+   int family = listen->addr.sa.sa_family;
 +#ifdef HAVE_IPV6
    /* Can always get recvd interface for IPv6 */
-   int check_dest = !option_bool(OPT_NOWILD) || listen->family == AF_INET6;
+   int check_dest = !option_bool(OPT_NOWILD) || family == AF_INET6;
 +#else
 +  int check_dest = !option_bool(OPT_NOWILD);
 +#endif
@@ -2035,15 +2034,15 @@
  #if defined(HAVE_LINUX_NETWORK)
      char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
  #elif defined(HAVE_SOLARIS_NETWORK)
-@@ -171,6 +177,7 @@ void tftp_request(struct listener *liste
+@@ -172,6 +178,7 @@ void tftp_request(struct listener *liste
  	  
  #endif
  
 +#ifdef HAVE_IPV6
-       if (listen->family == AF_INET6)
+       if (family == AF_INET6)
          {
            for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-@@ -186,6 +193,7 @@ void tftp_request(struct listener *liste
+@@ -187,6 +194,7 @@ void tftp_request(struct listener *liste
                  if_index = p.p->ipi6_ifindex;
                }
          }
@@ -2051,18 +2050,18 @@
        
        if (!indextoname(listen->tftpfd, if_index, namebuff))
  	return;
-@@ -194,8 +202,10 @@ void tftp_request(struct listener *liste
+@@ -195,8 +203,10 @@ void tftp_request(struct listener *liste
        
        addra.addr4 = addr.in.sin_addr;
  
 +#ifdef HAVE_IPV6
-       if (listen->family == AF_INET6)
+       if (family == AF_INET6)
  	addra.addr6 = addr.in6.sin6_addr;
 +#endif
  
        if (daemon->tftp_interfaces)
  	{
-@@ -288,6 +298,7 @@ void tftp_request(struct listener *liste
+@@ -289,6 +299,7 @@ void tftp_request(struct listener *liste
        addr.in.sin_len = sizeof(addr.in);
  #endif
      }
@@ -2070,7 +2069,7 @@
    else
      {
        addr.in6.sin6_port = htons(port);
-@@ -297,6 +308,7 @@ void tftp_request(struct listener *liste
+@@ -298,6 +309,7 @@ void tftp_request(struct listener *liste
        addr.in6.sin6_len = sizeof(addr.in6);
  #endif
      }
@@ -2078,16 +2077,15 @@
  
    /* May reuse struct transfer from abandoned transfer in single port mode. */
    if (!transfer && !(transfer = whine_malloc(sizeof(struct tftp_transfer))))
-@@ -339,9 +351,10 @@ void tftp_request(struct listener *liste
+@@ -340,9 +352,11 @@ void tftp_request(struct listener *liste
  		{ 
- 		  if (listen->family == AF_INET)
+ 		  if (family == AF_INET)
  		    addr.in.sin_port = htons(port);
 +#ifdef HAVE_IPV6
  		  else
--		    addr.in6.sin6_port = htons(port);
--		  
-+		     addr.in6.sin6_port = htons(port);
+ 		    addr.in6.sin6_port = htons(port);
 +#endif
+ 		  
  		  continue;
  		}
  	      my_syslog(MS_TFTP | LOG_ERR, _("unable to get free port for TFTP"));

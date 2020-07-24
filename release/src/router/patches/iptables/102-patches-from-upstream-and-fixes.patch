@@ -1,0 +1,1862 @@
+Subject: [PATCH] iptables: patches from upstream + fixes and additions
+
+Fix "iptables getsockopt failed strangely" when querying revisions for non-existant matches and targets
+Fix for --random option in DNAT and REDIRECT
+Fix connlimit output for inverted --connlimit-above: ! > is <=, not <
+Fix CONNMARK mask initialisation
+Fix check_inverse() call in libipt_conntrack
+Fix ip6tables dest address printing
+Backport several other upstream patches
+...
+Add IPv6 support
+Add 'set-return' target to ipv6 CONNMARK module
+Add 'set-mark-return', 'and-mark-return' and 'or-mark-return' options to MARK module
+Add support for ip6tables “–goto” option
+Add userspace support for --log-macdecode option in LOG module (K24)
+Replace 'bcount' by the standard 'connbytes' match
+Fix multiport match (K24)
+Fix ip6tables so that writes rules for EACH of a hostname’s addresses
+Fix the very broken handling of redundant addresses
+Fix: was calloc'ing n^2*size when only needed n*size for lookup responses (iptables.c)
+Ignore IPT_F_NO_DEF_MATCH flag when comparing rule in libip4tc.c
+
+---
+
+--- iptables/extensions/libip6t_CONNMARK.c
++++ iptables/extensions/libip6t_CONNMARK.c
+@@ -26,7 +26,7 @@
+ 
+ #include <ip6tables.h>
+ #include <linux/netfilter_ipv6/ip6_tables.h>
+-#include "../include/linux/netfilter_ipv4/ipt_CONNMARK.h"
++#include <linux/netfilter_ipv4/ipt_CONNMARK.h>
+ 
+ #if 0
+ struct markinfo {
+@@ -42,6 +42,7 @@ help(void)
+ 	printf(
+ "CONNMARK target v%s options:\n"
+ "  --set-mark value[/mask]       Set conntrack mark value\n"
++"  --set-return [--mask mask]    Set conntrack mark & nfmark, RETURN\n"
+ "  --save-mark [--mask mask]     Save the packet nfmark in the connection\n"
+ "  --restore-mark [--mask mask]  Restore saved nfmark value\n"
+ "\n",
+@@ -53,6 +54,7 @@ static struct option opts[] = {
+ 	{ "save-mark", 0, 0, '2' },
+ 	{ "restore-mark", 0, 0, '3' },
+ 	{ "mask", 1, 0, '4' },
++	{ "set-return", 1, 0, '9' },
+ 	{ 0 }
+ };
+ 
+@@ -60,6 +62,11 @@ static struct option opts[] = {
+ static void
+ init(struct ip6t_entry_target *t, unsigned int *nfcache)
+ {
++	struct ipt_connmark_target_info *markinfo
++		= (struct ipt_connmark_target_info *)t->data;
++
++	markinfo->mask = 0xffffffffUL;
++
+ }
+ 
+ /* Function which parses command options; returns true if it
+@@ -72,12 +79,11 @@ parse(int c, char **argv, int invert, un
+ 	struct ipt_connmark_target_info *markinfo
+ 		= (struct ipt_connmark_target_info *)(*target)->data;
+ 
+-	markinfo->mask = 0xffffffffUL;
+-
+ 	switch (c) {
+ 		char *end;
+ 	case '1':
+-		markinfo->mode = IPT_CONNMARK_SET;
++	case '9':
++		markinfo->mode = (c == '1') ? IPT_CONNMARK_SET : IPT_CONNMARK_SET_RETURN;
+ 
+ 		markinfo->mark = strtoul(optarg, &end, 0);
+ 		if (*end == '/' && end[1] != '\0')
+@@ -152,7 +158,9 @@ print(const struct ip6t_ip6 *ip,
+ 		(const struct ipt_connmark_target_info *)target->data;
+ 	switch (markinfo->mode) {
+ 	case IPT_CONNMARK_SET:
+-	    printf("CONNMARK set ");
++	case IPT_CONNMARK_SET_RETURN:
++	    printf("CONNMARK set%s ", (markinfo->mode == IPT_CONNMARK_SET_RETURN) ? "-return" : "");
++
+ 	    print_mark(markinfo->mark);
+ 	    print_mask("/", markinfo->mask);
+ 	    printf(" ");
+@@ -181,7 +189,9 @@ save(const struct ip6t_ip6 *ip, const st
+ 
+ 	switch (markinfo->mode) {
+ 	case IPT_CONNMARK_SET:
+-	    printf("--set-mark ");
++	case IPT_CONNMARK_SET_RETURN:
++	    printf("--set-%s ", (markinfo->mode == IPT_CONNMARK_SET_RETURN) ? "return" : "mark");
++
+ 	    print_mark(markinfo->mark);
+ 	    print_mask("/", markinfo->mask);
+ 	    printf(" ");
+--- iptables/extensions/libip6t_LOG.c
++++ iptables/extensions/libip6t_LOG.c
+@@ -15,6 +15,12 @@
+ #define IP6T_LOG_MASK	0x0f
+ #endif
+ 
++#ifndef IPT_LOG_MACDECODE /* Old kernel */
++#define IPT_LOG_MACDECODE 0x20
++#undef  IPT_LOG_MASK
++#define IPT_LOG_MASK	0x2f
++#endif
++
+ #define LOG_DEFAULT_LEVEL LOG_WARNING
+ 
+ /* Function which prints out usage message. */
+@@ -28,7 +34,8 @@ help(void)
+ " --log-tcp-sequence		Log TCP sequence numbers.\n\n"
+ " --log-tcp-options		Log TCP options.\n\n"
+ " --log-ip-options		Log IP options.\n\n"
+-" --log-uid			Log UID owning the local socket.\n\n",
++" --log-uid			Log UID owning the local socket.\n\n"
++" --log-macdecode		Decode MAC addresses and protocol.\n\n",
+ IPTABLES_VERSION);
+ }
+ 
+@@ -39,6 +46,7 @@ static struct option opts[] = {
+ 	{ .name = "log-tcp-options",  .has_arg = 0, .flag = 0, .val = '2' },
+ 	{ .name = "log-ip-options",   .has_arg = 0, .flag = 0, .val = '3' },
+ 	{ .name = "log-uid",          .has_arg = 0, .flag = 0, .val = '4' },
++	{ .name = "log-macdecode",    .has_arg = 0, .flag = 0, .val = '5' },
+ 	{ .name = 0 }
+ };
+ 
+@@ -105,6 +113,7 @@ parse_level(const char *level)
+ #define IP6T_LOG_OPT_TCPOPT 0x08
+ #define IP6T_LOG_OPT_IPOPT 0x10
+ #define IP6T_LOG_OPT_UID 0x20
++#define IPT_LOG_OPT_MACDECODE 0x40
+ 
+ /* Function which parses command options; returns true if it
+    ate an option */
+@@ -192,6 +201,15 @@ parse(int c, char **argv, int invert, un
+ 		*flags |= IP6T_LOG_OPT_UID;
+ 		break;
+ 
++	case '5':
++		if (*flags & IPT_LOG_OPT_MACDECODE)
++			exit_error(PARAMETER_PROBLEM,
++				   "Can't specify --log-macdecode twice");
++
++		loginfo->logflags |= IPT_LOG_MACDECODE;
++		*flags |= IPT_LOG_OPT_MACDECODE;
++		break;
++
+ 	default:
+ 		return 0;
+ 	}
+@@ -237,6 +255,8 @@ print(const struct ip6t_ip6 *ip,
+ 			printf("ip-options ");
+ 		if (loginfo->logflags & IP6T_LOG_UID)
+ 			printf("uid ");
++		if (loginfo->logflags & IPT_LOG_MACDECODE)
++			printf("macdecode ");
+ 		if (loginfo->logflags & ~(IP6T_LOG_MASK))
+ 			printf("unknown-flags ");
+ 	}
+@@ -249,6 +269,7 @@ print(const struct ip6t_ip6 *ip,
+ static void
+ save(const struct ip6t_ip6 *ip, const struct ip6t_entry_target *target)
+ {
++#ifdef IPTABLES_SAVE
+ 	const struct ip6t_log_info *loginfo
+ 		= (const struct ip6t_log_info *)target->data;
+ 
+@@ -266,6 +287,9 @@ save(const struct ip6t_ip6 *ip, const st
+ 		printf("--log-ip-options ");
+ 	if (loginfo->logflags & IP6T_LOG_UID)
+ 		printf("--log-uid ");
++	if (loginfo->logflags & IPT_LOG_MACDECODE)
++		printf("--log-macdecode ");
++#endif
+ }
+ 
+ static
+--- iptables/extensions/libip6t_multiport.c
++++ iptables/extensions/libip6t_multiport.c
+@@ -9,6 +9,7 @@
+ #include "../include/linux/netfilter_ipv6/ip6t_multiport.h"
+ 
+ /* Function which prints out usage message. */
++#if 0
+ static void
+ help(void)
+ {
+@@ -25,6 +26,7 @@ help(void)
+ " NOTE: this kernel does not support port ranges in multiport.\n",
+ IPTABLES_VERSION);
+ }
++#endif
+ 
+ static void
+ help_v1(void)
+@@ -68,6 +70,7 @@ proto_to_name(u_int8_t proto)
+ 	}
+ }
+ 
++#if 0
+ static unsigned int
+ parse_multi_ports(const char *portstring, u_int16_t *ports, const char *proto)
+ {
+@@ -87,6 +90,7 @@ parse_multi_ports(const char *portstring
+ 	free(buffer);
+ 	return i;
+ }
++#endif
+ 
+ static void
+ parse_multi_ports_v1(const char *portstring, 
+@@ -151,6 +155,7 @@ check_proto(const struct ip6t_entry *ent
+ 
+ /* Function which parses command options; returns true if it
+    ate an option */
++#if 0
+ static int
+ parse(int c, char **argv, int invert, unsigned int *flags,
+       const struct ip6t_entry *entry,
+@@ -200,6 +205,7 @@ parse(int c, char **argv, int invert, un
+ 	*flags = 1;
+ 	return 1;
+ }
++#endif
+ 
+ static int
+ parse_v1(int c, char **argv, int invert, unsigned int *flags,
+@@ -278,6 +284,7 @@ print_port(u_int16_t port, u_int8_t prot
+ }
+ 
+ /* Prints out the matchinfo. */
++#if 0
+ static void
+ print(const struct ip6t_ip6 *ip,
+       const struct ip6t_entry_match *match,
+@@ -313,6 +320,7 @@ print(const struct ip6t_ip6 *ip,
+ 	}
+ 	printf(" ");
+ }
++#endif
+ 
+ static void
+ print_v1(const struct ip6t_ip6 *ip,
+@@ -358,6 +366,7 @@ print_v1(const struct ip6t_ip6 *ip,
+ }
+ 
+ /* Saves the union ip6t_matchinfo in parsable form to stdout. */
++#if 0
+ static void save(const struct ip6t_ip6 *ip, const struct ip6t_entry_match *match)
+ {
+ 	const struct ip6t_multiport *multiinfo
+@@ -384,6 +393,7 @@ static void save(const struct ip6t_ip6 *
+ 	}
+ 	printf(" ");
+ }
++#endif
+ 
+ static void save_v1(const struct ip6t_ip6 *ip, 
+ 		    const struct ip6t_entry_match *match)
+@@ -420,6 +430,7 @@ static void save_v1(const struct ip6t_ip
+ 	printf(" ");
+ }
+ 
++#if 0
+ static struct ip6tables_match multiport = {
+ 	.name		= "multiport",
+ 	.version	= IPTABLES_VERSION,
+@@ -433,6 +444,7 @@ static struct ip6tables_match multiport
+ 	.save		= &save,
+ 	.extra_opts	= opts,
+ };
++#endif
+ 
+ static struct ip6tables_match multiport_v1 = { 
+ 	.next		= NULL,
+@@ -453,6 +465,8 @@ static struct ip6tables_match multiport_
+ void
+ _init(void)
+ {
++#if 0
+ 	register_match6(&multiport);
++#endif
+ 	register_match6(&multiport_v1);
+ }
+--- iptables/extensions/libip6t_tcp.c
++++ iptables/extensions/libip6t_tcp.c
+@@ -16,7 +16,7 @@ help(void)
+ " --tcp-flags [!] mask comp	match when TCP flags & mask == comp\n"
+ "				(Flags: SYN ACK FIN RST URG PSH ALL NONE)\n"
+ "[!] --syn			match when only SYN flag set\n"
+-"				(equivalent to --tcp-flags SYN,RST,ACK SYN)\n"
++"				(equivalent to --tcp-flags SYN,RST,ACK,FIN SYN)\n"
+ " --source-port [!] port[:port]\n"
+ " --sport ...\n"
+ "				match source port(s)\n"
+@@ -181,7 +181,7 @@ parse(int c, char **argv, int invert, un
+ 			exit_error(PARAMETER_PROBLEM,
+ 				   "Only one of `--syn' or `--tcp-flags' "
+ 				   " allowed");
+-		parse_tcp_flags(tcpinfo, "SYN,RST,ACK", "SYN", invert);
++		parse_tcp_flags(tcpinfo, "SYN,RST,ACK,FIN", "SYN", invert);
+ 		*flags |= TCP_FLAGS;
+ 		break;
+ 
+--- iptables/extensions/libipt_connbytes.c
++++ iptables/extensions/libipt_connbytes.c
+@@ -158,11 +158,9 @@ print(const struct ipt_ip *ip,
+ 	else
+ 		printf("connbytes %llu:%llu ",sinfo->count.from,
+ 			sinfo->count.to);
+-
+-	fputs("connbytes mode ", stdout);
+ 	print_mode(sinfo);
+ 
+-	fputs("connbytes direction ", stdout);
++	fputs("direction ", stdout);
+ 	print_direction(sinfo);
+ }
+ 
+--- iptables/extensions/libipt_CONNMARK.c
++++ iptables/extensions/libipt_CONNMARK.c
+@@ -26,7 +26,7 @@
+ 
+ #include <iptables.h>
+ #include <linux/netfilter_ipv4/ip_tables.h>
+-#include "../include/linux/netfilter_ipv4/ipt_CONNMARK.h"
++#include <../include/linux/netfilter_ipv4/ipt_CONNMARK.h>
+ 
+ #if 0
+ struct markinfo {
+@@ -42,6 +42,7 @@ help(void)
+ 	printf(
+ "CONNMARK target v%s options:\n"
+ "  --set-mark value[/mask]       Set conntrack mark value\n"
++"  --set-return [--mask mask]    Set conntrack mark & nfmark, RETURN\n"
+ "  --save-mark [--mask mask]     Save the packet nfmark in the connection\n"
+ "  --restore-mark [--mask mask]  Restore saved nfmark value\n"
+ "\n",
+@@ -53,6 +54,7 @@ static struct option opts[] = {
+ 	{ "save-mark", 0, 0, '2' },
+ 	{ "restore-mark", 0, 0, '3' },
+ 	{ "mask", 1, 0, '4' },
++	{ "set-return", 1, 0, '9' },
+ 	{ 0 }
+ };
+ 
+@@ -60,6 +62,10 @@ static struct option opts[] = {
+ static void
+ init(struct ipt_entry_target *t, unsigned int *nfcache)
+ {
++	struct ipt_connmark_target_info *markinfo
++		= (struct ipt_connmark_target_info *)t->data;
++
++	markinfo->mask = 0xffffffffUL;
+ }
+ 
+ /* Function which parses command options; returns true if it
+@@ -72,12 +78,12 @@ parse(int c, char **argv, int invert, un
+ 	struct ipt_connmark_target_info *markinfo
+ 		= (struct ipt_connmark_target_info *)(*target)->data;
+ 
+-	markinfo->mask = 0xffffffffUL;
+-
+ 	switch (c) {
+ 		char *end;
+ 	case '1':
+-		markinfo->mode = IPT_CONNMARK_SET;
++	case '9':
++		markinfo->mode = (c == '1') ? IPT_CONNMARK_SET : IPT_CONNMARK_SET_RETURN;
++//		markinfo->mode = IPT_CONNMARK_SET;
+ 
+ 		markinfo->mark = strtoul(optarg, &end, 0);
+ 		if (*end == '/' && end[1] != '\0')
+@@ -152,7 +158,10 @@ print(const struct ipt_ip *ip,
+ 		(const struct ipt_connmark_target_info *)target->data;
+ 	switch (markinfo->mode) {
+ 	case IPT_CONNMARK_SET:
+-	    printf("CONNMARK set ");
++	case IPT_CONNMARK_SET_RETURN:
++	    printf("CONNMARK set%s ", (markinfo->mode == IPT_CONNMARK_SET_RETURN) ? "-return" : "");
++
++//	    printf("CONNMARK set ");
+ 	    print_mark(markinfo->mark);
+ 	    print_mask("/", markinfo->mask);
+ 	    printf(" ");
+@@ -181,7 +190,10 @@ save(const struct ipt_ip *ip, const stru
+ 
+ 	switch (markinfo->mode) {
+ 	case IPT_CONNMARK_SET:
+-	    printf("--set-mark ");
++	case IPT_CONNMARK_SET_RETURN:
++	    printf("--set-%s ", (markinfo->mode == IPT_CONNMARK_SET_RETURN) ? "return" : "mark");
++
++//	    printf("--set-mark ");
+ 	    print_mark(markinfo->mark);
+ 	    print_mask("/", markinfo->mask);
+ 	    printf(" ");
+--- iptables/extensions/libipt_conntrack.c
++++ iptables/extensions/libipt_conntrack.c
+@@ -228,7 +228,7 @@ static int conntrack_parse(int c, char **argv, int invert, unsigned int *flags,
+ 		break;
+ 
+ 	case '3':
+-		check_inverse(optarg, &invert, &optind, 9);
++		check_inverse(optarg, &invert, &optind, 0);
+ 
+ 		if (invert)
+ 			sinfo->invflags |= IPT_CONNTRACK_ORIGSRC;
+--- iptables/extensions/libipt_DNAT.c
++++ iptables/extensions/libipt_DNAT.c
+@@ -160,7 +160,7 @@ parse(int c, char **argv, int invert, un
+ 			exit_error(PARAMETER_PROBLEM,
+ 				   "Unexpected `!' after --to-destination");
+ 
+-		if (*flags) {
++		if (*flags & IPT_DNAT_OPT_DEST) {
+ 			if (!kernel_version)
+ 				get_kernel_version();
+ 			if (kernel_version > LINUX_VERSION(2, 6, 10))
+@@ -180,6 +180,7 @@ parse(int c, char **argv, int invert, un
+ 			*flags |= IPT_DNAT_OPT_RANDOM;
+ 		} else
+ 			*flags |= IPT_DNAT_OPT_RANDOM;
++		return 1;
+ 	default:
+ 		return 0;
+ 	}
+--- iptables/extensions/libipt_LOG.c
++++ iptables/extensions/libipt_LOG.c
+@@ -14,12 +14,18 @@
+ #ifndef IPT_LOG_UID /* Old kernel */
+ #define IPT_LOG_UID	0x08	/* Log UID owning local socket */
+ #undef  IPT_LOG_MASK
+ #define IPT_LOG_MASK	0x0f
+ #endif
+ 
++#ifndef IPT_LOG_MACDECODE /* Old kernel */
++#define IPT_LOG_MACDECODE 0x20
++#undef  IPT_LOG_MASK
++#define IPT_LOG_MASK	0x2f
++#endif
++
+ /* Function which prints out usage message. */
+ static void
+ help(void)
+ {
+ 	printf(
+ "LOG v%s options:\n"
+@@ -28,7 +34,8 @@ help(void)
+ " --log-tcp-sequence		Log TCP sequence numbers.\n\n"
+ " --log-tcp-options		Log TCP options.\n\n"
+ " --log-ip-options		Log IP options.\n\n"
+-" --log-uid			Log UID owning the local socket.\n\n",
++" --log-uid			Log UID owning the local socket.\n\n"
++" --log-macdecode		Decode MAC addresses and protocol.\n\n",
+ IPTABLES_VERSION);
+ }
+ 
+@@ -37,10 +44,11 @@ static struct option opts[] = {
+ 	{ .name = "log-prefix",       .has_arg = 1, .flag = 0, .val = '#' },
+ 	{ .name = "log-tcp-sequence", .has_arg = 0, .flag = 0, .val = '1' },
+ 	{ .name = "log-tcp-options",  .has_arg = 0, .flag = 0, .val = '2' },
+ 	{ .name = "log-ip-options",   .has_arg = 0, .flag = 0, .val = '3' },
+ 	{ .name = "log-uid",          .has_arg = 0, .flag = 0, .val = '4' },
++	{ .name = "log-macdecode",    .has_arg = 0, .flag = 0, .val = '5' },
+ 	{ .name = 0 }
+ };
+ 
+ /* Initialize the target. */
+ static void
+@@ -105,6 +113,7 @@ parse_level(const char *level)
+ #define IPT_LOG_OPT_TCPOPT 0x08
+ #define IPT_LOG_OPT_IPOPT 0x10
+ #define IPT_LOG_OPT_UID 0x20
++#define IPT_LOG_OPT_MACDECODE 0x40
+ 
+ /* Function which parses command options; returns true if it
+    ate an option */
+@@ -189,12 +198,21 @@ parse(int c, char **argv, int invert, un
+ 				   "Can't specify --log-uid twice");
+ 
+ 		loginfo->logflags |= IPT_LOG_UID;
+ 		*flags |= IPT_LOG_OPT_UID;
+ 		break;
+ 
++	case '5':
++		if (*flags & IPT_LOG_OPT_MACDECODE)
++			exit_error(PARAMETER_PROBLEM,
++				   "Can't specify --log-macdecode twice");
++
++		loginfo->logflags |= IPT_LOG_MACDECODE;
++		*flags |= IPT_LOG_OPT_MACDECODE;
++		break;
++
+ 	default:
+ 		return 0;
+ 	}
+ 
+ 	return 1;
+ }
+@@ -237,6 +255,8 @@ print(const struct ipt_ip *ip,
+ 			printf("ip-options ");
+ 		if (loginfo->logflags & IPT_LOG_UID)
+ 			printf("uid ");
++		if (loginfo->logflags & IPT_LOG_MACDECODE)
++			printf("macdecode ");
+ 		if (loginfo->logflags & ~(IPT_LOG_MASK))
+ 			printf("unknown-flags ");
+ 	}
+@@ -246,12 +266,13 @@ print(const struct ipt_ip *ip,
+ }
+ 
+ /* Saves the union ipt_targinfo in parsable form to stdout. */
+ static void
+ save(const struct ipt_ip *ip, const struct ipt_entry_target *target)
+ {
++#ifdef IPTABLES_SAVE
+ 	const struct ipt_log_info *loginfo
+ 		= (const struct ipt_log_info *)target->data;
+ 
+ 	if (strcmp(loginfo->prefix, "") != 0)
+ 		printf("--log-prefix \"%s\" ", loginfo->prefix);
+ 
+@@ -266,6 +287,9 @@ save(const struct ipt_ip *ip, const stru
+ 		printf("--log-ip-options ");
+ 	if (loginfo->logflags & IPT_LOG_UID)
+ 		printf("--log-uid ");
++	if (loginfo->logflags & IPT_LOG_MACDECODE)
++		printf("--log-macdecode ");
++#endif
+ }
+ 
+ static
+--- iptables/extensions/libipt_MARK.c
++++ iptables/extensions/libipt_MARK.c
+@@ -18,6 +18,9 @@ help(void)
+ "  --set-mark value                   Set nfmark value\n"
+ "  --and-mark value                   Binary AND the nfmark with value\n"
+ "  --or-mark  value                   Binary OR  the nfmark with value\n"
++"  --set-mark-return value            Set nfmark value and RETURN\n"
++"  --and-mark-return value            Binary AND the nfmark with value and RETURN\n"
++"  --or-mark-return  value            Binary OR  the nfmark with value and RETURN\n"
+ "\n",
+ IPTABLES_VERSION);
+ }
+@@ -26,6 +29,9 @@ static struct option opts[] = {
+ 	{ "set-mark", 1, 0, '1' },
+ 	{ "and-mark", 1, 0, '2' },
+ 	{ "or-mark", 1, 0, '3' },
++	{ "set-mark-return", 1, 0, '4' },
++	{ "and-mark-return", 1, 0, '5' },
++	{ "or-mark-return", 1, 0, '6' },
+ 	{ 0 }
+ };
+ 
+@@ -66,6 +72,26 @@ parse_v0(int c, char **argv, int invert,
+ 	case '3':
+ 		exit_error(PARAMETER_PROBLEM,
+ 			   "MARK target: kernel too old for --or-mark");
++	case '4':
++#ifdef KERNEL_64_USERSPACE_32
++		if (string_to_number_ll(optarg, 0, 0, 
++				     &markinfo->mark))
++#else
++		if (string_to_number_l(optarg, 0, 0, 
++				     &markinfo->mark))
++#endif
++			exit_error(PARAMETER_PROBLEM, "Bad MARK value `%s'", optarg);
++		if (*flags)
++			exit_error(PARAMETER_PROBLEM,
++			           "MARK target: Can't specify --set-mark-return twice");
++		*flags = 1;
++		break;
++	case '5':
++		exit_error(PARAMETER_PROBLEM,
++			   "MARK target: kernel too old for --and-mark-return");
++	case '6':
++		exit_error(PARAMETER_PROBLEM,
++			   "MARK target: kernel too old for --or-mark-return");
+ 	default:
+ 		return 0;
+ 	}
+@@ -78,7 +104,7 @@ final_check(unsigned int flags)
+ {
+ 	if (!flags)
+ 		exit_error(PARAMETER_PROBLEM,
+-		           "MARK target: Parameter --set/and/or-mark"
++		           "MARK target: Parameter --set/and/or/set-return/and-return/or-return-mark"
+ 			   " is required");
+ }
+ 
+@@ -102,6 +128,15 @@ parse_v1(int c, char **argv, int invert,
+ 	case '3':
+ 	        markinfo->mode = IPT_MARK_OR;
+ 		break;
++	case '4':
++	        markinfo->mode = IPT_MARK_SET_RETURN;
++		break;
++	case '5':
++	        markinfo->mode = IPT_MARK_AND_RETURN;
++		break;
++	case '6':
++	        markinfo->mode = IPT_MARK_OR_RETURN;
++		break;
+ 	default:
+ 		return 0;
+ 	}
+@@ -177,6 +212,15 @@ print_v1(const struct ipt_ip *ip,
+ 	case IPT_MARK_OR: 
+ 		printf("MARK or ");
+ 		break;
++	case IPT_MARK_SET_RETURN:
++		printf("MARK set RETURN");
++		break;
++	case IPT_MARK_AND_RETURN:
++		printf("MARK and RETURN");
++		break;
++	case IPT_MARK_OR_RETURN: 
++		printf("MARK or RETURN");
++		break;
+ 	}
+ 	print_mark(markinfo->mark);
+ }
+@@ -198,6 +242,15 @@ save_v1(const struct ipt_ip *ip, const s
+ 	case IPT_MARK_OR: 
+ 		printf("--or-mark ");
+ 		break;
++	case IPT_MARK_SET_RETURN:
++		printf("--set-mark-return ");
++		break;
++	case IPT_MARK_AND_RETURN:
++		printf("--and-mark-return ");
++		break;
++	case IPT_MARK_OR_RETURN: 
++		printf("--or-mark-return ");
++		break;
+ 	}
+ 	print_mark(markinfo->mark);
+ }
+--- iptables/extensions/libipt_multiport.c
++++ iptables/extensions/libipt_multiport.c
+@@ -9,6 +9,7 @@
+ #include "../include/linux/netfilter_ipv4/ipt_multiport.h"
+ 
+ /* Function which prints out usage message. */
++#if 0
+ static void
+ help(void)
+ {
+@@ -25,6 +26,7 @@ help(void)
+ " NOTE: this kernel does not support port ranges in multiport.\n",
+ IPTABLES_VERSION);
+ }
++#endif
+ 
+ static void
+ help_v1(void)
+@@ -70,6 +72,7 @@ proto_to_name(u_int8_t proto)
+ 	}
+ }
+ 
++#if 0
+ static unsigned int
+ parse_multi_ports(const char *portstring, u_int16_t *ports, const char *proto)
+ {
+@@ -89,6 +92,7 @@ parse_multi_ports(const char *portstring
+ 	free(buffer);
+ 	return i;
+ }
++#endif
+ 
+ static void
+ parse_multi_ports_v1(const char *portstring, 
+@@ -158,6 +162,7 @@ check_proto(const struct ipt_entry *entr
+ 
+ /* Function which parses command options; returns true if it
+    ate an option */
++#if 0
+ static int
+ parse(int c, char **argv, int invert, unsigned int *flags,
+       const struct ipt_entry *entry,
+@@ -207,6 +212,7 @@ parse(int c, char **argv, int invert, un
+ 	*flags = 1;
+ 	return 1;
+ }
++#endif
+ 
+ static int
+ parse_v1(int c, char **argv, int invert, unsigned int *flags,
+@@ -285,6 +291,7 @@ print_port(u_int16_t port, u_int8_t prot
+ }
+ 
+ /* Prints out the matchinfo. */
++#if 0
+ static void
+ print(const struct ipt_ip *ip,
+       const struct ipt_entry_match *match,
+@@ -320,6 +327,7 @@ print(const struct ipt_ip *ip,
+ 	}
+ 	printf(" ");
+ }
++#endif
+ 
+ static void
+ print_v1(const struct ipt_ip *ip,
+@@ -365,6 +373,7 @@ print_v1(const struct ipt_ip *ip,
+ }
+ 
+ /* Saves the union ipt_matchinfo in parsable form to stdout. */
++#if 0
+ static void save(const struct ipt_ip *ip, const struct ipt_entry_match *match)
+ {
+ 	const struct ipt_multiport *multiinfo
+@@ -391,6 +400,7 @@ static void save(const struct ipt_ip *ip
+ 	}
+ 	printf(" ");
+ }
++#endif
+ 
+ static void save_v1(const struct ipt_ip *ip, 
+ 		    const struct ipt_entry_match *match)
+@@ -427,6 +437,7 @@ static void save_v1(const struct ipt_ip
+ 	printf(" ");
+ }
+ 
++#if 0
+ static struct iptables_match multiport = { 
+ 	.next		= NULL,
+ 	.name		= "multiport",
+@@ -442,6 +453,7 @@ static struct iptables_match multiport =
+ 	.save		= &save,
+ 	.extra_opts	= opts
+ };
++#endif
+ 
+ static struct iptables_match multiport_v1 = { 
+ 	.next		= NULL,
+@@ -462,6 +474,8 @@ static struct iptables_match multiport_v
+ void
+ _init(void)
+ {
++#if 0
+ 	register_match(&multiport);
++#endif
+ 	register_match(&multiport_v1);
+ }
+--- iptables/extensions/libipt_quota.c
++++ iptables/extensions/libipt_quota.c
+@@ -3,13 +3,12 @@
+  *
+  * Sam Johnston <samj@samj.net>
+  */
+-#include <stddef.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <getopt.h>
+ #include <iptables.h>
+ 
+-#include <linux/netfilter/xt_quota.h>
++#include <linux/netfilter_ipv4/ipt_quota.h>
+ #include <linux/netfilter_ipv4/ip_tables.h>
+ 
+ static struct option opts[] = {
+@@ -29,7 +28,7 @@ help(void)
+ static void
+ print(const struct ipt_ip *ip, const struct ipt_entry_match *match, int numeric)
+ {
+-        struct xt_quota_info *q = (struct xt_quota_info *) match->data;
++        struct ipt_quota_info *q = (struct ipt_quota_info *) match->data;
+         printf("quota: %llu bytes", (unsigned long long) q->quota);
+ }
+ 
+@@ -37,7 +36,7 @@ print(const struct ipt_ip *ip, const str
+ static void
+ save(const struct ipt_ip *ip, const struct ipt_entry_match *match)
+ {
+-        struct xt_quota_info *q = (struct xt_quota_info *) match->data;
++        struct ipt_quota_info *q = (struct ipt_quota_info *) match->data;
+         printf("--quota %llu ", (unsigned long long) q->quota);
+ }
+ 
+@@ -63,7 +62,7 @@ parse(int c, char **argv, int invert, un
+       const struct ipt_entry *entry,
+       unsigned int *nfcache, struct ipt_entry_match **match)
+ {
+-        struct xt_quota_info *info = (struct xt_quota_info *) (*match)->data;
++        struct ipt_quota_info *info = (struct ipt_quota_info *) (*match)->data;
+ 
+         switch (c) {
+         case '1':
+@@ -90,8 +89,8 @@ struct iptables_match quota = {
+ 	.next		= NULL,
+ 	.name		= "quota",
+ 	.version	= IPTABLES_VERSION,
+-	.size		= IPT_ALIGN(sizeof (struct xt_quota_info)),
+-	.userspacesize	= offsetof(struct xt_quota_info, quota),
++	.size		= IPT_ALIGN(sizeof (struct ipt_quota_info)),
++	.userspacesize	= IPT_ALIGN(sizeof (struct ipt_quota_info)),
+ 	.help		= &help,
+ 	.parse		= &parse,
+ 	.final_check	= &final_check,
+--- iptables/extensions/libipt_REDIRECT.c
++++ iptables/extensions/libipt_REDIRECT.c
+@@ -24,7 +24,7 @@ IPTABLES_VERSION);
+ 
+ static struct option opts[] = {
+ 	{ "to-ports", 1, 0, '1' },
+-	{ "random", 1, 0, '2' },
++	{ "random", 0, 0, '2' },
+ 	{ 0 }
+ };
+ 
+--- iptables/extensions/libipt_tcp.c
++++ iptables/extensions/libipt_tcp.c
+@@ -16,7 +16,7 @@ help(void)
+ " --tcp-flags [!] mask comp	match when TCP flags & mask == comp\n"
+ "				(Flags: SYN ACK FIN RST URG PSH ALL NONE)\n"
+ "[!] --syn			match when only SYN flag set\n"
+-"				(equivalent to --tcp-flags SYN,RST,ACK SYN)\n"
++"				(equivalent to --tcp-flags SYN,RST,ACK,FIN SYN)\n"
+ " --source-port [!] port[:port]\n"
+ " --sport ...\n"
+ "				match source port(s)\n"
+--- iptables/include/linux/netfilter_ipv4/ipt_CONNMARK.h
++++ iptables/include/linux/netfilter_ipv4/ipt_CONNMARK.h
+@@ -13,7 +13,8 @@
+ enum {
+ 	IPT_CONNMARK_SET = 0,
+ 	IPT_CONNMARK_SAVE,
+-	IPT_CONNMARK_RESTORE
++	IPT_CONNMARK_RESTORE,
++	IPT_CONNMARK_SET_RETURN
+ };
+ 
+ struct ipt_connmark_target_info {
+--- iptables/include/linux/netfilter_ipv4/ipt_MARK.h
++++ iptables/include/linux/netfilter_ipv4/ipt_MARK.h
+@@ -12,7 +12,10 @@ struct ipt_mark_target_info {
+ enum {
+ 	IPT_MARK_SET=0,
+ 	IPT_MARK_AND,
+-	IPT_MARK_OR
++    IPT_MARK_OR,
++    IPT_MARK_SET_RETURN,
++    IPT_MARK_AND_RETURN,
++    IPT_MARK_OR_RETURN
+ };
+ 
+ struct ipt_mark_target_info_v1 {
+--- iptables/ip6tables.c
++++ iptables/ip6tables.c
+@@ -134,6 +134,7 @@ static struct option original_opts[] = {
+ 	{ "line-numbers", 0, 0, '0' },
+ 	{ "modprobe", 1, 0, 'M' },
+ 	{ "set-counters", 1, 0, 'c' },
++	{ "goto", 1, 0, 'g' },
+ 	{ 0 }
+ };
+ 
+@@ -378,6 +379,10 @@ exit_printhelp(struct ip6tables_rule_mat
+ "				network interface name ([+] for wildcard)\n"
+ "  --jump	-j target\n"
+ "				target for rule (may load target extension)\n"
++#ifdef IP6T_F_GOTO
++"  --goto	-g chain\n"
++"				jump to chain with no return\n"
++#endif
+ "  --match	-m match\n"
+ "				extended match (may load extension)\n"
+ "  --numeric	-n		numeric output of addresses and ports\n"
+@@ -546,15 +551,15 @@ host_to_addr(const char *name, unsigned
+ {
+ 	struct addrinfo hints;
+         struct addrinfo *res;
+-        static struct in6_addr *addr;
++	struct addrinfo *p;
++	struct in6_addr *addr;
+ 	int err;
++	unsigned int i;
+ 
+ 	memset(&hints, 0, sizeof(hints));
+         hints.ai_flags=AI_CANONNAME;
+         hints.ai_family=AF_INET6;
+         hints.ai_socktype=SOCK_RAW;
+-        hints.ai_protocol=41;
+-        hints.ai_next=NULL;
+ 
+ 	*naddr = 0;
+         if ( (err=getaddrinfo(name, NULL, &hints, &res)) != 0 ){
+@@ -563,20 +568,19 @@ host_to_addr(const char *name, unsigned
+ #endif
+                 return (struct in6_addr *) NULL;
+         } else {
+-		if (res->ai_family != AF_INET6 ||
+-		    res->ai_addrlen != sizeof(struct sockaddr_in6))
+-			return (struct in6_addr *) NULL;
+-
++		/* Find length of address-chain */
++		for (p = res; p != NULL; p = p->ai_next)
++			(*naddr)++;
+ #ifdef DEBUG
+                 fprintf(stderr, "resolved: len=%d  %s ", res->ai_addrlen, 
+                     addr_to_numeric(&(((struct sockaddr_in6 *)res->ai_addr)->sin6_addr)));
+ #endif
+-		/* Get the first element of the address-chain */
+-		addr = fw_calloc(1, sizeof(struct in6_addr));
+-		in6addrcpy(addr, (struct in6_addr *)
+-			&((struct sockaddr_in6 *)res->ai_addr)->sin6_addr);
++		addr = fw_calloc(*naddr, sizeof(struct in6_addr));
++		i = 0;
++		for(p = res; p != NULL; p = p->ai_next)
++			in6addrcpy(&(addr[i++]), (struct in6_addr *)
++				&((struct sockaddr_in6 *)p->ai_addr)->sin6_addr);
+ 		freeaddrinfo(res);
+-		*naddr = 1;
+ 		return addr;
+ 	}
+ 
+@@ -734,8 +738,7 @@ parse_hostnetworkmask(const char *name,
+ 		j++;
+ 		for (k = 0; k < j - 1; k++) {
+ 			if (IN6_ARE_ADDR_EQUAL(&addrp[k], &addrp[j - 1])) {
+-				(*naddrs)--;
+-				j--;
++				in6addrcpy( &addrp[--j], &addrp[--(*naddrs)] );
+ 				break;
+ 			}
+ 		}
+@@ -868,6 +871,9 @@ parse_protocol(const char *s)
+ 			for (i = 0;
+ 			     i < sizeof(chain_protos)/sizeof(struct pprot);
+ 			     i++) {
++				if (chain_protos[i].name == NULL)
++					continue;
++
+ 				if (strcmp(s, chain_protos[i].name) == 0) {
+ 					proto = chain_protos[i].num;
+ 					break;
+@@ -1091,6 +1097,9 @@ merge_options(struct option *oldopts, co
+ 	unsigned int num_old, num_new, i;
+ 	struct option *merge;
+ 
++	if (newopts == NULL)
++		return oldopts;
++
+ 	for (num_old = 0; oldopts[num_old].name; num_old++);
+ 	for (num_new = 0; newopts[num_new].name; num_new++);
+ 
+@@ -1130,7 +1139,7 @@ static int compatible_revision(const cha
+ 	max_rev = getsockopt(sockfd, IPPROTO_IPV6, opt, &rev, &s);
+ 	if (max_rev < 0) {
+ 		/* Definitely don't support this? */
+-		if (errno == EPROTONOSUPPORT) {
++		if (errno == ENOENT || errno == EPROTONOSUPPORT) {
+ 			close(sockfd);
+ 			return 0;
+ 		} else if (errno == ENOPROTOOPT) {
+@@ -1427,19 +1436,24 @@ print_firewall(const struct ip6t_entry *
+ 	fputc(fw->ipv6.invflags & IP6T_INV_DSTIP ? '!' : ' ', stdout);
+ 	if (!memcmp(&fw->ipv6.dmsk, &in6addr_any, sizeof in6addr_any)
+ 	    && !(format & FMT_NUMERIC))
+-		printf(FMT("%-19s","-> %s"), "anywhere");
++		printf(FMT("%-19s ","-> %s"), "anywhere");
+ 	else {
+ 		if (format & FMT_NUMERIC)
+ 			sprintf(buf, "%s", addr_to_numeric(&(fw->ipv6.dst)));
+ 		else
+ 			sprintf(buf, "%s", addr_to_anyname(&(fw->ipv6.dst)));
+ 		strcat(buf, mask_to_numeric(&(fw->ipv6.dmsk)));
+-		printf(FMT("%-19s","-> %s"), buf);
++		printf(FMT("%-19s ","-> %s"), buf);
+ 	}
+ 
+ 	if (format & FMT_NOTABLE)
+ 		fputs("  ", stdout);
+ 
++#ifdef IP6T_F_GOTO
++	if(fw->ipv6.flags & IP6T_F_GOTO)
++		printf("[goto] ");
++#endif
++
+ 	IP6T_MATCH_ITERATE(fw, print_match, &fw->ipv6, format & FMT_NUMERIC);
+ 
+ 	if (target) {
+@@ -1535,7 +1549,8 @@ insert_entry(const ip6t_chainlabel chain
+ }
+ 
+ static unsigned char *
+-make_delete_mask(struct ip6t_entry *fw, struct ip6tables_rule_match *matches)
++make_delete_mask(struct ip6t_entry *fw, struct ip6tables_rule_match *matches,
++		 const struct ip6tables_target *target)
+ {
+ 	/* Establish mask for comparison */
+ 	unsigned int size;
+@@ -1548,7 +1563,7 @@ make_delete_mask(struct ip6t_entry *fw,
+ 
+ 	mask = fw_calloc(1, size
+ 			 + IP6T_ALIGN(sizeof(struct ip6t_entry_target))
+-			 + ip6tables_targets->size);
++			 + target->size);
+ 
+ 	memset(mask, 0xFF, sizeof(struct ip6t_entry));
+ 	mptr = mask + sizeof(struct ip6t_entry);
+@@ -1562,7 +1577,7 @@ make_delete_mask(struct ip6t_entry *fw,
+ 
+ 	memset(mptr, 0xFF, 
+ 	       IP6T_ALIGN(sizeof(struct ip6t_entry_target))
+-	       + ip6tables_targets->userspacesize);
++	       + target->userspacesize);
+ 
+ 	return mask;
+ }
+@@ -1576,13 +1591,14 @@ delete_entry(const ip6t_chainlabel chain
+ 	     const struct in6_addr daddrs[],
+ 	     int verbose,
+ 	     ip6tc_handle_t *handle,
+-	     struct ip6tables_rule_match *matches)
++	     struct ip6tables_rule_match *matches,
++	     const struct ip6tables_target *target)
+ {
+ 	unsigned int i, j;
+ 	int ret = 1;
+ 	unsigned char *mask;
+ 
+-	mask = make_delete_mask(fw, matches);
++	mask = make_delete_mask(fw, matches, target);
+ 	for (i = 0; i < nsaddrs; i++) {
+ 		fw->ipv6.src = saddrs[i];
+ 		for (j = 0; j < ndaddrs; j++) {
+@@ -1884,6 +1900,7 @@ int do_command6(int argc, char *argv[],
+ 	const char *jumpto = "";
+ 	char *protocol = NULL;
+ 	int proto_used = 0;
++	unsigned long long cnt;
+ 
+ 	memset(&fw, 0, sizeof(fw));
+ 
+@@ -1906,7 +1923,7 @@ int do_command6(int argc, char *argv[],
+ 	opterr = 0;
+ 
+ 	while ((c = getopt_long(argc, argv,
+-	   "-A:D:R:I:L::M:F::Z::N:X::E:P:Vh::o:p:s:d:j:i:bvnt:m:xc:",
++	   "-A:D:R:I:L::M:F::Z::N:X::E:P:Vh::o:p:s:d:j:i:bvnt:m:xc:g:",
+ 					   opts, NULL)) != -1) {
+ 		switch (c) {
+ 			/*
+@@ -2081,6 +2098,15 @@ int do_command6(int argc, char *argv[],
+ 			dhostnetworkmask = argv[optind-1];
+ 			break;
+ 
++#ifdef IP6T_F_GOTO
++		case 'g':
++			set_option(&options, OPT_JUMP, &fw.ipv6.invflags,
++				   invert);
++			fw.ipv6.flags |= IP6T_F_GOTO;
++			jumpto = parse_target(optarg);
++			break;
++#endif
++
+ 		case 'j':
+ 			set_option(&options, OPT_JUMP, &fw.ipv6.invflags,
+ 				   invert);
+@@ -2099,7 +2125,12 @@ int do_command6(int argc, char *argv[],
+ 				strcpy(target->t->u.user.name, jumpto);
+ 				if (target->init != NULL)
+ 					target->init(target->t, &fw.nfcache);
+-				opts = merge_options(opts, target->extra_opts, &target->option_offset);
++				opts = merge_options(opts,
++						     target->extra_opts,
++						     &target->option_offset);
++				if (opts == NULL)
++					exit_error(OTHER_PROBLEM,
++						   "can't alloc memory!");
+ 			}
+ 			break;
+ 
+@@ -2160,7 +2191,7 @@ int do_command6(int argc, char *argv[],
+ 			if (invert)
+ 				exit_error(PARAMETER_PROBLEM,
+ 					   "unexpected ! flag before --table");
+-			*table = argv[optind-1];
++			*table = optarg;
+ 			break;
+ 
+ 		case 'x':
+@@ -2198,16 +2229,18 @@ int do_command6(int argc, char *argv[],
+ 					"-%c requires packet and byte counter",
+ 					opt2char(OPT_COUNTERS));
+ 
+-			if (sscanf(pcnt, "%llu", (unsigned long long *)&fw.counters.pcnt) != 1)
++			if (sscanf(pcnt, "%llu", (unsigned long long *)&cnt) != 1)
+ 				exit_error(PARAMETER_PROBLEM,
+ 					"-%c packet counter not numeric",
+ 					opt2char(OPT_COUNTERS));
++			fw.counters.pcnt = cnt;
+ 
+-			if (sscanf(bcnt, "%llu", (unsigned long long *)&fw.counters.bcnt) != 1)
++			if (sscanf(bcnt, "%llu", (unsigned long long *)&cnt) != 1)
+ 				exit_error(PARAMETER_PROBLEM,
+ 					"-%c byte counter not numeric",
+ 					opt2char(OPT_COUNTERS));
+-			
++			fw.counters.bcnt = cnt;
++
+ 			break;
+ 
+ 
+@@ -2225,13 +2258,19 @@ int do_command6(int argc, char *argv[],
+ 			exit_tryhelp(2);
+ 
+ 		default:
+-			if (!target
+-			    || !(target->parse(c - target->option_offset,
++			if (target == NULL || target->parse == NULL ||
++			    c < target->option_offset ||
++			    c >= target->option_offset + OPTION_OFFSET ||
++			    !(target->parse(c - target->option_offset,
+ 					       argv, invert,
+ 					       &target->tflags,
+ 					       &fw, &target->t))) {
+ 				for (matchp = matches; matchp; matchp = matchp->next) {
+-					if (matchp->completed) 
++					if (matchp->completed ||
++					    matchp->match->parse == NULL)
++						continue;
++					if (c < matchp->match->option_offset ||
++					    c >= matchp->match->option_offset + OPTION_OFFSET)
+ 						continue;
+ 					if (matchp->match->parse(c - matchp->match->option_offset,
+ 						     argv, invert,
+@@ -2301,8 +2340,7 @@ int do_command6(int argc, char *argv[],
+ 
+ 				if (!m)
+ 					exit_error(PARAMETER_PROBLEM,
+-						   "Unknown arg `%s'",
+-						   argv[optind-1]);
++						   "Unknown arg `%s'", optarg);
+ 			}
+ 		}
+ 		invert = FALSE;
+@@ -2427,6 +2465,11 @@ int do_command6(int argc, char *argv[],
+ 			 * We cannot know if the plugin is corrupt, non
+ 			 * existant OR if the user just misspelled a
+ 			 * chain. */
++#ifdef IP6T_F_GOTO
++			if (fw.ipv6.flags & IP6T_F_GOTO)
++				exit_error(PARAMETER_PROBLEM,
++					   "goto '%s' is not a chain\n", jumpto);
++#endif
+ 			find_target(jumpto, LOAD_MUST_SUCCEED);
+ 		} else {
+ 			e = generate_entry(&fw, matches, target->t);
+@@ -2445,7 +2488,7 @@ int do_command6(int argc, char *argv[],
+ 		ret = delete_entry(chain, e,
+ 				   nsaddrs, saddrs, ndaddrs, daddrs,
+ 				   options&OPT_VERBOSE,
+-				   handle, matches);
++				   handle, matches, target);
+ 		break;
+ 	case CMD_DELETE_NUM:
+ 		ret = ip6tc_delete_num_entry(chain, rulenum - 1, handle);
+@@ -2513,12 +2556,8 @@ int do_command6(int argc, char *argv[],
+ 		e = NULL;
+ 	}
+ 
+-	for (c = 0; c < nsaddrs; c++)
+-		free(&saddrs[c]);
+-
+-	for (c = 0; c < ndaddrs; c++)
+-		free(&daddrs[c]);
+-
++	free(saddrs);
++	free(daddrs);
+ 	free_opts(1);
+ 
+ 	return ret;
+--- iptables/ip6tables-restore.c
++++ iptables/ip6tables-restore.c
+@@ -76,7 +76,15 @@ ip6tc_handle_t create_handle(const char
+ 
+ static int parse_counters(char *string, struct ip6t_counters *ctr)
+ {
+-	return (sscanf(string, "[%llu:%llu]", (unsigned long long *)&ctr->pcnt, (unsigned long long *)&ctr->bcnt) == 2);
++	unsigned long long pcnt, bcnt;
++	int ret;
++
++	ret = sscanf(string, "[%llu:%llu]",
++		     (unsigned long long *)&pcnt,
++		     (unsigned long long *)&bcnt);
++	ctr->pcnt = pcnt;
++	ctr->bcnt = bcnt;
++	return ret == 2;
+ }
+ 
+ /* global new argv and argc */
+@@ -102,7 +110,11 @@ static void free_argv(void) {
+ 		free(newargv[i]);
+ }
+ 
++#ifdef IPTABLES_MULTI
++int ip6tables_restore_main(int argc, char *argv[])
++#else
+ int main(int argc, char *argv[])
++#endif
+ {
+ 	ip6tc_handle_t handle = NULL;
+ 	char buffer[10240];
+@@ -298,8 +310,9 @@ int main(int argc, char *argv[])
+ 			char *parsestart;
+ 
+ 			/* the parser */
+-			char *param_start, *curchar;
+-			int quote_open;
++			char *curchar;
++			int quote_open, escaped;
++			size_t param_len;
+ 
+ 			/* reset the newargv */
+ 			newargc = 0;
+@@ -346,44 +359,46 @@ int main(int argc, char *argv[])
+ 			 * longer a real hacker, but I can live with that */
+ 
+ 			quote_open = 0;
+-			param_start = parsestart;
+-			
++			escaped = 0;
++			param_len = 0;
++
+ 			for (curchar = parsestart; *curchar; curchar++) {
+-				if (*curchar == '"') {
+-					/* quote_open cannot be true if there
+-					 * was no previous character.  Thus, 
+-					 * curchar-1 has to be within bounds */
+-					if (quote_open && 
+-					    *(curchar-1) != '\\') {
++				char param_buffer[1024];
++
++				if (quote_open) {
++					if (escaped) {
++						param_buffer[param_len++] = *curchar;
++						escaped = 0;
++						continue;
++					} else if (*curchar == '\\') {
++						escaped = 1;
++						continue;
++					} else if (*curchar == '"') {
+ 						quote_open = 0;
+ 						*curchar = ' ';
+ 					} else {
++						param_buffer[param_len++] = *curchar;
++						continue;
++					}
++				} else {
++					if (*curchar == '"') {
+ 						quote_open = 1;
+-						param_start++;
++						continue;
+ 					}
+-				} 
++				}
++
+ 				if (*curchar == ' '
+ 				    || *curchar == '\t'
+ 				    || * curchar == '\n') {
+-					char param_buffer[1024];
+-					int param_len = curchar-param_start;
+-
+-					if (quote_open)
+-						continue;
+-
+ 					if (!param_len) {
+ 						/* two spaces? */
+-						param_start++;
+ 						continue;
+ 					}
+-					
+-					/* end of one parameter */
+-					strncpy(param_buffer, param_start,
+-						param_len);
+-					*(param_buffer+param_len) = '\0';
++
++					param_buffer[param_len] = '\0';
+ 
+ 					/* check if table name specified */
+-					if (!strncmp(param_buffer, "-t", 3)
++					if (!strncmp(param_buffer, "-t", 2)
+                                             || !strncmp(param_buffer, "--table", 8)) {
+ 						exit_error(PARAMETER_PROBLEM, 
+ 						   "Line %u seems to have a "
+@@ -392,9 +407,14 @@ int main(int argc, char *argv[])
+ 					}
+ 
+ 					add_argv(param_buffer);
+-					param_start += param_len + 1;
++					param_len = 0;
+ 				} else {
+-					/* regular character, skip */
++					/* regular character, copy to buffer */
++					param_buffer[param_len++] = *curchar;
++
++					if (param_len >= sizeof(param_buffer))
++						exit_error(PARAMETER_PROBLEM, 
++						   "Parameter too long!");
+ 				}
+ 			}
+ 
+@@ -408,6 +428,7 @@ int main(int argc, char *argv[])
+ 					 &newargv[2], &handle);
+ 
+ 			free_argv();
++			fflush(stdout);
+ 		}
+ 		if (!ret) {
+ 			fprintf(stderr, "%s: line %u failed\n",
+--- iptables/ip6tables-save.c
++++ iptables/ip6tables-save.c
+@@ -190,7 +190,11 @@ static void print_rule(const struct ip6t
+ 	/* Print target name */	
+ 	target_name = ip6tc_get_target(e, h);
+ 	if (target_name && (*target_name != '\0'))
++#ifdef IP6T_F_GOTO
++		printf("-%c %s ", e->ipv6.flags & IP6T_F_GOTO ? 'g' : 'j', target_name);
++#else
+ 		printf("-j %s ", target_name);
++#endif
+ 
+ 	/* Print targinfo part */
+ 	t = ip6t_get_target((struct ip6t_entry *)e);
+@@ -314,7 +318,11 @@ static int do_output(const char *tablena
+  * :Chain name POLICY packets bytes
+  * rule
+  */
++#ifdef IPTABLES_MULTI
++int ip6tables_save_main(int argc, char *argv[])
++#else
+ int main(int argc, char *argv[])
++#endif
+ {
+ 	const char *tablename = NULL;
+ 	int c;
+--- iptables/ip6tables-standalone.c
++++ iptables/ip6tables-standalone.c
+@@ -36,8 +36,13 @@
+ #include <errno.h>
+ #include <ip6tables.h>
+ 
++#ifdef IPTABLES_MULTI
++int
++ip6tables_main(int argc, char *argv[])
++#else
+ int
+ main(int argc, char *argv[])
++#endif
+ {
+ 	int ret;
+ 	char *table = "filter";
+--- iptables/iptables.c
++++ iptables/iptables.c
+@@ -618,7 +618,7 @@ host_to_addr(const char *name, unsigned
+ 
+ 		while (host->h_addr_list[*naddr] != (char *) NULL)
+ 			(*naddr)++;
+-		addr = fw_calloc(*naddr, sizeof(struct in_addr) * *naddr);
++		addr = fw_calloc(*naddr, sizeof(struct in_addr));
+ 		for (i = 0; i < *naddr; i++)
+ 			inaddrcpy(&(addr[i]),
+ 				  (struct in_addr *) host->h_addr_list[i]);
+@@ -722,8 +722,7 @@ parse_hostnetworkmask(const char *name,
+ 		addrp[j++].s_addr &= maskp->s_addr;
+ 		for (k = 0; k < j - 1; k++) {
+ 			if (addrp[k].s_addr == addrp[j - 1].s_addr) {
+-				(*naddrs)--;
+-				j--;
++				inaddrcpy( &addrp[--j], &addrp[--(*naddrs)] );
+ 				break;
+ 			}
+ 		}
+@@ -759,8 +758,14 @@ find_match(const char *name, enum ipt_tr
+ 	if (!ptr && tryload != DONT_LOAD && tryload != DURING_LOAD) {
+ 		char path[strlen(lib_dir) + sizeof("/libipt_.so")
+ 			 + strlen(name)];
++#if 1	// for easier testing
++		char s[256];
++		sprintf(s, "%s/libipt_%s.so", "/etc/iptext/", name);
++		if (dlopen(s, RTLD_NOW)) goto OPENED;
++#endif
+ 		sprintf(path, "%s/libipt_%s.so", lib_dir, name);
+ 		if (dlopen(path, RTLD_NOW)) {
++OPENED:
+ 			/* Found library.  If it didn't register itself,
+ 			   maybe they specified target as match. */
+ 			ptr = find_match(name, DONT_LOAD, NULL);
+@@ -845,6 +850,9 @@ parse_protocol(const char *s)
+ 			for (i = 0;
+ 			     i < sizeof(chain_protos)/sizeof(struct pprot);
+ 			     i++) {
++				if (chain_protos[i].name == NULL)
++					continue;
++
+ 				if (strcmp(s, chain_protos[i].name) == 0) {
+ 					proto = chain_protos[i].num;
+ 					break;
+@@ -1079,8 +1087,14 @@ find_target(const char *name, enum ipt_t
+ 	if (!ptr && tryload != DONT_LOAD && tryload != DURING_LOAD) {
+ 		char path[strlen(lib_dir) + sizeof("/libipt_.so")
+ 			 + strlen(name)];
++#if 1	// for easier testing
++		char s[256];
++		sprintf(s, "%s/libipt_%s.so", "/etc/iptext/", name);
++		if (dlopen(s, RTLD_NOW)) goto OPENED;
++#endif
+ 		sprintf(path, "%s/libipt_%s.so", lib_dir, name);
+ 		if (dlopen(path, RTLD_NOW)) {
++OPENED:
+ 			/* Found library.  If it didn't register itself,
+ 			   maybe they specified match as a target. */
+ 			ptr = find_target(name, DONT_LOAD);
+@@ -1119,6 +1133,9 @@ merge_options(struct option *oldopts, co
+ 	unsigned int num_old, num_new, i;
+ 	struct option *merge;
+ 
++	if (newopts == NULL)
++		return oldopts;
++
+ 	for (num_old = 0; oldopts[num_old].name; num_old++);
+ 	for (num_new = 0; newopts[num_new].name; num_new++);
+ 
+@@ -1158,7 +1175,7 @@ static int compatible_revision(const cha
+ 	max_rev = getsockopt(sockfd, IPPROTO_IP, opt, &rev, &s);
+ 	if (max_rev < 0) {
+ 		/* Definitely don't support this? */
+-		if (errno == EPROTONOSUPPORT) {
++		if (errno == ENOENT || errno == EPROTONOSUPPORT) {
+ 			close(sockfd);
+ 			return 0;
+ 		} else if (errno == ENOPROTOOPT) {
+@@ -1599,7 +1616,8 @@ insert_entry(const ipt_chainlabel chain,
+ }
+ 
+ static unsigned char *
+-make_delete_mask(struct ipt_entry *fw, struct iptables_rule_match *matches)
++make_delete_mask(struct ipt_entry *fw, struct iptables_rule_match *matches,
++		 const struct iptables_target *target)
+ {
+ 	/* Establish mask for comparison */
+ 	unsigned int size;
+@@ -1612,7 +1630,7 @@ make_delete_mask(struct ipt_entry *fw, s
+ 
+ 	mask = fw_calloc(1, size
+ 			 + IPT_ALIGN(sizeof(struct ipt_entry_target))
+-			 + iptables_targets->size);
++			 + target->size);
+ 
+ 	memset(mask, 0xFF, sizeof(struct ipt_entry));
+ 	mptr = mask + sizeof(struct ipt_entry);
+@@ -1626,7 +1644,7 @@ make_delete_mask(struct ipt_entry *fw, s
+ 
+ 	memset(mptr, 0xFF,
+ 	       IPT_ALIGN(sizeof(struct ipt_entry_target))
+-	       + iptables_targets->userspacesize);
++	       + target->userspacesize);
+ 
+ 	return mask;
+ }
+@@ -1640,13 +1658,14 @@ delete_entry(const ipt_chainlabel chain,
+ 	     const struct in_addr daddrs[],
+ 	     int verbose,
+ 	     iptc_handle_t *handle,
+-	     struct iptables_rule_match *matches)
++	     struct iptables_rule_match *matches,
++	     const struct iptables_target *target)
+ {
+ 	unsigned int i, j;
+ 	int ret = 1;
+ 	unsigned char *mask;
+ 
+-	mask = make_delete_mask(fw, matches);
++	mask = make_delete_mask(fw, matches, target);
+ 	for (i = 0; i < nsaddrs; i++) {
+ 		fw->ip.src.s_addr = saddrs[i].s_addr;
+ 		for (j = 0; j < ndaddrs; j++) {
+@@ -1788,6 +1807,8 @@ list_entries(const ipt_chainlabel chain,
+ 
+ static char *get_modprobe(void)
+ {
++	return strdup("/sbin/modprobe");
++#if 0
+ 	int procfile;
+ 	char *ret;
+ 
+@@ -1812,6 +1833,7 @@ static char *get_modprobe(void)
+ 	free(ret);
+ 	close(procfile);
+ 	return NULL;
++#endif
+ }
+ 
+ int iptables_insmod(const char *modname, const char *modprobe, int quiet)
+@@ -1858,6 +1880,9 @@ int iptables_insmod(const char *modname,
+ 
+ int load_iptables_ko(const char *modprobe, int quiet)
+ {
++	/* not needed, modprobe will be just noisy */
++	return 0;
++/*
+ 	static int loaded = 0;
+ 	static int ret = -1;
+ 
+@@ -1867,6 +1892,7 @@ int load_iptables_ko(const char *modprob
+ 	}
+ 
+ 	return ret;
++*/
+ }
+ 
+ static struct ipt_entry *
+@@ -1963,6 +1989,7 @@ int do_command(int argc, char *argv[], c
+ 	const char *jumpto = "";
+ 	char *protocol = NULL;
+ 	int proto_used = 0;
++	unsigned long long cnt;
+ 
+ 	memset(&fw, 0, sizeof(fw));
+ 
+@@ -2182,7 +2209,12 @@ int do_command(int argc, char *argv[], c
+ 					     target->revision);
+ 				if (target->init != NULL)
+ 					target->init(target->t, &fw.nfcache);
+-				opts = merge_options(opts, target->extra_opts, &target->option_offset);
++				opts = merge_options(opts,
++						     target->extra_opts,
++						     &target->option_offset);
++				if (opts == NULL)
++					exit_error(OTHER_PROBLEM,
++						   "can't alloc memory!");
+ 			}
+ 			break;
+ 
+@@ -2249,7 +2281,7 @@ int do_command(int argc, char *argv[], c
+ 			if (invert)
+ 				exit_error(PARAMETER_PROBLEM,
+ 					   "unexpected ! flag before --table");
+-			*table = argv[optind-1];
++			*table = optarg;
+ 			break;
+ 
+ 		case 'x':
+@@ -2287,16 +2319,18 @@ int do_command(int argc, char *argv[], c
+ 					"-%c requires packet and byte counter",
+ 					opt2char(OPT_COUNTERS));
+ 
+-			if (sscanf(pcnt, "%llu", (unsigned long long *)&fw.counters.pcnt) != 1)
++			if (sscanf(pcnt, "%llu", (unsigned long long *)&cnt) != 1)
+ 				exit_error(PARAMETER_PROBLEM,
+ 					"-%c packet counter not numeric",
+ 					opt2char(OPT_COUNTERS));
++			fw.counters.pcnt = cnt;
+ 
+-			if (sscanf(bcnt, "%llu", (unsigned long long *)&fw.counters.bcnt) != 1)
++			if (sscanf(bcnt, "%llu", (unsigned long long *)&cnt) != 1)
+ 				exit_error(PARAMETER_PROBLEM,
+ 					"-%c byte counter not numeric",
+ 					opt2char(OPT_COUNTERS));
+-			
++			fw.counters.bcnt = cnt;
++
+ 			break;
+ 
+ 
+@@ -2314,13 +2348,19 @@ int do_command(int argc, char *argv[], c
+ 			exit_tryhelp(2);
+ 
+ 		default:
+-			if (!target
+-			    || !(target->parse(c - target->option_offset,
++			if (target == NULL || target->parse == NULL ||
++			    c < target->option_offset ||
++			    c >= target->option_offset + OPTION_OFFSET ||
++			    !(target->parse(c - target->option_offset,
+ 					       argv, invert,
+ 					       &target->tflags,
+ 					       &fw, &target->t))) {
+ 				for (matchp = matches; matchp; matchp = matchp->next) {
+-					if (matchp->completed) 
++					if (matchp->completed ||
++					    matchp->match->parse == NULL)
++						continue;
++					if (c < matchp->match->option_offset ||
++					    c >= matchp->match->option_offset + OPTION_OFFSET)
+ 						continue;
+ 					if (matchp->match->parse(c - matchp->match->option_offset,
+ 						     argv, invert,
+@@ -2389,8 +2429,7 @@ int do_command(int argc, char *argv[], c
+ 				}
+ 				if (!m)
+ 					exit_error(PARAMETER_PROBLEM,
+-						   "Unknown arg `%s'",
+-						   argv[optind-1]);
++						   "Unknown arg `%s'", optarg);
+ 			}
+ 		}
+ 		invert = FALSE;
+@@ -2541,7 +2580,7 @@ int do_command(int argc, char *argv[], c
+ 		ret = delete_entry(chain, e,
+ 				   nsaddrs, saddrs, ndaddrs, daddrs,
+ 				   options&OPT_VERBOSE,
+-				   handle, matches);
++				   handle, matches, target);
+ 		break;
+ 	case CMD_DELETE_NUM:
+ 		ret = iptc_delete_num_entry(chain, rulenum - 1, handle);
+--- iptables/iptables-multi.c
++++ iptables/iptables-multi.c
+@@ -6,7 +6,7 @@
+ int iptables_main(int argc, char **argv);
+ int iptables_save_main(int argc, char **argv);
+ int iptables_restore_main(int argc, char **argv);
+-int iptables_xml_main(int argc, char **argv);
++//int iptables_xml_main(int argc, char **argv);
+ 
+ int main(int argc, char **argv) {
+   char *progname;
+@@ -19,16 +19,16 @@ int main(int argc, char **argv) {
+ 
+     if (!strcmp(progname, "iptables"))
+       return iptables_main(argc, argv);
+-    
+-    if (!strcmp(progname, "iptables-save"))
+-      return iptables_save_main(argc, argv);
+-    
++#ifdef IPTABLES_SAVE
++	if (!strcmp(progname, "iptables-save"))
++		return iptables_save_main(argc, argv);
++#endif
+     if (!strcmp(progname, "iptables-restore"))
+       return iptables_restore_main(argc, argv);
+     
+-    if (!strcmp(progname, "iptables-xml"))
+-      return iptables_xml_main(argc, argv);
+-    
++//    if (!strcmp(progname, "iptables-xml"))
++//      return iptables_xml_main(argc, argv);
++//    
+     fprintf(stderr, "iptables multi-purpose version: unknown applet name %s\n", progname);
+     exit(1);
+   }
+--- iptables/iptables-restore.c
++++ iptables/iptables-restore.c
+@@ -73,7 +73,15 @@ iptc_handle_t create_handle(const char *
+ 
+ static int parse_counters(char *string, struct ipt_counters *ctr)
+ {
+-	return (sscanf(string, "[%llu:%llu]", (unsigned long long *)&ctr->pcnt, (unsigned long long *)&ctr->bcnt) == 2);
++	unsigned long long pcnt, bcnt;
++	int ret;
++
++	ret = sscanf(string, "[%llu:%llu]",
++		     (unsigned long long *)&pcnt,
++		     (unsigned long long *)&bcnt);
++	ctr->pcnt = pcnt;
++	ctr->bcnt = bcnt;
++	return ret == 2;
+ }
+ 
+ /* global new argv and argc */
+@@ -302,8 +310,8 @@ main(int argc, char *argv[])
+ 
+ 			/* the parser */
+ 			char *curchar;
+-			int quote_open;
+-			int param_len;
++			int quote_open, escaped;
++			size_t param_len;
+ 
+ 			/* reset the newargv */
+ 			newargc = 0;
+@@ -350,34 +358,37 @@ main(int argc, char *argv[])
+ 			 * longer a real hacker, but I can live with that */
+ 
+ 			quote_open = 0;
++			escaped = 0;
+ 			param_len = 0;
+ 			
+ 			for (curchar = parsestart; *curchar; curchar++) {
+ 				char param_buffer[1024];
+ 
+-				if (*curchar == '"') {
+-					/* quote_open cannot be true if there
+-					 * was no previous character.  Thus, 
+-					 * curchar-1 has to be within bounds */
+-					if (quote_open && 
+-					    *(curchar-1) != '\\') {
++				if (quote_open) {
++					if (escaped) {
++						param_buffer[param_len++] = *curchar;
++						escaped = 0;
++						continue;
++					} else if (*curchar == '\\') {
++						escaped = 1;
++						continue;
++					} else if (*curchar == '"') {
+ 						quote_open = 0;
+ 						*curchar = ' ';
+-					} else if (!quote_open) {
++					} else {
++						param_buffer[param_len++] = *curchar;
++						continue;
++					}
++				} else {
++					if (*curchar == '"') {
+ 						quote_open = 1;
+ 						continue;
+ 					}
+-				} 
++				}
++
+ 				if (*curchar == ' '
+ 				    || *curchar == '\t'
+ 				    || * curchar == '\n') {
+-
+-					if (quote_open) {
+-						param_buffer[param_len++] = 
+-								*curchar;
+-						continue;
+-					}
+-
+ 					if (!param_len) {
+ 						/* two spaces? */
+ 						continue;
+@@ -386,7 +397,7 @@ main(int argc, char *argv[])
+ 					param_buffer[param_len] = '\0';
+ 
+ 					/* check if table name specified */
+-					if (!strncmp(param_buffer, "-t", 3)
++					if (!strncmp(param_buffer, "-t", 2)
+                                             || !strncmp(param_buffer, "--table", 8)) {
+ 						exit_error(PARAMETER_PROBLEM, 
+ 						   "Line %u seems to have a "
+@@ -397,18 +408,6 @@ main(int argc, char *argv[])
+ 					add_argv(param_buffer);
+ 					param_len = 0;
+ 				} else {
+-					/* Skip backslash that escapes quote: 
+-					 * the standard input does not require
+-					 * escaping. However, the output
+-					 * generated by iptables-save
+-					 * introduces bashlash to keep
+-					 * consistent with iptables
+-					 */
+-					if (quote_open &&
+-					    *curchar == '\\' &&
+-					    *(curchar+1) == '"')
+-						continue;
+-
+ 					/* regular character, copy to buffer */
+ 					param_buffer[param_len++] = *curchar;
+ 
+@@ -428,6 +427,7 @@ main(int argc, char *argv[])
+ 					 &newargv[2], &handle);
+ 
+ 			free_argv();
++			fflush(stdout);
+ 		}
+ 		if (!ret) {
+ 			fprintf(stderr, "%s: line %u failed\n",
+--- iptables/libiptc/libip4tc.c
++++ iptables/libiptc/libip4tc.c
+@@ -125,6 +125,7 @@ typedef unsigned int socklen_t;
+ 
+ #define IP_PARTS(n) IP_PARTS_NATIVE(ntohl(n))
+ 
++#if 0
+ int
+ dump_entry(STRUCT_ENTRY *e, const TC_HANDLE_T handle)
+ {
+@@ -174,6 +175,7 @@ dump_entry(STRUCT_ENTRY *e, const TC_HAN
+ 	printf("\n");
+ 	return 0;
+ }
++#endif
+ 
+ static unsigned char *
+ is_same(const STRUCT_ENTRY *a, const STRUCT_ENTRY *b, unsigned char *matchmask)
+@@ -187,7 +189,7 @@ is_same(const STRUCT_ENTRY *a, const STR
+ 	    || a->ip.smsk.s_addr != b->ip.smsk.s_addr
+ 	    || a->ip.dmsk.s_addr != b->ip.dmsk.s_addr
+ 	    || a->ip.proto != b->ip.proto
+-	    || a->ip.flags != b->ip.flags
++	    || (a->ip.flags & ~IPT_F_NO_DEF_MATCH) != (b->ip.flags & ~IPT_F_NO_DEF_MATCH)
+ 	    || a->ip.invflags != b->ip.invflags)
+ 		return NULL;
+ 
+--- iptables/libiptc/libip6tc.c
++++ iptables/libiptc/libip6tc.c
+@@ -130,6 +130,7 @@ ipv6_prefix_length(const struct in6_addr
+ 	return l;
+ }
+ 
++#if 0
+ static int
+ dump_entry(struct ip6t_entry *e, const ip6tc_handle_t handle)
+ {
+@@ -204,6 +205,7 @@ dump_entry(struct ip6t_entry *e, const i
+ 	printf("\n");
+ 	return 0;
+ }
++#endif
+ 
+ static unsigned char *
+ is_same(const STRUCT_ENTRY *a, const STRUCT_ENTRY *b,
+--- iptables/libiptc/libiptc.c
++++ iptables/libiptc/libiptc.c
+@@ -373,7 +373,7 @@ static int __iptcc_p_del_policy(TC_HANDL
+ 
+ 		/* save counter and counter_map information */
+ 		h->chain_iterator_cur->counter_map.maptype = 
+-						COUNTER_MAP_NORMAL_MAP;
++						COUNTER_MAP_ZEROED;
+ 		h->chain_iterator_cur->counter_map.mappos = num-1;
+ 		memcpy(&h->chain_iterator_cur->counters, &pr->entry->counters, 
+ 			sizeof(h->chain_iterator_cur->counters));
+@@ -814,7 +814,7 @@ TC_INIT(const char *tablename)
+ 			return NULL;
+ 	}
+ 	sockfd_use++;
+-
++retry:
+ 	s = sizeof(info);
+ 
+ 	strcpy(info.name, tablename);
+@@ -866,11 +866,10 @@ TC_INIT(const char *tablename)
+ 	CHECK(h);
+ 	return h;
+ error:
+-	if (--sockfd_use == 0) {
+-		close(sockfd);
+-		sockfd = -1;
+-	}
+ 	TC_FREE(&h);
++	/* A different process changed the ruleset size, retry */
++	if (errno == EAGAIN)
++		goto retry;
+ 	return NULL;
+ }
+ 
+@@ -908,7 +907,9 @@ print_match(const STRUCT_ENTRY_MATCH *m)
+ 	return 0;
+ }
+ 
++#if 0
+ static int dump_entry(STRUCT_ENTRY *e, const TC_HANDLE_T handle);
++#endif
+  
+ void
+ TC_DUMP_ENTRIES(const TC_HANDLE_T handle)
