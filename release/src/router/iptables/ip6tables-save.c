@@ -190,11 +190,7 @@ static void print_rule(const struct ip6t_entry *e,
 	/* Print target name */	
 	target_name = ip6tc_get_target(e, h);
 	if (target_name && (*target_name != '\0'))
-#ifdef IP6T_F_GOTO
-		printf("-%c %s ", e->ipv6.flags & IP6T_F_GOTO ? 'g' : 'j', target_name);
-#else
 		printf("-j %s ", target_name);
-#endif
 
 	/* Print targinfo part */
 	t = ip6t_get_target((struct ip6t_entry *)e);
@@ -318,11 +314,7 @@ static int do_output(const char *tablename)
  * :Chain name POLICY packets bytes
  * rule
  */
-#ifdef IPTABLES_MULTI
-int ip6tables_save_main(int argc, char *argv[])
-#else
 int main(int argc, char *argv[])
-#endif
 {
 	const char *tablename = NULL;
 	int c;

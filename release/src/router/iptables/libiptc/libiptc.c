@@ -373,7 +373,7 @@ static int __iptcc_p_del_policy(TC_HANDLE_T h, unsigned int num)
 
 		/* save counter and counter_map information */
 		h->chain_iterator_cur->counter_map.maptype = 
-						COUNTER_MAP_ZEROED;
+						COUNTER_MAP_NORMAL_MAP;
 		h->chain_iterator_cur->counter_map.mappos = num-1;
 		memcpy(&h->chain_iterator_cur->counters, &pr->entry->counters, 
 			sizeof(h->chain_iterator_cur->counters));
@@ -814,7 +814,7 @@ TC_INIT(const char *tablename)
 			return NULL;
 	}
 	sockfd_use++;
-retry:
+
 	s = sizeof(info);
 
 	strcpy(info.name, tablename);
@@ -866,10 +866,11 @@ retry:
 	CHECK(h);
 	return h;
 error:
+	if (--sockfd_use == 0) {
+		close(sockfd);
+		sockfd = -1;
+	}
 	TC_FREE(&h);
-	/* A different process changed the ruleset size, retry */
-	if (errno == EAGAIN)
-		goto retry;
 	return NULL;
 }
 
@@ -907,9 +908,7 @@ print_match(const STRUCT_ENTRY_MATCH *m)
 	return 0;
 }
 
-#if 0
 static int dump_entry(STRUCT_ENTRY *e, const TC_HANDLE_T handle);
-#endif
  
 void
 TC_DUMP_ENTRIES(const TC_HANDLE_T handle)
