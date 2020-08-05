@@ -541,10 +541,8 @@ void start_ovpn_client(int clientNum)
 #endif
 	}
 
-#if defined(TCONFIG_BCMARM)
 	/* In case of openvpn unexpectedly dies and leaves it added - flush tun IF, otherwise openvpn will not re-start (required by iproute2) */
 	eval("/usr/sbin/ip", "addr", "flush", "dev", iface);
-#endif
 
 	/* Start the VPN client */
 	sprintf(buffer, "/etc/openvpn/vpnclient%d --cd /etc/openvpn/client%d --config config.ovpn", clientNum, clientNum);

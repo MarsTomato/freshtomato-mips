@@ -593,6 +593,8 @@ static int init_vlan_ports(void)
 		break;
 	case MODEL_F7D3301:
 	case MODEL_F7D4301:
+	case MODEL_WNDR3700v3:
+	case MODEL_WNDR4000:
 		dirty |= check_nv("vlan1ports", "3 2 1 0 8*");
 		dirty |= check_nv("vlan2ports", "4 8");
 		break;
@@ -614,8 +616,6 @@ static int init_vlan_ports(void)
 	case MODEL_RTN15U:
 	case MODEL_E3200:
 	case MODEL_E4200:
-	case MODEL_WNDR4000:
-	case MODEL_WNDR3700v3:
 		dirty |= check_nv("vlan1ports", "0 1 2 3 8*");
 		dirty |= check_nv("vlan2ports", "4 8");
 		break;

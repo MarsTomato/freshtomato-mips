@@ -20,7 +20,7 @@
 	June 2014 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - Apr 16 2018 - Tvlz **
+	** Last Updated - May 6 2020 - Tvlz **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -78,6 +78,7 @@ switch (nvram['t_model_name']) {
 	case 'Linksys E2500 v1/v2/v3':
 	case 'Linksys E3200 v1.0':
 	case 'Linksys E4200 v1':
+	case 'Netgear WNDR3700v3':
 	case 'Netgear WNDR4000':
 	case 'Netgear WNDR4500 V1':
 	case 'Netgear WNDR4500 V2':
@@ -129,7 +130,6 @@ switch (nvram['t_model_name']) {
 	case 'Netgear WNDR3400':
 	case 'Netgear WNDR3400v2':
 	case 'Netgear WNDR3400v3':
-	case 'Netgear WNDR3700v3':
 	case 'Netgear R6300 V1':
 		COL_P0N = '3';
 		COL_P1N = '2';
@@ -995,8 +995,8 @@ function earlyInit() {
 
 <!-- / / / -->
 
-<!-- Needed for RT branch, no support for VIDs above 16 -->
-<!--	<div id="vid_offset" style="display:none"> -->
+<!-- RT-N/RT-AC branch, Hide VID Offset, VIDs above 16 Supported -->
+		<div id="vid_offset" style="display:none">
 		<div class="section-title">VID Offset</div>
 		<div class="section">
 			<script>
@@ -1007,7 +1007,7 @@ function earlyInit() {
 				]);
 			</script>
 		</div>
-<!--	</div> -->
+		</div>
 
 <!-- / / / -->
 
@@ -1041,9 +1041,6 @@ function earlyInit() {
 			<li><b>Bridge</b> - Determines if this VLAN ID should be treated as WAN, part of a LAN bridge or just left alone (i.e. member of a 802.1Q trunk, being managed manually via scripts, etc...).</li>
 		</ul>
 		<ul>
-		<ul>
-			<li><b>VID Offset</b> - First 802.1Q VLAN tag to be used as <i>base/initial tag/VID</i> for VLAN and VID assignments. This allows using VIDs larger than 15 on (older) devices, in contiguous blocks/ranges with up to 16 VLANs/VIDs. Set to '0' (zero) to disable this feature and VLANs will have the very same/identical value for its VID, as usual (from 0 to 15).</li>
-		</ul>
 			<li><b>Wireless</b> - Assignments of wireless interfaces to different LAN briges. You should probably be using and/or check things on <a href="advanced-wlanvifs.asp">Advanced/Virtual Wireless</a> and <a href="basic-network.asp">Basic/Network</a>.</li>
 		</ul>
 		<ul>

@@ -326,6 +326,12 @@ ifeq ($(WNDR),y)
 	-b U12H208T00_NETGEAR -r 2 2>&1 | tee -a fpkg.log
 	@$(MAKE) netgear-check MAXFSIZE=7274496 NG_FNAME=image/freshtomato-WNDR3400v3-$(ND)$(current_BUILD_USB)$(if $(filter $(NVRAM_SIZE),0),,-NVRAM$(NVRAM_SIZE)K)$(RT_SUFFIX)-$(mips_rev)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).chk
  else
+	# Make WNDR4000, Checksum starts at 0x6FFFF8 => Max size (to not touch the last 64kB block) = 7274496
+	@$(SRCBASE)/wnrtool/mkchkimg -o image/freshtomato-WNDR4000-$(ND)$(current_BUILD_USB)$(if $(filter $(NVRAM_SIZE),0),,-NVRAM$(NVRAM_SIZE)K)$(RT_SUFFIX)-$(mips_rev)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).chk \
+	-k image/freshtomato-$(ND)$(current_BUILD_USB)$(if $(filter $(NVRAM_SIZE),0),,-NVRAM$(NVRAM_SIZE)K)$(RT_SUFFIX)-$(mips_rev)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx \
+	-b U12H181T00_NETGEAR -r 2 2>&1 | tee -a fpkg.log
+	@$(MAKE) netgear-check MAXFSIZE=7274496 NG_FNAME=image/freshtomato-WNDR4000-$(ND)$(current_BUILD_USB)$(if $(filter $(NVRAM_SIZE),0),,-NVRAM$(NVRAM_SIZE)K)$(RT_SUFFIX)-$(mips_rev)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).chk
+
 	# Make WNDR3700v3, Checksum starts at 0x6FFFF8 => Max size (to not touch the last 64kB block) = 7274496
 	@$(SRCBASE)/wnrtool/mkchkimg -o image/freshtomato-WNDR3700v3-$(ND)$(current_BUILD_USB)$(if $(filter $(NVRAM_SIZE),0),,-NVRAM$(NVRAM_SIZE)K)$(RT_SUFFIX)-$(mips_rev)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).chk \
 	-k image/freshtomato-$(ND)$(current_BUILD_USB)$(if $(filter $(NVRAM_SIZE),0),,-NVRAM$(NVRAM_SIZE)K)$(RT_SUFFIX)-$(mips_rev)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx \
@@ -895,14 +901,6 @@ define KernelConfig
 		fi; \
 	fi; \
 	if [ "$(UPS)" = "y" ]; then \
-		sed -i "/CONFIG_INPUT=m/d" $(1); \
-		echo "CONFIG_INPUT=y" >>$(1); \
-		sed -i "/CONFIG_USB=m/d" $(1); \
-		echo "CONFIG_USB=y" >>$(1); \
-		sed -i "/CONFIG_HID=m/d" $(1); \
-		echo "CONFIG_HID=y" >>$(1); \
-		sed -i "/CONFIG_USB_HID=m/d" $(1); \
-		echo "CONFIG_USB_HID=y" >>$(1); \
 		sed -i "/CONFIG_USB_HIDDEV=m/d" $(1); \
 		echo "CONFIG_USB_HIDDEV=y" >>$(1); \
 		sed -i "/CONFIG_USB_DEVICEFS=m/d" $(1); \
@@ -1234,14 +1232,14 @@ v2z:
 v2e:
 	@$(MAKE) e MIPS32=r2 WNR3500LV2=1 NVRAM_SIZE=32 NO_JFFS=y MEDIASRV=y
 
-## Builds for Netgear WNDR3400/3700v3
+## Builds for Netgear WNDR3400/3700v3/4000
 wndr64:
 	@$(MAKE) bin MIPS32=r2 B=E USB="USB" NO_ZEBRA=y NO_HTTPS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y NVRAM_SIZE=64 WNDR=y NO_XXTP=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
 
 wndr64-vpn:
 	@$(MAKE) bin MIPS32=r2 B=E USB="USB" NO_ZEBRA=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y OPENVPN=y PPTPD=y STUBBY=y NO_SAMBA=y NVRAM_SIZE=64 WNDR=y BCMNAT=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="$(VPN)"
 
-## Builds with wl_high module
+## Builds with 5Ghz USB Radio (wl_high module)
 rtn53:
 	@$(MAKE) bin MIPS32=r2 B=E USB="USB" BBEXTRAS=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y OPENVPN=y PPTPD=y STUBBY=y TOR=y NOCAT=y USBAP=y NO_USBAPP=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="RT-N53"
 
@@ -1455,20 +1453,24 @@ help:
 	@echo "n64v         Linksys E-series(64k Nvram) build IPv6-VPN"
 	@echo "n64m         Linksys E-series(64k Nvram) build Max"
 	@echo ""
-	@echo "       Routers with wl_high module"
-	@echo "rtn53        Asus RT-N53 with wl_high module (dualband support)"
-	@echo "f9k          Belkin F9K1102 (v1/v3) with wl_high module (dualband support)"
-	@echo "e2500        Linksys E2500 with wl_high module (dualband support)"
-	@echo "e3200        Linksys E3200/E2500v3 with wl_high module (dualband support) / max 16MB"
-	@echo "n6           Tenda N6 with wl_high module (dualband support)"
-	@echo "n60          Tenda N60 with wl_high module (dualband support) w/o minidlna"
-	@echo "wndr3400v2     Netgear WNDR3400v2/v3 miniIPv6 with wl_high module (dualband support) w/o minidlna"
-	@echo "wndr3400v2-vpn Netgear WNDR3400v2/v3 VPN with wl_high module (dualband support) w/o Samba"
+	@echo "       Routers with 5Ghz USB Radio (wl_high module)"
+	@echo "       Before compilation you have to revert patch to the kernel:"
+	@echo "       $ cd release/src-rt/linux"
+	@echo "       $ patch -R -p4 < fix4usbap.patch"
+	@echo ""
+	@echo "rtn53        Asus RT-N53"
+	@echo "f9k          Belkin F9K1102 (v1/v3)"
+	@echo "e2500        Linksys E2500"
+	@echo "e3200        Linksys E3200/E2500v3 / max 16MB"
+	@echo "n6           Tenda N6"
+	@echo "n60          Tenda N60 w/o minidlna"
+	@echo "wndr3400v2     Netgear WNDR3400v2/v3 miniIPv6 w/o minidlna"
+	@echo "wndr3400v2-vpn Netgear WNDR3400v2/v3 VPN w/o Samba"
 #	@echo "l600n        Rosewill L600N Build with wl_high module (dualband support)"
 	@echo ""
-	@echo "       Netgear WNDR3400/3700v3 builds"
-	@echo "wndr64       Netgear WNDR3400/3700v3 miniIPv6 w/o miniDLNA"
-	@echo "wndr64-vpn   Netgear WNDR3400/3700v3 VPN w/o Samba"
+	@echo "       Netgear WNDR3400/3700v3/4000 builds"
+	@echo "wndr64       Netgear WNDR3400/3700v3/4000 miniIPv6 w/o miniDLNA"
+	@echo "wndr64-vpn   Netgear WNDR3400/3700v3/4000 VPN w/o Samba"
 	@echo ""
 	@echo "       Netgear WNR3500L v2 builds (128MB Flash)"
 	@echo "v2e          Netgear WNR3500Lv2 build VPN"

@@ -159,9 +159,7 @@ char * strBits(int input, int binarySize)
 		return (char *)NULL;
 }
 
-/* bwq518 */
-/* return 0 success, 1 fail */
-int led_bit(int b, int mode)
+void led_bit(int b, int mode)
 {
 	FILE *fileExtGPIOstatus;		/* For WNDR4000, keep track of extended bit status (shift register), as cannot read from HW! */
 	unsigned int intExtendedLEDStatus;	/* Status of Extended LED's (shift register on WNDR4000) ... and WNDR3700v3, it's the same! */
@@ -169,10 +167,9 @@ int led_bit(int b, int mode)
 	if ((mode == LED_ON) || (mode == LED_OFF)) {
 		if (b < 16) {
 			/* Read bit-mask from file, for tracking / updates (as this process is called clean each LED update, so cannot use static variable!) */
-			if (!(fileExtGPIOstatus = fopen("/tmp/.ext_led_value", "rb"))) {
+			if ((fileExtGPIOstatus = fopen("/tmp/.ext_led_value", "rb"))) {
 				fscanf(fileExtGPIOstatus, "Shift Register Status: 0x%x\n", &intExtendedLEDStatus);
 				fclose(fileExtGPIOstatus);
-				return 1;
 			} else {
 				/* Read Error (tracking file) - set all LED's to off */
 				intExtendedLEDStatus = 0x00;
@@ -189,14 +186,13 @@ int led_bit(int b, int mode)
 			/* And write to LEDs (Shift Register) */
 			gpio_write_shiftregister(intExtendedLEDStatus, 7, 6, 7);
 			/* Write bit-mask to file, for tracking / updates (as this process is called clean each LED update, so cannot use static variable!) */
-			if (!(fileExtGPIOstatus = fopen("/tmp/.ext_led_value", "wb"))) {
+			if ((fileExtGPIOstatus = fopen("/tmp/.ext_led_value", "wb"))) {
 				fprintf(fileExtGPIOstatus, "Shift Register Status: 0x%x\n", intExtendedLEDStatus);
 				fprintf(fileExtGPIOstatus, "Shift Register Status: 0b%s\n", strBits(intExtendedLEDStatus, 8));
 				fclose(fileExtGPIOstatus);
 			}
 		}
 	}
-	return 0;
 }
 
 int do_led(int which, int mode)
