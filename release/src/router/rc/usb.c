@@ -149,6 +149,9 @@ void start_usb(void)
 
 #ifdef TCONFIG_UPS
 		if (nvram_get_int("usb_apcupsd") == 1) {
+			modprobe("input-core");
+			modprobe("hid");
+			modprobe("usbhid");
 			start_ups();
 		}
 #endif
@@ -177,6 +180,9 @@ void stop_usb(void)
 
 #ifdef TCONFIG_UPS
 		stop_ups();
+		modprobe_r("usbhid");
+		modprobe_r("hid");
+		modprobe_r("input-core");
 #endif
 
 	// only find and kill the printer server we started (port 0)

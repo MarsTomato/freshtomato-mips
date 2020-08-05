@@ -324,7 +324,10 @@ void set_et_qos_mode(void)
 
 void unload_wl(void)
 {
-	modprobe_r("wl");
+	/* do not unload the wifi driver by default, it can cause problems for some router */
+	if (nvram_match("wl_unload_enable", "1")) {
+		modprobe_r("wl");
+	}
 }
 
 void load_wl(void)
