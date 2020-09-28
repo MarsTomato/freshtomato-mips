@@ -272,7 +272,7 @@ const defaults_t defaults[] = {
 	{ "wan_ppp_idletime",		"5"				},	// Dial on demand max idle time (mins)
 	{ "wan_ppp_demand",		"0"				},	// Dial on demand
 	{ "wan_ppp_demand_dnsip",	"198.51.100.1"			},	// IP to which DNS queries are sent to trigger Connect On Demand
-	{ "wan_ppp_redialperiod",	"10"				},	// Redial Period  (seconds)
+	{ "wan_ppp_redialperiod",	"20"				},	// Redial Period  (seconds)
 	{ "wan_ppp_service",		""				},	// PPPoE service name
 	{ "wan_ppp_custom",		""				},	// PPPD additional options
 	{ "wan_ppp_mlppp",		"0"				},	// PPPoE single line MLPPP
@@ -284,7 +284,7 @@ const defaults_t defaults[] = {
 	{ "wan2_ppp_idletime",		"5"				},	// Dial on demand max idle time (mins)
 	{ "wan2_ppp_demand",		"0"				},	// Dial on demand
 	{ "wan2_ppp_demand_dnsip",	"198.51.100.1"			},	// IP to which DNS queries are sent to trigger Connect On Demand
-	{ "wan2_ppp_redialperiod",	"10"				},	// Redial Period  (seconds)
+	{ "wan2_ppp_redialperiod",	"20"				},	// Redial Period  (seconds)
 	{ "wan2_ppp_service",		""				},	// PPPoE service name
 	{ "wan2_ppp_custom",		""				},	// PPPD additional options
 	{ "wan2_ppp_mlppp",		"0"				},	// PPPoE single line MLPPP
@@ -297,7 +297,7 @@ const defaults_t defaults[] = {
 	{ "wan3_ppp_idletime",		"5"				},	// Dial on demand max idle time (mins)
 	{ "wan3_ppp_demand",		"0"				},	// Dial on demand
 	{ "wan3_ppp_demand_dnsip",	"198.51.100.1"			},	// IP to which DNS queries are sent to trigger Connect On Demand
-	{ "wan3_ppp_redialperiod",	"10"				},	// Redial Period  (seconds)
+	{ "wan3_ppp_redialperiod",	"20"				},	// Redial Period  (seconds)
 	{ "wan3_ppp_service",		""				},	// PPPoE service name
 	{ "wan3_ppp_custom",		""				},	// PPPD additional options
 	{ "wan3_ppp_mlppp",		"0"				},	// PPPoE single line MLPPP
@@ -309,7 +309,7 @@ const defaults_t defaults[] = {
 	{ "wan4_ppp_idletime",		"5"				},	// Dial on demand max idle time (mins)
 	{ "wan4_ppp_demand",		"0"				},	// Dial on demand
 	{ "wan4_ppp_demand_dnsip",	"198.51.100.1"			},	// IP to which DNS queries are sent to trigger Connect On Demand
-	{ "wan4_ppp_redialperiod",	"10"				},	// Redial Period  (seconds)
+	{ "wan4_ppp_redialperiod",	"20"				},	// Redial Period  (seconds)
 	{ "wan4_ppp_service",		""				},	// PPPoE service name
 	{ "wan4_ppp_custom",		""				},	// PPPD additional options
 	{ "wan4_ppp_mlppp",		"0"				},	// PPPoE single line MLPPP
@@ -1067,10 +1067,14 @@ const defaults_t defaults[] = {
 	{ "vpn_server1_port",		"1194"				},
 	{ "vpn_server1_firewall",	"auto"				},
 	{ "vpn_server1_crypt",		"tls"				},
-	{ "vpn_server1_comp",		"adaptive"			},
+	{ "vpn_server1_comp",		"-1"				},
 	{ "vpn_server1_cipher",		"AES-128-CBC"			},
 	{ "vpn_server1_ncp_enable",	"1"				},
+#if 0
 	{ "vpn_server1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
+#else
+	{ "vpn_server1_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
+#endif
 	{ "vpn_server1_digest",		"default"			},
 	{ "vpn_server1_dhcp",		"1"				},
 	{ "vpn_server1_r1",		"192.168.1.50"			},
@@ -1107,10 +1111,14 @@ const defaults_t defaults[] = {
 	{ "vpn_server2_port",		"1195"				},
 	{ "vpn_server2_firewall",	"auto"				},
 	{ "vpn_server2_crypt",		"tls"				},
-	{ "vpn_server2_comp",		"adaptive"			},
+	{ "vpn_server2_comp",		"-1"				},
 	{ "vpn_server2_cipher",		"AES-128-CBC"			},
 	{ "vpn_server2_ncp_enable",	"1"				},
+#if 0
 	{ "vpn_server2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
+#else
+	{ "vpn_server2_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
+#endif
 	{ "vpn_server2_digest",		"default"			},
 	{ "vpn_server2_dhcp",		"1"				},
 	{ "vpn_server2_r1",		"192.168.1.50"			},
@@ -1153,10 +1161,14 @@ const defaults_t defaults[] = {
 	{ "vpn_client1_rg",		"0"				},
 	{ "vpn_client1_firewall",	"auto"				},
 	{ "vpn_client1_crypt",		"tls"				},
-	{ "vpn_client1_comp",		"adaptive"			},
+	{ "vpn_client1_comp",		"-1"				},
 	{ "vpn_client1_cipher",		"default"			},
 	{ "vpn_client1_ncp_enable",	"1"				},
+#if 0
 	{ "vpn_client1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
+#else
+	{ "vpn_client1_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
+#endif
 	{ "vpn_client1_digest",		"default"			},
 	{ "vpn_client1_local",		"10.8.0.2"			},
 	{ "vpn_client1_remote",		"10.8.0.1"			},
@@ -1186,10 +1198,14 @@ const defaults_t defaults[] = {
 	{ "vpn_client2_rg",		"0"				},
 	{ "vpn_client2_firewall",	"auto"				},
 	{ "vpn_client2_crypt",		"tls"				},
-	{ "vpn_client2_comp",		"adaptive"			},
+	{ "vpn_client2_comp",		"-1"				},
 	{ "vpn_client2_cipher",		"default"			},
 	{ "vpn_client2_ncp_enable",	"1"				},
+#if 0
 	{ "vpn_client2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
+#else
+	{ "vpn_client2_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
+#endif
 	{ "vpn_client2_digest",		"default"			},
 	{ "vpn_client2_local",		"10.9.0.2"			},
 	{ "vpn_client2_remote",		"10.9.0.1"			},

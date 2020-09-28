@@ -42,16 +42,9 @@
 #include <time.h>
 #include <bcmdevs.h>
 
-#define DBG _dprintf
-//#define DBG(args...) do { } while (0);
-#define mwanlog(level,x...) if (nvram_get_int("mwan_debug")>=level) syslog(level, x)
-
-/* ----------------------------------------------------------------------------- */
 
 static int config_pppd(int wan_proto, int num, char *prefix)
 {
-	TRACE_PT("begin\n");
-
 	FILE *fp;
 #ifdef TCONFIG_USB
 	FILE *cfp;
@@ -80,88 +73,76 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 	}
 
 #ifdef TCONFIG_USB
-	if (wan_proto != WP_PPP3G) {
+	if (wan_proto != WP_PPP3G)
 #endif
-		fprintf(fp,
-			"user \"%s\"\n"		/* Don't rely on pap/chap secrets (useless) */
-			"password \"%s\"\n"	/* Don't rely on pap/chap secrets (useless) */
-			"lcp-echo-adaptive\n",	/* Suppress LCP echo-requests if traffic was received */
-			nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)),
-			nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp)));
-#ifdef TCONFIG_USB
-	}
-#endif
-	fprintf(fp,
-		"unit %d\n"		/* unit as WAN NUM, let's try to have persistent names */
-		"linkname %s\n"		/* link name for WAN ID */
-		"defaultroute\n"	/* Add a default route to the system routing tables, using the peer as the gateway */
-		"usepeerdns\n"		/* Ask the peer for up to 2 DNS server addresses */
-		"default-asyncmap\n"	/* Disable  asyncmap  negotiation */
-		"novj\n"		/* Disable Van Jacobson style TCP/IP header compression */
-		"nobsdcomp\n"		/* Disable BSD-Compress  compression */
-		"nodeflate\n"		/* Disable Deflate compression */
-		"noauth\n"		/* Do not authenticate peer */
-		"refuse-eap\n"		/* Do not use eap */
-		"maxfail 0\n"		/* Never give up */
-		"lcp-echo-interval %d\n"/* Interval between LCP echo-requests */
-		"lcp-echo-failure %d\n"	/* Tolerance to unanswered echo-requests */
-		"%s",			/* Debug */
-		num,
-		prefix,
-		nvram_get_int(strcat_r(prefix, "_pppoe_lei", tmp)) ? : 10,
-		nvram_get_int(strcat_r(prefix, "_pppoe_lef", tmp)) ? : 5,
-		nvram_get_int("debug_ppp") ? "debug\n" : "");
+		fprintf(fp, "user \"%s\"\n"		/* Don't rely on pap/chap secrets (useless) */
+		            "password \"%s\"\n"		/* Don't rely on pap/chap secrets (useless) */
+		            "lcp-echo-adaptive\n",	/* Suppress LCP echo-requests if traffic was received */
+		            nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp)),
+		            nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp)));
+
+	fprintf(fp, "unit %d\n"			/* unit as WAN NUM, let's try to have persistent names */
+	            "linkname %s\n"		/* link name for WAN ID */
+	            "defaultroute\n"		/* Add a default route to the system routing tables, using the peer as the gateway */
+	            "usepeerdns\n"		/* Ask the peer for up to 2 DNS server addresses */
+	            "default-asyncmap\n"	/* Disable  asyncmap  negotiation */
+	            "novj\n"			/* Disable Van Jacobson style TCP/IP header compression */
+	            "nobsdcomp\n"		/* Disable BSD-Compress  compression */
+	            "nodeflate\n"		/* Disable Deflate compression */
+	            "noauth\n"			/* Do not authenticate peer */
+	            "refuse-eap\n"		/* Do not use eap */
+	            "maxfail 0\n"		/* Never give up */
+	            "lcp-echo-interval %d\n"	/* Interval between LCP echo-requests */
+	            "lcp-echo-failure %d\n"	/* Tolerance to unanswered echo-requests */
+	            "%s",			/* Debug */
+	            num,
+	            prefix,
+	            nvram_get_int(strcat_r(prefix, "_pppoe_lei", tmp)) ? : 10,
+	            nvram_get_int(strcat_r(prefix, "_pppoe_lef", tmp)) ? : 5,
+	            nvram_get_int("debug_ppp") ? "debug\n" : "");
 
 #ifdef TCONFIG_USB
 	if (wan_proto == WP_PPP3G && nvram_match(strcat_r(prefix, "_modem_dev", tmp), "ttyACM0")) {
-		/* Don`t write nopcomp and noaccomp options */
-	} else {
-#endif
-		fprintf(fp,
-			"nopcomp\n"	/* Disable protocol field compression */
-			"noaccomp\n"	/* Disable Address/Control compression */
-			);
-#ifdef TCONFIG_USB
+		/* Don't write nopcomp and noaccomp options */
 	}
+	else
 #endif
+		fprintf(fp, "nopcomp\n"		/* Disable protocol field compression */
+		            "noaccomp\n");	/* Disable Address/Control compression */
 
-	if (wan_proto != WP_L2TP) {
-		fprintf(fp,
-			"persist\n"
-			"holdoff %d\n",
-			demand ? 30 : (nvram_get_int(strcat_r(prefix, "_ppp_redialperiod", tmp)) ? : 30));
-	}
+	if (wan_proto != WP_L2TP)
+		fprintf(fp, "persist\n"
+		            "holdoff %d\n",
+		            demand ? 30 : (nvram_get_int(strcat_r(prefix, "_ppp_redialperiod", tmp)) ? : 30));
 
 	switch (wan_proto) {
 	case WP_PPTP:
-		fprintf(fp,
-			"plugin pptp.so\n"
-			"pptp_server %s\n"
-			"nomppe-stateful\n"
-			"require-mschap-v2\n"
-			"noauth\n"	/* No authenticate peer (i dunno why it doesn't apply from shared params) */
-			"mtu %d\n",
-			nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)),
-			nvram_get_int(strcat_r(prefix, "_mtu_enable", tmp)) ? nvram_get_int(strcat_r(prefix, "_wan_mtu", tmp)) : 1400);
+		fprintf(fp, "plugin pptp.so\n"
+		            "pptp_server %s\n"
+		            "nomppe-stateful\n"
+		            "require-mschap-v2\n"
+		            "noauth\n"	/* No authenticate peer (i dunno why it doesn't apply from shared params) */
+		            "mtu %d\n",
+		            nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)),
+		            (nvram_get_int(strcat_r(prefix, "_mtu_enable", tmp)) ? nvram_get_int(strcat_r(prefix, "_wan_mtu", tmp)) : 1400));
 		break;
 	case WP_PPPOE:
-		fprintf(fp,
-			"plugin rp-pppoe.so\n"
-			"nomppe nomppc\n"
-			"nic-%s\n"
-			"mru %d mtu %d\n",
-			nvram_safe_get(strcat_r(prefix, "_ifname", tmp)),
-			nvram_get_int(strcat_r(prefix, "_mtu", tmp)),
-			nvram_get_int(strcat_r(prefix, "_mtu", tmp)));
-		if (((p = nvram_get(strcat_r(prefix, "_ppp_service", tmp))) != NULL) && (*p)) {
+		fprintf(fp, "plugin rp-pppoe.so\n"
+		            "nomppe nomppc\n"
+		            "nic-%s\n"
+		            "mru %d mtu %d\n",
+		            nvram_safe_get(strcat_r(prefix, "_ifname", tmp)),
+		            nvram_get_int(strcat_r(prefix, "_mtu", tmp)),
+		            nvram_get_int(strcat_r(prefix, "_mtu", tmp)));
+		if ((p = nvram_safe_get(strcat_r(prefix, "_ppp_service", tmp))) && (*p))
 			fprintf(fp, "rp_pppoe_service '%s'\n", p);
-		}
-		if (((p = nvram_get(strcat_r(prefix, "_ppp_ac", tmp))) != NULL) && (*p)) {
+
+		if ((p = nvram_safe_get(strcat_r(prefix, "_ppp_ac", tmp))) && (*p))
 			fprintf(fp, "rp_pppoe_ac '%s'\n", p);
-		}
-		if (nvram_match(strcat_r(prefix, "_ppp_mlppp", tmp), "1")) {
+
+		if (nvram_match(strcat_r(prefix, "_ppp_mlppp", tmp), "1"))
 			fprintf(fp, "mp\n");
-		}
+
 		break;
 #ifdef TCONFIG_USB
 	case WP_PPP3G: ;
@@ -174,66 +155,59 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 			perror(ppp3g_chatfile);
 			return -1;
 		}
-		fprintf(cfp,
-			"ABORT \"NO CARRIER\"\n"
-			"ABORT \"NO DIALTONE\"\n"
-			"ABORT \"NO DIAL TONE\"\n"
-			"ABORT \"NO ERROR\"\n"
-			"ABORT \"NO ANSWER\"\n"
-			"ABORT \"BUSY\"\n"
-			"ABORT \"VOICE\"\n"
-			"ABORT \"DELAYED\"\n"
-			"REPORT CONNECT\n"
-			"TIMEOUT 10\n"
-			"\"\" \"AT\"\n"
-			"OK \"AT&FE0V1X1&D2&C1S0=0\"\n"
-			"OK \"AT\"\n"
-			"OK \"ATS0=0\"\n"
-			"OK \"AT\"\n"
-			"OK \"AT&FE0V1X1&D2&C1S0=0\"\n"
-			"OK \"AT\"\n"
-			);
+		fprintf(cfp, "ABORT \"NO CARRIER\"\n"
+		             "ABORT \"NO DIALTONE\"\n"
+		             "ABORT \"NO DIAL TONE\"\n"
+		             "ABORT \"NO ERROR\"\n"
+		             "ABORT \"NO ANSWER\"\n"
+		             "ABORT \"BUSY\"\n"
+		             "ABORT \"VOICE\"\n"
+		             "ABORT \"DELAYED\"\n"
+		             "REPORT CONNECT\n"
+		             "TIMEOUT 10\n"
+		             "\"\" \"AT\"\n"
+		             "OK \"AT&FE0V1X1&D2&C1S0=0\"\n"
+		             "OK \"AT\"\n"
+		             "OK \"ATS0=0\"\n"
+		             "OK \"AT\"\n"
+		             "OK \"AT&FE0V1X1&D2&C1S0=0\"\n"
+		             "OK \"AT\"\n");
 
 		/* Only send the AT+CGDCONT (define PDP context) command to set
 		 * the APN if modem_apn is defined and non-empty.  Some ISPs
 		 * (ex. BSNL EVDO in India) don't need this (the modem returns
 		 * ERROR if issued).
 		 */
-		if (((p = nvram_safe_get(strcat_r(prefix, "_modem_apn", tmp))) != NULL) && (*p)) {
+		if ((p = nvram_safe_get(strcat_r(prefix, "_modem_apn", tmp))) && (*p))
 			fprintf(cfp, "OK 'AT+CGDCONT=1,\"IP\",\"%s\"'\n", p);
-		}
 
-		fprintf(cfp,
-			"OK \"ATDT%s\"\n"
-			"TIMEOUT 30\n"
-			"CONNECT \\c\n",
-			nvram_safe_get(strcat_r(prefix, "_modem_init", tmp))
-			);
+		fprintf(cfp, "OK \"ATDT%s\"\n"
+		             "TIMEOUT 30\n"
+		             "CONNECT \\c\n",
+		             nvram_safe_get(strcat_r(prefix, "_modem_init", tmp)));
 		fclose(cfp);
 
 		/* Add to options file */
-		fprintf(fp,
-			"%s\n"
-			"460800\n"
-			"connect \"/usr/sbin/chat %s -t 30 -f %s\"\n"
-			"noipdefault\n"
-			"lock\n"	/* Lock the modem device, to avoid another process trying to use it */
-			"crtscts\n"	/* Use hardware flow-control between the computer and the modem, to avoid data loss */
-			"modem\n"	/* Use the modem control lines */
-			"ipcp-accept-local\n",
-			nvram_safe_get(strcat_r(prefix, "_modem_dev", tmp)),
-			nvram_get_int("debug_ppp") ? "-v" : "-V",
-			ppp3g_chatfile);
+		fprintf(fp, "%s\n"
+		            "460800\n"
+		            "connect \"/usr/sbin/chat %s -t 30 -f %s\"\n"
+		            "noipdefault\n"
+		            "lock\n"	/* Lock the modem device, to avoid another process trying to use it */
+		            "crtscts\n"	/* Use hardware flow-control between the computer and the modem, to avoid data loss */
+		            "modem\n"	/* Use the modem control lines */
+		            "ipcp-accept-local\n",
+		            nvram_safe_get(strcat_r(prefix, "_modem_dev", tmp)),
+		            nvram_get_int("debug_ppp") ? "-v" : "-V",
+		            ppp3g_chatfile);
 
-		if (strlen(nvram_get(strcat_r(prefix, "_ppp_username", tmp))) > 0)
-			fprintf(fp, "user \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_username", tmp)));
-		if (strlen(nvram_get(strcat_r(prefix, "_ppp_passwd", tmp))) > 0)
-			fprintf(fp, "password \"%s\"\n", nvram_get(strcat_r(prefix, "_ppp_passwd", tmp)));
+		if ((p = nvram_safe_get(strcat_r(prefix, "_ppp_username", tmp))) && (*p))
+			fprintf(fp, "user \"%s\"\n", p);
+		if ((p = nvram_safe_get(strcat_r(prefix, "_ppp_passwd", tmp))) && (*p))
+			fprintf(fp, "password \"%s\"\n", p);
 
 		/* Clear old gateway */
-		if (strlen(nvram_get(strcat_r(prefix, "_gateway", tmp))) > 0) {
+		if ((p = nvram_get(strcat_r(prefix, "_gateway", tmp))) && (*p))
 			nvram_set(strcat_r(prefix, "_gateway", tmp), "");
-		}
 
 		/* Detect 3G Modem */
 		xstart("switch3g", prefix);
@@ -249,15 +223,14 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 	if (demand) {
 		/* Demand mode */
 		if (wan_proto != WP_L2TP)
-			fprintf(fp,
-				"demand\n"	/* Dial on demand */
-				"idle %d\n",	/* Disconnect if the link is idle for n seconds */
-				nvram_get_int(strcat_r(prefix, "_ppp_idletime", tmp)) * 60);
-		fprintf(fp,
-			"ipcp-accept-remote\n"	/* Force to accept the peer's idea of its (remote) IP address */
-			"ipcp-accept-local\n"	/* Force to accept the peer's idea of local IP address */
-			"noipdefault\n"		/* Disables the default behaviour when no local IP address is specified (request from peer) */
-			"ktune\n");		/* Set /proc/sys/net/ipv4/ip_dynaddr to 1 in demand mode if the local address changes */
+			fprintf(fp, "demand\n"		/* Dial on demand */
+			            "idle %d\n",	/* Disconnect if the link is idle for n seconds */
+			            nvram_get_int(strcat_r(prefix, "_ppp_idletime", tmp)) * 60);
+
+		fprintf(fp, "ipcp-accept-remote\n"	/* Force to accept the peer's idea of its (remote) IP address */
+		            "ipcp-accept-local\n"	/* Force to accept the peer's idea of local IP address */
+		            "noipdefault\n"		/* Disables the default behaviour when no local IP address is specified (request from peer) */
+		            "ktune\n");			/* Set /proc/sys/net/ipv4/ip_dynaddr to 1 in demand mode if the local address changes */
 	}
 
 #ifdef TCONFIG_IPV6
@@ -272,25 +245,23 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 	fprintf(fp, "%s\n", nvram_safe_get(strcat_r(prefix, "_ppp_custom", tmp)));
 	fclose(fp);
 
-	TRACE_PT("end\n");
 	return 0;
 }
 
 static void stop_ppp(char *prefix)
 {
-	TRACE_PT("begin\n");
-	char ppp_linkfile[256];
-	char pppd_name[256];
+	char buffer[64];
 
-	memset(ppp_linkfile, 0, 256);
-	sprintf(ppp_linkfile, "/tmp/ppp/%s_link", prefix);
-	unlink(ppp_linkfile);
+	memset(buffer, 0, 64);
+	sprintf(buffer, "/tmp/ppp/%s_link", prefix);
+	unlink(buffer);
 	/* Fix switching wan type from UI error (stale options file) */
-	sprintf(ppp_linkfile, "/tmp/ppp/%s_options", prefix);
-	unlink(ppp_linkfile);
+	memset(buffer, 0, 64);
+	sprintf(buffer, "/tmp/ppp/%s_options", prefix);
+	unlink(buffer);
 
-	memset(pppd_name, 0, 256);
-	sprintf(pppd_name, "pppd%s", prefix);
+	memset(buffer, 0, 64);
+	sprintf(buffer, "pppd%s", prefix);
 
 	/* Race condition on start_pppoe in ip-up on boot, primary pp(poe/tp) wan will not reach start_wan_done on secondary ppp(oe/3g) start */
 	//killall_tk("ip-up");
@@ -300,18 +271,17 @@ static void stop_ppp(char *prefix)
 	//killall_tk("ipv6-down");
 #endif
 	/* FIXME: find a proper way to stop daemon */
-	if (
-		get_wanx_proto("wan") != WP_L2TP
-		&& get_wanx_proto("wan2") != WP_L2TP
+	if (get_wanx_proto("wan") != WP_L2TP
+	    && get_wanx_proto("wan2") != WP_L2TP
 #ifdef TCONFIG_MULTIWAN
-		&& get_wanx_proto("wan3") != WP_L2TP
-		&& get_wanx_proto("wan4") != WP_L2TP
+	    && get_wanx_proto("wan3") != WP_L2TP
+	    && get_wanx_proto("wan4") != WP_L2TP
 #endif
 	)
 		killall_tk("xl2tpd");
 
 	//kill(nvram_get_int(strcat_r(prefix, "_pppd_pid", tmp)),1);
-	killall_tk((char *)pppd_name);
+	killall_tk((char *)buffer);
 
 	/* Don't kill other wans listeners, only this wan one
 	 * its PID can be found in /var/run/listen-wan%d.pid
@@ -320,20 +290,20 @@ static void stop_ppp(char *prefix)
 
 	/* WAN LED control */
 	wan_led_off(prefix); /* LED OFF? */
-
-	TRACE_PT("end\n");
 }
 
 static void run_pppd(char *prefix)
 {
 	char tmp[100];
-
 	char pppd_path[256];
+	char ppp_optfile[256];
+
 	memset(pppd_path, 0, 256);
 	sprintf(pppd_path, "/tmp/ppp/pppd%s", prefix);
-	char ppp_optfile[256];
+
 	memset(ppp_optfile, 0, 256);
 	sprintf(ppp_optfile, "/tmp/ppp/%s_options", prefix);
+
 	symlink("/usr/sbin/pppd", pppd_path);
 	eval(pppd_path, "file", ppp_optfile);
 
@@ -348,12 +318,11 @@ static void run_pppd(char *prefix)
 
 		/* Trigger Connect On Demand if user ping pptp server IP or WAN IP */
 		eval("listen", nvram_safe_get("lan_ifname"), prefix);
-	} else {							/* Keepalive mode */
+	}
+	else {							/* Keepalive mode */
 		start_redial(prefix);
 	}
 }
-
-/* ----------------------------------------------------------------------------- */
 
 inline void stop_pptp(char *prefix)
 {
@@ -363,15 +332,15 @@ inline void stop_pptp(char *prefix)
 void start_pptp(char *prefix)
 {
 	int num = 0; /* wan */
+
 	if (!strcmp(prefix,"wan2")) num = 1;
 #ifdef TCONFIG_MULTIWAN
 	else if (!strcmp(prefix,"wan3")) num = 2;
 	else if (!strcmp(prefix,"wan4")) num = 3;
 #endif
 
-	TRACE_PT("begin\n");
-
-	if (!using_dhcpc(prefix)) stop_dhcpc(prefix);
+	if (!using_dhcpc(prefix))
+		stop_dhcpc(prefix);
 
 	stop_pptp(prefix);
 
@@ -379,54 +348,34 @@ void start_pptp(char *prefix)
 		return;
 
 	run_pppd(prefix);
-
-	TRACE_PT("end\n");
 }
-
-/* ----------------------------------------------------------------------------- */
 
 /* Used by PPTP/L2TP mainly to setup host routes to DNS and access server */
 void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 {
+	struct in_addr ipaddr;
+	char tmp[100];
+	char word[100], *next;
 	int i, ret;
 	int proto;
-	char tmp[100];
-	struct in_addr ipaddr;
 
 	/* Delete default route */
 	route_del(ifname, 0, NULL, NULL, NULL);
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "!!! preset_wan: route_del(%s,0,NULL,NULL,NULL) !!! delete default route via %s !!!", ifname, ifname);
-#endif
 
 	/* Try adding a host route to gateway first */
 	route_add(ifname, 0, gw, NULL, "255.255.255.255");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "!!! preset_wan: route_add(%s,0,%s,NULL,255.255.255.255) !!! add host route to gw %s via %s !!!", ifname, gw, gw, ifname);
-#endif
 
 	/* Set default route to gateway if specified */
 	i = 5;
 	while ((ret = route_add(ifname, 1, "0.0.0.0", gw, "0.0.0.0") != 0) && (i--)) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "!!! preset_wan: route_add(%s,1,0.0.0.0,%s,0.0.0.0) !!! set default gateway %s for %s with metric 1 tries:[%d] ret:[%d] !!!", ifname, gw, gw, ifname, i, ret);
-#endif
 		sleep(1);
 	}
-	DBG("set default gateway=%s n=%d\n", gw, i);
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "!!! preset_wan: route_add(%s,1,0.0.0.0,%s,0.0.0.0) !!! set default gateway %s for %s with metric 1 return:[%d] !!!", ifname, gw, gw, ifname, ret);
-#endif
 
 	/* Add routes to dns servers as well for demand ppp to work */
-	char word[100], *next;
 	in_addr_t mask = inet_addr(netmask);
 	foreach(word, nvram_safe_get(strcat_r(prefix, "_get_dns", tmp)), next) {
 		if ((inet_addr(word) & mask) != (inet_addr(nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp))) & mask))
 			route_add(ifname, 0, word, gw, "255.255.255.255");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "!!! preset_wan: add route to %s dns %s via %s !!!", prefix, word, gw);
-#endif
 	}
 
 	/* Add routes to PPTP/L2TP servers for load-balanced WAN setups will work.
@@ -437,20 +386,12 @@ void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 	*/
 	proto = get_wanx_proto(prefix);
 	if (proto == WP_PPTP) {
-		if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), &(ipaddr.s_addr))) {
+		if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), &(ipaddr.s_addr)))
 			route_add(ifname, 0, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), gw, "255.255.255.255");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "!!! preset_wan: got %s_pptp_server_ip, add route to %s via %s !!!", prefix, nvram_safe_get(strcat_r(prefix, "_pptp_server_ip", tmp)), gw);
-#endif
-		}
 	}
 	if (proto == WP_L2TP) {
-		if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), &(ipaddr.s_addr))) {
+		if (inet_pton(AF_INET, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), &(ipaddr.s_addr)))
 			route_add(ifname, 0, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), gw, "255.255.255.255");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "!!! preset_wan: got %s_l2tp_server_ip, add route to %s via %s !!!", prefix, nvram_safe_get(strcat_r(prefix, "_l2tp_server_ip", tmp)), gw);
-#endif
-		}
 	}
 
 	/* FIXME! why only on primary WAN?
@@ -466,18 +407,13 @@ void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 	//}
 }
 
-/* ----------------------------------------------------------------------------- */
-
 /* Get the IP, subnetmask, gaeway from WAN ppp interface in demand mode and set nvram */
 static void start_tmp_ppp(int num, char *ifname, char *prefix)
 {
-	int timeout;
 	struct ifreq ifr;
-	int s;
-
 	char tmp[100];
-
-	TRACE_PT("begin: num=%d\n", num);
+	int timeout;
+	int s;
 
 	/* wtf? only on primary wan? */
 	//if (num != 0) return;
@@ -486,62 +422,42 @@ static void start_tmp_ppp(int num, char *ifname, char *prefix)
 	timeout = 15;
 	while ((ifconfig(ifname, IFUP, NULL, NULL) != 0) && (timeout-- > 0)) {
 		sleep(1);
-		DBG("[%d] waiting for %s %d...\n", __LINE__, ifname, timeout);
 	}
 
-	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) return;
+	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
+		return;
+
 	strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
 
 	/* Set temporary IP address */
 	timeout = 3;
 	while (ioctl(s, SIOCGIFADDR, &ifr) && timeout--) {
-		DBG("[%d] waiting for %s...\n", __LINE__, ifname);
 		sleep(1);
-	};
+	}
+
 	if (!using_dhcpc(prefix)) {
 		nvram_set(strcat_r(prefix, "_ipaddr", tmp), inet_ntoa(sin_addr(&(ifr.ifr_addr))));
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** start_tmp_ppp: set %s_ipaddr=%s ***", prefix, inet_ntoa(sin_addr(&(ifr.ifr_addr))));
-#endif
 		nvram_set(strcat_r(prefix, "_netmask", tmp), "255.255.255.255");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** start_tmp_ppp: set %s_netmask=255.255.255.255 ***", prefix);
-#endif
-	} else {
-		/* Don't overwrite netmask and set proper IP for PPP+DHCP wan */
-		nvram_set(strcat_r(prefix, "_ppp_get_ip", tmp), inet_ntoa(sin_addr(&(ifr.ifr_addr))));
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** start_tmp_ppp: set %s_ppp_get_ip=%s ***", prefix, inet_ntoa(sin_addr(&(ifr.ifr_addr))));
-#endif
 	}
+	else	/* Don't overwrite netmask and set proper IP for PPP+DHCP wan */
+		nvram_set(strcat_r(prefix, "_ppp_get_ip", tmp), inet_ntoa(sin_addr(&(ifr.ifr_addr))));
 
 	/* Get temporary P-t-P address */
 	timeout = 3;
 	while (ioctl(s, SIOCGIFDSTADDR, &ifr) && timeout--) {
-		DBG("[%d] waiting for %s...\n", __LINE__, ifname);
 		sleep(1);
 	}
 	/* UI and listen / connect scripts se wan_gateway() which return gateway_get */
 	if (!using_dhcpc(prefix)) {
 		nvram_set(strcat_r(prefix, "_gateway", tmp), inet_ntoa(sin_addr(&(ifr.ifr_dstaddr))));
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** start_tmp_ppp: set %s_gateway=%s ***", prefix, inet_ntoa(sin_addr(&(ifr.ifr_dstaddr))));
-#endif
 		nvram_set(strcat_r(prefix, "_gateway_get", tmp), inet_ntoa(sin_addr(&(ifr.ifr_dstaddr))));
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** start_tmp_ppp: set %s_gateway_get=%s ***", prefix, inet_ntoa(sin_addr(&(ifr.ifr_dstaddr))));
-#endif
-	} else {
-		nvram_set(strcat_r(prefix, "_gateway_get", tmp), inet_ntoa(sin_addr(&(ifr.ifr_dstaddr))));
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** start_tmp_ppp: set %s_gateway_get=%s ***", prefix, inet_ntoa(sin_addr(&(ifr.ifr_dstaddr))));
-#endif
 	}
+	else
+		nvram_set(strcat_r(prefix, "_gateway_get", tmp), inet_ntoa(sin_addr(&(ifr.ifr_dstaddr))));
 
 	close(s);
 
 	start_wan_done(ifname, prefix);
-	TRACE_PT("end\n");
 }
 
 void start_pppoe(int num, char *prefix)
@@ -549,9 +465,8 @@ void start_pppoe(int num, char *prefix)
 	char pppname[8] = "";
 	char tmp[100];
 
-	TRACE_PT("begin pppoe_num=%d\n", num);
-
-	if (num < 0 || num > 3) return;
+	if (num < 0 || num > 3)
+		return;
 
 	stop_pppoe(prefix);
 
@@ -560,10 +475,11 @@ void start_pppoe(int num, char *prefix)
 		if (nvram_match("usb_3g", "1")) {
 			if (config_pppd(WP_PPP3G, num, prefix) != 0)
 				return;
-		} else {		/* USB support has been disabled */
-			return;
 		}
-	} else {
+		else		/* USB support has been disabled */
+			return;
+	}
+	else {
 #endif
 		if (config_pppd(WP_PPPOE, num, prefix) != 0)
 			return;
@@ -576,24 +492,11 @@ void start_pppoe(int num, char *prefix)
 
 	if (strcmp(pppname, "none") && strcmp(pppname, "")) {		/* Got interface */
 		/* Run in demand mode only if interface exists and not for L2TP wan */
-		if (nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp)) && !nvram_match(strcat_r(prefix, "_proto", tmp), "l2tp")) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** start_pppoe(%s), (demand mode): start_tmp_ppp(%d, %s, %s) ***", prefix, num, pppname, prefix);
-#endif
+		if (nvram_get_int(strcat_r(prefix, "_ppp_demand", tmp)) && !nvram_match(strcat_r(prefix, "_proto", tmp), "l2tp"))
 			start_tmp_ppp(num, pppname, prefix);
-		} else {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** start_pppoe(%s), (keep alive mode): ifconfig(%s, IFUP, NULL, NULL); num: %d ***", prefix, pppname, num);
-#endif
+		else
 			ifconfig(pppname, IFUP, NULL, NULL);
-		}
-	} else {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** start_pppoe(%s), ppp interface not found or set to none! ***", prefix);
-#endif
 	}
-
-	TRACE_PT("end\n");
 }
 
 void stop_pppoe(char *prefix)
@@ -609,7 +512,7 @@ static int config_l2tp(void)		/* shared xl2tpd.conf for all WAN */
 	int demand;
 	char xl2tp_file[256];
 	char tmp[100];
-	const char *names[] = {		/* FIXME: hardcoded to 4 WANs */
+	const char *names[] = {
 		"wan",
 		"wan2",
 #ifdef TCONFIG_MULTIWAN
@@ -623,56 +526,44 @@ static int config_l2tp(void)		/* shared xl2tpd.conf for all WAN */
 	memset(xl2tp_file, 0, 256);
 	sprintf(xl2tp_file, "/etc/xl2tpd.conf");
  	if ((fp = fopen(xl2tp_file, "w")) == NULL) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** config_l2tp: error open /etc/xl2tpd.conf for writing! ***");
-#endif
-		return -1;
+		perror(xl2tp_file);
+ 		return -1;
 	}
 	/* GLOBAL */
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "*** config_l2tp: GLOBAL ***");
-#endif
-	fprintf(fp,
-		"[global]\n"
-		"access control = no\n"
-		"port = 1701\n"
-		"debug avp = no\n"
-		"debug network = no\n"
-		"debug packet = no\n"
-		"debug state = no\n"
-		"debug tunnel = no\n"
-		"\n"
-	);
+	fprintf(fp, "[global]\n"
+	            "access control = no\n"
+	            "port = 1701\n"
+	            "debug avp = no\n"
+	            "debug network = no\n"
+	            "debug packet = no\n"
+	            "debug state = no\n"
+	            "debug tunnel = no\n"
+	            "\n");
 	/* LACS */
 	for (i = 0; names[i] != NULL; ++i) {
 		if (!strcmp(nvram_safe_get(strcat_r(names[i], "_proto", tmp)), "l2tp")) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** config_l2tp: create LAC for %s ***", names[i]);
-#endif
 			demand = nvram_get_int(strcat_r(names[i], "_ppp_demand", tmp));
 			char ppp_optfile[256];
 			memset(ppp_optfile, 0, 256);
 			sprintf(ppp_optfile, "/tmp/ppp/%s_options", names[i]);
-			fprintf(fp,
-				"[lac %s]\n"
-				"lns = %s\n"
-				"bps = 1000000000\n"	/* 1 gbit to both tx/rx */
-				"tunnel rws = 8\n"
-				"pppoptfile = %s\n"
-				"autodial = no\n"
-				"redial = %s\n"
-				"max redials = 32767\n"
-				"redial timeout = %d\n"
-				"ppp debug = %s\n"
-				"%s\n",
-				names[i],		/* LAC name */
-				nvram_safe_get(strcat_r(names[i], "_l2tp_server_ip", tmp)),
-				ppp_optfile,
-				demand ? "no" : "yes",
-				nvram_get_int(strcat_r(names[i], "_ppp_redialperiod", tmp)) ? : 30,
-				nvram_get_int("debug_ppp") ? "yes" : "no",
-				nvram_safe_get(strcat_r(names[i], "_xl2tpd_custom", tmp))
-			);
+			fprintf(fp, "[lac %s]\n"
+			            "lns = %s\n"
+			            "bps = 1000000000\n"	/* 1 gbit to both tx/rx */
+			            "tunnel rws = 8\n"
+			            "pppoptfile = %s\n"
+			            "autodial = no\n"
+			            "redial = %s\n"
+			            "max redials = 32767\n"
+			            "redial timeout = %d\n"
+			            "ppp debug = %s\n"
+			            "%s\n",
+			            names[i],		/* LAC name */
+			            nvram_safe_get(strcat_r(names[i], "_l2tp_server_ip", tmp)),
+			            ppp_optfile,
+			            demand ? "no" : "yes",
+			            nvram_get_int(strcat_r(names[i], "_ppp_redialperiod", tmp)) ? : 30,
+			            nvram_get_int("debug_ppp") ? "yes" : "no",
+			            nvram_safe_get(strcat_r(names[i], "_xl2tpd_custom", tmp)));
 
 			memset(xl2tp_file, 0, 256);
 			sprintf(xl2tp_file, "/etc/%s_xl2tpd.custom", names[i]);
@@ -704,13 +595,12 @@ void start_l2tp(char *prefix)
 	char tmp[100];
 	int demand;
 
-	TRACE_PT("begin\n");
-
-	if (!using_dhcpc(prefix)) stop_dhcpc(prefix);	/* As for PPTP */
+	if (!using_dhcpc(prefix))	/* As for PPTP */
+		stop_dhcpc(prefix);
 
 	//stop_l2tp(prefix);
 
-	if (config_l2tp() != 0)				/* Generate L2TP daemon config */
+	if (config_l2tp() != 0)		/* Generate L2TP daemon config */
 		return;
 
 	int num = 0; /* wan */
@@ -726,78 +616,55 @@ void start_l2tp(char *prefix)
 
 	enable_ip_forward();
 
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "*** start_l2tp, cmd: xl2tpd -c /etc/xl2tpd.conf ***");
-#endif
 	eval("xl2tpd", "-c", "/etc/xl2tpd.conf");
 
-	if (demand) {					/* Listen LAN for ping to l2tp server IP, see listen.c */
+	if (demand)					/* Listen LAN for ping to l2tp server IP, see listen.c */
 		eval("listen", nvram_safe_get("lan_ifname"), prefix);
-	} else {
+	else
 		force_to_dial(prefix);			/* Force connect via l2tp-control */
-	}
-
-	TRACE_PT("end\n");
 }
-
-/* ----------------------------------------------------------------------------- */
 
 char *wan_gateway(char *prefix)
 {
 	char tmp[100];
 	char *gw = nvram_safe_get(strcat_r(prefix, "_gateway_get", tmp));
+
 	if ((*gw == 0) || (strcmp(gw, "0.0.0.0") == 0))
 		gw = nvram_safe_get(strcat_r(prefix, "_gateway", tmp));
+
 	return gw;
 }
-
-/* ----------------------------------------------------------------------------- */
 
 /* Trigger connect on demand */
 void force_to_dial(char *prefix)
 {
 	char l2tp_file[64];
 	char connects[64];
-	char dgw[64] = "";
+	char dgw[64];
 
-	TRACE_PT("begin\n");
+	memset(dgw, 0, 64);
 	sprintf(dgw, "10.112.112.%d", 111 + get_wan_unit(prefix)); /* 10.112.112.112-115 for ppp0-3 */
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "*** force_to_dial %s, proto=%d gw=%s dgw=%s dhcpc=%d ***", prefix, get_wanx_proto(prefix), wan_gateway(prefix), dgw, using_dhcpc(prefix));
-#endif
 	sleep(1);
+
 	switch (get_wanx_proto(prefix)) {
 	case WP_L2TP:
 		memset(l2tp_file, 0, 64);
 		sprintf(l2tp_file, "/var/run/l2tp-control");
 		memset(connects, 0, 64);
 		sprintf(connects, "c %s", prefix);
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** force_to_dial %s, do L2TP connect, command: %s ***", prefix, connects);
-#endif
 		f_write_string(l2tp_file, connects, 0, 0);
 		break;
 	case WP_PPTP:
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** force_to_dial %s, do ping -c 2 %s ***", prefix, dgw);
-#endif
 		eval("ping", "-c", "2", dgw);
 		break;
 	case WP_DISABLED:
 	case WP_STATIC:
 		break;
 	default:
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "*** force_to_dial %s, do ping -c 2 %s ***", prefix, (strcmp(wan_gateway(prefix),"") != 0 && strcmp(wan_gateway(prefix),"0.0.0.0") != 0) ? wan_gateway(prefix) : dgw);
-#endif
 		eval("ping", "-c", "2", (strcmp(wan_gateway(prefix),"") != 0 && strcmp(wan_gateway(prefix),"0.0.0.0") != 0) ? wan_gateway(prefix) : dgw);
 		break;
 	}
-
-	TRACE_PT("end\n");
 }
-
-/* ----------------------------------------------------------------------------- */
 
 static void _do_wan_routes(char *ifname, char *nvname, int metric, int add)
 {
@@ -827,17 +694,10 @@ static void _do_wan_routes(char *ifname, char *nvname, int metric, int add)
 		gateway = strsep(&tmp, " ");
 
 		if (gateway && *gateway) {
-			if (add) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-				mwanlog(LOG_DEBUG, "!!! do_wan_routes: route_add(%s,%d,%s,%s,%s) !!!", ifname, metric, ipaddr, gateway, netmask);
-#endif
+			if (add)
 				route_add(ifname, metric, ipaddr, gateway, netmask);
-			} else {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-				mwanlog(LOG_DEBUG, "!!! do_wan_routes: route_del(%s,%d,%s,%s,%s) !!!", ifname, metric, ipaddr, gateway, netmask);
-#endif
+			else
 				route_del(ifname, metric, ipaddr, gateway, netmask);
-			}
 		}
 	}
 	free(routes);
@@ -846,9 +706,6 @@ static void _do_wan_routes(char *ifname, char *nvname, int metric, int add)
 void do_wan_routes(char *ifname, int metric, int add, char *prefix)
 {
 	if (nvram_get_int("dhcp_routes")) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "MWAN: do_wan_routes, interface=%s metric=%d add=%d prefix=%s", ifname,  metric, add, prefix);
-#endif
 		char tmp[100];
 		/* Static Routes:		IP ROUTER IP2 ROUTER2 ... */
 		/* Classless Static Routes:	IP/MASK ROUTER IP2/MASK2 ROUTER2 ... */
@@ -857,19 +714,6 @@ void do_wan_routes(char *ifname, int metric, int add, char *prefix)
 	}
 }
 
-/* ----------------------------------------------------------------------------- */
-/*
-static int is_sta(int idx, int unit, int subunit, void *param)
-{
-	char **p = param;
-
-	if (nvram_match(wl_nvname("mode", unit, subunit), "sta")) {
-		*p = nvram_safe_get(wl_nvname("ifname", unit, subunit));
-		return 1;
-	}
-	return 0;
-}
-*/
 void start_wan_if(int mode, char *prefix)
 {
 	int wan_proto;
@@ -889,13 +733,7 @@ void start_wan_if(int mode, char *prefix)
 	char wanconn_file[256];
 	char tmp[100];
 
-	TRACE_PT("begin\n");
-
 	wan_unit = get_wan_unit(prefix);
-
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "MWAN: IN start_wan_if (%s)", prefix);
-#endif
 
 	memset(wanconn_file, 0, 256);
 	sprintf(wanconn_file, "/var/lib/misc/%s.connecting", prefix);
@@ -906,7 +744,7 @@ void start_wan_if(int mode, char *prefix)
 	 * so primary / 3G WAN will be setup with wrong interface in case there is any STA exist.
 	 * also, (nvram_match(strcat_r(prefix, "_sta", tmp), "") return 0 for PPP3G or portless? WAN !!!
 	 */
-	if (strcmp(nvram_safe_get(strcat_r(prefix, "_sta", tmp)),"") == 0) {
+	if (strcmp(nvram_safe_get(strcat_r(prefix, "_sta", tmp)), "") == 0) {
 		p = nvram_safe_get(strcat_r(prefix, "_ifnameX", tmp));
 		if (sscanf(p, "vlan%d", &vid) == 1) {
 			vlan0tag = nvram_get_int("vlan0tag");
@@ -917,18 +755,12 @@ void start_wan_if(int mode, char *prefix)
 			p = buf;
 		}
 		/* Set wan mac on vlan (but not for wireless client) */
-		if (!strcmp(prefix, "wan")) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** set_mac(%s,wan_mac,1) ***", p);
-#endif
+		if (!strcmp(prefix, "wan"))
 			set_mac(p, "wan_mac", 1);
-		} else {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "*** set_mac(%s,%s_mac,%d) ***", p, prefix, wan_unit + 15);
-#endif
+		else
 			set_mac(p, strcat_r(prefix, "_mac", tmp), wan_unit + 15);
-		}
-	} else { /* Wireless client as wan */
+	}
+	else { /* Wireless client as wan */
 		w = nvram_safe_get(strcat_r(prefix, "_sta", tmp));
 		p = nvram_safe_get(strcat_r(w, "_ifname", tmp));
 	}
@@ -978,9 +810,9 @@ void start_wan_if(int mode, char *prefix)
 		max = 1500;
 		break;
 	}
-	if (nvram_match(strcat_r(prefix, "_mtu_enable", tmp), "0")) {
+	if (nvram_match(strcat_r(prefix, "_mtu_enable", tmp), "0"))
 		mtu = max;
-	} else {
+	else {
 		/* KDB If we've big fat frames enabled then we *CAN* break the
 		 * max MTU on PPP link
 		 */
@@ -990,6 +822,7 @@ void start_wan_if(int mode, char *prefix)
 		else if (mtu < 576)
 			mtu = 576;
 	}
+	memset(buf, 0, 128);
 	sprintf(buf, "%d", mtu);
 	nvram_set(strcat_r(prefix, "_mtu", tmp), buf);
 	nvram_set(strcat_r(prefix, "_run_mtu", tmp), buf);
@@ -1009,9 +842,6 @@ void start_wan_if(int mode, char *prefix)
 	case WP_PPP3G:
 		if (wan_proto == WP_PPPOE && using_dhcpc(prefix)) { /* PPPoE with DHCP MAN */
 			stop_dhcpc(prefix);
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "MWAN: start_wan_if: starting dhcpc(%s) for PPPoE ...", prefix);
-#endif
 			start_dhcpc(prefix);
 		}
 		else if (!strcmp(prefix,"wan"))  start_pppoe(PPPOEWAN, prefix);
@@ -1025,32 +855,27 @@ void start_wan_if(int mode, char *prefix)
 	case WP_LTE:
 	case WP_L2TP:
 	case WP_PPTP:
-		if (wan_proto == WP_LTE) {
+		if (wan_proto == WP_LTE)
 			/* Prepare LTE modem */
 			xstart("switch4g", prefix);
-		} else if (using_dhcpc(prefix)) {
+		else if (using_dhcpc(prefix)) {
 			stop_dhcpc(prefix);
 			start_dhcpc(prefix);
-		} else if (wan_proto != WP_DHCP && wan_proto != WP_LTE) {
+		}
+		else if (wan_proto != WP_DHCP && wan_proto != WP_LTE) {
 			/* Set wan interface IP/mask */
 			ifconfig(wan_ifname, IFUP, "0.0.0.0", NULL);
 			ifconfig(wan_ifname, IFUP, nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp)), nvram_safe_get(strcat_r(prefix, "_netmask", tmp)));
 
 			p = nvram_safe_get(strcat_r(prefix, "_gateway", tmp));
-			if ((*p != 0) && (strcmp(p, "0.0.0.0") != 0))
+			if ((strcmp(p, "0.0.0.0") != 0) && (*p))
 				preset_wan(wan_ifname, p, nvram_safe_get(strcat_r(prefix, "_netmask", tmp)), prefix);
 
 			switch (wan_proto) {
 			case WP_PPTP:
-#ifndef TCONFIG_OPTIMIZE_SIZE
-				mwanlog(LOG_DEBUG, "*** start_wan_if: start_pptp (%s) ***", prefix);
-#endif
 				start_pptp(prefix);
 				break;
 			case WP_L2TP:
-#ifndef TCONFIG_OPTIMIZE_SIZE
-				mwanlog(LOG_DEBUG, "*** start_wan_if: start_l2tp (%s) ***", prefix);
-#endif
 				start_l2tp(prefix);
 				break;
 			}
@@ -1063,29 +888,19 @@ void start_wan_if(int mode, char *prefix)
 		while ((!check_wanup(prefix)) && (r-- > 0)) {
 			sleep(1);
 		}
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "MWAN: start_wan_if to start_wan_done(%s, %s) ... [static]", wan_ifname, prefix);
-#endif
 		start_wan_done(wan_ifname, prefix);
 		break;
 	}
 
 	/* Get current WAN hardware address */
 	strlcpy(ifr.ifr_name, wan_ifname, IFNAMSIZ);
-	if (ioctl(sd, SIOCGIFHWADDR, &ifr) == 0) {
+	if (ioctl(sd, SIOCGIFHWADDR, &ifr) == 0)
 		nvram_set(strcat_r(prefix, "_hwaddr", tmp), ether_etoa((const unsigned char *) ifr.ifr_hwaddr.sa_data, buf));
-	}
 
 	close(sd);
 
 	/* Set initial QoS mode again now that WAN port is ready. */
 	set_et_qos_mode();
-
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "MWAN: OUT start_wan_if (%s)", prefix);
-#endif
-
-	TRACE_PT("end\n");
 }
 
 void start_wan(int mode)
@@ -1095,21 +910,13 @@ void start_wan(int mode)
 	char prefix[] = "wanXX";
 
 	mwan_num = atoi(nvram_safe_get("mwan_num"));
-	if (mwan_num < 1 || mwan_num > MWAN_MAX) {
+	if (mwan_num < 1 || mwan_num > MWAN_MAX)
 		mwan_num = 1;
-	}
-
-	syslog(LOG_INFO, "start_wan: Restarting wireless");
-	stop_wireless();
-	start_wireless();
 
 	syslog(LOG_INFO, "MultiWAN: MWAN is %d (max %d)", mwan_num, MWAN_MAX);
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, prefix);
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "MWAN: start_wan, unit=%d mode=%d prefix=%s", wan_unit, mode, prefix);
-#endif
 		start_wan_if (mode, prefix);
 	}
 
@@ -1124,12 +931,12 @@ void start_wan(int mode)
 	if (nvram_get_int("mwan_cktime") > 0)
 		xstart("watchdog", "add");
 
-	led(LED_DIAG, LED_OFF);	/* For 4712, 5325E (?) */
+	led(LED_DIAG, LED_OFF);
 	led(LED_DMZ, nvram_match("dmz_enable", "1"));
 }
 
 #ifdef TCONFIG_IPV6
-void start_wan6_done(const char *wan_ifname)
+void start_wan6(const char *wan_ifname)
 {
 	struct in_addr addr4;
 	struct in6_addr addr;
@@ -1139,12 +946,10 @@ void start_wan6_done(const char *wan_ifname)
 
 	if (service != IPV6_DISABLED) {
 		/* Check if "ipv6_accept_ra" (bit 0) for wan is enabled (via GUI, basic-ipv6.asp) */
-		if ((nvram_get_int("ipv6_accept_ra") & 0x01) != 0) {
+		if ((nvram_get_int("ipv6_accept_ra") & 0x01) != 0)
 			accept_ra(wan_ifname);
-		} else {
-			/* set default value */
+		else /* set default value */
 			accept_ra_reset(wan_ifname);
-		}
 	}
 
 	switch (service) {
@@ -1154,7 +959,6 @@ void start_wan6_done(const char *wan_ifname)
 		eval("ip", "-6", "route", "del", "::/0");
 		eval("ip", "-6", "route", "add", nvram_safe_get("ipv6_isp_gw"), "dev", (char *)wan_ifname);
 		eval("ip", "-6", "route", "add", "::/0", "via", nvram_safe_get("ipv6_isp_gw"), "dev", (char *)wan_ifname);
-		//eval("ip", "route", "add", "::/0", "dev", (char *)wan_ifname, "metric", "2048");
 		break;
 	case IPV6_NATIVE_DHCP:
 		/* IPv6 RA (via WAN) will take care of adding the default route, so that ipv6_isp_opt should not be enabled/required!
@@ -1193,13 +997,19 @@ void start_wan6_done(const char *wan_ifname)
 		break;
 	}
 }
-#endif
+void stop_wan6(void)
+{
+	stop_ipv6_tunnel();
+	stop_dhcp6c();
+
+	nvram_set("ipv6_get_dns", ""); /* clear dns */
+}
+#endif /* #ifdef TCONFIG_IPV6 */
 
 /* ppp_demand: 0=keep alive, 1=connect on demand (run 'listen')
  * wan_ifname: vlan1
  * wan_iface: ppp# (PPPOE, PPP3G, PPTP, L2TP), vlan1 (DHCP, HB, Static, LTE)
  */
-
 void start_wan_done(char *wan_ifname, char *prefix)
 {
 	int proto;
@@ -1212,84 +1022,47 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	char wanconn_file[256];
 	char tmp[100];
 
-	TRACE_PT("begin %s_ifname=%s\n", prefix, wan_ifname);
+	int is_primary;
+	char pw[] = "wanXX";
 
 	sysinfo(&si);
 
 	memset(wantime_file, 0, 256);
-	sprintf(wantime_file, "/var/lib/misc/%s_time", prefix);	
+	sprintf(wantime_file, "/var/lib/misc/%s_time", prefix);
 	f_write(wantime_file, &si.uptime, sizeof(si.uptime), 0, 0);
 
 	proto = get_wanx_proto(prefix);
 
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "MWAN: IN start_wan_done, interface=%s wan_prefix=%s proto=%d", wan_ifname, prefix, proto);
-#endif
-
 	/* Delete default interface route */
-	if (proto == WP_PPTP || proto == WP_L2TP || (proto == WP_PPPOE && using_dhcpc(prefix))) {	/* Delete MAN default route */
+	if (proto == WP_PPTP || proto == WP_L2TP || (proto == WP_PPPOE && using_dhcpc(prefix)))	/* Delete MAN default route */
 		route_del(NULL, 0, NULL, NULL, NULL);
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "!!! start_wan_done: route_del(NULL,0,NULL,NULL,NULL) !!! delete any default route !!!");
-#endif
-	} else {
+	else
 		route_del(wan_ifname, 0, NULL, NULL, NULL);
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "!!! start_wan_done: route_del(%s,0,NULL,NULL,NULL) !!! delete default interface route !!!", wan_ifname);
-#endif
-	}
 
 	if (proto != WP_DISABLED) {
-
 		/* Set default route to gateway if specified */
 		gw = wan_gateway(prefix);
-#if 0
-		if (proto == WP_PPTP && !using_dhcpc(prefix)) {
-			/* For PPTP protocol, we must use ppp_get_ip as gateway, not pptp_server_ip (why ??) */
-			if (*gw == 0 || strcmp(gw, "0.0.0.0") == 0) gw = nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp));
-		}
-#endif
+
 		if ((*gw != 0) && (strcmp(gw, "0.0.0.0") != 0)) {
-			if (proto == WP_DHCP || proto == WP_STATIC || proto == WP_LTE) {
+			if (proto == WP_DHCP || proto == WP_STATIC || proto == WP_LTE)
 				/* Possibly gateway is over the bridge, try adding a route to gateway first */
 				route_add(wan_ifname, 0, gw, NULL, "255.255.255.255");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-				mwanlog(LOG_DEBUG, "!!! start_wan_done: route_add(%s,0,%s,NULL,255.255.255.255) !!!", wan_ifname, gw);
-#endif
-			}
 
 			n = 5;
 			while ((route_add(wan_ifname, 0, "0.0.0.0", gw, "0.0.0.0") == 1) && (n--)) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
-				mwanlog(LOG_DEBUG, "!!! start_wan_done: route_add(%s,0,0.0.0.0,%s,0.0.0.0) !!! set default gw [%d]!!!", wan_ifname, gw, n);
-#endif
 				sleep(1);
 			}
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "!!! start_wan_done: route_add(%s,0,0.0.0.0,%s,0.0.0.0) !!! set default gw %s on %s !!!", wan_ifname, gw, gw, wan_ifname);
-#endif
-			DBG("set default gateway=%s n=%d\n", gw, n);
 
 			/* hack: avoid routing cycles, when both peer and server have the same IP */
-			if (proto == WP_PPTP || proto == WP_L2TP) {
+			if (proto == WP_PPTP || proto == WP_L2TP)
 				/* Delete gateway route as it's no longer needed */
 				route_del(wan_ifname, 0, gw, "0.0.0.0", "255.255.255.255");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-				mwanlog(LOG_DEBUG, "!!! start_wan_done: route_del(%s,0,%s,0.0.0.0,255.255.255.255) !!!", wan_ifname, gw);
-#endif
-			}
 		}
 
 		/* Change GW from peer IP to PPTP/L2TP IP */
 		if (proto == WP_PPTP || proto == WP_L2TP) {
 			route_del(nvram_safe_get(strcat_r(prefix, "_iface", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_gateway_get", tmp)), NULL, "255.255.255.255");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "!!! start_wan_done, route_del(%s,0,%s,NULL,255.255.255.255) !!!", nvram_safe_get(strcat_r(prefix, "_iface", tmp)), nvram_safe_get(strcat_r(prefix, "_gateway_get", tmp)));
-#endif
 			route_add(nvram_safe_get(strcat_r(prefix, "_iface", tmp)), 0, nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)), NULL, "255.255.255.255");
-#ifndef TCONFIG_OPTIMIZE_SIZE
-			mwanlog(LOG_DEBUG, "!!! start_wan_done, route_add(%s,0,%s,NULL,255.255.255.255) !!!", nvram_safe_get(strcat_r(prefix, "_iface", tmp)), nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp)));
-#endif
 		}
 	}
 
@@ -1300,28 +1073,27 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 	do_static_routes(1);
 	/* And routes supplied via DHCP */
-	do_wan_routes(using_dhcpc(prefix) ? nvram_safe_get(strcat_r(prefix, "_ifname",tmp)) : wan_ifname, 0, 1, prefix);
+	do_wan_routes((using_dhcpc(prefix) ? nvram_safe_get(strcat_r(prefix, "_ifname",tmp)) : wan_ifname), 0, 1, prefix);
+
+	/* start IPv6 BUT only for "wan" (no multiwan support, no primary wan) */
+#ifdef TCONFIG_IPV6
+	if (strcmp(prefix, "wan") == 0) { /* check for "wan" prefix */
+		start_wan6(get_wan6face());
+	}
+#endif
 
 	/*
 	 * FIX boot with only secondary etc wan active (assume current wan is primary if previous is not up)
 	 */
-	int is_primary;
-	char pw[] = "wanXXX";
-
 	get_wan_prefix(nvram_get_int("wan_primary"), pw);	/* Get current primary wan name */
 	if (!check_wanup(pw)) {					/* If primary wan offline, set current as primary */
-#ifndef TCONFIG_OPTIMIZE_SIZE
-		mwanlog(LOG_DEBUG, "MWAN: primary wan unit=%d offline, set %s as primary ...", nvram_get_int("wan_primary"), prefix);
-#endif
-		sprintf(tmp,"%d",get_wan_unit(prefix));
+		memset(tmp, 0, 100);
+		sprintf(tmp, "%d", get_wan_unit(prefix));
 		nvram_set("wan_primary", tmp);
-		memset(pw,0,6);
+		memset(pw, 0, 6);
 		strncpy(pw, prefix, sizeof(pw));
 	}
 	is_primary = (strcmp(prefix, pw) == 0);			/* Is this primary wan? */
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "MWAN: %s is primary: %s", prefix, (is_primary) ? "true" : "false");
-#endif
 
 	wanup = check_wanup(prefix);
 
@@ -1344,15 +1116,12 @@ void start_wan_done(char *wan_ifname, char *prefix)
 			start_udpxy();
 		}
 
-#ifdef TCONFIG_IPV6
-		start_wan6_done(get_wan6face());
-#endif
-
 		start_httpd();
 	}
 
 	if (wanup) {
 		char wan_unit_str[16];
+		memset(wan_unit_str, 0, 16);
 		sprintf(wan_unit_str, "%d", get_wan_unit(prefix));
 
 		notice_set(prefix, "");
@@ -1364,11 +1133,11 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 	if (is_primary) {
 		/* WAN LED control */
-		if (wanup) {
+		if (wanup)
 			wan_led(wanup); /* LED ON! */
-		}
 
-		/* We don't need STP after wireless led is lighted		// no idea why... toggling it if necessary	-- zzz */
+#ifndef TCONFIG_BCMARM
+		/* We don't need STP after wireless led is lighted */
 		if (check_hw_type() == HW_BCM4702) {
 			eval("brctl", "stp", nvram_safe_get("lan_ifname"), "0");
 			if (nvram_match("lan_stp", "1")) 
@@ -1389,6 +1158,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 					eval("brctl", "stp", nvram_safe_get("lan3_ifname"), "1");
 			}
 		}
+#endif
 
 		if (wanup) {
 #ifdef TCONFIG_OPENVPN
@@ -1403,7 +1173,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 		stop_upnp();
 		start_upnp();
-		new_qoslimit_start();	/* !! RAF */
+		new_qoslimit_start();
 	}
 
 	mwan_table_add(prefix);
@@ -1412,12 +1182,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	memset(wanconn_file, 0, 256);
 	sprintf(wanconn_file, "/var/lib/misc/%s.connecting", prefix);
 	unlink(wanconn_file);
-
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "MWAN: OUT start_wan_done [%s]", prefix);
-#endif
-
-	TRACE_PT("end\n");
 }
 
 void stop_wan_if(char *prefix)
@@ -1432,9 +1196,15 @@ void stop_wan_if(char *prefix)
 
 	mwan_table_del(prefix);
 
-	TRACE_PT("begin\n");
-
 	stop_qos(prefix);
+
+	/* stop IPv6 BUT only for "wan" (no multiwan support, no primary wan) */
+#ifdef TCONFIG_IPV6
+	if (strcmp(prefix, "wan") == 0) { /* check for "wan" prefix */
+		stop_wan6();
+	}
+#endif
+
 	/* Kill any WAN client daemons or callbacks */
 	stop_redial(prefix);
 	stop_l2tp(prefix);			/* Special case for xl2tpd */
@@ -1479,20 +1249,18 @@ void stop_wan_if(char *prefix)
 		nvram_set(strcat_r(prefix, "_ppp_get_ip", tmp), "0.0.0.0");
 		nvram_set(strcat_r(prefix, "_get_dns", tmp), "");
 		/* For debug. Don't fool wantchdog / mwan scripts with old obsolete interface, it can be actually used on other wan (ex: ppp0) */
-		nvram_set(strcat_r(prefix, "_iface", tmp),"none");
+		nvram_set(strcat_r(prefix, "_iface", tmp), "none");
 	}
-	TRACE_PT("end\n");
 }
 
 void stop_wan(void)
 {
-
 #ifdef TCONFIG_TINC
 	stop_tinc();
 #endif
 
-	new_qoslimit_stop();	/* !! RAF */
-	stop_upnp();		/* !!TB - moved from stop_services() */
+	new_qoslimit_stop();
+	stop_upnp();
 	stop_firewall();
 	stop_igmp_proxy();
 	stop_udpxy();
@@ -1519,9 +1287,6 @@ void stop_wan(void)
 	stop_wan_if("wan4");
 #endif
 
-#ifndef TCONFIG_OPTIMIZE_SIZE
-	mwanlog(LOG_DEBUG, "MWAN: watchdog disabled");
-#endif
 	xstart("watchdog", "del");
 
 }

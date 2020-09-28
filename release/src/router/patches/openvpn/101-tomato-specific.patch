@@ -1,38 +1,26 @@
-diff -Naurp openvpn/src/openvpn/route.c openvpn/src/openvpn/route.c
---- openvpn/src/openvpn/route.c	2017-03-22 16:34:21.000000000 +0100
-+++ openvpn/src/openvpn/route.c	2018-04-17 17:15:46.759443944 +0200
-@@ -45,6 +45,10 @@
+--- openvpn/src/openvpn/networking_sitnl.c
++++ openvpn/src/openvpn/networking_sitnl.c
+@@ -25,6 +25,10 @@
+ #endif
+ 
+ #ifdef TARGET_LINUX
++/* be compatible with Tomato */
++typedef __signed__ long __s64;
++typedef unsigned long __u64;
++/* end Tomato */
+ 
+ #include "syshead.h"
+ 
+--- openvpn/src/openvpn/route.c
++++ openvpn/src/openvpn/route.c
+@@ -46,6 +46,10 @@
  #include "memdbg.h"
  
  #if defined(TARGET_LINUX) || defined(TARGET_ANDROID)
-+// be compatible with Tomato K26 - shibby
++/* be compatible with Tomato */
 +typedef __signed__ long __s64;
 +typedef unsigned long __u64;
-+// end - shibby
++/* end Tomato */
  #include <linux/rtnetlink.h>            /* RTM_GETROUTE etc. */
  #endif
  
-diff -Naurp openvpn/src/openvpn/tun.c openvpn/src/openvpn/tun.c
---- openvpn/src/openvpn/tun.c	2017-03-22 16:34:21.000000000 +0100
-+++ openvpn/src/openvpn/tun.c	2018-04-17 17:15:46.767444024 +0200
-@@ -2069,6 +2069,20 @@ open_tun(const char *dev, const char *de
- 
- #ifdef ENABLE_FEATURE_TUN_PERSIST
- 
-+/*
-+ * This can be removed in future
-+ * when all systems will use newer
-+ * linux-headers
-+ *
-+ * be compatible with Tomato K26 - shibby
-+ */
-+#ifndef TUNSETOWNER
-+#define TUNSETOWNER	_IOW('T', 204, int)
-+#endif
-+#ifndef TUNSETGROUP
-+#define TUNSETGROUP	_IOW('T', 206, int)
-+#endif
-+
- void
- tuncfg(const char *dev, const char *dev_type, const char *dev_node, int persist_mode, const char *username, const char *groupname, const struct tuntap_options *options)
- {

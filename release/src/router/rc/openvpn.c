@@ -276,7 +276,7 @@ void start_ovpn_client(int clientNum)
 		sprintf(buffer, "vpn_client%d_ncp_ciphers", clientNum);
 		strlcpy(buffer2, nvram_safe_get(buffer), sizeof(buffer2));
 		if ((nvi > 0) && (buffer2[0] != '\0')) {
-			fprintf(fp, "ncp-ciphers %s\n", buffer2);
+			fprintf(fp, "data-ciphers %s\n", buffer2);
 		}
 		else {
 			nvi = 0;
@@ -901,7 +901,7 @@ void start_ovpn_server(int serverNum)
 		sprintf(buffer, "vpn_server%d_ncp_ciphers", serverNum);
 		strlcpy(buffer2, nvram_safe_get(buffer), sizeof(buffer2));
 		if ((nvi > 0) && (buffer2[0] != '\0')) {
-			fprintf(fp, "ncp-ciphers %s\n", buffer2);
+			fprintf(fp, "data-ciphers %s\n", buffer2);
 		}
 		else {
 			nvi = 0;
@@ -1061,7 +1061,7 @@ void start_ovpn_server(int serverNum)
 
 			sprintf(buffer, "vpn_server%d_nocert", serverNum);
 			if (nvram_get_int(buffer))
-				fprintf(fp, "client-cert-not-required\n");
+				fprintf(fp, "verify-client-cert optional\n");
 		}
 
 		sprintf(buffer, "vpn_server%d_pdns", serverNum);

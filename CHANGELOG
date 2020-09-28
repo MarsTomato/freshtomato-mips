@@ -5,6 +5,73 @@ FreshTomato-MIPS Changelog
 
 
 
+2020.6          2020.09.25
+--------------------------
+
+- kernel: make xt_recent built-in instead of module
+- busybox: clean sources of 1.25.1, add patches instead
+- dnsmasq: update to 2.82
+- libcurl: update to 7.72.0
+- libjson: udpdate to 0.15 (20200726)
+- nano: update to 5.2
+- nginx: update to 1.19.2
+- sqlite: update to 3.33.0
+- openvpn: update to 2.5_rc1
+- transmission: update to 3.00
+- tor: update to 0.4.4.5
+- iptables: clean sources of 1.3.8, add patches instead
+- libcurl: update CA certificate bundle as of 2020-07-22
+- OpenVPN: use the iproute2 ip tool instead of ifconfig
+- system: add option to adjust tcp/udp buffers and thresholds
+- build: update logic how to apply patches
+- build: rom: use a local copy of ca-certificates file when unable to download
+- build RT-AC: optimize size for 'e' target (VPN)
+- build: nfs-utils: tune recipe; don't build mount.nfs
+- build: re-add OpenVPN 2.4 only for 'j' target because of size
+- make: build the modules needed by apcupsd standalone - the way it is done so far only (unnecessarily) increases the kernel size, and we don't need amazing performance here and I bet 95% of users don't use it
+- make: re-add Netgear WNDR4000
+- router: fix build of libFLAC in some cases
+- remove libuuid checking in miniupnpd build
+- fix building router/conf on GCC 10 compiler on host
+- MULTIWAN: rc: dhcp.c: call function mwan_table_del(prefix) for dual WAN and multi WAN setups
+- MULTIWAN: rc: dhcp.c: call function mwan_load_balance() for dual WAN and multi WAN setups
+- IPv6: adjust start and stop logic
+- GUI: Status: Device List: also deauthenticate device when deleting DHCP lease
+- GUI: keep wireless noise floor value(s) current on device list page
+- GUI: advanced-wireless.asp: reboot the router if the user wants to change the wireless country
+- GUI: Device List: better match the pictures to the signal level
+- GUI SDK6 / RT-AC branch: advanced-wireless.asp: make it possible to select country rev; when changing country settings for the wireless driver, also change bootloader default values
+- GUI: advanced-wireless.asp - hide option Bluetooth Coexistence for 5 GHz wireless interfaces
+- GUI: include AdvancedTomato font into the css stylesheet
+- iptables: fix save formatting for libipt_webst, libipt_account, ROUTE target, TRIGGER target
+- iptables: fix list formatting for ROUTE target
+- iptables: fix match for ipt_account
+- dnsmasq: suppress unwanted errors in log caused by adding already existing rule to ipset
+- httpd: update the way how failed GUI login attempts are added to log
+- patches: iptables: remove unneeded files; fix filenames; cosmetics
+- implement option to prevent Firefox's automatic usage of DoH
+- DNS: Fix the bug even when WAN DNS server is set to Auto, still using what was previously entered in the Manual DNS field
+- rc: dnsmasq: reject wpad hostname (protect against VU#598349)
+- rc: firewall.c: raise a little allowed hit count in BF protection for remote GUI access
+- rc: fix segfault in dhcpc-release and dhcpc-renew when run without arguments
+- rc: init.c: revert commit to force EU country for all RT-AC66U/R router
+- rc: mwan.c: adjust function mwan_table_del() and remove only active and valid DNS
+- rc: network.c: do not unload the wifi driver by default
+- nvram: defaults.c: don't prioritize AES-256 over AES-128 (no AES acceleration)
+- nvram: defaults.c: adjust redial period to 20 seconds
+- openvpn: try to use CHACHA20-POLY1305 (if supported by the remote end) on routers without AES acceleration
+- openvpn: disable compression by default
+- openvpn: update config file generation for OpenVPN 2.5
+- rc: wan.c: do not restart wireless at function start_wan()
+- rom: Makefile: fix downloading dnscrypt-proxy resolvers file
+- www: tomato.js: add SameSite=Lax also when deleting cookies
+- fix Netgear WNDR3700v3 Vlan port order and hide "VID Offset" for RT-N/RT-AC Routers
+- change Netgear Model Detection for WNDR3400/v2/v3 and WNDR3700v3/4000
+- fix Netgear WNDR3700v3/4000 Ethernet Port State
+- fix Netgear WNDR3700v3/4000 LED "fileExtGPIOstatus" logic
+- Asus RT-AC66U/R: set/adjust country code and rev for US router to enable 80 MHz channels (with fresh/default setup)
+
+
 2020.5          2020.07.17
 --------------------------
 

@@ -555,8 +555,6 @@ define BusyboxOptions
 		echo "CONFIG_PING6=y" >>$(1); \
 		sed -i "/CONFIG_TRACEROUTE6/d" $(1); \
 		echo "CONFIG_TRACEROUTE6=y" >>$(1); \
-		sed -i "/CONFIG_FEATURE_UDHCP_RFC5969/d" $(1); \
-		echo "CONFIG_FEATURE_UDHCP_RFC5969=y" >>$(1); \
 	fi; \
 	if [ "$(SLIM)" = "y" ]; then \
 		sed -i "/CONFIG_AWK/d" $(1); \

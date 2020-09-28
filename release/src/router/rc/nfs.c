@@ -6,6 +6,7 @@
  * changes, fixes 2020 pedro
  *
  */
+
 #include <rc.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -22,9 +23,8 @@ void start_nfs(void)
 	char *g, *p;
 	char *dir, *address, *access, *sync, *subtree, *other;
 
-	if (!nvram_match("nfs_enable", "1")) {
+	if (!nvram_match("nfs_enable", "1"))
 		return;
-	}
 
 	if ((pidof("nfsd") >= 0) && (pidof("mountd") >= 0) && (pidof("statd") >= 0)) {
 		syslog(LOG_INFO, "NFS Server already running... stop");
@@ -37,6 +37,7 @@ void start_nfs(void)
 	mkdir_if_none("/var/lib");
 	mkdir_if_none("/var/lib/nfs");
 	mkdir_if_none("/var/lib/nfs/sm");
+	mkdir_if_none("/var/lib/nfs/v4recovery");
 
 	unlink("/var/lib/nfs/etab");
 	unlink("/var/lib/nfs/xtab");
@@ -45,9 +46,8 @@ void start_nfs(void)
 	close(creat("/var/lib/nfs/xtab", 0644));
 	close(creat("/var/lib/nfs/rmtab", 0644));
 
-	if (stat(NFS_EXPORT, &st_buf) == 0) {
+	if (stat(NFS_EXPORT, &st_buf) == 0)
 		unlink(NFS_EXPORT);
-	}
 
 	/* read exports from nvram */
 	if ((buf = strdup(nvram_safe_get("nfs_exports"))) != NULL) {
@@ -73,14 +73,17 @@ void start_nfs(void)
 
 	chmod(NFS_EXPORT, 0644);
 
-	if (pidof("portmap") < 0) {
+	if (pidof("portmap") < 0)
 		eval("/usr/sbin/portmap");
-	}
 
 	eval("/usr/sbin/statd");
 
 	if (nvram_match("nfs_enable_v2", "1")) {
+#if defined(TCONFIG_BCMARM)
+		eval("/usr/sbin/nfsd", "-V 2");
+#else
 		eval("/usr/sbin/nfsd");
+#endif
 		eval("/usr/sbin/mountd", "-V 2");
 	}
 	else {
@@ -92,8 +95,6 @@ void start_nfs(void)
 	eval("/usr/sbin/exportfs", "-r");
 
 	syslog(LOG_INFO, "NFS Server started");
-
-	return;
 }
 
 void stop_nfs(void)
@@ -106,6 +107,4 @@ void stop_nfs(void)
 	killall_tk("statd");
 
 	syslog(LOG_INFO, "NFS Server stopped");
-
-	return;
 }
