@@ -1110,6 +1110,17 @@ static const nvset_t nvset_list[] = {
 // advanced-wireless
 	{ "wl_country",			V_LENGTH(0, 64)			},	// !!TB - Country code
 	{ "wl_country_code",		V_LENGTH(0, 4)			},	// !!TB - Country code
+#ifdef CONFIG_BCMWL6
+	{ "wl_country_rev",		V_RANGE(0, 999)			},	/* Country rev */
+	{ "0:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "1:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "pci/1/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
+	{ "pci/2/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
+	{ "0:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+	{ "1:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+	{ "pci/1/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
+	{ "pci/2/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
+#endif
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
 	{ "wl_afterburner",		V_LENGTH(2, 4)			},	// off, on, auto
 	{ "wl_auth",			V_01				},

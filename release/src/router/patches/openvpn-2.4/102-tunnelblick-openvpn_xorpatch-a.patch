@@ -1,0 +1,26 @@
+--- openvpn-2.4/src/openvpn/forward.c
++++ openvpn-2.4/src/openvpn/forward.c
+@@ -729,7 +729,10 @@
+ 
+     status = link_socket_read(c->c2.link_socket,
+                               &c->c2.buf,
+-                              &c->c2.from);
++                              &c->c2.from,
++                              c->options.ce.xormethod,
++                              c->options.ce.xormask,
++                              c->options.ce.xormasklen);
+ 
+     if (socket_connection_reset(c->c2.link_socket, status))
+     {
+@@ -1377,7 +1380,10 @@
+                 /* Send packet */
+                 size = link_socket_write(c->c2.link_socket,
+                                          &c->c2.to_link,
+-                                         to_addr);
++                                         to_addr,
++                                         c->options.ce.xormethod,
++                                         c->options.ce.xormask,
++                                         c->options.ce.xormasklen);
+ 
+                 /* Undo effect of prepend */
+                 link_socket_write_post_size_adjust(&size, size_delta, &c->c2.to_link);

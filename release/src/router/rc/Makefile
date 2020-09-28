@@ -4,20 +4,52 @@ CFLAGS = -Wall -Os $(EXTRACFLAGS) -Wsign-compare
 CFLAGS += -I. -I$(TOP)/shared -I$(SRCBASE)/include -idirafter$(LINUXDIR)/include
 CFLAGS += -ffunction-sections -fdata-sections
 
+ifeq ($(TCONFIG_DPSTA),y)
+CFLAGS += -I$(TOP)/dpsta
+endif
+
+ifeq ($(TCONFIG_BCMARM),y)
+LDFLAGS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared -lcrypt -L$(TOP)/libbcmcrypto -lbcmcrypto
+CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include -DHAVE_TYPE_FLOAT
+CFLAGS += -I$(SRCBASE)/common/include
+LDFLAGS += -L$(TOP)/libbcm -lbcm
+LDFLAGS += -lgcc_s
+else
 LDFLAGS = -L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared -lcrypt
+endif
+
 LDFLAGS += -ffunction-sections -fdata-sections -Wl,--gc-sections
 ifeq ($(STATIC),1)
 LDFLAGS += -static
 endif
 
-OBJS := rc.o init.o interface.o network.o wan.o services.o dhcp.o
-OBJS += firewall.o ppp.o telssh.o wnas.o
-OBJS += listen.o redial.o led.o qos.o forward.o misc.o mtd.o
-OBJS += buttons.o restrict.o gpio.o sched.o
-OBJS += new_qoslimit.o arpbind.o
-OBJS += tomatoanon.o
+ifeq ($(TCONFIG_BCMARM),y)
+LDFLAGS += $(EXTRA_LDFLAGS)
+endif
+
+ifeq ($(TCONFIG_BCMSMP),y)
+CFLAGS += -DSMP
+endif
+
+OBJS := rc.o init.o interface.o network.o wan.o services.o dhcp.o \
+        firewall.o ppp.o telssh.o wnas.o \
+        listen.o redial.o led.o qos.o forward.o misc.o mtd.o \
+        buttons.o restrict.o gpio.o sched.o \
+        new_qoslimit.o arpbind.o \
+        tomatoanon.o
+
+ifeq ($(or $(TCONFIG_BCMARM),$(CONFIG_BLINK)),y)
 OBJS += blink.o
 OBJS += blink_br.o
+endif
+
+ifeq ($(TCONFIG_BCMARM),y)
+OBJS += bcmutils.o
+endif
+
+ifeq ($(TCONFIG_FANCTRL),y)
+OBJS += phy_tempsense.o
+endif
 
 # dualwan / multiwan
 OBJS += mwan.o pbr.o
@@ -25,21 +57,27 @@ OBJS += mwan.o pbr.o
 ifeq ($(TCONFIG_USB),y)
 OBJS += usb.o
 endif
+
 ifeq ($(TCONFIG_DDNS),y)
 OBJS += ddns.o
 endif
+
 ifeq ($(TCONFIG_CIFS),y)
 OBJS += cifs.o
 endif
+
 ifeq ($(TCONFIG_JFFS2),y)
 OBJS += jffs2.o
 endif
+
 ifeq ($(TCONFIG_OPENVPN),y)
 OBJS += openvpn.o
 endif
+
 ifeq ($(TCONFIG_TINC),y)
 OBJS += tinc.o
 endif
+
 ifeq ($(TCONFIG_PPTPD),y)
 OBJS += pptpd.o
 OBJS += pptp_client.o
@@ -52,11 +90,6 @@ endif
 ifeq ($(TCONFIG_NGINX),y)
 OBJS += nginx.o
 OBJS += mysql.o
-endif
-
-ifeq ($(TOMATO_SL),1)
-#OBJS += usb.o
-OBJS += samba.o
 endif
 
 ifeq ($(TCONFIG_BT),y)
@@ -83,6 +116,10 @@ ifeq ($(TCONFIG_TOR),y)
 OBJS += tor.o
 endif
 
+ifeq ($(TCONFIG_BCMARM),y)
+vpath %.c $(SRCBASE)/shared
+endif
+
 all: rc
 
 rc: $(OBJS)
@@ -98,13 +135,22 @@ install: all
 	@$(STRIP) $(INSTALLDIR)/sbin/rc
 	@chmod 0500 $(INSTALLDIR)/sbin/rc
 
+ifeq ($(TCONFIG_BCMARM),y)
+	@cd $(INSTALLDIR)/sbin && ln -sf rc preinit
+else
 	@cd $(INSTALLDIR)/sbin && ln -sf rc init
+endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc console
 	@cd $(INSTALLDIR)/sbin && ln -sf rc hotplug
 	@cd $(INSTALLDIR)/sbin && ln -sf rc service
 	@cd $(INSTALLDIR)/sbin && ln -sf rc buttons
+ifeq ($(or $(TCONFIG_BCMARM),$(CONFIG_BLINK)),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc blink
 	@cd $(INSTALLDIR)/sbin && ln -sf rc blink_br
+endif
+ifeq ($(TCONFIG_FANCTRL),y)
+	@cd $(INSTALLDIR)/sbin && ln -sf rc phy_tempsense
+endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc rcheck
 	@cd $(INSTALLDIR)/sbin && ln -sf rc radio
 	@cd $(INSTALLDIR)/sbin && ln -sf rc led
@@ -121,8 +167,14 @@ install: all
 	@cd $(INSTALLDIR)/sbin && ln -sf rc listen
 	@cd $(INSTALLDIR)/sbin && ln -sf rc ppp_event
 
+ifeq ($(TCONFIG_BCMARM),y)
+	@cd $(INSTALLDIR)/sbin && ln -sf rc mtd-write2
+	@cd $(INSTALLDIR)/sbin && ln -sf rc mtd-erase2
+	@cd $(INSTALLDIR)/sbin && ln -sf rc nvram_erase
+else
 	@cd $(INSTALLDIR)/sbin && ln -sf rc mtd-write
 	@cd $(INSTALLDIR)/sbin && ln -sf rc mtd-erase
+endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc mtd-unlock
 
 	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcpc-event
@@ -143,15 +195,6 @@ ifeq ($(TCONFIG_CIFS),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc mount-cifs
 endif
 
-ifeq ($(TOMATO_SL),1)
-	@cd $(INSTALLDIR)/sbin && ln -sf rc usbevent
-	@cd $(INSTALLDIR)/sbin && ln -sf rc usbrescan
-	@cd $(INSTALLDIR)/sbin && ln -sf rc hotdiskadd
-	@cd $(INSTALLDIR)/sbin && ln -sf rc hotdiskremove
-	@cd $(INSTALLDIR)/sbin && ln -sf rc hotdiskerror
-	@cd $(INSTALLDIR)/sbin && ln -sf rc umountx
-endif
-
 clean:
 	rm -f rc *.o .*.depend
 
@@ -166,8 +209,6 @@ size: rc
 	@$(CC) $(CFLAGS) -M $< > $@
 
 -include $(OBJS:%.o=.%.depend)
-
-
 
 pswatch: pswatch.c
 	$(CC) -o $@ $^

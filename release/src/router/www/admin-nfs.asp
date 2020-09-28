@@ -156,15 +156,6 @@ function earlyInit() {
 
 <!-- / / / -->
 
-<div class="section-title">NFS Client</div>
-<div class="section">
-	<ul>
-		<li>If you want to mount an NFS share from other NFS Server, you can use the mount.nfs tool via telnet/ssh.</li>
-	</ul>
-</div>
-
-<!-- / / / -->
-
 <div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">

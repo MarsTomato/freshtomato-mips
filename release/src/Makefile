@@ -825,8 +825,6 @@ define BusyboxOptions
 		echo "CONFIG_PING6=y" >>$(1); \
 		sed -i "/CONFIG_TRACEROUTE6/d" $(1); \
 		echo "CONFIG_TRACEROUTE6=y" >>$(1); \
-		sed -i "/CONFIG_FEATURE_UDHCP_RFC5969/d" $(1); \
-		echo "CONFIG_FEATURE_UDHCP_RFC5969=y" >>$(1); \
 	fi; \
 	if [ "$(SLIM)" = "y" ]; then \
 		sed -i "/CONFIG_AWK/d" $(1); \
@@ -1035,7 +1033,7 @@ endif
 ## VPN
 e:
 	@$(MAKE) bin USB="USB" B=E NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y KEYGEN=y PPTPD=y \
-	    BBEXTRAS=y STUBBY=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="$(VPN)"
+	    BBEXTRAS=y STUBBY=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="$(VPN)"
 
 
 ## BTgui-VPN

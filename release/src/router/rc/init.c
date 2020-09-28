@@ -1748,8 +1748,13 @@ static int init_nvram(void)
 			nvram_set("pci/2/1/ledbh3", "11");
 			nvram_set("pci/2/1/ledbh10", "7");
 
-			//force EU country for eth2
-			nvram_set("pci/2/1/ccode", "EU");
+			/* Only for USA router/version: adjust some wireless default values for US to enable 80 MHz channels */
+			if (nvram_match("regulation_domain", "US")) { /* check 2.4 GHz domain only */
+				set_regulation(0, "US", "0"); /* 2.4 GHz country and rev setting */
+				set_regulation(1, "US", "0"); /* 5 GHz country and rev setting */
+				nvram_set("regulation_domain_5G", "US"); /* keep it easy: follow 2.4 GHz wireless */
+			}
+
 #endif // TCONFIG_AC66U
 		}
 		break;

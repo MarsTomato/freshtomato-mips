@@ -1410,7 +1410,7 @@
  	.final_check   = &final_check,
 --- iptables/extensions/libip6t_webmon.c
 +++ iptables/extensions/libip6t_webmon.c
-@@ -73,10 +73,12 @@
+@@ -68,10 +68,12 @@
  static uint32_t global_max_searches = DEFAULT_MAX;
  
  /* Function which prints out usage message. */
@@ -1423,7 +1423,7 @@
  
  static struct option opts[] = 
  {
-@@ -277,7 +279,9 @@
+@@ -272,7 +274,9 @@
  	#endif
  	.size		= IP6T_ALIGN(sizeof(struct ipt_webmon_info)),
  	.userspacesize	= IP6T_ALIGN(sizeof(struct ipt_webmon_info)),
@@ -4313,7 +4313,7 @@
  	.final_check   = &final_check,
 --- iptables/extensions/libipt_webmon.c
 +++ iptables/extensions/libipt_webmon.c
-@@ -70,10 +70,12 @@
+@@ -65,10 +65,12 @@
  static uint32_t global_max_searches = DEFAULT_MAX;
  
  /* Function which prints out usage message. */
@@ -4326,7 +4326,7 @@
  
  static struct option opts[] = 
  {
-@@ -272,7 +274,9 @@
+@@ -267,7 +269,9 @@
  	#endif
  	.size		= IPT_ALIGN(sizeof(struct ipt_webmon_info)),
  	.userspacesize	= IPT_ALIGN(sizeof(struct ipt_webmon_info)),

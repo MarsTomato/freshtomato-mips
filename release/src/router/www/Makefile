@@ -196,6 +196,11 @@ ifeq ($(CONFIG_BCMWL6),y)
 	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
 endif
 
+# Only for BCMWL6 SDK / RT-AC branch
+ifneq ($(CONFIG_BCMWL6),y)
+	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
+endif
+
 # Add "beta" tag if needed
 ifeq ($(TOMATO_EXPERIMENTAL),1)
 	cd $(INSTALLDIR)/www && \
@@ -208,7 +213,7 @@ endif
 # Only include the vpn pages if OpenVPN is compiled in
 # Remove AES ciphers from the GUI if openssl doesn't have an AES directory
 ifeq ($(TCONFIG_OPENVPN),y)
-	test -d ../openssl/crypto/aes || sed -i $(INSTALLDIR)/www/vpn.js -e "/AES-BEGIN/,/AES-END/d"
+	test -d ../$(OPENSSLDIR)/crypto/aes || sed -i $(INSTALLDIR)/www/vpn.js -e "/AES-BEGIN/,/AES-END/d"
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/ VPN-BEGIN/d" -e "/ VPN-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/ VPN-BEGIN/d" -e "/ VPN-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/ VPN-BEGIN/d" -e "/ VPN-END/d"
@@ -366,6 +371,7 @@ endif
 		-e "/IPV6-BEGIN/d"	-e "/IPV6-END/d" \
 		-e "/CTF-BEGIN/d"	-e "/CTF-END/d" \
 		-e "/BCMNAT-BEGIN/d"	-e "/BCMNAT-END/d" \
+		-e "/BCMWL6-BEGIN/d"	-e "/BCMWL6-END/d" \
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
 		-e "/BT-BEGIN/d"	-e "/BT-END/d" \
 		-e "/NFS-BEGIN/d"	-e "/NFS-END/d" \

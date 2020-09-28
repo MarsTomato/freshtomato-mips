@@ -272,7 +272,11 @@ obj-$(TCONFIG_PPTPD) += pptpd
 obj-$(TCONFIG_SSH) += dropbear
 obj-$(TCONFIG_ZEBRA) += zebra
 obj-$(TCONFIG_LZO) += lzo
+ifeq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
+obj-$(TCONFIG_OPENVPN) += openvpn-2.4
+else
 obj-$(TCONFIG_OPENVPN) += openvpn
+endif
 obj-$(TCONFIG_OPENVPN) += openvpn_plugin_auth_nvram
 obj-$(TCONFIG_TINC) += tinc
 obj-$(TCONFIG_EMF) += emf
@@ -756,17 +760,19 @@ oldconfig oldconf: koldconf roldconf dependconf bboldconf
 
 busybox: dummy
 	@$(SEP)
+	$(call patch_files,busybox)
 	@$(MAKE) -C busybox EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS)" $(PARALLEL_BUILD)
 
 busybox-install:
 	rm -rf $(INSTALLDIR)/busybox
 	$(MAKE) -C busybox install EXTRA_CFLAGS="-fPIC $(EXTRACFLAGS)" CONFIG_PREFIX=$(INSTALLDIR)/busybox
 
-busybox-clean:
-	-@$(MAKE) -C busybox distclean
-
 busybox-config:
 	$(MAKE) -C busybox menuconfig
+
+busybox-clean:
+	-@$(MAKE) -C busybox distclean
+	$(call unpatch_files,busybox)
 
 httpd: shared nvram $(if $(TCONFIG_HTTPS),mssl,)
 	@$(SEP)
@@ -1511,7 +1517,8 @@ flac/stamp-h1: libogg
 	LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix='' --disable-rpath \
 		--disable-doxygen-docs --disable-xmms-plugin --disable-cpplibs --disable-thorough-tests \
-		--without-libiconv-prefix --disable-altivec --disable-sse --disable-dependency-tracking
+		--without-libiconv-prefix --disable-altivec --disable-sse --disable-dependency-tracking \
+		--with-ogg=$(TOP)/libogg/src/.libs
 	@touch $@
 
 flac: flac/stamp-h1 libogg
@@ -2223,9 +2230,9 @@ lzo-install:
 		ln -sf liblzo2.so.2.0.0 liblzo2.so.2 && \
 		ln -sf liblzo2.so.2.0.0 liblzo2.so
 
-openvpn/Makefile:
-	$(call patch_files,openvpn)
-	cd openvpn && autoreconf && \
+openvpn-2.4/Makefile:
+	$(call patch_files,openvpn-2.4)
+	cd openvpn-2.4 && autoreconf -fsi && \
 	OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
 	OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR) -lcrypto -lssl" \
 	CFLAGS="$(CFLAG_OPTIMIZE) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
@@ -2234,7 +2241,35 @@ openvpn/Makefile:
 	PLUGINDIR="/lib" IFCONFIG="/sbin/ifconfig" IPROUTE="/usr/sbin/ip" ROUTE="/sbin/route" \
 	$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 		--enable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
-		$(if $(TCONFIG_OPTIMIZE_SIZE_MORE),--disable-lz4 --enable-small --disable-server) --enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
+		--disable-lz4 --enable-small --disable-server --enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
+	@touch openvpn-2.4/.conf
+
+openvpn-2.4: $(OPENSSLDIR) lzo $(if $(INSTALL_ZLIB),zlib,) openvpn-2.4/Makefile
+	@$(SEP)
+	@$(MAKE) -C openvpn-2.4 $(PARALLEL_BUILD)
+
+openvpn-2.4-clean:
+	[ ! -f openvpn-2.4/Makefile ] || $(MAKE) -C openvpn-2.4 clean
+	@rm -f openvpn-2.4/Makefile
+	$(call unpatch_files,openvpn-2.4)
+
+openvpn-2.4-install:
+	install -D openvpn-2.4/src/openvpn/.libs/openvpn $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
+	$(STRIP) -s $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
+	chmod 0500 $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
+
+openvpn/Makefile:
+	$(call patch_files,openvpn)
+	cd openvpn && autoreconf -fsi && \
+	OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
+	OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR) -lcrypto -lssl" \
+	CFLAGS="$(CFLAG_OPTIMIZE) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	LDFLAGS="-L$(TOP)/$(OPENSSLDIR) $(if $(INSTALL_ZLIB),-L$(TOP)/zlib -lz,) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/include" \
+	PLUGINDIR="/lib" IFCONFIG="/sbin/ifconfig" IPROUTE="/usr/sbin/ip" ROUTE="/sbin/route" \
+	$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
+		--enable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
+		--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
 	@touch openvpn/.conf
 
 openvpn: $(OPENSSLDIR) lzo $(if $(INSTALL_ZLIB),zlib,) openvpn/Makefile
@@ -2251,7 +2286,7 @@ openvpn-install:
 	$(STRIP) -s $(INSTALLDIR)/openvpn/usr/sbin/openvpn
 	chmod 0500 $(INSTALLDIR)/openvpn/usr/sbin/openvpn
 
-openvpn_plugin_auth_nvram:nvram
+openvpn_plugin_auth_nvram: nvram
 
 nano/stamp-h1: libncurses
 	cd nano && autoreconf && \
@@ -2368,29 +2403,20 @@ libiconv-install:
 		ln -sf libiconv.so.2.6.1 libiconv.so
 
 transmission/stamp-h1: $(OPENSSLDIR) libcurl libevent zlib
-	$(call patch_files,transmission)
-	cd transmission && autoreconf -f && \
-		CFLAGS="-Os -Wall -pipe $(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32) -fno-delete-null-pointer-checks -funit-at-a-time \
-			--param large-function-growth=800 --param max-inline-insns-single=3000 \
-			-ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="--param large-function-growth=800 --param max-inline-insns-single=3000 -fPIC" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC \
-			-L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/.libs" \
-		HAVE_CXX=yes \
-		CXXFLAGS="-Os -Wall -pipe $(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32) -ffunction-sections -fdata-sections" \
-		$(CONFIGURE) --target=$(HOST) --host=$(HOST) --build=x86_64-linux-gnu --prefix=/usr --disable-nls \
-			--enable-lightweight --enable-largefile --enable-utp --without-gtk --disable-cli --without-systemd-daemon \
+	cd transmission && ./autogen.sh && \
+		CFLAGS="-O3 -Wall -pipe $(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32) -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
+		CPPFLAGS="-O3 -Wall -pipe $(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
+		CXXFLAGS="-O3 -Wall -pipe $(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
+		LDFLAGS="-L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+		$(CONFIGURE) --prefix=/usr --enable-lightweight --enable-largefile --enable-utp \
+			--disable-nls --disable-cli --without-gtk --disable-dependency-tracking \
 			LIBCURL_CFLAGS="-I$(TOP)/libcurl/include" \
-			LIBCURL_LDFLAGS="-L$(TOP)/libcurl/lib/.libs/" \
 			LIBCURL_LIBS="-lcurl" \
 			LIBEVENT_CFLAGS="-I$(TOP)/libevent/include" \
-			LIBEVENT_LDFLAGS="-L$(TOP)/libevent/.libs" \
 			LIBEVENT_LIBS="-levent" \
 			OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
-			OPENSSL_LDFLAGS="-L$(TOP)/$(OPENSSLDIR)" \
 			OPENSSL_LIBS="-lcrypto -lssl" \
 			ZLIB_CFLAGS="-I$(TOP)/zlib" \
-			ZLIB_LDFLAGS="-L$(TOP)/zlib" \
 			ZLIB_LIBS="-lz"
 	@touch $@
 
@@ -2401,13 +2427,18 @@ transmission: transmission/stamp-h1
 transmission-clean:
 	-@$(MAKE) -C transmission clean
 	@rm -f transmission/stamp-h1 transmission/Makefile
-	$(call unpatch_files,transmission)
 
 transmission-install:
 	$(MAKE) -C transmission DESTDIR=$(INSTALLDIR)/transmission install-strip
 	@rm -rf $(INSTALLDIR)/transmission/usr/share/man
+	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-show
+	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-edit
+	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-create
+	$(STRIP) -s $(INSTALLDIR)/transmission/usr/bin/transmission-daemon
 ifneq ($(TCONFIG_TR_EXTRAS),y)
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-remote
+else
+	$(STRIP) -s $(INSTALLDIR)/transmission/usr/bin/transmission-remote
 endif
 
 libnfsidmap/stamp-h1:
@@ -2444,15 +2475,18 @@ portmap-clean:
 
 e2fsprogs/stamp-h1:
 	cd e2fsprogs && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-	$(CONFIGURE) --prefix=$(TOP)/e2fsprogs/staged --disable-debugfs --disable-imager --disable-resizer --disable-uuidd --disable-nls
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		$(CONFIGURE) --prefix=$(TOP)/e2fsprogs/staged --enable-elf-shlibs --disable-tls --disable-defrag \
+			--disable-jbd-debug --disable-blkid-debug --disable-testio-debug --disable-backtrace --disable-e2initrd-helper \
+			--disable-nls --disable-debugfs --disable-imager --disable-resizer --disable-uuidd --disable-rpath
 	@touch $@
 
 e2fsprogs: e2fsprogs/stamp-h1
 	@$(SEP)
 	$(MAKE) -C e2fsprogs libs $(PARALLEL_BUILD)
 
-e2fsprogs-install: e2fsprogs
+e2fsprogs-install:
 	$(MAKE) -C e2fsprogs install-libs
 
 e2fsprogs-clean:
@@ -2466,14 +2500,14 @@ nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
 	cd nfs-utils && ./autogen.sh && \
 	CPPFLAGS="-Os $(EXTRACFLAGS)" \
 	CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time -pipe $(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32) -ffunction-sections -fdata-sections \
-		-I$(TOP)/libevent/staged/usr/local/include -I$(TOP)/e2fsprogs/lib \
+		-I$(TOP)/libevent/staged/usr/local/include \
 		-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
-	LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib -L$(TOP)/e2fsprogs/lib \
+	LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib \
 		-L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		knfsd_cv_bsd_signals=no \
 	CC_FOR_BUILD=$(CC) $(CONFIGURE) --disable-gss --without-tcp-wrappers \
 		--disable-nfsv4 --disable-ipv6 \
-		--disable-uuid --disable-tirpc --disable-dependency-tracking
+		--disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
 	@touch $@
 
 nfs-utils: nfs-utils/stamp-h1
@@ -2482,7 +2516,6 @@ nfs-utils: nfs-utils/stamp-h1
 
 nfs-utils-install:
 	install -d $(INSTALLDIR)/nfs-utils/usr/sbin
-	install -D nfs-utils/utils/mount/mount.nfs $(INSTALLDIR)/nfs-utils/usr/sbin/mount.nfs
 	install -D nfs-utils/utils/nfsd/nfsd $(INSTALLDIR)/nfs-utils/usr/sbin/nfsd
 	install -D nfs-utils/utils/showmount/showmount $(INSTALLDIR)/nfs-utils/usr/sbin/showmount
 	install -D nfs-utils/utils/exportfs/exportfs $(INSTALLDIR)/nfs-utils/usr/sbin/exportfs

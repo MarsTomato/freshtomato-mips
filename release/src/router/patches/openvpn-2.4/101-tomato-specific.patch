@@ -1,0 +1,30 @@
+--- openvpn-2.4/src/openvpn/route.c
++++ openvpn-2.4/src/openvpn/route.c
+@@ -45,6 +45,10 @@
+ #include "memdbg.h"
+ 
+ #if defined(TARGET_LINUX) || defined(TARGET_ANDROID)
++/* be compatible with Tomato */
++typedef __signed__ long __s64;
++typedef unsigned long __u64;
++/* end Tomato */
+ #include <linux/rtnetlink.h>            /* RTM_GETROUTE etc. */
+ #endif
+ 
+--- openvpn-2.4/src/openvpn/tun.c
++++ openvpn-2.4/src/openvpn/tun.c
+@@ -2069,6 +2069,14 @@ open_tun(const char *dev, const char *de
+ 
+ #ifdef ENABLE_FEATURE_TUN_PERSIST
+ 
++/* be compatible with Tomato */
++#ifndef TUNSETOWNER
++#define TUNSETOWNER	_IOW('T', 204, int)
++#endif
++#ifndef TUNSETGROUP
++#define TUNSETGROUP	_IOW('T', 206, int)
++#endif
++/* end Tomato */
+ void
+ tuncfg(const char *dev, const char *dev_type, const char *dev_node, int persist_mode, const char *username, const char *groupname, const struct tuntap_options *options)
+ {
