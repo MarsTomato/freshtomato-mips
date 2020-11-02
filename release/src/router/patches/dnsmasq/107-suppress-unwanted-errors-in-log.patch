@@ -5,7 +5,7 @@
      ret = old_kernel ? old_add_to_ipset(setname, ipaddr, remove) : new_add_to_ipset(setname, ipaddr, af, remove);
  
 -  if (ret == -1)
-+  if (ret == -1 && errno != EEXIST)
++  if (ret == -1 && errno != EEXIST && errno != EAFNOSUPPORT)
       my_syslog(LOG_ERR, _("failed to update ipset %s: %s"), setname, strerror(errno));
  
    return ret;

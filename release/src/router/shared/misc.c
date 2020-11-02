@@ -299,7 +299,8 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    (model == MODEL_D1800H) ||
 	    (model == MODEL_TDN6) ||
 	    (model == MODEL_WNDR4500) ||
-	    (model == MODEL_WNDR4500V2))
+	    (model == MODEL_WNDR4500V2) ||
+	    (model == MODEL_DIR865L))
 	{
 		led(LED_WHITE, mode);
 	}
@@ -780,6 +781,24 @@ const char *getifaddr(char *ifname, int family, int linklocal)
 	return NULL;
 }
 
+int is_intf_up(const char* ifname)
+{
+	struct ifreq ifr;
+	int sfd;
+	int ret = 0;
+
+	if (!((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0))
+	{
+		strcpy(ifr.ifr_name, ifname);
+		if (!ioctl(sfd, SIOCGIFFLAGS, &ifr) && (ifr.ifr_flags & IFF_UP))
+			ret = 1;
+
+		close(sfd);
+	}
+
+	return ret;
+}
+
 // -----------------------------------------------------------------------------
 
 long get_uptime(void)
@@ -979,6 +998,15 @@ int nvram_is_empty(const char *key)
 void nvram_commit_x(void)
 {
 	if (!nvram_get_int("debug_nocommit")) nvram_commit();
+}
+
+char *getNVRAMVar(const char *text, const int unit)
+{
+	char buffer[32];
+	memset(buffer, 0, 32);
+	sprintf(buffer, text, unit);
+
+	return nvram_safe_get(buffer);
 }
 
 int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int timeout)

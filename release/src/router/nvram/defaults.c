@@ -551,6 +551,8 @@ const defaults_t defaults[] = {
 	{ "tm_dst",			"1" 				},
 	{ "ntp_updates",		"1"				},
 	{ "ntp_server",			"0.europe.pool.ntp.org 1.europe.pool.ntp.org 2.europe.pool.ntp.org" },
+	{ "ntpd_enable",		"0"				},
+	{ "ntpd_server_redir",		"0"				},
 
 /* basic-static */
 	{ "dhcpd_static",		""				},
@@ -580,7 +582,7 @@ const defaults_t defaults[] = {
 #if defined(TCONFIG_NVRAM_32K) || defined(TCONFIG_OPTIMIZE_SIZE_MORE)
 	{ "adblock_blacklist",		""				},
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://adblock.gjtech.net/?format=hostfile<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>"},
+	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>"},
 #endif
 	{ "adblock_blacklist_custom",	""				},
 	{ "adblock_whitelist",		""				},
@@ -764,15 +766,6 @@ const defaults_t defaults[] = {
 #endif
 	{ "rrulewp",			"80,8080"			},
 
-#if TOMATO_SL
-/* samba */
-	{ "smbd_on",			"0"				},
-	{ "nmbd_on",			"0"				},
-	{ "smbd_wgroup",		"WORKGROUP"			},
-	{ "smbd_nbname",		"TOMATO"			},
-	{ "smbd_adminpass",		"admin"				},
-#endif
-
 /* admin-access */
 	{ "http_username",		""				},	// Username
 	{ "http_passwd",		"admin"				},	// Password
@@ -926,7 +919,7 @@ const defaults_t defaults[] = {
 	{ "usb_uhci",			"0"				},
 	{ "usb_ohci",			"0"				},
 	{ "usb_usb2",			"1"				},
-#if defined(LINUX26) && defined(TCONFIG_MICROSD)
+#ifdef TCONFIG_MICROSD
 	{ "usb_mmc",			"-1"				},
 #endif
 	{ "usb_irq_thresh",		"0"				},
@@ -977,6 +970,7 @@ const defaults_t defaults[] = {
 	{ "ftp_custom",			""				},
 	{ "ftp_sip",			""				},	// wan ftp access: source ip address(es)
 	{ "ftp_limit",			"0,3,60"			},
+	{ "ftp_tls",			"0"				},
 	{ "log_ftp",			"0"				},
 #endif
 
@@ -1072,7 +1066,6 @@ const defaults_t defaults[] = {
 	{ "vpn_server1_crypt",		"tls"				},
 	{ "vpn_server1_comp",		"-1"				},
 	{ "vpn_server1_cipher",		"AES-128-CBC"			},
-	{ "vpn_server1_ncp_enable",	"1"				},
 #if 0
 	{ "vpn_server1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
 #else
@@ -1105,9 +1098,11 @@ const defaults_t defaults[] = {
 	{ "vpn_server1_ca",		""				},
 	{ "vpn_server1_ca_key",		""				},
 	{ "vpn_server1_crt",		""				},
+	{ "vpn_server1_crl",		""				},
 	{ "vpn_server1_key",		""				},
 	{ "vpn_server1_dh",		""				},
 	{ "vpn_server1_br",		"br0"				},
+	{ "vpn_server1_serial",		"00"				},
 	{ "vpn_server2_poll",		"0"				},
 	{ "vpn_server2_if",		"tun"				},
 	{ "vpn_server2_proto",		"udp"				},
@@ -1116,7 +1111,6 @@ const defaults_t defaults[] = {
 	{ "vpn_server2_crypt",		"tls"				},
 	{ "vpn_server2_comp",		"-1"				},
 	{ "vpn_server2_cipher",		"AES-128-CBC"			},
-	{ "vpn_server2_ncp_enable",	"1"				},
 #if 0
 	{ "vpn_server2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
 #else
@@ -1149,9 +1143,11 @@ const defaults_t defaults[] = {
 	{ "vpn_server2_ca",		""				},
 	{ "vpn_server2_ca_key",		""				},
 	{ "vpn_server2_crt",		""				},
+	{ "vpn_server1_crl",		""				},
 	{ "vpn_server2_key",		""				},
 	{ "vpn_server2_dh",		""				},
 	{ "vpn_server2_br",		"br0"				},
+	{ "vpn_server2_serial",		"00"				},
 	{ "vpn_client_eas",		""				},
 	{ "vpn_client1_poll",		"0"				},
 	{ "vpn_client1_if",		"tun"				},
@@ -1166,7 +1162,6 @@ const defaults_t defaults[] = {
 	{ "vpn_client1_crypt",		"tls"				},
 	{ "vpn_client1_comp",		"-1"				},
 	{ "vpn_client1_cipher",		"default"			},
-	{ "vpn_client1_ncp_enable",	"1"				},
 #if 0
 	{ "vpn_client1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
 #else
@@ -1190,6 +1185,7 @@ const defaults_t defaults[] = {
 	{ "vpn_client1_nobind",		"1"				},
 	{ "vpn_client1_routing_val",	""				},
 	{ "vpn_client1_fw",		"1"				},
+	{ "vpn_client1_tlsvername",	"0"				},
 	{ "vpn_client2_poll",		"0"				},
 	{ "vpn_client2_if",		"tun"				},
 	{ "vpn_client2_bridge",		"1"				},
@@ -1203,7 +1199,6 @@ const defaults_t defaults[] = {
 	{ "vpn_client2_crypt",		"tls"				},
 	{ "vpn_client2_comp",		"-1"				},
 	{ "vpn_client2_cipher",		"default"			},
-	{ "vpn_client2_ncp_enable",	"1"				},
 #if 0
 	{ "vpn_client2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
 #else
@@ -1227,6 +1222,7 @@ const defaults_t defaults[] = {
 	{ "vpn_client2_nobind",		"1"				},
 	{ "vpn_client2_routing_val",	""				},
 	{ "vpn_client2_fw",		"1"				},
+	{ "vpn_client2_tlsvername",	"0"				},
 #endif
 
 #ifdef TCONFIG_PPTPD

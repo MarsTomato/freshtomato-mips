@@ -198,6 +198,11 @@ int buttons_main(int argc, char *argv[])
 		reset_mask = 1 << 6;
 		ses_mask = 1 << 5; // gpio 5, inversed
 		break;
+	case MODEL_DIR865L:
+		reset_mask = 1 << 5;
+		ses_mask = 1 << 14;
+		ses_led = LED_AOSS;
+		break;
 	case MODEL_EA6500V1:
 		reset_mask = 1 << 3;
 		ses_mask = 1 << 4;

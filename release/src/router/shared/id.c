@@ -79,6 +79,7 @@ Tenda N60                      BCM5357               0x052B       60        0x14
 Tenda N80                      BCM4706               0x05D8       80        0x1104    0x00000110 //16MB/128MB/2.4/5G/USB
 Tenda N6                       BCM5357               0x0550       6         0x1444    0x710 //8MB/64MB/2.4/5G/USB
 TENDA W1800R                   HW_BCM4706            0x05d8       18/21(EU)/60(CN)   0x1200  0x00000110
+DIR-865L                       HW_BCM4706            0x0617       24        0x1102     0x00000110
 Buffalo WZR-D1800H             HW_BCM4706            0xf52e       00        0x1204    0x110 //NAND/128M/128M/2.4-5G/USB
 
 Ovislink WL1600GL		HW_BCM5354G           0x048E        8        0x11
@@ -194,6 +195,7 @@ int check_hw_type(void)
 	case 0xf5b2:
 	case 0xf52e: //WZR-D1800H,D1100H,Netgear R6300V1,WNDR4500,WNDR4500V2
 	case 0xc617: //Linksys EA6500v1
+	case 0x0617: /* DIR-865L */
 		return HW_BCM4706;
 	case 0x052b:
 		if (nvram_match("boardrev", "0x1204")) return HW_BCM5357; //rt-n15u
@@ -531,6 +533,12 @@ int get_model(void)
 		}
 		break;
 #ifdef CONFIG_BCMWL5
+	case 24:
+		switch (hw) {
+		case HW_BCM4706:
+			return MODEL_DIR865L;
+		}
+		break;
 	case 60:
 		switch (hw) {
 		case HW_BCM5357:
@@ -636,6 +644,7 @@ int get_model(void)
 		case HW_BCM4706:
 			if (nvram_match("boardrev", "0x1100")) return MODEL_RTN66U;
 			if (nvram_match("boardrev", "0x1204")) return MODEL_D1800H;
+			if (nvram_match("boardrev", "0x1102")) return MODEL_DIR865L;
 			break;
 		}
 		break;

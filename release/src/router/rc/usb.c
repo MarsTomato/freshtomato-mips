@@ -74,6 +74,10 @@ void start_usb(void)
 		xstart("gpio", "enable", "21");
 	}
 
+	if (nvram_match("boardtype", "0x0617") &&  nvram_match("boardrev", "0x1102")) { /* DIR-865L enable USB */
+		xstart("gpio", "enable", "7");
+	}
+
 	_dprintf("%s\n", __FUNCTION__);
 	tune_bdflush();
 
@@ -344,7 +348,9 @@ void stop_usb(void)
 	if (nvram_match("boardtype", "0x052b")) { // Netgear WNR3500L v2 - disable USB port
 		xstart("gpio", "disable", "20");
 	}
-
+	if (nvram_match("boardtype", "0x0617") &&  nvram_match("boardrev", "0x1102")) { /* DIR-865L disable USB */
+		xstart("gpio", "disable", "7");
+	}
 }
 
 #define MOUNT_VAL_FAIL 	0

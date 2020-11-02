@@ -157,6 +157,7 @@ foreach_wwan(function(i) {
 		}
 	}
 });
+/* USB-END */
 
 for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
 	var wan_suffix = uidx > 1 ? uidx : '';
@@ -178,7 +179,6 @@ for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
 		})(wan_suffix);
 	}
 }
-/* USB-END */
 
 function c(id, htm) {
 	E(id).cells[1].innerHTML = htm;
@@ -224,33 +224,33 @@ function ethstates() {
 		}
 		else if (port == "1000FD") {
 			fn = 'eth_1000_fd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "1000HD") {
 			fn = 'eth_1000_hd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "100FD") {
 			fn = 'eth_100_fd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "100HD") {
 			fn = 'eth_100_hd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "10FD") {
 			fn = 'eth_10_fd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else if (port == "10HD") {
 			fn = 'eth_10_hd';
-			state1 = port.replace("HD","M Half");
-			state2 = state1.replace("FD","M Full");
+			state1 = port.replace("HD","Mbps Half");
+			state2 = state1.replace("FD","Mbps Full");
 		}
 		else {
 			fn = 'eth_1000_fd';
@@ -284,6 +284,10 @@ function show() {
 /* IPV6-BEGIN */
 	c('ip6_wan', stats.ip6_wan);
 	elem.display('ip6_wan', stats.ip6_wan != '');
+	c('ip6_wan_dns1', stats.ip6_wan_dns1);
+	elem.display('ip6_wan_dns1', stats.ip6_wan_dns1 != '');
+	c('ip6_wan_dns2', stats.ip6_wan_dns2);
+	elem.display('ip6_wan_dns2', stats.ip6_wan_dns2 != '');
 	c('ip6_lan', stats.ip6_lan);
 	elem.display('ip6_lan', stats.ip6_lan != '');
 	c('ip6_lan_ll', stats.ip6_lan_ll);
@@ -403,7 +407,7 @@ function init() {
 		var timer = updateWWANTimers[wwan_number - 1];
 		timer.initPage(3000, 3);
 	});
-
+/* USB-END */
 	for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
 		if (!customStatusTimers[uidx - 1]) {
 			continue;
@@ -411,7 +415,6 @@ function init() {
 		var timer = customStatusTimers[uidx - 1];
 		timer.initPage(3000, 3);
 	}
-/* USB-END */
 
 	ref.initPage(3000, 3);
 
@@ -506,6 +509,8 @@ function init() {
 			{ title: 'Gateway', rid: 'wan'+u+'gateway', text: stats.wangateway[uidx-1] },
 /* IPV6-BEGIN */
 			{ title: 'IPv6 Address', rid: 'ip6_wan', text: stats.ip6_wan, hidden: (stats.ip6_wan == '') },
+			{ title: 'IPv6 DNS1', rid: 'ip6_wan_dns1', text: stats.ip6_wan_dns1, hidden: (stats.ip6_wan_dns1 == '') },
+			{ title: 'IPv6 DNS2', rid: 'ip6_wan_dns2', text: stats.ip6_wan_dns2, hidden: (stats.ip6_wan_dns2 == '') },
 /* IPV6-END */
 			{ title: 'DNS', rid: 'wan'+u+'dns', text: stats.dns[uidx-1] },
 			{ title: 'MTU', text: nvram['wan'+u+'_run_mtu'] },
