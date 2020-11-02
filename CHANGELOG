@@ -5,6 +5,17 @@ FreshTomato-MIPS Changelog
 
 
 
+2020.7          2020.10.01
+--------------------------
+
+Note: fix the critical bug for RT-AC branch (when using webmonitor) with iptables not working, therefore no firewall. This release only includes images for RT-AC branch.
+
+- openssl: update to 1.1.1h
+- iptables: patches: fix commit eeb9ed2 for iptables regarding webmon for RT-AC branch (add forgotten #ifdef for include)
+- openvpn: extend data-cipher length as per the ovpn documentation
+- www: vpn-tinc.asp: fix typo
+
+
 2020.6          2020.09.25
 --------------------------
 

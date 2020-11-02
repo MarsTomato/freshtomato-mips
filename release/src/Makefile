@@ -236,8 +236,6 @@ what:
 
 define RouterOptions
 	@( \
-	sed -i "/TCONFIG_SAMBA3/d" $(1); \
-	echo "TCONFIG_SAMBA3=y" >>$(1); \
 	sed -i "/TCONFIG_EMF/d" $(1); \
 	if [ "$(SLIM)" = "y" ]; then \
 		echo "# TCONFIG_EMF is not set" >>$(1); \

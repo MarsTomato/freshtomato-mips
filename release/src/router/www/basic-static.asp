@@ -15,7 +15,7 @@
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
-<title>[<% ident(); %>] Basic: Static DHCP/ARP/IPT</title>
+<title>[<% ident(); %>] Basic: DHCP Reservation</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
 <script src="tomato.js"></script>
@@ -332,7 +332,7 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<div class="section-title">Static DHCP/ARP/IPT</div>
+<div class="section-title">DHCP Reservation</div>
 <div class="section">
 	<div class="tomato-grid" id="bs-grid"></div>
 </div>

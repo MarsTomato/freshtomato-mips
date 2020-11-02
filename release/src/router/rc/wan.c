@@ -57,6 +57,7 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 	symlink("/dev/null", "/tmp/ppp/connect-errors");
 	symlink("/sbin/rc", "/tmp/ppp/ip-up");
 	symlink("/sbin/rc", "/tmp/ppp/ip-down");
+	symlink("/sbin/rc", "/tmp/ppp/ip-pre-up");
 #ifdef TCONFIG_IPV6
 	symlink("/sbin/rc", "/tmp/ppp/ipv6-up");
 	symlink("/sbin/rc", "/tmp/ppp/ipv6-down");
@@ -234,11 +235,14 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 	}
 
 #ifdef TCONFIG_IPV6
-	switch (get_ipv6_service()) {
-	case IPV6_NATIVE:
-	case IPV6_NATIVE_DHCP:
-		fprintf(fp, "+ipv6\n");
-		break;
+	/* start/add IPv6 BUT only for "wan" (no multiwan support) */
+	if (strcmp(prefix, "wan") == 0) { /* check for "wan" prefix */
+		switch (get_ipv6_service()) {
+		case IPV6_NATIVE:
+		case IPV6_NATIVE_DHCP:
+			fprintf(fp, "+ipv6\n");
+			break;
+		}
 	}
 #endif
 	/* User specific options */
@@ -264,11 +268,12 @@ static void stop_ppp(char *prefix)
 	sprintf(buffer, "pppd%s", prefix);
 
 	/* Race condition on start_pppoe in ip-up on boot, primary pp(poe/tp) wan will not reach start_wan_done on secondary ppp(oe/3g) start */
-	//killall_tk("ip-up");
-	//killall_tk("ip-down");
+	//killall_tk_period_wait("ip-up", 50);
+	//killall_tk_period_wait("ip-pre-up", 50);
+	//killall_tk_period_wait("ip-down", 50);
 #ifdef TCONFIG_IPV6
-	//killall_tk("ipv6-up");
-	//killall_tk("ipv6-down");
+	//killall_tk_period_wait("ipv6-up", 50);
+	//killall_tk_period_wait("ipv6-down", 50);
 #endif
 	/* FIXME: find a proper way to stop daemon */
 	if (get_wanx_proto("wan") != WP_L2TP
@@ -278,15 +283,15 @@ static void stop_ppp(char *prefix)
 	    && get_wanx_proto("wan4") != WP_L2TP
 #endif
 	)
-		killall_tk("xl2tpd");
+		killall_tk_period_wait("xl2tpd", 50);
 
 	//kill(nvram_get_int(strcat_r(prefix, "_pppd_pid", tmp)),1);
-	killall_tk((char *)buffer);
+	killall_tk_period_wait((char *)buffer, 50);
 
 	/* Don't kill other wans listeners, only this wan one
 	 * its PID can be found in /var/run/listen-wan%d.pid
 	 */
-	//killall_tk("listen");
+	//killall_tk_period_wait("listen", 50);
 
 	/* WAN LED control */
 	wan_led_off(prefix); /* LED OFF? */
@@ -925,7 +930,7 @@ void start_wan(int mode)
 
 	enable_ip_forward();
 
-	killall_tk("mwanroute");
+	killall_tk_period_wait("mwanroute", 50);
 	xstart("mwanroute");
 
 	if (nvram_get_int("mwan_cktime") > 0)
@@ -1003,6 +1008,8 @@ void stop_wan6(void)
 	stop_dhcp6c();
 
 	nvram_set("ipv6_get_dns", ""); /* clear dns */
+
+	dns_to_resolv();
 }
 #endif /* #ifdef TCONFIG_IPV6 */
 
@@ -1075,10 +1082,20 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	/* And routes supplied via DHCP */
 	do_wan_routes((using_dhcpc(prefix) ? nvram_safe_get(strcat_r(prefix, "_ifname",tmp)) : wan_ifname), 0, 1, prefix);
 
-	/* start IPv6 BUT only for "wan" (no multiwan support, no primary wan) */
 #ifdef TCONFIG_IPV6
+	/* start IPv6 BUT only for "wan" (no multiwan support, no primary wan) */
 	if (strcmp(prefix, "wan") == 0) { /* check for "wan" prefix */
-		start_wan6(get_wan6face());
+		switch (get_ipv6_service()) {
+		case IPV6_NATIVE:
+		case IPV6_NATIVE_DHCP:
+			if (strncmp(wan_ifname, "ppp", 3) == 0) { /* check for pppx */
+				break;
+			}
+			/* fall through */
+		default:
+			start_wan6(get_wan6face());
+			break;
+		}
 	}
 #endif
 
@@ -1214,7 +1231,7 @@ void stop_wan_if(char *prefix)
 	wan_proto = get_wanx_proto(prefix);
 
 	if (wan_proto == WP_LTE) {
-		killall_tk("switch4g");		/* Kill switch4g script if running */
+		killall_tk_period_wait("switch4g", 50);		/* Kill switch4g script if running */
 		xstart("switch4g", prefix, "disconnect");
 		sleep(3);			/* Wait a litle for disconnect */
 	}

@@ -2413,7 +2413,7 @@ function navi() {
 			['Identification',		'ident.asp'],
 			['Time',			'time.asp'],
 			['DDNS',			'ddns.asp'],
-			['Static DHCP/ARP/IPT',		'static.asp'],
+			['DHCP Reservation',		'static.asp'],
 			['Wireless Filter',		'wfilter.asp'] ] ],
 		['Advanced', 			'advanced', 0, [
 			['Conntrack/Netfilter',		'ctnf.asp'],
@@ -2766,7 +2766,11 @@ function reboot() {
 }
 
 function shutdown() {
-	if (confirm("Shutdown?")) form.submitHidden('shutdown.cgi', { });
+	if (confirm("Shutdown?")) shutdown2();
+}
+
+function shutdown2() {
+	if (confirm("Are you really sure you want to Shutdown??\nThis will require a manual power cycle to boot again.")) form.submitHidden('shutdown.cgi', { });
 }
 
 function logout() {
