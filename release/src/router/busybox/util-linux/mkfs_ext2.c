@@ -7,6 +7,27 @@
  *
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
+//config:config MKE2FS
+//config:	bool "mke2fs (10 kb)"
+//config:	default y
+//config:	select PLATFORM_LINUX
+//config:	help
+//config:	Utility to create EXT2 filesystems.
+//config:
+//config:config MKFS_EXT2
+//config:	bool "mkfs.ext2 (10 kb)"
+//config:	default y
+//config:	select PLATFORM_LINUX
+//config:	help
+//config:	Alias to "mke2fs".
+
+//                    APPLET_ODDNAME:name       main       location     suid_type     help
+//applet:IF_MKE2FS(   APPLET_ODDNAME(mke2fs,    mkfs_ext2, BB_DIR_SBIN, BB_SUID_DROP, mkfs_ext2))
+//applet:IF_MKFS_EXT2(APPLET_ODDNAME(mkfs.ext2, mkfs_ext2, BB_DIR_SBIN, BB_SUID_DROP, mkfs_ext2))
+////////:IF_MKFS_EXT3(APPLET_ODDNAME(mkfs.ext3, mkfs_ext2, BB_DIR_SBIN, BB_SUID_DROP, mkfs_ext2))
+
+//kbuild:lib-$(CONFIG_MKE2FS) += mkfs_ext2.o
+//kbuild:lib-$(CONFIG_MKFS_EXT2) += mkfs_ext2.o
 
 //usage:#define mkfs_ext2_trivial_usage
 //usage:       "[-Fn] "
@@ -56,23 +77,6 @@
 #define EXT2_HASH_HALF_MD4       1
 #define EXT2_FLAGS_SIGNED_HASH   0x0001
 #define EXT2_FLAGS_UNSIGNED_HASH 0x0002
-
-// storage helpers
-char BUG_wrong_field_size(void);
-#define STORE_LE(field, value) \
-do { \
-	if (sizeof(field) == 4) \
-		field = SWAP_LE32(value); \
-	else if (sizeof(field) == 2) \
-		field = SWAP_LE16(value); \
-	else if (sizeof(field) == 1) \
-		field = (value); \
-	else \
-		BUG_wrong_field_size(); \
-} while (0)
-
-#define FETCH_LE32(field) \
-	(sizeof(field) == 4 ? SWAP_LE32(field) : BUG_wrong_field_size())
 
 // All fields are little-endian
 struct ext2_dir {
@@ -244,8 +248,7 @@ int mkfs_ext2_main(int argc UNUSED_PARAM, char **argv)
 
 	// using global "option_mask32" instead of local "opts":
 	// we are register starved here
-	opt_complementary = "-1:b+:i+:I+:m+";
-	/*opts =*/ getopt32(argv, "cl:b:f:i:I:J:G:N:m:o:g:L:M:O:r:E:T:U:jnqvFS",
+	/*opts =*/ getopt32(argv, "cl:b:+f:i:+I:+J:G:N:m:+o:g:L:M:O:r:E:T:U:jnqvFS",
 		/*lbfi:*/ NULL, &bs, NULL, &bpi,
 		/*IJGN:*/ &user_inodesize, NULL, NULL, NULL,
 		/*mogL:*/ &reserved_percent, NULL, NULL, &label,

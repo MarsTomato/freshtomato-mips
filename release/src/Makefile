@@ -48,6 +48,8 @@ endif
 
 PPTPD ?= "n"
 
+KERN_SIZE_OPT ?= y
+
 ifeq ($(NVRAM_SIZE),)
 NVRAM_SIZE = 0
 endif
@@ -89,7 +91,6 @@ uppercase_B = $(shell echo $(B) | tr a-z  A-Z)
 lowercase_B = $(shell echo $(B) | tr A-Z a-z)
 
 mips_rev = $(if $(filter $(MIPS32),r2),MIPSR2,MIPSR1)
-KERN_SIZE_OPT ?= n
 
 beta = $(if $(filter $(TOMATO_EXPERIMENTAL),1),-beta,)
 
@@ -767,10 +768,6 @@ define BusyboxOptions
 	fi; \
 	if [ "$(USB)" = "USB" ]; then \
 		if [ "$(USBEXTRAS)" = "y" ]; then \
-			sed -i "/CONFIG_E2FSCK/d" $(1); \
-			echo "CONFIG_E2FSCK=y" >>$(1); \
-			sed -i "/CONFIG_MKE2FS/d" $(1); \
-			echo "CONFIG_MKE2FS=y" >>$(1); \
 			sed -i "/CONFIG_FDISK/d" $(1); \
 			echo "CONFIG_FDISK=y" >>$(1); \
 			sed -i "/CONFIG_FEATURE_FDISK_WRITABLE/d" $(1); \
@@ -783,10 +780,6 @@ define BusyboxOptions
 			echo "CONFIG_FLOCK=y" >>$(1); \
 			sed -i "/CONFIG_FSYNC/d" $(1); \
 			echo "CONFIG_FSYNC=y" >>$(1); \
-			sed -i "/CONFIG_TUNE2FS/d" $(1); \
-			echo "CONFIG_TUNE2FS=y" >>$(1); \
-			sed -i "/CONFIG_E2LABEL/d" $(1); \
-			echo "CONFIG_E2LABEL=y" >>$(1); \
 			sed -i "/CONFIG_LSUSB/d" $(1); \
 			echo "CONFIG_LSUSB=y" >>$(1); \
 			sed -i "/CONFIG_FEATURE_WGET_STATUSBAR/d" $(1); \
@@ -807,8 +800,10 @@ define BusyboxOptions
 		echo "# CONFIG_VOLUMEID is not set" >>$(1); \
 		sed -i "/CONFIG_BLKID/d" $(1); \
 		echo "# CONFIG_BLKID is not set" >>$(1); \
-		sed -i "/CONFIG_SWAPONOFF/d" $(1); \
-		echo "# CONFIG_SWAPONOFF is not set" >>$(1); \
+		sed -i "/CONFIG_SWAPON/d" $(1); \
+		echo "# CONFIG_SWAPON is not set" >>$(1); \
+		sed -i "/CONFIG_SWAPOFF/d" $(1); \
+		echo "# CONFIG_SWAPOFF is not set" >>$(1); \
 		sed -i "/CONFIG_CHROOT/d" $(1); \
 		echo "# CONFIG_CHROOT is not set" >>$(1); \
 		sed -i "/CONFIG_PIVOT_ROOT/d" $(1); \
@@ -846,6 +841,11 @@ define BusyboxOptions
 		echo "CONFIG_FEATURE_LS_COLOR=y" >>$(1); \
 		sed -i "/CONFIG_FEATURE_LS_COLOR_IS_DEFAULT/d" $(1); \
 		echo "CONFIG_FEATURE_LS_COLOR_IS_DEFAULT=y" >>$(1); \
+	fi; \
+	if [ "$(BUILD_DESC)" = "AIO" ] || [ "$(BUILD_DESC)" = "Mega-VPN" ]; then \
+		sed -i "s/# CONFIG_TIME is not set/CONFIG_TIME=y/g" $(1); \
+		sed -i "s/# CONFIG_GETOPT is not set/CONFIG_GETOPT=y/g" $(1); \
+		sed -i "s/# CONFIG_FEATURE_GETOPT_LONG is not set/CONFIG_FEATURE_GETOPT_LONG=y/g" $(1); \
 	fi; \
 	)
 endef
@@ -1001,6 +1001,10 @@ define KernelConfig
 	else \
 	        echo "# CONFIG_NVRAM_64K is not set" >>$(1); \
 	fi \
+	if [ "$(BUILD_DESC)" = "AIO" ] || [ "$(BUILD_DESC)" = "Mega-VPN" ]; then \
+		sed -i "s/# CONFIG_NETFILTER_XT_MATCH_STATISTIC is not set/CONFIG_NETFILTER_XT_MATCH_STATISTIC=m/g" $(1); \
+		sed -i "s/# CONFIG_NETFILTER_XT_MATCH_COMMENT is not set/CONFIG_NETFILTER_XT_MATCH_COMMENT=y/g" $(1); \
+	fi; \
 	)
 endef
 
@@ -1026,7 +1030,7 @@ endif
 #################################
 
 
-## targets with USB support
+## USB support ##
 
 ## VPN
 e:
@@ -1037,31 +1041,31 @@ e:
 ## BTgui-VPN
 c:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y KEYGEN=y PPTPD=y \
-	    BBEXTRAS=y BTGUI=y STUBBY=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="BTgui-VPN"
+	    BBEXTRAS=y BTGUI=y STUBBY=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="BTgui-VPN"
 
 
 ## Nocat-VPN
 d:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y KEYGEN=y PPTPD=y \
-	    BBEXTRAS=y BTGUI=y STUBBY=y NOCAT=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="Nocat-VPN"
+	    BBEXTRAS=y BTGUI=y STUBBY=y NOCAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="Nocat-VPN"
 
 
 ## BT
 u:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y \
-	    BTCLIENT=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="BT"
+	    BTCLIENT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="BT"
 
 
 ## BT-VPN
 t:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y PPTPD=y \
-	    NO_JFFS=y BTCLIENT=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="BT-VPN"
+	    NO_JFFS=y BTCLIENT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="BT-VPN"
 
 
 ## Big-VPN
 b:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y KEYGEN=y PPTPD=y \
-	    BBEXTRAS=y BTGUI=y STUBBY=y NO_CIFS=y NO_JFFS=y NFS=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="Big-VPN"
+	    BBEXTRAS=y BTGUI=y STUBBY=y NO_CIFS=y NO_JFFS=y NFS=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="Big-VPN"
 
 
 ## Mega-VPN
@@ -1076,46 +1080,39 @@ z:
 	    BBEXTRAS=y MEDIASRV=y DNSCRYPT=y STUBBY=y NOCAT=y TOR=y BTCLIENT=y NFS=y SNMP=y UPS=y TR_EXTRAS=y IPSEC=y DNSSEC=y TINC=y NANO=y HFS=y NGINX=y IPERF=y TERMLIB=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="AIO"
 
 
-#################################
+## NO USB support ##
 
-
-## targets with NO USB support
-
-## Mini - targeted for Netgear routers
+## Mini (4MB)
 f:
-	@$(MAKE) bin USB="" B=F MULTIWAN=y NO_CIFS=y NO_JFFS=y NO_ZEBRA=y BCMNAT=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT=y KERN_SIZE_OPT_MORE=y BUILD_DESC="Mini"
+	@$(MAKE) bin USB="" B=F MULTIWAN=y NO_CIFS=y NO_JFFS=y NO_ZEBRA=y BCMNAT=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT_MORE=y BUILD_DESC="Mini"
 
 
-## MiniIPv6 - for 4MB routers
+## MiniIPv6 (4MB)
 i:
-	@$(MAKE) bin USB="" B=I MULTIWAN=y NO_CIFS=y NO_ZEBRA=y NO_JFFS=y IPV6SUPP=y NO_HTTPS=y BCMNAT=y KERN_SIZE_OPT=y BUILD_DESC="MiniIPv6"
+	@$(MAKE) bin USB="" B=I MULTIWAN=y NO_CIFS=y NO_ZEBRA=y NO_JFFS=y IPV6SUPP=y NO_HTTPS=y BCMNAT=y BUILD_DESC="MiniIPv6"
 
 
-## MiniVPN - for 4MB routers
+## MiniVPN (4MB)
 j:
-	@$(MAKE) bin USB="" B=V MULTIWAN=y NO_CIFS=y NO_ZEBRA=y NO_JFFS=y OPENVPN=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT=y KERN_SIZE_OPT_MORE=y BUILD_DESC="MiniVPN"
+	@$(MAKE) bin USB="" B=V MULTIWAN=y NO_CIFS=y NO_ZEBRA=y NO_JFFS=y OPENVPN=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT_MORE=y BUILD_DESC="MiniVPN"
 
 
-## MiniVPN2 - for 4MB routers
+## MiniVPN2 (4MB)
 j2:
-	@$(MAKE) bin USB="" B=V MULTIWAN=y NO_CIFS=y NO_ZEBRA=y NO_JFFS=y PPTPD=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT=y KERN_SIZE_OPT_MORE=y BUILD_DESC="MiniVPN2"
+	@$(MAKE) bin USB="" B=V MULTIWAN=y NO_CIFS=y NO_ZEBRA=y NO_JFFS=y PPTPD=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT_MORE=y BUILD_DESC="MiniVPN2"
 
 
-## IPv6-VPN with no USB support
+## IPv6-VPN (4MB)
 v:
-	@$(MAKE) bin USB="" B=V MULTIWAN=y NO_JFFS=y IPV6SUPP=y OPENVPN=y PPTPD=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT=y KERN_SIZE_OPT_MORE=y BUILD_DESC="IPv6-$(VPN)"
+	@$(MAKE) bin USB="" B=V MULTIWAN=y NO_JFFS=y IPV6SUPP=y OPENVPN=y PPTPD=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT_MORE=y BUILD_DESC="IPv6-$(VPN)"
 
 
-## Max build for router with 8MB flash without USB Support (like WRT54GS v1)
+## Max (8MB)
 m:
-	@$(MAKE) bin USB="" B=E MULTIWAN=y IPV6SUPP=y OPENVPN=y KEYGEN=y PPTPD=y NOCAT=y NFS=y SNMP=y STUBBY=y TOR=y IPSEC=y BBEXTRAS=y EBTABLES=y BCMNAT=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y KERN_SIZE_OPT=y BUILD_DESC="Max"
+	@$(MAKE) bin USB="" B=E MULTIWAN=y IPV6SUPP=y OPENVPN=y KEYGEN=y PPTPD=y NOCAT=y NFS=y SNMP=y STUBBY=y TOR=y IPSEC=y BBEXTRAS=y EBTABLES=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="Max"
 
 
-
-########## Mips32r2 builds ##########
-
-
-## AIO MIPS2 for RT-N16
+## MIPS32R2 ##
 r2z:
 	@$(MAKE) z MIPS32=r2 NVRAM_SIZE=32
 
@@ -1159,117 +1156,108 @@ r2m:
 	@$(MAKE) m MIPS32=r2 NVRAM_SIZE=32
 
 
-## Belkin
-f5d:
-	@$(MAKE) bin MIPS32=r2 B=V USB="USB" NO_JFFS=y NO_CIFS=y NO_ZEBRA=y NFS=y MEDIASRV=y IPV6SUPP=y NVRAM_64K=y PPTPD=y OPENVPN=y BELKIN_F5D=y KERN_SIZE_OPT=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="IPv6-$(VPN)"
-
-f7d:
-	@$(MAKE) bin MIPS32=r2 B=V USB="USB" NO_JFFS=y NO_CIFS=y NO_ZEBRA=y NFS=y MEDIASRV=y IPV6SUPP=y NVRAM_SIZE=32 OPENVPN=y BELKIN_F7D=y KERN_SIZE_OPT=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="IPv6-$(VPN)"
-
-
-## Linksys E-series witk 60K NVRAM builds
+## Linksys E-series witk 60K NVRAM ##
 n60e:
-	@$(MAKE) e MIPS32=r2 NVRAM_SIZE=60 NO_KEYGEN=y KERN_SIZE_OPT=y LINKSYS_E=y
+	@$(MAKE) e MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
 
 n60c:
-	@$(MAKE) c MIPS32=r2 NVRAM_SIZE=60 NO_KEYGEN=y KERN_SIZE_OPT=y LINKSYS_E=y
+	@$(MAKE) c MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
 
 n60u:
-	@$(MAKE) u MIPS32=r2 NVRAM_SIZE=60 KERN_SIZE_OPT=y LINKSYS_E=y
+	@$(MAKE) u MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
 
 n60t:
-	@$(MAKE) t MIPS32=r2 NVRAM_SIZE=60 KERN_SIZE_OPT=y LINKSYS_E=y
+	@$(MAKE) t MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
 
 n60b:
-	@$(MAKE) b MIPS32=r2 NVRAM_SIZE=60 NO_KEYGEN=y KERN_SIZE_OPT=y LINKSYS_E=y
+	@$(MAKE) b MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
 
 n60d:
-	@$(MAKE) d MIPS32=r2 NVRAM_SIZE=60 NO_KEYGEN=y KERN_SIZE_OPT=y LINKSYS_E=y
+	@$(MAKE) d MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
 
 n60o:
 	@$(MAKE) o MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
-
-n60i:
-	@$(MAKE) i MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
-
-n60j:
-	@$(MAKE) j MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
 
 n60v:
 	@$(MAKE) v MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
 
 n60m:
-	@$(MAKE) m MIPS32=r2 NVRAM_SIZE=60 NO_KEYGEN=y LINKSYS_E=y
+	@$(MAKE) m MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=y
 
 
-## Linksys E-Series with 64K Nvram Builds
+## Belkin ##
+f5d:
+	@$(MAKE) bin MIPS32=r2 B=V MULTIWAN=y USB="USB" NO_JFFS=y NO_CIFS=y NO_ZEBRA=y NFS=y MEDIASRV=y IPV6SUPP=y NVRAM_64K=y PPTPD=y OPENVPN=y BELKIN_F5D=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="IPv6-$(VPN)"
+
+f7d:
+	@$(MAKE) bin MIPS32=r2 B=V USB="USB" NO_JFFS=y NO_CIFS=y NO_ZEBRA=y NFS=y MEDIASRV=y IPV6SUPP=y NVRAM_SIZE=32 OPENVPN=y BELKIN_F7D=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="IPv6-$(VPN)"
+
+
+## Linksys E-Series with 64K NVRAM ##
 n64m:
 	@$(MAKE) m MIPS32=r2 NVRAM_SIZE=64 NO_KEYGEN=y LINKSYS_E_64k=y
 
 
-## Linksys E-Series with 4MB Flash (Max Flashsize=3866624)
+## Linksys E-Series with 4MB Flash (Max Flashsize=3866624) ##
 e1000v2f:
-	@$(MAKE) bin MIPS32=r2 B=F USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NVRAM_SIZE=32 LINKSYS_E1000v2=y KERN_SIZE_OPT=y BCMNAT=y ADVTHEMES=y BUILD_DESC="Mini"
+	@$(MAKE) bin MIPS32=r2 B=F USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NVRAM_SIZE=32 LINKSYS_E1000v2=y BCMNAT=y ADVTHEMES=y BUILD_DESC="Mini"
 
 e1000v2i:
-	@$(MAKE) bin MIPS32=r2 B=I USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NVRAM_SIZE=32 LINKSYS_E1000v2=y NO_CIFS=y IPV6SUPP=y KERN_SIZE_OPT=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
+	@$(MAKE) bin MIPS32=r2 B=I USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NVRAM_SIZE=32 LINKSYS_E1000v2=y NO_CIFS=y IPV6SUPP=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
 
 e1200v1f:
-	@$(MAKE) bin MIPS32=r2 B=F USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NVRAM_SIZE=64 LINKSYS_E1200v1=y KERN_SIZE_OPT=y BCMNAT=y ADVTHEMES=y BUILD_DESC="Mini"
+	@$(MAKE) bin MIPS32=r2 B=F MULTIWAN=y USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NVRAM_SIZE=64 LINKSYS_E1200v1=y BCMNAT=y ADVTHEMES=y BUILD_DESC="Mini"
 
 e1200v1i:
-	@$(MAKE) bin MIPS32=r2 B=I USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NVRAM_SIZE=64 LINKSYS_E1200v1=y NO_CIFS=y IPV6SUPP=y KERN_SIZE_OPT=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
+	@$(MAKE) bin MIPS32=r2 B=I MULTIWAN=y USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NVRAM_SIZE=64 LINKSYS_E1200v1=y NO_CIFS=y IPV6SUPP=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
 
 
-## Builds for WNR3500L v2
+## WNR3500L v2 ##
 v2z:
 	@$(MAKE) z MIPS32=r2 WNR3500LV2=1 NVRAM_SIZE=32 NO_JFFS=y
 
 v2e:
 	@$(MAKE) e MIPS32=r2 WNR3500LV2=1 NVRAM_SIZE=32 NO_JFFS=y MEDIASRV=y
 
-## Builds for Netgear WNDR3400/3700v3/4000
+
+## Netgear WNDR3400/3700v3/4000 ##
 wndr64:
-	@$(MAKE) bin MIPS32=r2 B=E USB="USB" NO_ZEBRA=y NO_HTTPS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y NVRAM_SIZE=64 WNDR=y NO_XXTP=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" USBEXTRAS=y NO_ZEBRA=y NO_HTTPS=y BBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y NVRAM_SIZE=64 WNDR=y NO_XXTP=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
 
 wndr64-vpn:
-	@$(MAKE) bin MIPS32=r2 B=E USB="USB" NO_ZEBRA=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y OPENVPN=y PPTPD=y STUBBY=y NO_SAMBA=y NVRAM_SIZE=64 WNDR=y BCMNAT=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="$(VPN)"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" USBEXTRAS=y NO_ZEBRA=y BBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y OPENVPN=y PPTPD=y STUBBY=y NO_SAMBA=y NVRAM_SIZE=64 WNDR=y BCMNAT=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="$(VPN)"
 
-## Builds with 5Ghz USB Radio (wl_high module)
+
+## Builds with 5Ghz USB Radio (wl_high module - USBAP=y) ##
 rtn53:
-	@$(MAKE) bin MIPS32=r2 B=E USB="USB" BBEXTRAS=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y OPENVPN=y PPTPD=y STUBBY=y TOR=y NOCAT=y USBAP=y NO_USBAPP=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="RT-N53"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" NO_USBAPP=y USBAP=y BBEXTRAS=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y OPENVPN=y PPTPD=y STUBBY=y NOCAT=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="RT-N53"
 
 e2500:
-	@$(MAKE) bin MIPS32=r2 B=E USB="USB" BBEXTRAS=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y OPENVPN=y PPTPD=y STUBBY=y TOR=y NOCAT=y USBAP=y NO_USBAPP=y NVRAM_SIZE=32 LINKSYS_E2500=y BCMNAT=y ADVTHEMES=y OPENSSL11=y KERN_SIZE_OPT=y BUILD_DESC="Max"
+	@$(MAKE) bin MIPS32=r2 B=E USB="USB" NO_USBAPP=y USBAP=y BBEXTRAS=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y OPENVPN=y PPTPD=y STUBBY=y NOCAT=y NVRAM_SIZE=32 LINKSYS_E2500=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="Max"
 
 e3200:
 	@$(MAKE) o MIPS32=r2 USBAP=y NVRAM_SIZE=32 LINKSYS_E3200=y
 
 wndr3400v2:
-	@$(MAKE) bin MIPS32=r2 B=E USB="USB" NO_ZEBRA=y NO_HTTPS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y USBAP=y NVRAM_SIZE=64 WNDR=y NO_XXTP=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" USBEXTRAS=y USBAP=y NO_ZEBRA=y NO_HTTPS=y BBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y NVRAM_SIZE=64 WNDR=y NO_XXTP=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
 
 wndr3400v2-vpn:
-	@$(MAKE) bin MIPS32=r2 B=E USB="USB" NO_ZEBRA=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y OPENVPN=y PPTPD=y STUBBY=y NO_SAMBA=y USBAP=y NVRAM_SIZE=64 WNDR=y BCMNAT=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="$(VPN)"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" USBEXTRAS=y USBAP=y NO_ZEBRA=y BBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y OPENVPN=y PPTPD=y STUBBY=y NO_SAMBA=y NVRAM_SIZE=64 WNDR=y BCMNAT=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="$(VPN)"
 
 n6:
-	@$(MAKE) bin MIPS32=r2 B=E USB="USB" BBEXTRAS=y EBTABLES=y IPV6SUPP=y TOR=y NOCAT=y OPENVPN=y PPTPD=y STUBBY=y USBAP=y NO_USBAPP=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="TendaN6"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" NO_USBAPP=y USBAP=y BBEXTRAS=y EBTABLES=y IPV6SUPP=y STUBBY=y DNSSEC=y NOCAT=y BCMNAT=y OPENVPN=y PPTPD=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="TendaN6"
 
 n60:
-	@$(MAKE) bin MIPS32=r2 B=E USB="USB" BBEXTRAS=y USBEXTRAS=y EBTABLES=y IPV6SUPP=y NTFS=y USBAP=y STUBBY=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="TendaN60"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" USBEXTRAS=y USBAP=y BBEXTRAS=y EBTABLES=y IPV6SUPP=y NTFS=y STUBBY=y NOCAT=y BCMNAT=y OPENVPN=y PPTPD=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="TendaN60"
 
 n60init:
 	@$(MAKE) bin MIPS32=r2 B=E USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NO_CIFS=y NO_XXTP=y NO_SSH=y BCMNAT=y BUILD_DESC="TendaN60-init"
 
 f9k:
-	@$(MAKE) bin MIPS32=r2 B=V USB="USB" NO_JFFS=y NO_ZEBRA=y USBEXTRAS=y NO_CIFS=y NFS=y OPENVPN=y PPTPD=y USBAP=y IPV6SUPP=y NVRAM_64K=y KERN_SIZE_OPT=y BCMNAT=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="F9K1102"
+	@$(MAKE) bin MIPS32=r2 B=V MULTIWAN=y USB="USB" USBEXTRAS=y USBAP=y NO_JFFS=y NO_ZEBRA=y NO_CIFS=y NFS=y OPENVPN=y PPTPD=y IPV6SUPP=y NVRAM_64K=y BCMNAT=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="F9K1102"
 
 
-# it`s not possible to flash tomato on this router. Maybe in the future.
-## l600n:
-#	@$(MAKE) bin MIPS32=r2 OPENVPN=y BBEXTRAS=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y B=E BUILD_DESC="L600N" USB="USB" SNMP=y STUBBY=y PPTPD=y TOR=y NOCAT=y USBAP=y
-
-
-## Builds for Asus RT-N66u with 64k NVRAM support
+## Asus RT-N66u with 64K NVRAM ##
 ifeq ($(CONFIG_BCMWL6),y)
 r64z:
 	@$(MAKE) z MIPS32=r2 NVRAM_64K=y MICROSD=y ASUS_TRX="RT-N66U" UFSD=y
@@ -1297,12 +1285,6 @@ w1800re:
 w1800rz:
 	@$(MAKE) o MIPS32=r2 NVRAM_64K=y ASUS_TRX="W1800R"
 
-dir865le:
-	@$(MAKE) e MIPS32=r2 NVRAM_SIZE=32 ASUS_TRX="DIR865L"
-
-dir865lo:
-	@$(MAKE) o MIPS32=r2 NVRAM_SIZE=32 ASUS_TRX="DIR865L"
-
 r6300e:
 	@$(MAKE) e MIPS32=r2 NVRAM_64K=y NAND=y MEDIASRV=y ASUS_TRX="R6300V1"
 
@@ -1324,17 +1306,12 @@ wndr4500v2z:
 n80o:
 	@$(MAKE) o MIPS32=r2 NVRAM_64K=y ASUS_TRX="TDN80"
 
-#d1800he:
-#	@$(MAKE) e MIPS32=r2 NVRAM_64K=y NAND=y ASUS_TRX="D1800H"
+## 32K NVRAM ##
+dir865le:
+	@$(MAKE) bin MIPS32=r2 B=E USB="USB" NVRAM_SIZE=32 USBEXTRAS=y NTFS=y EBTABLES=y IPV6SUPP=y BCMNAT=y BBEXTRAS=y NANO=y DNSSEC=y DNSCRYPT=y STUBBY=y ADVTHEMES=y OPENSSL11=y ASUS_TRX="DIR865L" BUILD_DESC="Custom"
 
-#d1800hz:
-#	@$(MAKE) z MIPS32=r2 NVRAM_64K=y NAND=y ASUS_TRX="D1800H"
-
-#ea6500e:
-#	@$(MAKE) e MIPS32=r2 NVRAM_64K=y NAND=y ASUS_TRX="EA6500V1"
-
-#ea6500z:
-#	@$(MAKE) z MIPS32=r2 NVRAM_64K=y NAND=y ASUS_TRX="EA6500V1"
+dir865lo:
+	@$(MAKE) o MIPS32=r2 NVRAM_SIZE=32 ASUS_TRX="DIR865L"
 endif
 
 
@@ -1391,123 +1368,115 @@ setprofile:
 	@$(MAKE) -C router oldconfig
 
 help:
-	@echo "e            VPN - (standard plus VPN, extra utilities and NTFS support)"
-	@echo "c            BTgui-VPN - (Ext plus BT gui)"
-	@echo "d            Nocat-VPN - (BTgui plus VPN plus Nocat)"
-	@echo "u            BT"
-	@echo "t            BT-VPN - (BT plus VPN)"
-	@echo "b            Big-VPN - (Big plus VPN)"
-	@echo "o            Mega-VPN - (Mega plus VPN plus NOCAT minus NFS)"
-	@echo "z            MIPS Release 15F AIO (for routers +8MB flash)"
-	@echo "i            MiniIPv6 - (IPv6 with no USB support minus CIFS and RIPv1/2)"
-	@echo "j            MiniVPN - (OpenVPN with no USB support minus CIFS and RIPv1/2)"
-	@echo "j2           MiniVPN - (PPTPD with no USB support minus CIFS and RIPv1/2)"
-	@echo "f            Mini - (no USB support minus CIFS and RIPv1/2)"
-	@echo "v            IPv6-VPN (no usb) - (VPN with no USB support)"
-	@echo "m            Max (no usb) - (Max with IPv6 support and no USB)"
+	@echo "e              VPN - (standard plus VPN, extra utilities and NTFS support)"
+	@echo "c              BTgui-VPN - (Ext plus BT gui)"
+	@echo "d              Nocat-VPN - (BTgui plus VPN plus Nocat)"
+	@echo "u              BT"
+	@echo "t              BT-VPN - (BT plus VPN)"
+	@echo "b              Big-VPN - (Big plus VPN)"
+	@echo "o              Mega-VPN - (Mega plus VPN plus NOCAT minus NFS)"
+	@echo "z              MIPS Release 15F AIO (for routers +8MB flash)"
+	@echo "i              MiniIPv6 - (IPv6 with no USB support minus CIFS and RIPv1/2)"
+	@echo "j              MiniVPN - (OpenVPN with no USB support minus CIFS and RIPv1/2)"
+	@echo "j2             MiniVPN - (PPTPD with no USB support minus CIFS and RIPv1/2)"
+	@echo "f              Mini - (no USB support minus CIFS and RIPv1/2)"
+	@echo "v              IPv6-VPN (no usb) - (VPN with no USB support)"
+	@echo "m              Max (no usb) - (Max with IPv6 support and no USB)"
 	@echo ""
-	@echo "r2e          MIPS Release 2 VPN"
-	@echo "r2c          MIPS Release 2 BTgui-VPN"
-	@echo "r2d          MIPS Release 2 Nocat-VPN"
-	@echo "r2u          MIPS Release 2 BT"
-	@echo "r2t          MIPS Release 2 BT-VPN"
-	@echo "r2b          MIPS Release 2 Big-VPN"
-	@echo "r2o          MIPS Release 2 Mega-VPN (for routers +8MB flash)"
-	@echo "r2z          MIPS Release 2 AIO (for routers +8MB flash)"
-	@echo "r2v          MIPS Release 2 IPv6-VPN (no usb)"
-	@echo "r2m          MIPS Release 2 Max (no usb)"
-	@echo "r2i          MIPS Release 2 MiniIPv6 (for 4MB flash)"
-	@echo "r2j          MIPS Release 2 MiniVPN (OpenVPN; for 4MB flash)"
-	@echo "r2j2         MIPS Release 2 MiniVPN (PPTPD; for 4MB flash)"
-	@echo "r2f          MIPS Release 2 Mini (for netgear)"
-	@echo ""
-	@echo "       Belkin F5D/F7D Series with 8MB Flash"
-	@echo "f5d          Belkin F5D8235v3 MIPSr2 Mini w/ USB, IPv6, VPN"
-	@echo "f7d          Belkin F7D3301/3302/4302 MIPSr2 Mini w/ USB, IPv6, VPN"
+	@echo "r2e            MIPS Release 2 VPN"
+	@echo "r2c            MIPS Release 2 BTgui-VPN"
+	@echo "r2d            MIPS Release 2 Nocat-VPN"
+	@echo "r2u            MIPS Release 2 BT"
+	@echo "r2t            MIPS Release 2 BT-VPN"
+	@echo "r2b            MIPS Release 2 Big-VPN"
+	@echo "r2o            MIPS Release 2 Mega-VPN (for 8MB+ flash)"
+	@echo "r2z            MIPS Release 2 AIO (for 8MB+ flash)"
+	@echo "r2v            MIPS Release 2 IPv6-VPN (no usb)"
+	@echo "r2m            MIPS Release 2 Max (no usb)"
+	@echo "r2i            MIPS Release 2 MiniIPv6 (for 4MB flash)"
+	@echo "r2j            MIPS Release 2 MiniVPN (OpenVPN; for 4MB flash)"
+	@echo "r2j2           MIPS Release 2 MiniVPN (PPTPD; for 4MB flash)"
+	@echo "r2f            MIPS Release 2 Mini (for 4MB flash)"
 	@echo ""
 	@echo "       Linksys E-Series with 4MB Flash (E1000v2/v2.1/E1200v1)"
-	@echo "e1000v2f     Linksys E1000v2-v2.1/Cisco M10v2 Mini"
-	@echo "e1000v2i     Linksys E1000v2-v2.1/Cisco M10v2 MiniIPv6"
-	@echo "e1200v1f     Linksys E1200v1 Mini"
-	@echo "e1200v1i     Linksys E1200v1 MiniIPv6"
+	@echo "e1000v2f       Linksys E1000v2-v2.1/Cisco M10v2 Mini"
+	@echo "e1000v2i       Linksys E1000v2-v2.1/Cisco M10v2 MiniIPv6"
+	@echo "e1200v1f       Linksys E1200v1 Mini"
+	@echo "e1200v1i       Linksys E1200v1 MiniIPv6"
 	@echo ""
 	@echo "       Linksys E-Series with 60k Nvram"
-	@echo "n60e         Linksys E-series build VPN"
-	@echo "n60c         Linksys E-series build BTGui-VPN"
-	@echo "n60d         Linksys E-series build Nocat-VPN"
-	@echo "n60t         Linksys E-series build BT-VPN"
-	@echo "n60b         Linksys E-series build Big-VPN"
-	@echo "n60o         Linksys E-series build Mega-VPN"
-	@echo "n60z         Linksys E-series build AIO"
-	@echo "n60i         Linksys E-series build Mini for E2500"
-	@echo "n60j         Linksys E-series build MiniIPv6 for E2500"
-	@echo "n60v         Linksys E-series build IPv6-VPN for E2000"
-	@echo "n60m         Linksys E-series build Max for E2000"
+	@echo "n60e           Linksys E-series VPN"
+	@echo "n60c           Linksys E-series BTGui-VPN"
+	@echo "n60d           Linksys E-series Nocat-VPN"
+	@echo "n60t           Linksys E-series BT-VPN"
+	@echo "n60b           Linksys E-series Big-VPN"
+	@echo "n60o           Linksys E-series Mega-VPN"
+	@echo "n60v           Linksys E-series IPv6-VPN for E2000"
+	@echo "n60m           Linksys E-series Max for E2000"
 	@echo ""
 	@echo "       Linksys E-Series with 64k Nvram/8MB Flash (E800/E900/E1200v2/E1500)"
-	@echo "n64e         Linksys E-series(64k Nvram) build VPN"
-	@echo "n64c         Linksys E-series(64k Nvram) build BTGui-VPN"
-	@echo "n64d         Linksys E-series(64k Nvram) build BTGui-VPN plus Nocat"
-	@echo "n64u         Linksys E-series(64k Nvram) build BT"
-	@echo "n64t         Linksys E-series(64k Nvram) build BT-VPN"
-	@echo "n64b         Linksys E-series(64k Nvram) build Big-VPN"
-	@echo "n64o         Linksys E-series(64k Nvram) build Mega-VPN"
-	@echo "n64v         Linksys E-series(64k Nvram) build IPv6-VPN"
-	@echo "n64m         Linksys E-series(64k Nvram) build Max"
+	@echo "n64e           Linksys E-series VPN"
+	@echo "n64c           Linksys E-series BTGui-VPN"
+	@echo "n64d           Linksys E-series BTGui-VPN plus Nocat"
+	@echo "n64u           Linksys E-series BT"
+	@echo "n64t           Linksys E-series BT-VPN"
+	@echo "n64b           Linksys E-series Big-VPN"
+	@echo "n64o           Linksys E-series Mega-VPN"
+	@echo "n64v           Linksys E-series IPv6-VPN"
+	@echo "n64m           Linksys E-series Max"
+	@echo ""
+	@echo "       Belkin F5D/F7D Series with 8MB Flash"
+	@echo "f5d            Belkin F5D8235v3 MIPSr2 Mini w/ USB, IPv6, VPN"
+	@echo "f7d            Belkin F7D3301/3302/4302 MIPSr2 Mini w/ USB, IPv6, VPN"
 	@echo ""
 	@echo "       Routers with 5Ghz USB Radio (wl_high module)"
 	@echo "       Before compilation you have to revert patch to the kernel:"
 	@echo "       $ cd release/src-rt/linux"
 	@echo "       $ patch -R -p4 < fix4usbap.patch"
 	@echo ""
-	@echo "rtn53        Asus RT-N53"
-	@echo "f9k          Belkin F9K1102 (v1/v3)"
-	@echo "e2500        Linksys E2500"
-	@echo "e3200        Linksys E3200/E2500v3 / max 16MB"
-	@echo "n6           Tenda N6"
-	@echo "n60          Tenda N60 w/o minidlna"
+	@echo "rtn53          Asus RT-N53"
+	@echo "f9k            Belkin F9K1102 (v1/v3)"
+	@echo "e2500          Linksys E2500"
+	@echo "e3200          Linksys E3200/E2500v3 / max 16MB"
+	@echo "n6             Tenda N6"
+	@echo "n60            Tenda N60 w/o minidlna"
 	@echo "wndr3400v2     Netgear WNDR3400v2/v3 miniIPv6 w/o minidlna"
 	@echo "wndr3400v2-vpn Netgear WNDR3400v2/v3 VPN w/o Samba"
-#	@echo "l600n        Rosewill L600N Build with wl_high module (dualband support)"
 	@echo ""
-	@echo "       Netgear WNDR3400/3700v3/4000 builds"
-	@echo "wndr64       Netgear WNDR3400/3700v3/4000 miniIPv6 w/o miniDLNA"
-	@echo "wndr64-vpn   Netgear WNDR3400/3700v3/4000 VPN w/o Samba"
+	@echo "       Netgear WNDR3400/3700v3/4000"
+	@echo "wndr64         Netgear WNDR3400/3700v3/4000 miniIPv6 w/o miniDLNA"
+	@echo "wndr64-vpn     Netgear WNDR3400/3700v3/4000 VPN w/o Samba"
 	@echo ""
-	@echo "       Netgear WNR3500L v2 builds (128MB Flash)"
-	@echo "v2e          Netgear WNR3500Lv2 build VPN"
-	@echo "v2z          Netgear WNR3500Lv2 build AIO"
+	@echo "       Netgear WNR3500L v2 (128MB Flash)"
+	@echo "v2e            Netgear WNR3500Lv2 VPN"
+	@echo "v2z            Netgear WNR3500Lv2 AIO"
 	@echo ""
-	@echo "r64e         Asus RT-N66u build VPN"
-	@echo "r64z         Asus RT-N66u build AIO"
+	@echo "r64e           Asus RT-N66u VPN"
+	@echo "r64z           Asus RT-N66u AIO"
 ifeq ($(CONFIG_BCMWL6),y)
 	@echo ""
-	@echo "ac66e        Asus RT-AC66u build VPN"
-	@echo "ac66z        Asus RT-AC66u build AIO"
-	@echo "w1800re      Tenda W1800R build VPN"
-	@echo "w1800rz      Tenda W1800R build AIO"
-	@echo "dir865le     D-link DIR-865L build VPN"
-	@echo "dir865lz     D-link DIR-865L build Mega-VPN"
-	@echo "r6300e       Netgear R6300V1 build VPN"
-	@echo "r6300z       Netgear R6300V1 build AIO"
-	@echo "wndr4500e    Netgear WNDR4500V1 build VPN"
-	@echo "wndr4500z    Netgear WNDR4500V1 build AIO"
-	@echo "wndr4500v2e  Netgear WNDR4500V2 build VPN"
-	@echo "wndr4500v2z  Netgear WNDR4500V2 build AIO"
-	@echo "n80o         Tenda N80 build Mega-VPN"
-#	@echo "d1800he      Buffalo D1800H build VPN"
-#	@echo "d1800hz      Buffalo D1800H build AIO"
-#	@echo "ea6500e      Linksys EA6500v1 build VPN"
-#	@echo "ea6500z      Linksys EA6500v1 build AIO"
+	@echo "ac66e          Asus RT-AC66u VPN"
+	@echo "ac66z          Asus RT-AC66u AIO"
+	@echo "w1800re        Tenda W1800R VPN"
+	@echo "w1800rz        Tenda W1800R AIO"
+	@echo "dir865le       D-link DIR-865L VPN"
+	@echo "dir865lo       D-link DIR-865L Mega-VPN"
+	@echo "r6300e         Netgear R6300V1 VPN"
+	@echo "r6300z         Netgear R6300V1 AIO"
+	@echo "wndr4500e      Netgear WNDR4500V1 VPN"
+	@echo "wndr4500z      Netgear WNDR4500V1 AIO"
+	@echo "wndr4500v2e    Netgear WNDR4500V2 VPN"
+	@echo "wndr4500v2z    Netgear WNDR4500V2 AIO"
+	@echo "n80o           Tenda N80 Mega-VPN"
 endif
 	@echo ""
-	@echo "..etc..      other build configs"
-	@echo "clean        -C router clean"
-	@echo "cleanimage   rm -rf image"
-	@echo "cleantools   clean btools, mksquashfs"
-	@echo "cleankernel  -C Linux distclean (but preserves .config)"
-	@echo "distclean    distclean of Linux & busybox (but preserve .configs)"
-	@echo "prepk        -C Linux oldconfig dep"
+	@echo "..etc..        other build configs"
+	@echo "clean          -C router clean"
+	@echo "cleanimage     rm -rf image"
+	@echo "cleantools     clean btools, mksquashfs"
+	@echo "cleankernel    -C Linux distclean (but preserves .config)"
+	@echo "distclean      distclean of Linux & busybox (but preserve .configs)"
+	@echo "prepk          -C Linux oldconfig dep"
 
 .PHONY: all clean distclean cleanimage cleantools cleankernel prepk what setprofile help
 .PHONY: a b c d m nc Makefile allversions tomato_profile.mak

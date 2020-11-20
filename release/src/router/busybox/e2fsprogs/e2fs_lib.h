@@ -26,7 +26,7 @@ int fgetsetflags(const char *name, unsigned long *get_flags, unsigned long set_f
 #define fgetflags(name, flags) fgetsetflags(name, flags, 0)
 #define fsetflags(name, flags) fgetsetflags(name, NULL, flags)
 
-/* Must be 1 for compatibility with `int long_format'. */
+/* Must be 1 for compatibility with 'int long_format'. */
 #define PFOPT_LONG  1
 /* Print file attributes on an ext2 file system */
 void print_e2flags(FILE *f, unsigned long flags, unsigned options);
@@ -43,10 +43,5 @@ extern const char e2attr_flags_sname[];
 #define e2attr_flags_value_chattr (&e2attr_flags_value[1])
 #define e2attr_flags_sname_chattr (&e2attr_flags_sname[1])
 #endif
-
-/* uuid helpers */
-#define uuid_clear(uu) memset(uu, 0, sizeof(uu))
-#define uuid_copy(dst,src) memcpy(dst, src, sizeof(dst))
-#define uuid_is_null(uu) (!memcmp(uu, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", sizeof(uu)))
 
 POP_SAVED_FUNCTION_VISIBILITY

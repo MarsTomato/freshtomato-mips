@@ -34,6 +34,7 @@
 
 */
 
+
 #include "rc.h"
 
 #include <limits.h>
@@ -52,8 +53,11 @@
 #include <trxhdr.h>
 #include <bcmutils.h>
 
+// #define DEBUG_SIMULATE
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"mtd_debug"
 
-//	#define DEBUG_SIMULATE
 
 struct code_header {
 	char magic[4];
@@ -364,7 +368,7 @@ int mtd_write_main(int argc, char *argv[])
 		} else {
 			// And Byte Swap, Netgear header is big endian, machine is little endian
 			n = BCMSWAP32(n);
-			_dprintf("Read Netgear Header Length: 0x%x\n", n);
+			logmsg(LOG_DEBUG, "*** %s: read Netgear header length: 0x%x", __FUNCTION__, n);
 		}
 		
 		// Read (formatted) Netgear CHK header (now that we know how long it is)
@@ -372,13 +376,13 @@ int mtd_write_main(int argc, char *argv[])
 		if (safe_fread(&netgear_hdr, 1, n-sizeof(sig)-sizeof(n), f) != n-sizeof(sig)-sizeof(n)) {
 			goto ERROR;
 		} else
-			_dprintf("Read Netgear Header, Magic=0x%x, Length=0x%x\n", sig, n);
+			logmsg(LOG_DEBUG, "*** %s: read Netgear header, magic=0x%x, length=0x%x", __FUNCTION__, sig, n);
 		
 		// TRX (MAGIC) should be next...
 		if (safe_fread(&sig, 1, sizeof(sig), f) != sizeof(sig)) {
 			goto ERROR;
 		} else
-			_dprintf("Read TRX Header, Magic=0x%x\n", sig);
+			logmsg(LOG_DEBUG, "*** %s: read TRX header, magic=0x%x", __FUNCTION__, sig);
 		break;
 	case TRX_MAGIC:
 		break;
@@ -450,10 +454,10 @@ int mtd_write_main(int argc, char *argv[])
 
 	if (trx.flag_version & TRX_NO_HEADER) {
 		trx.len -= sizeof(struct trx_header);
-		_dprintf("don't write header\n");
+		logmsg(LOG_DEBUG, "*** %s: don't write header", __FUNCTION__);
 	}
 
-	_dprintf("trx len=%db 0x%x\n", trx.len, trx.len);
+	logmsg(LOG_DEBUG, "*** %s: trx len=%db 0x%x", __FUNCTION__, trx.len, trx.len);
 
 	if ((mf = mtd_open(dev, &mi)) < 0) {
 		error = "Error opening MTD device";
@@ -465,7 +469,7 @@ int mtd_write_main(int argc, char *argv[])
 		goto ERROR;
 	}
 
-	_dprintf("mtd size=%6x, erasesize=%6x\n", mi.size, mi.erasesize);
+	logmsg(LOG_DEBUG, "*** %s: mtd size=%6x, erasesize=%6x", __FUNCTION__, mi.size, mi.erasesize);
 
 	total = ROUNDUP(trx.len, mi.erasesize);
 	if (total > mi.size) {
@@ -481,7 +485,7 @@ int mtd_write_main(int argc, char *argv[])
 //		ei.length = ROUNDUP((si.freeram - (256 * 1024)), mi.erasesize);
 		ei.length = mi.erasesize;
 	}
-	_dprintf("freeram=%ld ei.length=%d total=%u\n", si.freeram, ei.length, total);
+	logmsg(LOG_DEBUG, "*** %s: freeram=%ld ei.length=%d total=%u", __FUNCTION__, si.freeram, ei.length, total);
 
 	if ((buf = malloc(ei.length)) == NULL) {
 		error = "Not enough memory";
@@ -503,9 +507,9 @@ int mtd_write_main(int argc, char *argv[])
 		memcpy(buf, &trx, sizeof(trx));
 		ofs = sizeof(trx);
 	}
-	_dprintf("trx.len=%ub 0x%x ofs=%ub 0x%x\n", trx.len, trx.len, ofs, ofs);
+	logmsg(LOG_DEBUG, "*** %s: trx.len=%ub 0x%x ofs=%ub 0x%x", __FUNCTION__, trx.len, trx.len, ofs, ofs);
 	netgear_chk_len = trx.len;
-	
+
 	error = NULL;
 
 	for (ei.start = 0; ei.start < total; ei.start += ei.length) {
@@ -519,7 +523,7 @@ int mtd_write_main(int argc, char *argv[])
 		crc = crc_calc(crc, buf + ofs, n);
 
 		if (trx.len == 0) {
-			_dprintf("crc=%8x  trx.crc=%8x\n", crc, trx.crc32);
+			logmsg(LOG_DEBUG, "*** %s: crc=%8x  trx.crc=%8x", __FUNCTION__, crc, trx.crc32);
 			if (crc != trx.crc32) {
 				error = "Image is corrupt";
 				break;
@@ -530,13 +534,12 @@ int mtd_write_main(int argc, char *argv[])
 			printf("Writing %x-%x\r", ei.start, (ei.start + ei.length) - 1);
 		}
 
-		_dprintf("ofs=%ub  n=%ub 0x%x  trx.len=%ub  ei.start=0x%x  ei.length=0x%x  mi.erasesize=0x%x\n",
-			   ofs, n, n, trx.len, ei.start, ei.length, mi.erasesize);
+		logmsg(LOG_DEBUG, "*** %s: ofs=%ub  n=%ub 0x%x  trx.len=%ub  ei.start=0x%x  ei.length=0x%x  mi.erasesize=0x%x", __FUNCTION__, ofs, n, n, trx.len, ei.start, ei.length, mi.erasesize);
 
 		n += ofs;
 
-		_dprintf(" erase start=%x len=%x\n", ei.start, ei.length);
-		_dprintf(" write %x\n", n);
+		logmsg(LOG_DEBUG, " erase start=%x len=%x", ei.start, ei.length);
+		logmsg(LOG_DEBUG, " write %x", n);
 
 #ifdef DEBUG_SIMULATE
 		if (fwrite(buf, 1, n, of) != n) {
@@ -594,29 +597,29 @@ int mtd_write_main(int argc, char *argv[])
 			n   = 0x00000004;	// fake length - little endian
 			crc = 0x02C0010E;	// fake crc - little endian
 		}
-		_dprintf("Netgear CRC, Data to Write: CRC=0x%x, Len=0x%x, Offset=0x%x\n", crc, n, ofs);
+		logmsg(LOG_DEBUG, "*** %s: Netgear CRC, data to write: CRC=0x%x, len=0x%x, offset=0x%x", __FUNCTION__, crc, n, ofs);
 		memcpy(&imageInfo[0], (char *)&n,   4);
 		memcpy(&imageInfo[4], (char *)&crc, 4);
 
 		ei.start = (ofs / mi.erasesize) * mi.erasesize;
 		ei.length = mi.erasesize;
-		_dprintf("Netgear CRC: Erase Start=0x%x, Length=0x%x\n", ei.start, ei.length);
+		logmsg(LOG_DEBUG, "*** %s: Netgear CRC: erase start=0x%x, length=0x%x", __FUNCTION__, ei.start, ei.length);
 
 		if (lseek(mf, ei.start, SEEK_SET) < 0) {
-			_dprintf("Netgear CRC: lseek() error\n");
+			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: lseek() error", __FUNCTION__);
 			goto ERROR2;
 		}
 		if (buf) free(buf);
 		if (!(buf = malloc(mi.erasesize))) {
-			_dprintf("Netgear CRC: malloc() error\n");
+			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: malloc() error", __FUNCTION__);
 			goto ERROR2;
 		}
 		if (read(mf, buf, mi.erasesize) != mi.erasesize) {
-			_dprintf("Netgear CRC: read() error\n");
+			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: read() error", __FUNCTION__);
 			goto ERROR2;
 		}
 		if (lseek(mf, ei.start, SEEK_SET) < 0) {
-			_dprintf("Netgear CRC: lseed() error\n");
+			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: lseed() error", __FUNCTION__);
 			goto ERROR2;
 		}
 		
@@ -632,18 +635,18 @@ int mtd_write_main(int argc, char *argv[])
 #else
 		ioctl(mf, MEMUNLOCK, &ei);
 		if (ioctl(mf, MEMERASE, &ei) != 0) {
-			_dprintf("Netgear CRC: ioctl() error\n");
+			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: ioctl() error", __FUNCTION__);
 			goto ERROR2;
 		}
 		if (write(mf, buf, mi.erasesize) != mi.erasesize) {
-			_dprintf("Netgear CRC: write() error\n");
+			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: write() error", __FUNCTION__);
 			goto ERROR2;
 		}
 		error = NULL;
 #endif
 
 ERROR2:
-		_dprintf("%s.\n",  error ? : "Write Netgear Length/CRC Completed.");
+		logmsg(LOG_DEBUG, "*** %s: %s", __FUNCTION__, error ? : "write Netgear fake len/crc completed");
 		// ignore crc write errors
 		error = NULL;
 		break;
@@ -669,6 +672,6 @@ ERROR:
 #endif
 
 	printf("%s\n",  error ? error : "Image successfully flashed");
-	_dprintf("%s\n",  error ? error : "Image successfully flashed");
+	logmsg(LOG_DEBUG, "*** %s: %s", __FUNCTION__, error ? error : "image successfully flashed");
 	return (error ? 1 : 0);
 }

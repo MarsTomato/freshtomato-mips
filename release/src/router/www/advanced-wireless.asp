@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country,wl_country_rev,0:regrev,1:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_nband,wl_wmf_bss_enable"); %>
+//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_ap_isolate,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_nband,wl_wmf_bss_enable"); %>
 
 //	<% wlcountries(); %>
 
@@ -96,7 +96,6 @@ function save() {
 			if (nvram['pci/'+u_pci+'/1/regrev'])
 				E('_pci/'+u_pci+'/1/regrev').value = c_rev;
 /* BCMWL6-END */
-			E('_wl'+u+'_country').value = c_code;
 			E('_wl'+u+'_nmode_protection').value = E('_wl'+u+'_gmode_protection').value;
 		}
 	}
@@ -178,7 +177,6 @@ function init() {
 			if (nvram['pci/'+u_pci+'/1/regrev'])
 				W('<input type="hidden" id="_pci/'+u_pci+'/1/regrev" name="pci/'+u_pci+'/1/regrev">');
 /* BCMWL6-END */
-			W('<input type="hidden" id="_wl'+u+'_country" name="wl'+u+'_country">');
 			W('<input type="hidden" id="_wl'+u+'_nmode_protection" name="wl'+u+'_nmode_protection">');
 
 /* / / / */

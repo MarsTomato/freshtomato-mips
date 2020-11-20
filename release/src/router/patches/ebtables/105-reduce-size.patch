@@ -1,0 +1,381 @@
+--- ebtables/ebtables.c
++++ ebtables/ebtables.c
+@@ -383,20 +383,28 @@
+ "\n\n");
+ 	m_l = new_entry->m_list;
+ 	while (m_l) {
++#ifdef NO_OPTSIZE
+ 		((struct ebt_u_match *)m_l->m)->help();
++#endif
+ 		printf("\n");
+ 		m_l = m_l->next;
+ 	}
+ 	w_l = new_entry->w_list;
+ 	while (w_l) {
++#ifdef NO_OPTSIZE
+ 		((struct ebt_u_watcher *)w_l->w)->help();
++#endif
+ 		printf("\n");
+ 		w_l = w_l->next;
+ 	}
++#ifdef NO_OPTSIZE
+ 	((struct ebt_u_target *)new_entry->t)->help();
++#endif
+ 	printf("\n");
++#ifdef NO_OPTSIZE
+ 	if (table->help)
+ 		table->help(ebt_hooknames);
++#endif
+ }
+ 
+ /* Execute command L */
+--- ebtables/extensions/ebt_802_3.c
++++ ebtables/extensions/ebt_802_3.c
+@@ -132,7 +132,9 @@
+ {
+ 	.name		= "802_3",
+ 	.size		= sizeof(struct ebt_802_3_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebtable_broute.c
++++ ebtables/extensions/ebtable_broute.c
+@@ -20,7 +20,9 @@
+ ebt_u_table table =
+ {
+ 	.name		= "broute",
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ };
+ 
+ static void _INIT(void)
+--- ebtables/extensions/ebtable_filter.c
++++ ebtables/extensions/ebtable_filter.c
+@@ -26,7 +26,9 @@
+ static struct ebt_u_table table =
+ {
+ 	.name		= "filter",
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ };
+ 
+ static void _INIT(void)
+--- ebtables/extensions/ebtable_nat.c
++++ ebtables/extensions/ebtable_nat.c
+@@ -27,7 +27,9 @@
+ ebt_u_table table =
+ {
+ 	.name		= "nat",
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ };
+ 
+ static void _INIT(void)
+--- ebtables/extensions/ebt_among.c
++++ ebtables/extensions/ebt_among.c
+@@ -482,7 +482,9 @@
+ static struct ebt_u_match among_match = {
+ 	.name 		= "among",
+ 	.size 		= sizeof(struct ebt_among_info),
++#ifdef NO_OPTSIZE
+ 	.help 		= print_help,
++#endif
+ 	.init 		= init,
+ 	.parse 		= parse,
+ 	.final_check 	= final_check,
+--- ebtables/extensions/ebt_arp.c
++++ ebtables/extensions/ebt_arp.c
+@@ -353,7 +353,9 @@
+ {
+ 	.name		= "arp",
+ 	.size		= sizeof(struct ebt_arp_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_arpreply.c
++++ ebtables/extensions/ebt_arpreply.c
+@@ -124,7 +124,9 @@
+ {
+ 	.name		= "arpreply",
+ 	.size		= sizeof(struct ebt_arpreply_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_AUDIT.c
++++ ebtables/extensions/ebt_AUDIT.c
+@@ -95,7 +95,9 @@
+ {
+ 	.name		= "AUDIT",
+ 	.size		= sizeof(struct xt_AUDIT_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_inat.c
++++ ebtables/extensions/ebt_inat.c
+@@ -357,7 +357,9 @@
+ {
+ 	.name		= EBT_ISNAT_TARGET,
+ 	.size		= sizeof(struct ebt_inat_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help_s,
++#endif
+ 	.init		= init_s,
+ 	.parse		= parse_s,
+ 	.final_check	= final_check_s,
+@@ -370,7 +372,9 @@
+ {
+ 	.name		= EBT_IDNAT_TARGET,
+ 	.size		= sizeof(struct ebt_inat_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help_d,
++#endif
+ 	.init		= init_d,
+ 	.parse		= parse_d,
+ 	.final_check	= final_check_d,
+--- ebtables/extensions/ebt_ip6.c
++++ ebtables/extensions/ebt_ip6.c
+@@ -404,7 +404,9 @@
+ {
+ 	.name		= EBT_IP6_MATCH,
+ 	.size		= sizeof(struct ebt_ip6_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_ip.c
++++ ebtables/extensions/ebt_ip.c
+@@ -463,7 +463,9 @@
+ {
+ 	.name		= "ip",
+ 	.size		= sizeof(struct ebt_ip_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_limit.c
++++ ebtables/extensions/ebt_limit.c
+@@ -203,7 +203,9 @@
+ {
+ 	.name		= "limit",
+ 	.size		= sizeof(struct ebt_limit_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_log.c
++++ ebtables/extensions/ebt_log.c
+@@ -208,7 +208,9 @@
+ {
+ 	.name		= "log",
+ 	.size		= sizeof(struct ebt_log_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_mark.c
++++ ebtables/extensions/ebt_mark.c
+@@ -163,7 +163,9 @@
+ {
+ 	.name		= "mark",
+ 	.size		= sizeof(struct ebt_mark_t_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_mark_m.c
++++ ebtables/extensions/ebt_mark_m.c
+@@ -112,7 +112,9 @@
+ {
+ 	.name		= "mark_m",
+ 	.size		= sizeof(struct ebt_mark_m_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_nat.c
++++ ebtables/extensions/ebt_nat.c
+@@ -209,7 +209,9 @@
+ {
+ 	.name		= "snat",
+ 	.size		= sizeof(struct ebt_nat_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help_s,
++#endif
+ 	.init		= init_s,
+ 	.parse		= parse_s,
+ 	.final_check	= final_check_s,
+@@ -222,7 +224,9 @@
+ {
+ 	.name		= "dnat",
+ 	.size		= sizeof(struct ebt_nat_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help_d,
++#endif
+ 	.init		= init_d,
+ 	.parse		= parse_d,
+ 	.final_check	= final_check_d,
+--- ebtables/extensions/ebt_nflog.c
++++ ebtables/extensions/ebt_nflog.c
+@@ -157,7 +157,9 @@
+ static struct ebt_u_watcher nflog_watcher = {
+ 	.name = "nflog",
+ 	.size = sizeof(struct ebt_nflog_info),
++#ifdef NO_OPTSIZE
+ 	.help = nflog_help,
++#endif
+ 	.init = init,
+ 	.parse = nflog_parse,
+ 	.final_check = nflog_final_check,
+--- ebtables/extensions/ebt_pkttype.c
++++ ebtables/extensions/ebt_pkttype.c
+@@ -116,7 +116,9 @@
+ {
+ 	.name		= "pkttype",
+ 	.size		= sizeof(struct ebt_pkttype_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_redirect.c
++++ ebtables/extensions/ebt_redirect.c
+@@ -99,7 +99,9 @@
+ {
+ 	.name		= "redirect",
+ 	.size		= sizeof(struct ebt_redirect_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_standard.c
++++ ebtables/extensions/ebt_standard.c
+@@ -75,7 +75,9 @@
+ 	.name		= "standard",
+ 	.size		= sizeof(struct ebt_standard_target) -
+ 			  sizeof(struct ebt_entry_target),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_stp.c
++++ ebtables/extensions/ebt_stp.c
+@@ -328,7 +328,9 @@
+ {
+ 	.name		= "stp",
+ 	.size		= sizeof(struct ebt_stp_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_string.c
++++ ebtables/extensions/ebt_string.c
+@@ -303,7 +303,9 @@
+ 	.name		= "string",
+ 	.revision	= 1,
+ 	.size		= sizeof(struct xt_string_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_ulog.c
++++ ebtables/extensions/ebt_ulog.c
+@@ -171,7 +171,9 @@
+ {
+ 	.name		= "ulog",
+ 	.size		= sizeof(struct ebt_ulog_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/extensions/ebt_vlan.c
++++ ebtables/extensions/ebt_vlan.c
+@@ -172,7 +172,9 @@
+ static struct ebt_u_match vlan_match = {
+ 	.name		= "vlan",
+ 	.size		= sizeof(struct ebt_vlan_info),
++#ifdef NO_OPTSIZE
+ 	.help		= print_help,
++#endif
+ 	.init		= init,
+ 	.parse		= parse,
+ 	.final_check	= final_check,
+--- ebtables/include/ebtables_u.h
++++ ebtables/include/ebtables_u.h
+@@ -102,7 +102,9 @@
+ {
+ 	char name[EBT_TABLE_MAXNAMELEN];
+ 	void (*check)(struct ebt_u_replace *repl);
++#ifdef NO_OPTSIZE
+ 	void (*help)(const char **);
++#endif
+ 	struct ebt_u_table *next;
+ };
+ 
+@@ -150,7 +152,9 @@
+ 	uint8_t revision;
+ 	/* size of the real match data */
+ 	unsigned int size;
++#ifdef NO_OPTSIZE
+ 	void (*help)(void);
++#endif
+ 	void (*init)(struct ebt_entry_match *m);
+ 	int (*parse)(int c, char **argv, int argc,
+ 	        const struct ebt_u_entry *entry, unsigned int *flags,
+@@ -182,7 +186,9 @@
+ {
+ 	char name[EBT_FUNCTION_MAXNAMELEN];
+ 	unsigned int size;
++#ifdef NO_OPTSIZE
+ 	void (*help)(void);
++#endif
+ 	void (*init)(struct ebt_entry_watcher *w);
+ 	int (*parse)(int c, char **argv, int argc,
+ 	   const struct ebt_u_entry *entry, unsigned int *flags,
+@@ -206,7 +212,9 @@
+ {
+ 	char name[EBT_FUNCTION_MAXNAMELEN];
+ 	unsigned int size;
++#ifdef NO_OPTSIZE
+ 	void (*help)(void);
++#endif
+ 	void (*init)(struct ebt_entry_target *t);
+ 	int (*parse)(int c, char **argv, int argc,
+ 	   const struct ebt_u_entry *entry, unsigned int *flags,

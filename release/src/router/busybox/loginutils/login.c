@@ -3,50 +3,50 @@
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
 //config:config LOGIN
-//config:	bool "login"
+//config:	bool "login (24 kb)"
 //config:	default y
 //config:	select FEATURE_SYSLOG
 //config:	help
-//config:	  login is used when signing onto a system.
+//config:	login is used when signing onto a system.
 //config:
-//config:	  Note that Busybox binary must be setuid root for this applet to
-//config:	  work properly.
+//config:	Note that busybox binary must be setuid root for this applet to
+//config:	work properly.
 //config:
 //config:config LOGIN_SESSION_AS_CHILD
 //config:	bool "Run logged in session in a child process"
 //config:	default y if PAM
 //config:	depends on LOGIN
 //config:	help
-//config:	  Run the logged in session in a child process.  This allows
-//config:	  login to clean up things such as utmp entries or PAM sessions
-//config:	  when the login session is complete.  If you use PAM, you
-//config:	  almost always would want this to be set to Y, else PAM session
-//config:	  will not be cleaned up.
+//config:	Run the logged in session in a child process.  This allows
+//config:	login to clean up things such as utmp entries or PAM sessions
+//config:	when the login session is complete.  If you use PAM, you
+//config:	almost always would want this to be set to Y, else PAM session
+//config:	will not be cleaned up.
 //config:
 //config:config LOGIN_SCRIPTS
-//config:	bool "Support for login scripts"
+//config:	bool "Support login scripts"
 //config:	depends on LOGIN
 //config:	default y
 //config:	help
-//config:	  Enable this if you want login to execute $LOGIN_PRE_SUID_SCRIPT
-//config:	  just prior to switching from root to logged-in user.
+//config:	Enable this if you want login to execute $LOGIN_PRE_SUID_SCRIPT
+//config:	just prior to switching from root to logged-in user.
 //config:
 //config:config FEATURE_NOLOGIN
-//config:	bool "Support for /etc/nologin"
+//config:	bool "Support /etc/nologin"
 //config:	default y
 //config:	depends on LOGIN
 //config:	help
-//config:	  The file /etc/nologin is used by (some versions of) login(1).
-//config:	  If it exists, non-root logins are prohibited.
+//config:	The file /etc/nologin is used by (some versions of) login(1).
+//config:	If it exists, non-root logins are prohibited.
 //config:
 //config:config FEATURE_SECURETTY
-//config:	bool "Support for /etc/securetty"
+//config:	bool "Support /etc/securetty"
 //config:	default y
 //config:	depends on LOGIN
 //config:	help
-//config:	  The file /etc/securetty is used by (some versions of) login(1).
-//config:	  The file contains the device names of tty lines (one per line,
-//config:	  without leading /dev/) on which root is allowed to login.
+//config:	The file /etc/securetty is used by (some versions of) login(1).
+//config:	The file contains the device names of tty lines (one per line,
+//config:	without leading /dev/) on which root is allowed to login.
 
 //applet:/* Needs to be run by root or be suid root - needs to change uid and gid: */
 //applet:IF_LOGIN(APPLET(login, BB_DIR_BIN, BB_SUID_REQUIRE))
@@ -64,12 +64,13 @@
 #include "libbb.h"
 #include "common_bufsiz.h"
 #include <syslog.h>
-#include <sys/resource.h>
 
 #if ENABLE_SELINUX
 # include <selinux/selinux.h>  /* for is_selinux_enabled()  */
 # include <selinux/get_context_list.h> /* for get_default_context() */
-# include <selinux/flask.h> /* for security class definitions  */
+# /* from deprecated <selinux/flask.h>: */
+# undef  SECCLASS_CHR_FILE
+# define SECCLASS_CHR_FILE 10
 #endif
 
 #if ENABLE_PAM
@@ -173,25 +174,6 @@ static void die_if_nologin(void)
 # define die_if_nologin() ((void)0)
 #endif
 
-#if ENABLE_FEATURE_SECURETTY && !ENABLE_PAM
-static int check_securetty(const char *short_tty)
-{
-	char *buf = (char*)"/etc/securetty"; /* any non-NULL is ok */
-	parser_t *parser = config_open2("/etc/securetty", fopen_for_read);
-	while (config_read(parser, &buf, 1, 1, "# \t", PARSE_NORMAL)) {
-		if (strcmp(buf, short_tty) == 0)
-			break;
-		buf = NULL;
-	}
-	config_close(parser);
-	/* buf != NULL here if config file was not found, empty
-	 * or line was found which equals short_tty */
-	return buf != NULL;
-}
-#else
-static ALWAYS_INLINE int check_securetty(const char *short_tty UNUSED_PARAM) { return 1; }
-#endif
-
 #if ENABLE_SELINUX
 static void initselinux(char *username, char *full_tty,
 						security_context_t *user_sid)
@@ -263,7 +245,9 @@ static void login_pam_end(pam_handle_t *pamh)
 			pam_strerror(pamh, pamret), pamret);
 	}
 }
-#endif /* ENABLE_PAM */
+#else
+# define login_pam_end(pamh) ((void)0)
+#endif
 
 static void get_username_or_die(char *buf, int size_buf)
 {
@@ -367,8 +351,8 @@ int login_main(int argc UNUSED_PARAM, char **argv)
 	/* Mandatory paranoia for suid applet:
 	 * ensure that fd# 0,1,2 are opened (at least to /dev/null)
 	 * and any extra open fd's are closed.
-	 * (The name of the function is misleading. Not daemonizing here.) */
-	bb_daemonize_or_rexec(DAEMON_ONLY_SANITIZE | DAEMON_CLOSE_EXTRA_FDS, NULL);
+	 */
+	bb_daemon_helper(DAEMON_CLOSE_EXTRA_FDS);
 
 	username[0] = '\0';
 	opt = getopt32(argv, "f:h:p", &opt_user, &opt_host);
@@ -489,6 +473,7 @@ int login_main(int argc UNUSED_PARAM, char **argv)
 		 * to know _why_ login failed */
 		syslog(LOG_WARNING, "pam_%s call failed: %s (%d)", failed_msg,
 					pam_strerror(pamh, pamret), pamret);
+		login_pam_end(pamh);
 		safe_strncpy(username, "UNKNOWN", sizeof(username));
 #else /* not PAM */
 		pw = getpwnam(username);
@@ -503,7 +488,7 @@ int login_main(int argc UNUSED_PARAM, char **argv)
 		if (opt & LOGIN_OPT_f)
 			break; /* -f USER: success without asking passwd */
 
-		if (pw->pw_uid == 0 && !check_securetty(short_tty))
+		if (pw->pw_uid == 0 && !is_tty_secure(short_tty))
 			goto auth_failed;
 
 		/* Don't check the password if password entry is empty (!) */
@@ -546,11 +531,10 @@ int login_main(int argc UNUSED_PARAM, char **argv)
 		if (child_pid < 0)
 			bb_perror_msg("vfork");
 		else {
-			if (safe_waitpid(child_pid, NULL, 0) == -1)
-				bb_perror_msg("waitpid");
+			wait_for_exitstatus(child_pid);
 			update_utmp_DEAD_PROCESS(child_pid);
 		}
-		IF_PAM(login_pam_end(pamh);)
+		login_pam_end(pamh);
 		return 0;
 	}
 #endif
@@ -618,7 +602,7 @@ int login_main(int argc UNUSED_PARAM, char **argv)
 	signal(SIGINT, SIG_DFL);
 
 	/* Exec login shell with no additional parameters */
-	run_shell(pw->pw_shell, 1, NULL, NULL);
+	run_shell(pw->pw_shell, 1, NULL);
 
 	/* return EXIT_FAILURE; - not reached */
 }

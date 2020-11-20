@@ -6,6 +6,16 @@
  *
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
+//config:config IFPLUGD
+//config:	bool "ifplugd (10 kb)"
+//config:	default y
+//config:	select PLATFORM_LINUX
+//config:	help
+//config:	Network interface plug detection daemon.
+
+//applet:IF_IFPLUGD(APPLET(ifplugd, BB_DIR_USR_SBIN, BB_SUID_DROP))
+
+//kbuild:lib-$(CONFIG_IFPLUGD) += ifplugd.o
 
 //usage:#define ifplugd_trivial_usage
 //usage:       "[OPTIONS]"
@@ -107,9 +117,9 @@ enum {
 #endif
 };
 #if ENABLE_FEATURE_PIDFILE
-# define OPTION_STR "+ansfFi:r:It:u:d:m:pqlx:Mk"
+# define OPTION_STR "+ansfFi:r:It:+u:+d:+m:pqlx:Mk"
 #else
-# define OPTION_STR "+ansfFi:r:It:u:d:m:pqlx:M"
+# define OPTION_STR "+ansfFi:r:It:+u:+d:+m:pqlx:M"
 #endif
 
 enum { // interface status
@@ -316,7 +326,7 @@ static int run_script(const char *action)
 	char *argv[5];
 	int r;
 
-	bb_error_msg("executing '%s %s %s'", G.script_name, G.iface, action);
+	bb_info_msg("executing '%s %s %s'", G.script_name, G.iface, action);
 
 	argv[0] = (char*) G.script_name;
 	argv[1] = (char*) G.iface;
@@ -332,12 +342,10 @@ static int run_script(const char *action)
 	/* r < 0 - can't exec, 0 <= r < 0x180 - exited, >=0x180 - killed by sig (r-0x180) */
 	r = spawn_and_wait(argv);
 
-	unsetenv(IFPLUGD_ENV_PREVIOUS);
-	unsetenv(IFPLUGD_ENV_CURRENT);
-	free(env_PREVIOUS);
-	free(env_CURRENT);
+	bb_unsetenv_and_free(env_PREVIOUS);
+	bb_unsetenv_and_free(env_CURRENT);
 
-	bb_error_msg("exit code: %d", r & 0xff);
+	bb_info_msg("exit code: %d", r & 0xff);
 	return (option_mask32 & FLAG_IGNORE_RETVAL) ? 0 : r;
 }
 
@@ -357,9 +365,13 @@ static void up_iface(void)
 	if (!(ifrequest.ifr_flags & IFF_UP)) {
 		ifrequest.ifr_flags |= IFF_UP;
 		/* Let user know we mess up with interface */
-		bb_error_msg("upping interface");
-		if (network_ioctl(SIOCSIFFLAGS, &ifrequest, "setting interface flags") < 0)
-			xfunc_die();
+		bb_info_msg("upping interface");
+		if (network_ioctl(SIOCSIFFLAGS, &ifrequest, "setting interface flags") < 0) {
+			if (errno != ENODEV && errno != EADDRNOTAVAIL)
+				xfunc_die();
+			G.iface_exists = 0;
+			return;
+		}
 	}
 
 #if 0 /* why do we mess with IP addr? It's not our business */
@@ -402,7 +414,7 @@ static void maybe_up_new_iface(void)
 				(uint8_t)(ifrequest.ifr_hwaddr.sa_data[5]));
 		}
 
-		bb_error_msg("using interface %s%s with driver<%s> (version: %s)",
+		bb_info_msg("using interface %s%s with driver<%s> (version: %s)",
 			G.iface, buf, driver_info.driver, driver_info.version);
 	}
 #endif
@@ -435,7 +447,7 @@ static smallint detect_link(void)
 			logmode = sv_logmode;
 			if (status != IFSTATUS_ERR) {
 				G.api_method_num = i;
-				bb_error_msg("using %s detection mode", method_table[i].name);
+				bb_info_msg("using %s detection mode", method_table[i].name);
 				break;
 			}
 		}
@@ -560,7 +572,6 @@ int ifplugd_main(int argc UNUSED_PARAM, char **argv)
 
 	INIT_G();
 
-	opt_complementary = "t+:u+:d+";
 	opts = getopt32(argv, OPTION_STR,
 		&G.iface, &G.script_name, &G.poll_time, &G.delay_up,
 		&G.delay_down, &G.api_mode, &G.extra_arg);
@@ -593,15 +604,7 @@ int ifplugd_main(int argc UNUSED_PARAM, char **argv)
 
 	xmove_fd(xsocket(AF_INET, SOCK_DGRAM, 0), ioctl_fd);
 	if (opts & FLAG_MONITOR) {
-		struct sockaddr_nl addr;
-		int fd = xsocket(PF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE);
-
-		memset(&addr, 0, sizeof(addr));
-		addr.nl_family = AF_NETLINK;
-		addr.nl_groups = RTMGRP_LINK;
-		addr.nl_pid = getpid();
-
-		xbind(fd, (struct sockaddr*)&addr, sizeof(addr));
+		int fd = create_and_bind_to_netlink(NETLINK_ROUTE, RTMGRP_LINK, 0);
 		xmove_fd(fd, netlink_fd);
 	}
 
@@ -621,7 +624,7 @@ int ifplugd_main(int argc UNUSED_PARAM, char **argv)
 		/* | (1 << SIGCHLD) - run_script does not use it anymore */
 		, record_signo);
 
-	bb_error_msg("started: %s", bb_banner);
+	bb_info_msg("started: %s", bb_banner);
 
 	if (opts & FLAG_MONITOR) {
 		struct ifreq ifrequest;
@@ -638,7 +641,7 @@ int ifplugd_main(int argc UNUSED_PARAM, char **argv)
 	iface_status_str = strstatus(iface_status);
 
 	if (opts & FLAG_MONITOR) {
-		bb_error_msg("interface %s",
+		bb_info_msg("interface %s",
 			G.iface_exists ? "exists"
 			: "doesn't exist, waiting");
 	}
@@ -646,7 +649,7 @@ int ifplugd_main(int argc UNUSED_PARAM, char **argv)
 	 * by potentially lying that it really exists */
 
 	if (G.iface_exists) {
-		bb_error_msg("link is %s", iface_status_str);
+		bb_info_msg("link is %s", iface_status_str);
 	}
 
 	if ((!(opts & FLAG_NO_STARTUP)
@@ -675,6 +678,8 @@ int ifplugd_main(int argc UNUSED_PARAM, char **argv)
 			goto exiting;
 		default:
 			bb_got_signal = 0;
+		/* do not clear bb_got_signal if already 0, this can lose signals */
+		case 0:
 			break;
 		}
 
@@ -699,7 +704,7 @@ int ifplugd_main(int argc UNUSED_PARAM, char **argv)
 			if (G.iface_exists < 0) /* error */
 				goto exiting;
 			if (iface_exists_old != G.iface_exists) {
-				bb_error_msg("interface %sappeared",
+				bb_info_msg("interface %sappeared",
 						G.iface_exists ? "" : "dis");
 				if (G.iface_exists)
 					maybe_up_new_iface();
@@ -717,7 +722,7 @@ int ifplugd_main(int argc UNUSED_PARAM, char **argv)
 		iface_status_str = strstatus(iface_status);
 
 		if (iface_status_old != iface_status) {
-			bb_error_msg("link is %s", iface_status_str);
+			bb_info_msg("link is %s", iface_status_str);
 
 			if (delay_time) {
 				/* link restored its old status before

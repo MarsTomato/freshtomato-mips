@@ -16,6 +16,15 @@
  * Some bugfix and minor changes was applied by Roberto A. Foglietta who made
  * the first porting of oao' scdns to busybox also.
  */
+//config:config DNSD
+//config:	bool "dnsd (9.8 kb)"
+//config:	default y
+//config:	help
+//config:	Small and static DNS server daemon.
+
+//applet:IF_DNSD(APPLET(dnsd, BB_DIR_USR_SBIN, BB_SUID_DROP))
+
+//kbuild:lib-$(CONFIG_DNSD) += dnsd.o
 
 //usage:#define dnsd_trivial_usage
 //usage:       "[-dvs] [-c CONFFILE] [-t TTL_SEC] [-p PORT] [-i ADDR]"
@@ -124,7 +133,7 @@ static struct dns_entry *parse_conf_file(const char *fileconf)
 		}
 
 		if (OPT_verbose)
-			bb_error_msg("name:%s, ip:%s", token[0], token[1]);
+			bb_info_msg("name:%s, ip:%s", token[0], token[1]);
 
 		/* sizeof(*m) includes 1 byte for m->name[0] */
 		m = xzalloc(sizeof(*m) + strlen(token[0]) + 1);
@@ -351,7 +360,7 @@ RDATA   a variable length string of octets that describes the resource.
 
 In order to reduce the size of messages, domain names coan be compressed.
 An entire domain name or a list of labels at the end of a domain name
-is replaced with a pointer to a prior occurance of the same name.
+is replaced with a pointer to a prior occurrence of the same name.
 
 The pointer takes the form of a two octet sequence:
     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
@@ -429,7 +438,7 @@ static int process_packet(struct dns_entry *conf_data,
 	answstr = table_lookup(conf_data, type, query_string);
 #if DEBUG
 	/* Shows lengths instead of dots, unusable for !DEBUG */
-	bb_error_msg("'%s'->'%s'", query_string, answstr);
+	bb_info_msg("'%s'->'%s'", query_string, answstr);
 #endif
 	outr_rlen = 4;
 	if (answstr && type == htons(REQ_PTR)) {
@@ -465,7 +474,7 @@ static int process_packet(struct dns_entry *conf_data,
 	 * RCODE = 0 "success"
 	 */
 	if (OPT_verbose)
-		bb_error_msg("returning positive reply");
+		bb_info_msg("returning positive reply");
 	outr_flags = htons(0x8000 | 0x0400 | 0);
 	/* we have one answer */
 	head->nansw = htons(1);
@@ -530,7 +539,7 @@ int dnsd_main(int argc UNUSED_PARAM, char **argv)
 
 	{
 		char *p = xmalloc_sockaddr2dotted(&lsa->u.sa);
-		bb_error_msg("accepting UDP packets on %s", p);
+		bb_info_msg("accepting UDP packets on %s", p);
 		free(p);
 	}
 
@@ -548,7 +557,7 @@ int dnsd_main(int argc UNUSED_PARAM, char **argv)
 			continue;
 		}
 		if (OPT_verbose)
-			bb_error_msg("got UDP packet");
+			bb_info_msg("got UDP packet");
 		buf[r] = '\0'; /* paranoia */
 		r = process_packet(conf_data, conf_ttl, buf);
 		if (r <= 0)

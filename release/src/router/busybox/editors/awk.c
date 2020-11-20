@@ -6,32 +6,30 @@
  *
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
-
 //config:config AWK
-//config:	bool "awk"
+//config:	bool "awk (23 kb)"
 //config:	default y
 //config:	help
-//config:	  Awk is used as a pattern scanning and processing language. This is
-//config:	  the BusyBox implementation of that programming language.
+//config:	Awk is used as a pattern scanning and processing language.
 //config:
 //config:config FEATURE_AWK_LIBM
 //config:	bool "Enable math functions (requires libm)"
 //config:	default y
 //config:	depends on AWK
 //config:	help
-//config:	  Enable math functions of the Awk programming language.
-//config:	  NOTE: This will require libm to be present for linking.
+//config:	Enable math functions of the Awk programming language.
+//config:	NOTE: This requires libm to be present for linking.
 //config:
 //config:config FEATURE_AWK_GNU_EXTENSIONS
 //config:	bool "Enable a few GNU extensions"
 //config:	default y
 //config:	depends on AWK
 //config:	help
-//config:	  Enable a few features from gawk:
-//config:	  * command line option -e AWK_PROGRAM
-//config:	  * simultaneous use of -f and -e on the command line.
-//config:	    This enables the use of awk library files.
-//config:	    Ex: awk -f mylib.awk -e '{print myfunction($1);}' ...
+//config:	Enable a few features from gawk:
+//config:	* command line option -e AWK_PROGRAM
+//config:	* simultaneous use of -f and -e on the command line.
+//config:	This enables the use of awk library files.
+//config:	Example: awk -f mylib.awk -e '{print myfunction($1);}' ...
 
 //applet:IF_AWK(APPLET_NOEXEC(awk, awk, BB_DIR_USR_BIN, BB_SUID_DROP, awk))
 
@@ -71,13 +69,14 @@
 #endif
 
 
-#define OPTSTR_AWK \
-	"F:v:f:" \
-	IF_FEATURE_AWK_GNU_EXTENSIONS("e:") \
+/* "+": stop on first non-option:
+ * $ awk 'BEGIN { for(i=1; i<ARGC; ++i) { print i ": " ARGV[i] }}' -argz
+ * 1: -argz
+ */
+#define OPTSTR_AWK "+" \
+	"F:v:*f:*" \
+	IF_FEATURE_AWK_GNU_EXTENSIONS("e:*") \
 	"W:"
-#define OPTCOMPLSTR_AWK \
-	"v::f::" \
-	IF_FEATURE_AWK_GNU_EXTENSIONS("e::")
 enum {
 	OPTBIT_F,	/* define field separator */
 	OPTBIT_v,	/* define variable */
@@ -234,7 +233,7 @@ typedef struct tsplitter_s {
  */
 #define	TC_LENGTH	(1 << 20)
 #define	TC_GETLINE	(1 << 21)
-#define	TC_FUNCDECL	(1 << 22)		/* `function' `func' */
+#define	TC_FUNCDECL	(1 << 22)		/* 'function' 'func' */
 #define	TC_BEGIN	(1 << 23)
 #define	TC_END		(1 << 24)
 #define	TC_EOF		(1 << 25)
@@ -276,18 +275,21 @@ typedef struct tsplitter_s {
                    | TC_STRING | TC_NUMBER | TC_UOPPOST)
 #define	TC_CONCAT2 (TC_OPERAND | TC_UOPPRE)
 
-#define	OF_RES1    0x010000
-#define	OF_RES2    0x020000
-#define	OF_STR1    0x040000
-#define	OF_STR2    0x080000
-#define	OF_NUM1    0x100000
-#define	OF_CHECKED 0x200000
+#define	OF_RES1     0x010000
+#define	OF_RES2     0x020000
+#define	OF_STR1     0x040000
+#define	OF_STR2     0x080000
+#define	OF_NUM1     0x100000
+#define	OF_CHECKED  0x200000
+#define	OF_REQUIRED 0x400000
+
 
 /* combined operator flags */
 #define	xx	0
 #define	xV	OF_RES2
 #define	xS	(OF_RES2 | OF_STR2)
 #define	Vx	OF_RES1
+#define	Rx	(OF_RES1 | OF_NUM1 | OF_REQUIRED)
 #define	VV	(OF_RES1 | OF_RES2)
 #define	Nx	(OF_RES1 | OF_NUM1)
 #define	NV	(OF_RES1 | OF_NUM1 | OF_RES2)
@@ -426,7 +428,7 @@ static const uint32_t tokeninfo[] = {
 	0,
 	0, /* \n */
 	ST_IF,        ST_DO,        ST_FOR,      OC_BREAK,
-	OC_CONTINUE,  OC_DELETE|Vx, OC_PRINT,
+	OC_CONTINUE,  OC_DELETE|Rx, OC_PRINT,
 	OC_PRINTF,    OC_NEXT,      OC_NEXTFILE,
 	OC_RETURN|Vx, OC_EXIT|Nx,
 	ST_WHILE,
@@ -594,11 +596,12 @@ static const char EMSG_UNEXP_EOS[] ALIGN1 = "Unexpected end of string";
 static const char EMSG_UNEXP_TOKEN[] ALIGN1 = "Unexpected token";
 static const char EMSG_DIV_BY_ZERO[] ALIGN1 = "Division by zero";
 static const char EMSG_INV_FMT[] ALIGN1 = "Invalid format specifier";
-static const char EMSG_TOO_FEW_ARGS[] ALIGN1 = "Too few arguments for builtin";
+static const char EMSG_TOO_FEW_ARGS[] ALIGN1 = "Too few arguments";
 static const char EMSG_NOT_ARRAY[] ALIGN1 = "Not an array";
 static const char EMSG_POSSIBLE_ERROR[] ALIGN1 = "Possible syntax error";
 static const char EMSG_UNDEF_FUNC[] ALIGN1 = "Call to undefined function";
 static const char EMSG_NO_MATH[] ALIGN1 = "Math support is not compiled in";
+static const char EMSG_NEGATIVE_FIELD[] ALIGN1 = "Access to negative field";
 
 static void zero_out_var(var *vp)
 {
@@ -1265,7 +1268,7 @@ static node *parse_expr(uint32_t iexp)
 	debug_printf_parse("%s(%x)\n", __func__, iexp);
 
 	sn.info = PRIMASK;
-	sn.r.n = glptr = NULL;
+	sn.r.n = sn.a.n = glptr = NULL;
 	xtc = TC_OPERAND | TC_UOPPRE | TC_REGEXP | iexp;
 
 	while (!((tc = next_token(xtc)) & iexp)) {
@@ -1287,6 +1290,7 @@ static node *parse_expr(uint32_t iexp)
 			    || ((t_info == vn->info) && ((t_info & OPCLSMASK) == OC_COLON))
 			) {
 				vn = vn->a.n;
+				if (!vn->a.n) syntax_error(EMSG_UNEXP_TOKEN);
 			}
 			if ((t_info & OPCLSMASK) == OC_TERNARY)
 				t_info += P(6);
@@ -1425,7 +1429,11 @@ static void chain_expr(uint32_t info)
 	node *n;
 
 	n = chain_node(info);
+
 	n->l.n = parse_expr(TC_OPTERM | TC_GRPTERM);
+	if ((info & OF_REQUIRED) && !n->l.n)
+		syntax_error(EMSG_TOO_FEW_ARGS);
+
 	if (t_tclass & TC_GRPTERM)
 		rollback_token();
 }
@@ -1517,7 +1525,7 @@ static void chain_group(void)
 			next_token(TC_SEQSTART);
 			n2 = parse_expr(TC_SEMICOL | TC_SEQTERM);
 			if (t_tclass & TC_SEQTERM) {	/* for-in */
-				if ((n2->info & OPCLSMASK) != OC_IN)
+				if (!n2 || (n2->info & OPCLSMASK) != OC_IN)
 					syntax_error(EMSG_UNEXP_TOKEN);
 				n = chain_node(OC_WALKINIT | VV);
 				n->l.n = n2->l.n;
@@ -1605,12 +1613,25 @@ static void parse_program(char *p)
 			f = newfunc(t_string);
 			f->body.first = NULL;
 			f->nargs = 0;
-			while (next_token(TC_VARIABLE | TC_SEQTERM) & TC_VARIABLE) {
+			/* Match func arg list: a comma sep list of >= 0 args, and a close paren */
+			while (next_token(TC_VARIABLE | TC_SEQTERM | TC_COMMA)) {
+				/* Either an empty arg list, or trailing comma from prev iter
+				 * must be followed by an arg */
+				if (f->nargs == 0 && t_tclass == TC_SEQTERM)
+					break;
+
+				/* TC_SEQSTART/TC_COMMA must be followed by TC_VARIABLE */
+				if (t_tclass != TC_VARIABLE)
+					syntax_error(EMSG_UNEXP_TOKEN);
+
 				v = findvar(ahash, t_string);
 				v->x.aidx = f->nargs++;
 
+				/* Arg followed either by end of arg list or 1 comma */
 				if (next_token(TC_COMMA | TC_SEQTERM) & TC_SEQTERM)
 					break;
+				if (t_tclass != TC_COMMA)
+					syntax_error(EMSG_UNEXP_TOKEN);
 			}
 			seq = &f->body;
 			chain_group();
@@ -1849,6 +1870,8 @@ static void handle_special(var *v)
 
 	if (v == intvar[NF]) {
 		n = (int)getvar_i(v);
+		if (n < 0)
+			syntax_error("NF set to negative value");
 		fsrealloc(n);
 
 		/* recalculate $0 */
@@ -2515,6 +2538,32 @@ static var *evaluate(node *op, var *res)
 		op1 = op->l.n;
 		debug_printf_eval("opinfo:%08x opn:%08x\n", opinfo, opn);
 
+		/* "delete" is special:
+		 * "delete array[var--]" must evaluate index expr only once,
+		 * must not evaluate it in "execute inevitable things" part.
+		 */
+		if (XC(opinfo & OPCLSMASK) == XC(OC_DELETE)) {
+			uint32_t info = op1->info & OPCLSMASK;
+			var *v;
+
+			debug_printf_eval("DELETE\n");
+			if (info == OC_VAR) {
+				v = op1->l.v;
+			} else if (info == OC_FNARG) {
+				v = &fnargs[op1->l.aidx];
+			} else {
+				syntax_error(EMSG_NOT_ARRAY);
+			}
+			if (op1->r.n) { /* array ref? */
+				const char *s;
+				s = getvar_s(evaluate(op1->r.n, v1));
+				hash_remove(iamarray(v), s);
+			} else {
+				clear_array(iamarray(v));
+			}
+			goto next;
+		}
+
 		/* execute inevitable things */
 		if (opinfo & OF_RES1)
 			L.v = evaluate(op1, v1);
@@ -2622,28 +2671,7 @@ static var *evaluate(node *op, var *res)
 			break;
 		}
 
-		case XC( OC_DELETE ): {
-			uint32_t info = op1->info & OPCLSMASK;
-			var *v;
-
-			if (info == OC_VAR) {
-				v = op1->l.v;
-			} else if (info == OC_FNARG) {
-				v = &fnargs[op1->l.aidx];
-			} else {
-				syntax_error(EMSG_NOT_ARRAY);
-			}
-
-			if (op1->r.n) {
-				const char *s;
-				clrvar(L.v);
-				s = getvar_s(evaluate(op1->r.n, v1));
-				hash_remove(iamarray(v), s);
-			} else {
-				clear_array(iamarray(v));
-			}
-			break;
-		}
+		/* case XC( OC_DELETE ): - moved to happen before arg evaluation */
 
 		case XC( OC_NEWSOURCE ):
 			g_progname = op->l.new_progname;
@@ -2667,12 +2695,14 @@ static var *evaluate(node *op, var *res)
 		/* -- recursive node type -- */
 
 		case XC( OC_VAR ):
+			debug_printf_eval("VAR\n");
 			L.v = op->l.v;
 			if (L.v == intvar[NF])
 				split_f0();
 			goto v_cont;
 
 		case XC( OC_FNARG ):
+			debug_printf_eval("FNARG[%d]\n", op->l.aidx);
 			L.v = &fnargs[op->l.aidx];
  v_cont:
 			res = op->r.n ? findvar(iamarray(L.v), R.s) : L.v;
@@ -2943,6 +2973,8 @@ static var *evaluate(node *op, var *res)
 
 		case XC( OC_FIELD ): {
 			int i = (int)getvar_i(R.v);
+			if (i < 0)
+				syntax_error(EMSG_NEGATIVE_FIELD);
 			if (i == 0) {
 				res = intvar[F0];
 			} else {
@@ -3036,7 +3068,8 @@ static var *evaluate(node *op, var *res)
 
 		default:
 			syntax_error(EMSG_POSSIBLE_ERROR);
-		}
+		} /* switch */
+ next:
 		if ((opinfo & OPCLSMASK) <= SHIFT_TIL_THIS)
 			op = op->a.n;
 		if ((opinfo & OPCLSMASK) >= RECUR_FROM_THIS)
@@ -3142,7 +3175,7 @@ static rstream *next_input_file(void)
 }
 
 int awk_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
-int awk_main(int argc, char **argv)
+int awk_main(int argc UNUSED_PARAM, char **argv)
 {
 	unsigned opt;
 	char *opt_F;
@@ -3209,10 +3242,9 @@ int awk_main(int argc, char **argv)
 			*s1 = '=';
 		}
 	}
-	opt_complementary = OPTCOMPLSTR_AWK;
 	opt = getopt32(argv, OPTSTR_AWK, &opt_F, &list_v, &list_f, IF_FEATURE_AWK_GNU_EXTENSIONS(&list_e,) NULL);
 	argv += optind;
-	argc -= optind;
+	//argc -= optind;
 	if (opt & OPT_W)
 		bb_error_msg("warning: option -W is ignored");
 	if (opt & OPT_F) {
@@ -3249,15 +3281,14 @@ int awk_main(int argc, char **argv)
 		if (!*argv)
 			bb_show_usage();
 		parse_program(*argv++);
-		argc--;
 	}
 
 	/* fill in ARGV array */
-	setvar_i(intvar[ARGC], argc + 1);
 	setari_u(intvar[ARGV], 0, "awk");
 	i = 0;
 	while (*argv)
 		setari_u(intvar[ARGV], ++i, *argv++);
+	setvar_i(intvar[ARGC], i + 1);
 
 	evaluate(beginseq.first, &tv);
 	if (!mainseq.first && !endseq.first)

@@ -168,7 +168,9 @@ obj-y += mssl
 obj-y += mdu
 obj-$(TCONFIG_RAID) += mdadm
 
-obj-$(TCONFIG_NFS) += e2fsprogs
+ifneq ($(TCONFIG_USB)$(TCONFIG_NFS),)
+obj-y += e2fsprogs
+endif
 obj-$(TCONFIG_NFS) += portmap
 obj-$(TCONFIG_NFS) += libnfsidmap
 obj-$(TCONFIG_NFS) += nfs-utils
@@ -935,7 +937,7 @@ dnsmasq: $(DNSSEC_BACKEND)
 	$(call patch_files,dnsmasq)
 	$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	CFLAGS="-Os -ffunction-sections -fdata-sections $(EXTRACFLAGS) $(OPTSIZE_FLAG)" \
-	COPTS="-DNO_INOTIFY -DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_GMP -DNO_SCRIPT $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-DNO_TFTP -DNO_LOOP -DNO_AUTH,) -DUSE_IPSET \
+	COPTS="-DNO_INOTIFY -DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_GMP -DNO_SCRIPT $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-DNO_TFTP -DNO_LOOP -DNO_AUTH,) -DUSE_IPSET -DEDNS_PKTSZ=1280 \
 		$(if $(DNSSEC_OPENSSL),-I$(TOP)/$(OPENSSLDIR)/include -DHAVE_DNSSEC,) \
 		$(if $(DNSSEC_NETTLE),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST,) \
 		$(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)" \
@@ -1026,6 +1028,7 @@ ppp-%:
 	$(MAKE) -C ppp/pppoecd $* INSTALLDIR=$(INSTALLDIR)/ppp $(if $(TCONFIG_IPV6),HAVE_INET6=y,)
 
 rp-pppoe/src/stamp-h1: rp-pppoe/src/Makefile.in
+	$(call patch_files,rp-pppoe)
 	cd rp-pppoe/src && \
 		CFLAGS="-g -Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -ffunction-sections -fdata-sections" \
@@ -1738,7 +1741,7 @@ endif
 	$(call patch_files,ebtables)
 	cd $(TOP)/ebtables && ./autogen.sh && \
 	$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --sysconfdir=/etc --libdir=/usr/lib \
-		CFLAGS="-Os $(EXTRACFLAGS) -DEBT_MIN_ALIGN=4 -ffunction-sections -fdata-sections -fPIC" \
+		CFLAGS="-Os $(EXTRACFLAGS) -DEBT_MIN_ALIGN=4 -ffunction-sections -fdata-sections -fPIC $(OPTSIZE_FLAG)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		LOCKFILE="/var/lock/ebtables"
 	@touch $@
@@ -2465,26 +2468,58 @@ portmap-clean:
 	-@$(MAKE) -C portmap clean
 
 e2fsprogs/stamp-h1:
+	$(call patch_files,e2fsprogs)
 	cd e2fsprogs && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=$(TOP)/e2fsprogs/staged --enable-elf-shlibs --disable-tls --disable-defrag \
+		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs --disable-tls --disable-defrag $(if $(TCONFIG_BCMARM),ac_cv_lib_pthread_sem_init=no,) \
 			--disable-jbd-debug --disable-blkid-debug --disable-testio-debug --disable-backtrace --disable-e2initrd-helper \
 			--disable-nls --disable-debugfs --disable-imager --disable-resizer --disable-uuidd --disable-rpath
 	@touch $@
 
 e2fsprogs: e2fsprogs/stamp-h1
 	@$(SEP)
-	$(MAKE) -C e2fsprogs libs $(PARALLEL_BUILD)
+	$(MAKE) -C e2fsprogs $(PARALLEL_BUILD)
 
 e2fsprogs-install:
-	$(MAKE) -C e2fsprogs install-libs
+	install -D e2fsprogs/e2fsck/e2fsck $(INSTALLDIR)/e2fsprogs/usr/sbin/e2fsck
+	install -D e2fsprogs/misc/mke2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/mke2fs
+	install -D e2fsprogs/misc/tune2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/tune2fs
+ifneq ($(TCONFIG_BCMARM),y)
+ifeq ($(TCONFIG_AIO),y)
+	install -D e2fsprogs/misc/badblocks $(INSTALLDIR)/e2fsprogs/usr/sbin/badblocks
+endif
+endif
+	$(STRIP) -s $(INSTALLDIR)/e2fsprogs/usr/sbin/*
+	install -D e2fsprogs/lib/libblkid.so.1.0 $(INSTALLDIR)/e2fsprogs/usr/lib/libblkid.so.1.0
+	install -D e2fsprogs/lib/libcom_err.so.2.1 $(INSTALLDIR)/e2fsprogs/usr/lib/libcom_err.so.2.1
+	install -D e2fsprogs/lib/libe2p.so.2.3 $(INSTALLDIR)/e2fsprogs/usr/lib/libe2p.so.2.3
+	install -D e2fsprogs/lib/libext2fs.so.2.4 $(INSTALLDIR)/e2fsprogs/usr/lib/libext2fs.so.2.4
+	install -D e2fsprogs/lib/libuuid.so.1.2 $(INSTALLDIR)/e2fsprogs/usr/lib/libuuid.so.1.2
+	$(STRIP) -s $(INSTALLDIR)/e2fsprogs/usr/lib/*.so.*
+	ln -sf libblkid.so.1.0 $(INSTALLDIR)/e2fsprogs/usr/lib/libblkid.so.1
+	ln -sf libcom_err.so.2.1 $(INSTALLDIR)/e2fsprogs/usr/lib/libcom_err.so.2
+	ln -sf libe2p.so.2.3 $(INSTALLDIR)/e2fsprogs/usr/lib/libe2p.so.2
+	ln -sf libext2fs.so.2.4 $(INSTALLDIR)/e2fsprogs/usr/lib/libext2fs.so.2
+	ln -sf libuuid.so.1.2 $(INSTALLDIR)/e2fsprogs/usr/lib/libuuid.so.1
+	ln -sf e2fsck $(INSTALLDIR)/e2fsprogs/usr/sbin/fsck.ext2
+	ln -sf e2fsck $(INSTALLDIR)/e2fsprogs/usr/sbin/fsck.ext3
+ifeq ($(TCONFIG_BCMARM),y)
+	ln -sf e2fsck $(INSTALLDIR)/e2fsprogs/usr/sbin/fsck.ext4
+endif
+	ln -sf mke2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/mkfs.ext2
+	ln -sf mke2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/mkfs.ext3
+ifeq ($(TCONFIG_BCMARM),y)
+	ln -sf mke2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/mkfs.ext4
+endif
+	install -D -m 0644 e2fsprogs/misc/mke2fs.conf $(INSTALLDIR)/rom/rom/etc/mke2fs.conf
+	install -D -m 0644 e2fsprogs/e2fsck/e2fsck.conf $(INSTALLDIR)/rom/rom/etc/e2fsck.conf
 
 e2fsprogs-clean:
 	-@$(MAKE) -C e2fsprogs clean
 	@rm -f e2fsprogs/stamp-h1
 	@rm -f e2fsprogs/Makefile
-	@rm -rf e2fsprogs/staged
+	$(call unpatch_files,e2fsprogs)
 
 nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
 	$(call patch_files,nfs-utils)
@@ -2779,6 +2814,7 @@ mdadm-clean:
 
 ipset:
 	@$(SEP)
+	$(call patch_files,ipset)
 	$(MAKE) -C ipset binaries COPT_FLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections --param large-function-growth=800 --param max-inline-insns-single=3000"
 
 ipset-install:
@@ -2790,6 +2826,7 @@ ipset-install:
 
 ipset-clean:
 	-@$(MAKE) -C ipset clean
+	$(call unpatch_files,ipset)
 
 libjson-c/build/Makefile:
 	$(call patch_files,libjson-c)

@@ -513,6 +513,71 @@ static const char op_tokens[] ALIGN1 = {
 };
 #define ptr_to_rparen (&op_tokens[sizeof(op_tokens)-7])
 
+#if ENABLE_FEATURE_SH_MATH_BASE
+static arith_t strto_arith_t(const char *nptr, char **endptr)
+{
+	unsigned base;
+	arith_t n;
+
+# if ENABLE_FEATURE_SH_MATH_64
+	n = strtoull(nptr, endptr, 0);
+# else
+	n = strtoul(nptr, endptr, 0);
+# endif
+	if (**endptr != '#'
+	 || (*nptr < '1' || *nptr > '9')
+	 || (n < 2 || n > 64)
+	) {
+		return n;
+	}
+
+	/* It's "N#nnnn" or "NN#nnnn" syntax, NN can't start with 0,
+	 * NN is in 2..64 range.
+	 */
+	base = (unsigned)n;
+	n = 0;
+	nptr = *endptr + 1;
+	/* bash allows "N#" (empty "nnnn" part) */
+	for (;;) {
+		unsigned digit = (unsigned)*nptr - '0';
+		if (digit >= 10) {
+			/* *nptr is not 0..9 */
+			if (*nptr > 'z')
+				break; /* this rejects e.g. $((64#~)) */
+			/* in bases up to 36, case does not matter for a-z */
+			digit = (unsigned)(*nptr | 0x20) - ('a' - 10);
+			if (base > 36 && *nptr <= '_') {
+				/* otherwise, A-Z,@,_ are 36..61,62,63 */
+				if (*nptr == '@')
+					digit = 62;
+				else if (*nptr == '_')
+					digit = 63;
+				else if (digit < 36) /* A-Z */
+					digit += 36 - 10;
+				else
+					break; /* error, such as [ or \ */
+			}
+			//bb_error_msg("ch:'%c'%d digit:%u", *nptr, *nptr, digit);
+			//if (digit < 10) - example where we need this?
+			//	break;
+		}
+		if (digit >= base)
+			break;
+		/* bash does not check for overflows */
+		n = n * base + digit;
+		nptr++;
+	}
+	*endptr = (char*)nptr;
+	return n;
+}
+#else /* !ENABLE_FEATURE_SH_MATH_BASE */
+# if ENABLE_FEATURE_SH_MATH_64
+#  define strto_arith_t(nptr, endptr) strtoull(nptr, endptr, 0)
+# else
+#  define strto_arith_t(nptr, endptr) strtoul(nptr, endptr, 0)
+# endif
+#endif
+
 static arith_t FAST_FUNC
 evaluate_string(arith_state_t *math_state, const char *expr)
 {
@@ -591,17 +656,31 @@ evaluate_string(arith_state_t *math_state, const char *expr)
 			/* Number */
 			numstackptr->var = NULL;
 			errno = 0;
-			numstackptr->val = strto_arith_t(expr, (char**) &expr, 0);
+			numstackptr->val = strto_arith_t(expr, (char**) &expr);
 			if (errno)
 				numstackptr->val = 0; /* bash compat */
 			goto num;
 		}
 
 		/* Should be an operator */
+
+		/* Special case: NUM-- and NUM++ are not recognized if NUM
+		 * is a literal number, not a variable. IOW:
+		 * "a+++v" is a++ + v.
+		 * "7+++v" is 7 + ++v, not 7++ + v.
+		 */
+		if (lasttok == TOK_NUM && !numstackptr[-1].var /* number literal */
+		 && (expr[0] == '+' || expr[0] == '-')
+		 && (expr[1] == expr[0])
+		) {
+			//bb_error_msg("special %c%c", expr[0], expr[0]);
+			op = (expr[0] == '+' ? TOK_ADD : TOK_SUB);
+			expr += 1;
+			goto tok_found1;
+		}
+
 		p = op_tokens;
 		while (1) {
-// TODO: bash allows 7+++v, treats it as 7 + ++v
-// we treat it as 7++ + v and reject
 			/* Compare expr to current op_tokens[] element */
 			const char *e = expr;
 			while (1) {
@@ -627,6 +706,7 @@ evaluate_string(arith_state_t *math_state, const char *expr)
 		}
  tok_found:
 		op = p[1]; /* fetch TOK_foo value */
+ tok_found1:
 		/* NB: expr now points past the operator */
 
 		/* post grammar: a++ reduce to num */
@@ -743,7 +823,7 @@ arith(arith_state_t *math_state, const char *expr)
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ''AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE

@@ -3,6 +3,8 @@
 	USB Support
 
 */
+
+
 #include "rc.h"
 
 #include <sys/types.h>
@@ -20,11 +22,15 @@
 #include <sys/file.h>
 #include <sys/swap.h>
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	0
+#define LOGMSG_NVDEBUG	"usb_debug"
+
+
 /* Adjust bdflush parameters.
  * Do this here, because Tomato doesn't have the sysctl command.
  * With these values, a disk block should be written to disk within 2 seconds.
  */
-
 void tune_bdflush(void)
 {
 	f_write_string("/proc/sys/vm/dirty_expire_centisecs", "200", 0, 0);
@@ -78,7 +84,7 @@ void start_usb(void)
 		xstart("gpio", "enable", "7");
 	}
 
-	_dprintf("%s\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
 	tune_bdflush();
 
 	if (nvram_get_int("usb_enable")) {
@@ -232,7 +238,6 @@ void stop_usb(void)
 	int wan_unit;
 	char *module;
 	char *mod;
-	char *tofree;
 	char tmp[100];
 	char prefix[] = "wanXX";
 
@@ -248,7 +253,7 @@ void stop_usb(void)
 	modprobe_r(USBPRINTER_MOD);
 
 	// only stop storage services if disabled
-	if (disabled || !nvram_get_int("usb_storage")) {
+	if ((disabled) || (!nvram_get_int("usb_storage"))) {
 		// Unmount all partitions
 		remove_storage_main(0);
 
@@ -319,28 +324,25 @@ void stop_usb(void)
 #endif
 
 	/* Remove 3G/4G modem modules */
-	if (disabled || !nvram_get_int("usb_3g")) {
+	if ((disabled) || (!nvram_get_int("usb_3g"))) {
 		mwan_num = atoi(nvram_safe_get("mwan_num"));
-		if (mwan_num < 1 || mwan_num > MWAN_MAX) {
+		if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
 			mwan_num = 1;
-		}
 
 		for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 			get_wan_prefix(wan_unit, prefix);
 			module = strdup(nvram_safe_get(strcat_r(prefix, "_modem_modules", tmp)));
 
 			if (module != NULL) {
-				tofree = module;
-				while ((mod = strsep(&module, " ")) != NULL)
-				{
+				while ((mod = strsep(&module, " ")) != NULL) {
 					int r = modprobe_r(mod);
 					if (r == 0) {
-						syslog(LOG_INFO, "USB: module '%s' was removed correctly (iface: %s, errno: %d)", mod, prefix, r);
+						logmsg(LOG_INFO, "USB: module '%s' was removed correctly (iface: %s, errno: %d)", mod, prefix, r);
 					} else {
-						syslog(LOG_INFO, "USB: module '%s' could not be removed! (iface: %s, errno: %d)", mod, prefix, r);
+						logmsg(LOG_INFO, "USB: module '%s' could not be removed! (iface: %s, errno: %d)", mod, prefix, r);
 					}
 				}
-				free(tofree);
+				free(module);
 			}
 		}
 	}
@@ -367,8 +369,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 	int dir_made;
 
 	if ((mnt = findmntents(mnt_dev, 0, NULL, 0))) {
-		syslog(LOG_INFO, "USB partition at %s already mounted on %s",
-			mnt_dev, mnt->mnt_dir);
+		logmsg(LOG_INFO, "USB partition at %s already mounted on %s", mnt_dev, mnt->mnt_dir);
 		return MOUNT_VAL_EXIST;
 	}
 
@@ -449,12 +450,10 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 				ret = eval("mount", "-o", "noatime,nodev", mnt_dev, mnt_dir);
 
 			if (ret == 0) {
-				syslog(LOG_INFO, "USB %s%s fs at %s mounted on %s",
-					type, (flags & MS_RDONLY) ? " (ro)" : "", mnt_dev, mnt_dir);
+				logmsg(LOG_INFO, "USB %s%s fs at %s mounted on %s", type, (flags & MS_RDONLY) ? " (ro)" : "", mnt_dev, mnt_dir);
 				return (flags & MS_RDONLY) ? MOUNT_VAL_RONLY : MOUNT_VAL_RW;
 			} else {
-				syslog(LOG_INFO, "USB %s%s fs at %s failed to mount on %s",
-					type, (flags & MS_RDONLY) ? " (ro)" : "", mnt_dev, mnt_dir);
+				logmsg(LOG_INFO, "USB %s%s fs at %s failed to mount on %s", type, (flags & MS_RDONLY) ? " (ro)" : "", mnt_dev, mnt_dir);
 			}
 
 			if (dir_made) {
@@ -497,7 +496,7 @@ struct mntent *mount_fstab(char *dev_name, char *type, char *label, char *uuid)
 	}
 
 	if (mnt)
-		syslog(LOG_INFO, "USB %s fs at %s mounted on %s", type, dev_name, mnt->mnt_dir);
+		logmsg(LOG_INFO, "USB %s fs at %s mounted on %s", type, dev_name, mnt->mnt_dir);
 	return (mnt);
 }
 
@@ -595,7 +594,7 @@ int umount_mountpoint(struct mntent *mnt, uint flags)
 	}
 
 	if (ret == 0)
-		syslog(LOG_INFO, "USB partition unmounted from %s", mnt->mnt_dir);
+		logmsg(LOG_INFO, "USB partition unmounted from %s", mnt->mnt_dir);
 
 	if (ret && ((flags & EFH_SHUTDN) != 0)) {
 		/* If system is stopping (not restarting), and we couldn't unmount the
@@ -615,7 +614,7 @@ int umount_mountpoint(struct mntent *mnt, uint flags)
 		 * busy when they move away from it. And then it disappears for real.
 		 */
 		ret = umount2(mnt->mnt_dir, MNT_DETACH);
-		syslog(LOG_INFO, "USB partition busy - will unmount ASAP from %s", mnt->mnt_dir);
+		logmsg(LOG_INFO, "USB partition busy - will unmount ASAP from %s", mnt->mnt_dir);
 	}
 
 	if (ret == 0) {
@@ -732,7 +731,7 @@ void hotplug_usb_storage_device(int host_no, int action_add, uint flags)
 {
 	if (!nvram_get_int("usb_enable"))
 		return;
-	_dprintf("%s: host %d action: %d\n", __FUNCTION__, host_no, action_add);
+	logmsg(LOG_DEBUG, "*** %s: host %d action: %d\n", __FUNCTION__, host_no, action_add);
 
 	if (action_add) {
 		if (nvram_get_int("usb_storage") && (nvram_get_int("usb_automount") || action_add < 0)) {
@@ -912,8 +911,7 @@ void hotplug_usb(void)
 	int is_block = strcmp(getenv("SUBSYSTEM") ? : "", "block") == 0;
 	char *scsi_host = getenv("SCSI_HOST");
 
-	_dprintf("%s hotplug INTERFACE=%s ACTION=%s PRODUCT=%s HOST=%s DEVICE=%s\n",
-		getenv("SUBSYSTEM") ? : "USB", interface, action, product, scsi_host, device);
+	logmsg(LOG_DEBUG, "*** %s: %s hotplug INTERFACE=%s ACTION=%s PRODUCT=%s HOST=%s DEVICE=%s\n", __FUNCTION__, getenv("SUBSYSTEM") ? : "USB", interface, action, product, scsi_host, device);
 
 	if (!nvram_get_int("usb_enable")) return;
 	if (!action || ((!interface || !product) && !is_block))
@@ -926,11 +924,8 @@ void hotplug_usb(void)
 
 	add = (strcmp(action, "add") == 0);
 	if (add && (strncmp(interface ? : "", "TOMATO/", 7) != 0)) {
-#ifndef TCONFIG_OPTIMIZE_SIZE
 		if (!is_block && device)
-			syslog(LOG_DEBUG, "Attached USB device %s [INTERFACE=%s PRODUCT=%s]",
-				device, interface, product);
-#endif
+			logmsg(LOG_DEBUG, "*** %s: attached USB device %s [INTERFACE=%s PRODUCT=%s]", __FUNCTION__, device, interface, product);
 	}
 
 	if (strncmp(interface ? : "", "TOMATO/", 7) == 0) {	/* web admin */

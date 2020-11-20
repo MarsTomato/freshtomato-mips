@@ -183,6 +183,19 @@ ifneq ($(TCONFIG_USB),y)
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/USB-BEGIN/,/USB-END/d"
 endif
 
+# ...And also don't include them if we have router with wl_high module but without USB support
+ifeq ($(TCONFIG_REMOVE_USBAPP),y)
+	rm -f $(INSTALLDIR)/www/nas-*.*
+	rm -f $(INSTALLDIR)/www/wwan_parser.js
+	rm -f $(INSTALLDIR)/www/wwan-sms.asp
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/USB-BEGIN/,/USB-END/d"
+	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/USB-BEGIN/,/USB-END/d"
+	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/USB-BEGIN/,/USB-END/d"
+	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/USB-BEGIN/,/USB-END/d"
+	sed -i $(INSTALLDIR)/www/about.asp -e "/USB-BEGIN/,/USB-END/d"
+	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/USB-BEGIN/,/USB-END/d"
+endif
+
 # Only include the CTF configuration if CTF is configured in.
 ifneq ($(TCONFIG_CTF),y)
 	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/CTF-BEGIN/,/CTF-END/d"
@@ -295,7 +308,10 @@ endif
 # Only include the https option if it is compiled in
 ifneq ($(TCONFIG_HTTPS),y)
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/HTTPS-BEGIN/,/HTTPS-END/d"
+# depends on USB and NAS pages - only if USB Support is configured in
+ifeq ($(TCONFIG_USB),y)
 	sed -i $(INSTALLDIR)/www/nas-ftp.asp -e "/HTTPS-BEGIN/,/HTTPS-END/d"
+endif
 endif
 
 # Only include the TLS keys generator option if it is compiled in

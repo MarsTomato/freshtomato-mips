@@ -11,6 +11,35 @@
  * See SuS3 sort standard at:
  * http://www.opengroup.org/onlinepubs/007904975/utilities/sort.html
  */
+//config:config SORT
+//config:	bool "sort (7.7 kb)"
+//config:	default y
+//config:	help
+//config:	sort is used to sort lines of text in specified files.
+//config:
+//config:config FEATURE_SORT_BIG
+//config:	bool "Full SuSv3 compliant sort (support -ktcbdfiogM)"
+//config:	default y
+//config:	depends on SORT
+//config:	help
+//config:	Without this, sort only supports -rusz, and an integer version
+//config:	of -n. Selecting this adds sort keys, floating point support, and
+//config:	more. This adds a little over 3k to a nonstatic build on x86.
+//config:
+//config:	The SuSv3 sort standard is available at:
+//config:	http://www.opengroup.org/onlinepubs/007904975/utilities/sort.html
+//config:
+//config:config FEATURE_SORT_OPTIMIZE_MEMORY
+//config:	bool "Use less memory (but might be slower)"
+//config:	default n   # defaults to N since we are size-paranoid tribe
+//config:	depends on SORT
+//config:	help
+//config:	Attempt to use less memory (by storing only one copy
+//config:	of duplicated lines, and such). Useful if you work on huge files.
+
+//applet:IF_SORT(APPLET_NOEXEC(sort, sort, BB_DIR_USR_BIN, BB_SUID_DROP, sort))
+
+//kbuild:lib-$(CONFIG_SORT) += sort.o
 
 //usage:#define sort_trivial_usage
 //usage:       "[-nru"
@@ -25,26 +54,23 @@
 //usage:     "\n	-f	Ignore case"
 //usage:     "\n	-i	Ignore unprintable characters"
 //usage:     "\n	-d	Dictionary order (blank or alphanumeric only)"
-//usage:     "\n	-g	General numerical sort"
-//usage:     "\n	-M	Sort month"
 //usage:	)
 //-h, --human-numeric-sort: compare human readable numbers (e.g., 2K 1G)
 //usage:     "\n	-n	Sort numbers"
 //usage:	IF_FEATURE_SORT_BIG(
+//usage:     "\n	-g	General numerical sort"
+//usage:     "\n	-M	Sort month"
+//usage:     "\n	-V	Sort version"
 //usage:     "\n	-t CHAR	Field separator"
 //usage:     "\n	-k N[,M] Sort by Nth field"
 //usage:	)
 //usage:     "\n	-r	Reverse sort order"
-//usage:	IF_FEATURE_SORT_BIG(
 //usage:     "\n	-s	Stable (don't sort ties alphabetically)"
-//usage:	)
 //usage:     "\n	-u	Suppress duplicate lines"
-//usage:	IF_FEATURE_SORT_BIG(
 //usage:     "\n	-z	Lines are terminated by NUL, not newline"
-////usage:     "\n	-m	Ignored for GNU compatibility"
-////usage:     "\n	-S BUFSZ Ignored for GNU compatibility"
-////usage:     "\n	-T TMPDIR Ignored for GNU compatibility"
-//usage:	)
+///////:     "\n	-m	Ignored for GNU compatibility"
+///////:     "\n	-S BUFSZ Ignored for GNU compatibility"
+///////:     "\n	-T TMPDIR Ignored for GNU compatibility"
 //usage:
 //usage:#define sort_example_usage
 //usage:       "$ echo -e \"e\\nf\\nb\\nd\\nc\\na\" | sort\n"
@@ -64,39 +90,41 @@
 
 #include "libbb.h"
 
-/* This is a NOEXEC applet. Be very careful! */
-
-
-/*
-	sort [-m][-o output][-bdfinru][-t char][-k keydef]... [file...]
-	sort -c [-bdfinru][-t char][-k keydef][file]
-*/
-
 /* These are sort types */
-static const char OPT_STR[] ALIGN1 = "ngMucszbrdfimS:T:o:k:t:";
 enum {
-	FLAG_n  = 1,            /* Numeric sort */
-	FLAG_g  = 2,            /* Sort using strtod() */
-	FLAG_M  = 4,            /* Sort date */
+	FLAG_n  = 1 << 0,       /* Numeric sort */
+	FLAG_g  = 1 << 1,       /* Sort using strtod() */
+	FLAG_M  = 1 << 2,       /* Sort date */
+	FLAG_V  = 1 << 3,       /* Sort version */
 /* ucsz apply to root level only, not keys.  b at root level implies bb */
-	FLAG_u  = 8,            /* Unique */
-	FLAG_c  = 0x10,         /* Check: no output, exit(!ordered) */
-	FLAG_s  = 0x20,         /* Stable sort, no ascii fallback at end */
-	FLAG_z  = 0x40,         /* Input and output is NUL terminated, not \n */
+	FLAG_u  = 1 << 4,       /* Unique */
+	FLAG_c  = 1 << 5,       /* Check: no output, exit(!ordered) */
+	FLAG_s  = 1 << 6,       /* Stable sort, no ascii fallback at end */
+	FLAG_z  = 1 << 7,       /* Input and output is NUL terminated, not \n */
 /* These can be applied to search keys, the previous four can't */
-	FLAG_b  = 0x80,         /* Ignore leading blanks */
-	FLAG_r  = 0x100,        /* Reverse */
-	FLAG_d  = 0x200,        /* Ignore !(isalnum()|isspace()) */
-	FLAG_f  = 0x400,        /* Force uppercase */
-	FLAG_i  = 0x800,        /* Ignore !isprint() */
-	FLAG_m  = 0x1000,       /* ignored: merge already sorted files; do not sort */
-	FLAG_S  = 0x2000,       /* ignored: -S, --buffer-size=SIZE */
-	FLAG_T  = 0x4000,       /* ignored: -T, --temporary-directory=DIR */
-	FLAG_o  = 0x8000,
-	FLAG_k  = 0x10000,
-	FLAG_t  = 0x20000,
+	FLAG_b  = 1 << 8,       /* Ignore leading blanks */
+	FLAG_r  = 1 << 9,       /* Reverse */
+	FLAG_d  = 1 << 10,      /* Ignore !(isalnum()|isspace()) */
+	FLAG_f  = 1 << 11,      /* Force uppercase */
+	FLAG_i  = 1 << 12,      /* Ignore !isprint() */
+	FLAG_m  = 1 << 13,      /* ignored: merge already sorted files; do not sort */
+	FLAG_S  = 1 << 14,      /* ignored: -S, --buffer-size=SIZE */
+	FLAG_T  = 1 << 15,      /* ignored: -T, --temporary-directory=DIR */
+	FLAG_o  = 1 << 16,
+	FLAG_k  = 1 << 17,
+	FLAG_t  = 1 << 18,
 	FLAG_bb = 0x80000000,   /* Ignore trailing blanks  */
+	FLAG_no_tie_break = 0x40000000,
 };
+
+static const char sort_opt_str[] ALIGN1 = "^"
+			"ngMVucszbrdfimS:T:o:k:*t:"
+			"\0" "o--o:t--t"/*-t, -o: at most one of each*/;
+/*
+ * OPT_STR must not be string literal, needs to have stable address:
+ * code uses "strchr(OPT_STR,c) - OPT_STR" idiom.
+ */
+#define OPT_STR (sort_opt_str + 1)
 
 #if ENABLE_FEATURE_SORT_BIG
 static char key_separator;
@@ -106,6 +134,10 @@ static struct sort_key {
 	unsigned range[4];          /* start word, start char, end word, end char */
 	unsigned flags;
 } *key_list;
+
+
+/* This is a NOEXEC applet. Be very careful! */
+
 
 static char *get_key(char *str, struct sort_key *key, int flags)
 {
@@ -243,10 +275,15 @@ static int compare_keys(const void *xarg, const void *yarg)
 		y = *(char **)yarg;
 #endif
 		/* Perform actual comparison */
-		switch (flags & (FLAG_n | FLAG_M | FLAG_g)) {
+		switch (flags & (FLAG_n | FLAG_g | FLAG_M | FLAG_V)) {
 		default:
 			bb_error_msg_and_die("unknown sort type");
 			break;
+#if defined(HAVE_STRVERSCMP) && HAVE_STRVERSCMP == 1
+		case FLAG_V:
+			retval = strverscmp(x, y);
+			break;
+#endif
 		/* Ascii sort */
 		case 0:
 #if ENABLE_LOCALE_SUPPORT
@@ -319,10 +356,35 @@ static int compare_keys(const void *xarg, const void *yarg)
 #endif
 	} /* for */
 
-	/* Perform fallback sort if necessary */
-	if (!retval && !(option_mask32 & FLAG_s)) {
-		flags = option_mask32;
-		retval = strcmp(*(char **)xarg, *(char **)yarg);
+	if (retval == 0) {
+		/* So far lines are "the same" */
+
+		if (option_mask32 & FLAG_s) {
+			/* "Stable sort": later line is "greater than",
+			 * IOW: do not allow qsort() to swap equal lines.
+			 */
+			uint32_t *p32;
+			uint32_t x32, y32;
+			char *line;
+			unsigned len;
+
+			line = *(char**)xarg;
+			len = (strlen(line) + 4) & (~3u);
+			p32 = (void*)(line + len);
+			x32 = *p32;
+			line = *(char**)yarg;
+			len = (strlen(line) + 4) & (~3u);
+			p32 = (void*)(line + len);
+			y32 = *p32;
+
+			/* If x > y, 1, else -1 */
+			retval = (x32 > y32) * 2 - 1;
+		} else
+		if (!(option_mask32 & FLAG_no_tie_break)) {
+			/* fallback sort */
+			flags = option_mask32;
+			retval = strcmp(*(char **)xarg, *(char **)yarg);
+		}
 	}
 
 	if (flags & FLAG_r)
@@ -347,20 +409,52 @@ static unsigned str2u(char **str)
 int sort_main(int argc, char **argv) MAIN_EXTERNALLY_VISIBLE;
 int sort_main(int argc UNUSED_PARAM, char **argv)
 {
-	char *line, **lines;
+	char **lines;
 	char *str_ignored, *str_o, *str_t;
 	llist_t *lst_k = NULL;
 	int i;
 	int linecount;
 	unsigned opts;
+#if ENABLE_FEATURE_SORT_OPTIMIZE_MEMORY
+	bool can_drop_dups;
+	size_t prev_len = 0;
+	char *prev_line = (char*) "";
+	/* Postpone optimizing if the input is small, < 16k lines:
+	 * even just free()ing duplicate lines takes time.
+	 */
+	size_t count_to_optimize_dups = 0x3fff;
+#endif
 
 	xfunc_error_retval = 2;
 
 	/* Parse command line options */
-	/* -o and -t can be given at most once */
-	opt_complementary = "o--o:t--t:" /* -t, -o: at most one of each */
-			"k::"; /* -k takes list */
-	opts = getopt32(argv, OPT_STR, &str_ignored, &str_ignored, &str_o, &lst_k, &str_t);
+	opts = getopt32(argv,
+			sort_opt_str,
+			&str_ignored, &str_ignored, &str_o, &lst_k, &str_t
+	);
+#if ENABLE_FEATURE_SORT_OPTIMIZE_MEMORY
+	/* Can drop dups only if -u but no "complicating" options,
+	 * IOW: if we do a full line compares. Safe options:
+	 * -o FILE Output to FILE
+	 * -z	   Lines are terminated by NUL, not newline
+	 * -r	   Reverse sort order
+	 * -s      Stable (don't sort ties alphabetically)
+	 * Not sure about these:
+	 * -b      Ignore leading blanks
+	 * -f	   Ignore case
+	 * -i	   Ignore unprintable characters
+	 * -d	   Dictionary order (blank or alphanumeric only)
+	 * -n	   Sort numbers
+	 * -g	   General numerical sort
+	 * -M	   Sort month
+	 */
+	can_drop_dups = ((opts & ~(FLAG_o|FLAG_z|FLAG_r|FLAG_s)) == FLAG_u);
+	/* Stable sort needs every line to be uniquely allocated,
+	 * disable optimization to reuse strings:
+	 */
+	if (opts & FLAG_s)
+		count_to_optimize_dups = (size_t)-1L;
+#endif
 	/* global b strips leading and trailing spaces */
 	if (opts & FLAG_b)
 		option_mask32 |= FLAG_bb;
@@ -435,9 +529,47 @@ int sort_main(int argc UNUSED_PARAM, char **argv)
 		 * do not continue to next file: */
 		FILE *fp = xfopen_stdin(*argv);
 		for (;;) {
-			line = GET_LINE(fp);
+			char *line = GET_LINE(fp);
 			if (!line)
 				break;
+
+#if ENABLE_FEATURE_SORT_OPTIMIZE_MEMORY
+			if (count_to_optimize_dups != 0)
+				count_to_optimize_dups--;
+			if (count_to_optimize_dups == 0) {
+				size_t len;
+				char *new_line;
+
+				/* On kernel/linux/arch/ *.[ch] files,
+				 * this reduces memory usage by 6%.
+				 *  yes | head -99999999 | sort
+				 * goes down from 1900Mb to 380 Mb.
+				 */
+				len = strlen(line);
+				if (len <= prev_len) {
+					new_line = prev_line + (prev_len - len);
+					if (strcmp(line, new_line) == 0) {
+						/* it's a tail of the prev line */
+						if (can_drop_dups && prev_len == len) {
+							/* it's identical to prev line */
+							free(line);
+							continue;
+						}
+						free(line);
+						line = new_line;
+						/* continue using longer prev_line
+						 * for future tail tests.
+						 */
+						goto skip;
+					}
+				}
+				prev_len = len;
+				prev_line = line;
+ skip: ;
+			}
+#else
+//TODO: lighter version which only drops total dups if can_drop_dups == true
+#endif
 			lines = xrealloc_vector(lines, 6, linecount);
 			lines[linecount++] = line;
 		}
@@ -460,15 +592,35 @@ int sort_main(int argc UNUSED_PARAM, char **argv)
 		return EXIT_SUCCESS;
 	}
 #endif
+
+	/* For stable sort, store original line position beyond terminating NUL */
+	if (option_mask32 & FLAG_s) {
+		for (i = 0; i < linecount; i++) {
+			uint32_t *p32;
+			char *line;
+			unsigned len;
+
+			line = lines[i];
+			len = (strlen(line) + 4) & (~3u);
+			lines[i] = line = xrealloc(line, len + 4);
+			p32 = (void*)(line + len);
+			*p32 = i;
+		}
+		/*option_mask32 |= FLAG_no_tie_break;*/
+		/* ^^^redundant: if FLAG_s, compare_keys() does no tie break */
+	}
+
 	/* Perform the actual sort */
 	qsort(lines, linecount, sizeof(lines[0]), compare_keys);
 
 	/* Handle -u */
 	if (option_mask32 & FLAG_u) {
 		int j = 0;
-		/* coreutils 6.3 drop lines for which only key is the same */
-		/* -- disabling last-resort compare... */
-		option_mask32 |= FLAG_s;
+		/* coreutils 6.3 drop lines for which only key is the same
+		 * -- disabling last-resort compare, or else compare_keys()
+		 * will be the same only for completely identical lines.
+		 */
+		option_mask32 |= FLAG_no_tie_break;
 		for (i = 1; i < linecount; i++) {
 			if (compare_keys(&lines[j], &lines[i]) == 0)
 				free(lines[i]);

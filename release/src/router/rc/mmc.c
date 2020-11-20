@@ -6,9 +6,11 @@
 
 */
 
+
 #include "rc.h"
 
 #include <sys/mount.h>
+
 
 static void error(const char *message)
 {

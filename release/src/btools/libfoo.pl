@@ -301,6 +301,28 @@ sub fixDyn
 
 # tor (pedro)
 	fixDynDep("tor", "libevent-2.1.so.7");
+
+# e2fsprogs (pedro)
+	fixDynDep("e2fsck", "libext2fs.so.2.4");
+	fixDynDep("e2fsck", "libuuid.so.1.2");
+	fixDynDep("e2fsck", "libblkid.so.1.0");
+	fixDynDep("e2fsck", "libe2p.so.2.3");
+	fixDynDep("e2fsck", "libcom_err.so.2.1");
+	fixDynDep("mke2fs", "libext2fs.so.2.4");
+	fixDynDep("mke2fs", "libuuid.so.1.2");
+	fixDynDep("mke2fs", "libblkid.so.1.0");
+	fixDynDep("mke2fs", "libe2p.so.2.3");
+	fixDynDep("mke2fs", "libcom_err.so.2.1");
+	fixDynDep("tune2fs", "libext2fs.so.2.4");
+	fixDynDep("tune2fs", "libuuid.so.1.2");
+	fixDynDep("tune2fs", "libblkid.so.1.0");
+	fixDynDep("tune2fs", "libe2p.so.2.3");
+	fixDynDep("tune2fs", "libcom_err.so.2.1");
+	fixDynDep("badblocks", "libext2fs.so.2.4");
+	fixDynDep("badblocks", "libuuid.so.1.2");
+	fixDynDep("badblocks", "libblkid.so.1.0");
+	fixDynDep("badblocks", "libe2p.so.2.3");
+	fixDynDep("badblocks", "libcom_err.so.2.1");
 }
 
 sub usersOf
@@ -614,6 +636,13 @@ genSO("${root}/usr/lib/libncurses.so.6", "${router}/libncurses/lib/libncurses.a"
 
 # iperf (pedro)
 genSO("${root}/usr/lib/libiperf.so.0.0.0", "${router}/iperf/src/.libs/libiperf.a");
+
+# e2fsprogs (pedro)
+genSO("${root}/usr/lib/libext2fs.so.2.4", "${router}/e2fsprogs/lib/libext2fs.a", "", "-L${router}/e2fsprogs/lib");
+genSO("${root}/usr/lib/libuuid.so.1.2", "${router}/e2fsprogs/lib/libuuid.a", "", "-L${router}/e2fsprogs/lib");
+genSO("${root}/usr/lib/libblkid.so.1.0", "${router}/e2fsprogs/lib/libblkid.a", "", "-L${router}/e2fsprogs/lib");
+genSO("${root}/usr/lib/libe2p.so.2.3", "${router}/e2fsprogs/lib/libe2p.a", "", "-L${router}/e2fsprogs/lib");
+genSO("${root}/usr/lib/libcom_err.so.2.1", "${router}/e2fsprogs/lib/libcom_err.a", "", "-L${router}/e2fsprogs/lib");
 
 print "\n--- end ---\n\n";
 

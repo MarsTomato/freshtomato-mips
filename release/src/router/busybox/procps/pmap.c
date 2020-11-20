@@ -7,18 +7,18 @@
  * Licensed under GPLv2 or later, see the LICENSE file in this source tree
  * for details.
  */
-
 //config:config PMAP
-//config:       bool "pmap"
-//config:       default y
-//config:       help
-//config:         Display processes' memory mappings.
+//config:	bool "pmap (6 kb)"
+//config:	default y
+//config:	help
+//config:	Display processes' memory mappings.
 
 //applet:IF_PMAP(APPLET(pmap, BB_DIR_USR_BIN, BB_SUID_DROP))
+
 //kbuild:lib-$(CONFIG_PMAP) += pmap.o
 
 //usage:#define pmap_trivial_usage
-//usage:       "[-xq] PID"
+//usage:       "[-xq] PID..."
 //usage:#define pmap_full_usage "\n\n"
 //usage:       "Display process memory usage"
 //usage:     "\n"
@@ -37,6 +37,12 @@
 # define DASHES "--------"
 #endif
 
+#if ULLONG_MAX == 0xffffffff
+# define AFMTLL "8"
+#else
+# define AFMTLL "16"
+#endif
+
 enum {
 	OPT_x = 1 << 0,
 	OPT_q = 1 << 1,
@@ -46,7 +52,7 @@ static void print_smaprec(struct smaprec *currec, void *data)
 {
 	unsigned opt = (uintptr_t)data;
 
-	printf("%0" AFMT "lx ", currec->smap_start);
+	printf("%0" AFMTLL "llx ", currec->smap_start);
 
 	if (opt & OPT_x)
 		printf("%7lu %7lu %7lu %7lu ",
@@ -96,7 +102,7 @@ int pmap_main(int argc UNUSED_PARAM, char **argv)
 	unsigned opts;
 	int ret;
 
-	opts = getopt32(argv, "xq");
+	opts = getopt32(argv, "^" "xq" "\0" "-1"); /* min one arg */
 	argv += optind;
 
 	ret = 0;

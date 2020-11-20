@@ -5,12 +5,11 @@
  *
  * Contact me: vda.linux@googlemail.com
  */
-
 //config:config NMETER
-//config:	bool "nmeter"
+//config:	bool "nmeter (11 kb)"
 //config:	default y
 //config:	help
-//config:	  Prints selected system stats continuously, one line per update.
+//config:	Prints selected system stats continuously, one line per update.
 
 //applet:IF_NMETER(APPLET(nmeter, BB_DIR_USR_BIN, BB_SUID_DROP))
 
@@ -24,7 +23,7 @@
 //usage:     "\n -d MSEC	Milliseconds between updates, default:1000, none:-1"
 //usage:     "\n"
 //usage:     "\nFormat specifiers:"
-//usage:     "\n %Nc or %[cN]	CPU. N - bar size (default:10)"
+//usage:     "\n %Nc or %[cN]	CPU. N - bar size (default 10)"
 //usage:     "\n		(displays: S:system U:user N:niced D:iowait I:irq i:softirq)"
 //usage:     "\n %[nINTERFACE]	Network INTERFACE"
 //usage:     "\n %m		Allocated memory"
