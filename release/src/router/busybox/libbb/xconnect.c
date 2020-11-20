@@ -6,12 +6,14 @@
  *
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
-
 #include <sys/types.h>
 #include <sys/socket.h> /* netinet/in.h needs it */
 #include <netinet/in.h>
 #include <net/if.h>
 #include <sys/un.h>
+#if ENABLE_IFPLUGD || ENABLE_FEATURE_MDEV_DAEMON || ENABLE_UEVENT
+# include <linux/netlink.h>
+#endif
 #include "libbb.h"
 
 int FAST_FUNC setsockopt_int(int fd, int level, int optname, int optval)
@@ -131,6 +133,7 @@ unsigned FAST_FUNC bb_lookup_port(const char *port, const char *protocol, unsign
 			port_nr = default_port;
 			if (tserv)
 				port_nr = ntohs(tserv->s_port);
+//FIXME: else: port string was garbage, but we don't report that???
 		}
 		errno = old_errno;
 	}
@@ -413,6 +416,38 @@ int FAST_FUNC create_and_bind_dgram_or_die(const char *bindaddr, int port)
 }
 
 
+#if ENABLE_IFPLUGD || ENABLE_FEATURE_MDEV_DAEMON || ENABLE_UEVENT
+int FAST_FUNC create_and_bind_to_netlink(int proto, int grp, unsigned rcvbuf)
+{
+	struct sockaddr_nl sa;
+	int fd;
+
+	memset(&sa, 0, sizeof(sa));
+	sa.nl_family = AF_NETLINK;
+	sa.nl_pid = getpid();
+	sa.nl_groups = grp;
+	fd = xsocket(AF_NETLINK, SOCK_DGRAM, proto);
+	xbind(fd, (struct sockaddr *) &sa, sizeof(sa));
+	close_on_exec_on(fd);
+
+	if (rcvbuf != 0) {
+		// SO_RCVBUFFORCE (root only) can go above net.core.rmem_max sysctl
+		setsockopt_SOL_SOCKET_int(fd, SO_RCVBUF,      rcvbuf);
+		setsockopt_SOL_SOCKET_int(fd, SO_RCVBUFFORCE, rcvbuf);
+# if 0
+		{
+			int z;
+			socklen_t zl = sizeof(z);
+			getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &z, &zl);
+			bb_error_msg("SO_RCVBUF:%d", z);
+		}
+# endif
+	}
+
+	return fd;
+}
+#endif
+
 int FAST_FUNC create_and_connect_stream_or_die(const char *peer, int port)
 {
 	int fd;
@@ -496,12 +531,15 @@ char* FAST_FUNC xmalloc_sockaddr2hostonly_noport(const struct sockaddr *sa)
 {
 	return sockaddr2str(sa, NI_NAMEREQD | IGNORE_PORT);
 }
+#ifndef NI_NUMERICSCOPE
+# define NI_NUMERICSCOPE 0
+#endif
 char* FAST_FUNC xmalloc_sockaddr2dotted(const struct sockaddr *sa)
 {
-	return sockaddr2str(sa, NI_NUMERICHOST);
+	return sockaddr2str(sa, NI_NUMERICHOST | NI_NUMERICSCOPE);
 }
 
 char* FAST_FUNC xmalloc_sockaddr2dotted_noport(const struct sockaddr *sa)
 {
-	return sockaddr2str(sa, NI_NUMERICHOST | IGNORE_PORT);
+	return sockaddr2str(sa, NI_NUMERICHOST | NI_NUMERICSCOPE | IGNORE_PORT);
 }

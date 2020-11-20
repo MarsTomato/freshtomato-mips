@@ -497,10 +497,6 @@ define BusyboxOptions
 	fi; \
 	if [ "$(USB)" = "USB" ]; then \
 		if [ "$(USBEXTRAS)" = "y" ]; then \
-			sed -i "/CONFIG_E2FSCK/d" $(1); \
-			echo "CONFIG_E2FSCK=y" >>$(1); \
-			sed -i "/CONFIG_MKE2FS/d" $(1); \
-			echo "CONFIG_MKE2FS=y" >>$(1); \
 			sed -i "/CONFIG_FDISK/d" $(1); \
 			echo "CONFIG_FDISK=y" >>$(1); \
 			sed -i "/CONFIG_FEATURE_FDISK_WRITABLE/d" $(1); \
@@ -513,10 +509,6 @@ define BusyboxOptions
 			echo "CONFIG_FLOCK=y" >>$(1); \
 			sed -i "/CONFIG_FSYNC/d" $(1); \
 			echo "CONFIG_FSYNC=y" >>$(1); \
-			sed -i "/CONFIG_TUNE2FS/d" $(1); \
-			echo "CONFIG_TUNE2FS=y" >>$(1); \
-			sed -i "/CONFIG_E2LABEL/d" $(1); \
-			echo "CONFIG_E2LABEL=y" >>$(1); \
 			sed -i "/CONFIG_LSUSB/d" $(1); \
 			echo "CONFIG_LSUSB=y" >>$(1); \
 			sed -i "/CONFIG_FEATURE_WGET_STATUSBAR/d" $(1); \
@@ -537,8 +529,10 @@ define BusyboxOptions
 		echo "# CONFIG_VOLUMEID is not set" >>$(1); \
 		sed -i "/CONFIG_BLKID/d" $(1); \
 		echo "# CONFIG_BLKID is not set" >>$(1); \
-		sed -i "/CONFIG_SWAPONOFF/d" $(1); \
-		echo "# CONFIG_SWAPONOFF is not set" >>$(1); \
+		sed -i "/CONFIG_SWAPON/d" $(1); \
+		echo "# CONFIG_SWAPON is not set" >>$(1); \
+		sed -i "/CONFIG_SWAPOFF/d" $(1); \
+		echo "# CONFIG_SWAPOFF is not set" >>$(1); \
 		sed -i "/CONFIG_CHROOT/d" $(1); \
 		echo "# CONFIG_CHROOT is not set" >>$(1); \
 		sed -i "/CONFIG_PIVOT_ROOT/d" $(1); \
@@ -576,6 +570,11 @@ define BusyboxOptions
 		echo "CONFIG_FEATURE_LS_COLOR=y" >>$(1); \
 		sed -i "/CONFIG_FEATURE_LS_COLOR_IS_DEFAULT/d" $(1); \
 		echo "CONFIG_FEATURE_LS_COLOR_IS_DEFAULT=y" >>$(1); \
+	fi; \
+	if [ "$(BUILD_DESC)" = "AIO" ] || [ "$(BUILD_DESC)" = "Mega-VPN" ]; then \
+		sed -i "s/# CONFIG_TIME is not set/CONFIG_TIME=y/g" $(1); \
+		sed -i "s/# CONFIG_GETOPT is not set/CONFIG_GETOPT=y/g" $(1); \
+		sed -i "s/# CONFIG_FEATURE_GETOPT_LONG is not set/CONFIG_FEATURE_GETOPT_LONG=y/g" $(1); \
 	fi; \
 	)
 endef
@@ -704,42 +703,42 @@ endif
 #################################
 
 
-## targets with USB support
+## USB support ##
 
 ## VPN
 e:
 	@$(MAKE) bin USB="USB" B=E NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y KEYGEN=y PPTPD=y \
-	    BBEXTRAS=y STUBBY=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="$(VPN)"
+	    BBEXTRAS=y STUBBY=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="$(VPN)"
 
 
 ## BTgui-VPN
 c:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y KEYGEN=y PPTPD=y \
-	    BBEXTRAS=y BTGUI=y STUBBY=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="BTgui-VPN"
+	    BBEXTRAS=y BTGUI=y STUBBY=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="BTgui-VPN"
 
 
 ## Nocat-VPN
 d:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y KEYGEN=y PPTPD=y \
-	    BBEXTRAS=y BTGUI=y STUBBY=y NOCAT=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="Nocat-VPN"
+	    BBEXTRAS=y BTGUI=y STUBBY=y NOCAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="Nocat-VPN"
 
 
 ## BT
 u:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y \
-	    BTCLIENT=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="BT"
+	    BTCLIENT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="BT"
 
 
 ## BT-VPN
 t:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y PPTPD=y \
-	    NO_JFFS=y BTCLIENT=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="BT-VPN"
+	    NO_JFFS=y BTCLIENT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="BT-VPN"
 
 
 ## Big-VPN
 b:
 	@$(MAKE) bin USB="USB" B=M NTFS=y EBTABLES=y MULTIWAN=y IPV6SUPP=y USBEXTRAS=y BCMNAT=y OPENVPN=y KEYGEN=y PPTPD=y \
-	    BBEXTRAS=y BTGUI=y STUBBY=y NO_CIFS=y NO_JFFS=y NFS=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="Big-VPN"
+	    BBEXTRAS=y BTGUI=y STUBBY=y NO_CIFS=y NO_JFFS=y NFS=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="Big-VPN"
 
 
 ## Mega-VPN
@@ -754,46 +753,39 @@ z:
 	    BBEXTRAS=y MEDIASRV=y DNSCRYPT=y STUBBY=y NOCAT=y TOR=y BTCLIENT=y NFS=y SNMP=y UPS=y TR_EXTRAS=y IPSEC=y DNSSEC=y TINC=y NANO=y HFS=y NGINX=y IPERF=y TERMLIB=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="AIO"
 
 
-#################################
+## NO USB support ##
 
-
-## targets with NO USB support
-
-## Mini - targeted for Netgear routers
+## Mini (4MB)
 f:
 	@$(MAKE) bin USB="" B=F MULTIWAN=y NO_CIFS=y JFFSv1=y NO_ZEBRA=y BCMNAT=y BUILD_DESC="Mini"
 
 
-## MiniIPv6 - for 4MB routers
+## MiniIPv6 (4MB)
 i:
 	@$(MAKE) bin USB="" B=I MULTIWAN=y NO_CIFS=y NO_ZEBRA=y NO_JFFS=y IPV6SUPP=y NO_HTTPS=y BCMNAT=y BUILD_DESC="MiniIPv6"
 
 
-## MiniVPN - for 4MB routers
+## MiniVPN (4MB)
 j:
 	@$(MAKE) bin USB="" B=V MULTIWAN=y NO_CIFS=y NO_ZEBRA=y NO_JFFS=y OPENVPN=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT_MORE=y BUILD_DESC="MiniVPN"
 
 
-## MiniVPN2 - for 4MB routers
+## MiniVPN2 (4MB)
 j2:
 	@$(MAKE) bin USB="" B=V MULTIWAN=y NO_CIFS=y NO_ZEBRA=y NO_JFFS=y PPTPD=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT_MORE=y BUILD_DESC="MiniVPN2"
 
 
-## IPv6-VPN with no USB support
+## IPv6-VPN (4MB)
 v:
 	@$(MAKE) bin USB="" B=V MULTIWAN=y NO_JFFS=y IPV6SUPP=y OPENVPN=y PPTPD=y OPTIMIZE_SIZE_MORE=y KERN_SIZE_OPT_MORE=y BUILD_DESC="IPv6-$(VPN)"
 
 
-## Max build for router with 8MB flash without USB Support (like WRT54GS v1)
+## Max (8MB)
 m:
-	@$(MAKE) bin USB="" B=E MULTIWAN=y IPV6SUPP=y OPENVPN=y KEYGEN=y PPTPD=y NOCAT=y NFS=y SNMP=y STUBBY=y TOR=y IPSEC=y BBEXTRAS=y EBTABLES=y BCMNAT=y ADVTHEMES=y OPENSSL11=y DONT_OPTIMIZE_SIZE=y BUILD_DESC="Max"
+	@$(MAKE) bin USB="" B=E MULTIWAN=y IPV6SUPP=y OPENVPN=y KEYGEN=y PPTPD=y NOCAT=y NFS=y SNMP=y STUBBY=y TOR=y IPSEC=y BBEXTRAS=y EBTABLES=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="Max"
 
 
-
-########## Mips32r2 builds ##########
-
-
-## AIO MIPS2 for RT-N16
+## MIPS32R2 ##
 r2z:
 	@$(MAKE) z MIPS32=r2 NVRAM_SIZE=32
 
@@ -837,7 +829,7 @@ r2m:
 	@$(MAKE) m MIPS32=r2 NVRAM_SIZE=32
 
 
-## Linksys
+## Linksys E-series witk 60K NVRAM ##
 n60e:
 	@$(MAKE) e MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=1
 
@@ -864,6 +856,8 @@ n60v:
 
 n60m:
 	@$(MAKE) m MIPS32=r2 NVRAM_SIZE=60 LINKSYS_E=1
+
+
 
 setprofile:
 	echo '#ifndef TOMATO_PROFILE' > router/shared/tomato_profile.h
@@ -917,52 +911,53 @@ setprofile:
 	@$(MAKE) -C router oldconfig
 
 help:
-	@echo "e            VPN - (standard plus VPN, extra utilities and NTFS support)"
-	@echo "c            BTgui-VPN - (Ext plus BT gui)"
-	@echo "d            Nocat-VPN - (BTgui plus VPN plus Nocat)"
-	@echo "u            BT"
-	@echo "t            BT-VPN - (BT plus VPN)"
-	@echo "b            Big-VPN - (Big plus VPN)"
-	@echo "o            Mega-VPN - (Mega plus VPN plus NOCAT minus NFS)"
-	@echo "z            MIPS Release 15F AIO (for routers +8MB flash)"
-	@echo "i            MiniIPv6 - (IPv6 with no USB support minus CIFS and RIPv1/2)"
-	@echo "j            MiniVPN - (OpenVPN with no USB support minus CIFS and RIPv1/2)"
-	@echo "j2           MiniVPN - (PPTPD with no USB support minus CIFS and RIPv1/2)"
-	@echo "f            Mini - (no USB support minus CIFS and RIPv1/2)"
-	@echo "v            IPv6-VPN (no usb) - (VPN with no USB support)"
-	@echo "m            Max (no usb) - (Max with IPv6 support and no USB)"
+	@echo "e              VPN - (standard plus VPN, extra utilities and NTFS support)"
+	@echo "c              BTgui-VPN - (Ext plus BT gui)"
+	@echo "d              Nocat-VPN - (BTgui plus VPN plus Nocat)"
+	@echo "u              BT"
+	@echo "t              BT-VPN - (BT plus VPN)"
+	@echo "b              Big-VPN - (Big plus VPN)"
+	@echo "o              Mega-VPN - (Mega plus VPN plus NOCAT minus NFS)"
+	@echo "z              MIPS Release 15F AIO (for routers +8MB flash)"
+	@echo "i              MiniIPv6 - (IPv6 with no USB support minus CIFS and RIPv1/2)"
+	@echo "j              MiniVPN - (OpenVPN with no USB support minus CIFS and RIPv1/2)"
+	@echo "j2             MiniVPN - (PPTPD with no USB support minus CIFS and RIPv1/2)"
+	@echo "f              Mini - (no USB support minus CIFS and RIPv1/2)"
+	@echo "v              IPv6-VPN (no usb) - (VPN with no USB support)"
+	@echo "m              Max (no usb) - (Max with IPv6 support and no USB)"
 	@echo ""
-	@echo "r2e          MIPS Release 2 VPN"
-	@echo "r2c          MIPS Release 2 BTgui-VPN"
-	@echo "r2d          MIPS Release 2 Nocat-VPN"
-	@echo "r2u          MIPS Release 2 BT"
-	@echo "r2t          MIPS Release 2 BT-VPN"
-	@echo "r2b          MIPS Release 2 Big-VPN"
-	@echo "r2o          MIPS Release 2 Mega-VPN (for routers +8MB flash)"
-	@echo "r2z          MIPS Release 2 AIO (for routers +8MB flash)"
-	@echo "r2v          MIPS Release 2 IPv6-VPN (no usb)"
-	@echo "r2m          MIPS Release 2 Max (no usb)"
-	@echo "r2i          MIPS Release 2 MiniIPv6 (for 4MB flash)"
-	@echo "r2j          MIPS Release 2 MiniVPN (OpenVPN; for 4MB flash)"
-	@echo "r2j2         MIPS Release 2 MiniVPN (PPTPD; for 4MB flash)"
-	@echo "r2f          MIPS Release 2 Mini (for netgear)"
+	@echo "r2e            MIPS Release 2 VPN"
+	@echo "r2c            MIPS Release 2 BTgui-VPN"
+	@echo "r2d            MIPS Release 2 Nocat-VPN"
+	@echo "r2u            MIPS Release 2 BT"
+	@echo "r2t            MIPS Release 2 BT-VPN"
+	@echo "r2b            MIPS Release 2 Big-VPN"
+	@echo "r2o            MIPS Release 2 Mega-VPN (for 8MB+ flash)"
+	@echo "r2z            MIPS Release 2 AIO (for 8MB+ flash)"
+	@echo "r2v            MIPS Release 2 IPv6-VPN (no usb)"
+	@echo "r2m            MIPS Release 2 Max (no usb)"
+	@echo "r2i            MIPS Release 2 MiniIPv6 (for 4MB flash)"
+	@echo "r2j            MIPS Release 2 MiniVPN (OpenVPN; for 4MB flash)"
+	@echo "r2j2           MIPS Release 2 MiniVPN (PPTPD; for 4MB flash)"
+	@echo "r2f            MIPS Release 2 Mini (for 4MB flash)"
 	@echo ""
-	@echo "n60e         Linksys E-series build VPN"
-	@echo "n60c         Linksys E-series build BTGui-VPN"
-	@echo "n60d         Linksys E-series build Nocat-VPN"
-	@echo "n60t         Linksys E-series build BT-VPN"
-	@echo "n60b         Linksys E-series build Big-VPN"
-	@echo "n60o         Linksys E-series build Mega-VPN"
-	@echo "n60v         Linksys E-series build IPv6-VPN for E2000"
-	@echo "n60m         Linksys E-series build Max for E2000"
+	@echo "       Linksys E-Series with 60k Nvram"
+	@echo "n60e           Linksys E-series VPN"
+	@echo "n60c           Linksys E-series BTGui-VPN"
+	@echo "n60d           Linksys E-series Nocat-VPN"
+	@echo "n60t           Linksys E-series BT-VPN"
+	@echo "n60b           Linksys E-series Big-VPN"
+	@echo "n60o           Linksys E-series Mega-VPN"
+	@echo "n60v           Linksys E-series IPv6-VPN for E2000"
+	@echo "n60m           Linksys E-series Max for E2000"
 	@echo ""
-	@echo "..etc..      other build configs"
-	@echo "clean        -C router clean"
-	@echo "cleanimage   rm -rf image"
-	@echo "cleantools   clean btools, mksquashfs"
-	@echo "cleankernel  -C Linux distclean (but preserves .config)"
-	@echo "distclean    distclean of Linux & busybox (but preserve .configs)"
-	@echo "prepk        -C Linux oldconfig dep"
+	@echo "..etc..        other build configs"
+	@echo "clean          -C router clean"
+	@echo "cleanimage     rm -rf image"
+	@echo "cleantools     clean btools, mksquashfs"
+	@echo "cleankernel    -C Linux distclean (but preserves .config)"
+	@echo "distclean      distclean of Linux & busybox (but preserve .configs)"
+	@echo "prepk          -C Linux oldconfig dep"
 
 .PHONY: all clean distclean cleanimage cleantools cleankernel prepk what setprofile help
 .PHONY: a b c d m nc Makefile allversions tomato_profile.mak

@@ -461,7 +461,9 @@ const defaults_t defaults[] = {
 	{ "wl_txstreams",		"0"				},	// 802.11n Tx Streams 0, 0 is invalid, WLCONF will change it to a radio appropriate default
 	{ "wl_dfs_preism",		"60"				},	// 802.11H pre network CAC time
 	{ "wl_dfs_postism",		"60"				},	// 802.11H In Service Monitoring CAC time
+#ifndef CONFIG_BCMWL6 /* following radar thrs params are not valid and not complete for SDK6 (and up) */
 	{ "wl_radarthrs",		"1 0x6c0 0x6e0 0x6bc 0x6e0 0x6ac 0x6cc 0x6bc 0x6e0" },	// Radar thrs params format: version thresh0_20 thresh1_20 thresh0_40 thresh1_40
+#endif
 	{ "wl_bcn_rotate",		"1"				},	// Beacon rotation
 	{ "wl_vlan_prio_mode",		"off"				},	// VLAN Priority support
 	{ "wl_obss_coex",		"0"				},	// OBSS Coexistence (0|1): when enabled, channel width is forced to 20MHz
@@ -479,7 +481,7 @@ const defaults_t defaults[] = {
 	{ "wl_ampdu_rr_rtylimit_tid",	"2 2 2 2 2 2 2 2"		},	// Default AMPDU regular rate retry limit per-tid setting
 	{ "wl_amsdu",			"auto"				},	// Default AMSDU setting
 	/* power save */
-	{ "wl_rxchain_pwrsave_enable",	"1"				},	// Rxchain powersave enable
+	{ "wl_rxchain_pwrsave_enable",	"0"				},	// Rxchain powersave enable
 	{ "wl_rxchain_pwrsave_quiet_time","1800"			},	// Quiet time for power save
 	{ "wl_rxchain_pwrsave_pps",	"10"				},	// Packets per second threshold for power save
 	{ "wl_radio_pwrsave_enable",	"0"				},	// Radio powersave enable
@@ -628,7 +630,6 @@ const defaults_t defaults[] = {
 	{ "block_wan",			"1"				},	// block inbound icmp
 	{ "block_wan_limit",		"1"				},
 	{ "block_wan_limit_icmp",	"1"				},
-	{ "block_wan_limit_tr",		"5"				},
 	{ "multicast_pass",		"0"				},	// enable multicast proxy
 	{ "multicast_lan",		"0"				},	// on LAN (br0)
 	{ "multicast_lan1",		"0"				},	// on LAN1 (br1)
@@ -825,7 +826,7 @@ const defaults_t defaults[] = {
 	{ "rstats_bak",			"0"				},
 
 /* admin-ipt */
-	{ "cstats_enable",		"1"				},
+	{ "cstats_enable",		"0"				},
 	{ "cstats_path",		""				},
 	{ "cstats_stime",		"48"				},
 	{ "cstats_offset",		"1"				},
@@ -893,6 +894,7 @@ const defaults_t defaults[] = {
 	{ "debug_nocommit",		"0"				},
 	{ "debug_cprintf",		"0"				},
 	{ "debug_cprintf_file",		"0"				},
+	{ "debug_logsegfault",		"0"				},
 	{ "console_loglevel",		"1"				},
 	{ "t_cafree",			"1"				},
 	{ "t_hidelr",			"0"				},
@@ -1320,37 +1322,35 @@ const defaults_t defaults[] = {
 	{ "bt_log_path",		"/var/log"			},
 #endif
 
-/* new_qoslimit */
-	{ "new_qoslimit_enable",	"0"				},
-	{ "new_qoslimit_obw",		""				},
-	{ "new_qoslimit_ibw",		""				},
-	{ "new_qoslimit_rules",		""				},
-	{ "qosl_enable",		"0"				},
-	{ "qosl_tcp",			"0"				},	// unlimited
-	{ "qosl_udp",			"0"				},	// unlimited
-	{ "qosl_dlc",			""				},
-	{ "qosl_ulc",			""				},
-	{ "qosl_dlr",			""				},
-	{ "qosl_ulr",			""				},
-	{ "limit_br0_prio",		"0"				},
-	{ "limit_br1_enable",		"0"				},
-	{ "limit_br1_dlc",		""				},
-	{ "limit_br1_ulc",		""				},
-	{ "limit_br1_dlr",		""				},
-	{ "limit_br1_ulr",		""				},
-	{ "limit_br1_prio",		"2"				},
-	{ "limit_br2_enable",		"0"				},
-	{ "limit_br2_dlc",		""				},
-	{ "limit_br2_ulc",		""				},
-	{ "limit_br2_dlr",		""				},
-	{ "limit_br2_ulr",		""				},
-	{ "limit_br2_prio",		"2"				},
-	{ "limit_br3_enable",		"0"				},
-	{ "limit_br3_dlc",		""				},
-	{ "limit_br3_ulc",		""				},
-	{ "limit_br3_dlr",		""				},
-	{ "limit_br3_ulr",		""				},
-	{ "limit_br3_prio",		"2"				},
+/* bwlimit */
+	{ "bwl_enable",			"0"				},
+	{ "bwl_rules",			""				},
+	{ "bwl_br0_enable",		"0"				},
+	{ "bwl_br0_dlc",		""				},
+	{ "bwl_br0_ulc",		""				},
+	{ "bwl_br0_dlr",		""				},
+	{ "bwl_br0_ulr",		""				},
+	{ "bwl_br0_tcp",		"0"				},	/* unlimited */
+	{ "bwl_br0_udp",		"0"				},	/* unlimited */
+	{ "bwl_br0_prio",		"3"				},
+	{ "bwl_br1_enable",		"0"				},
+	{ "bwl_br1_dlc",		""				},
+	{ "bwl_br1_ulc",		""				},
+	{ "bwl_br1_dlr",		""				},
+	{ "bwl_br1_ulr",		""				},
+	{ "bwl_br1_prio",		"2"				},
+	{ "bwl_br2_enable",		"0"				},
+	{ "bwl_br2_dlc",		""				},
+	{ "bwl_br2_ulc",		""				},
+	{ "bwl_br2_dlr",		""				},
+	{ "bwl_br2_ulr",		""				},
+	{ "bwl_br2_prio",		"2"				},
+	{ "bwl_br3_enable",		"0"				},
+	{ "bwl_br3_dlc",		""				},
+	{ "bwl_br3_ulc",		""				},
+	{ "bwl_br3_dlr",		""				},
+	{ "bwl_br3_ulr",		""				},
+	{ "bwl_br3_prio",		"2"				},
 
 
 /* NoCatSplash. !!Victek */

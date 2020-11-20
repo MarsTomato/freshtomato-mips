@@ -1,0 +1,383 @@
+--- ipset/ipset.c
++++ ipset/ipset.c
+@@ -151,6 +151,7 @@ static char commands_v_options[NUMBER_OF
+ /* Main parser function */
+ int parse_commandline(int argc, char *argv[]);
+ 
++#ifdef NO_OPTSIZE
+ static void exit_tryhelp(int status)
+ {
+ 	fprintf(stderr,
+@@ -181,6 +182,10 @@ void exit_error(int status, const char *
+ 
+ 	exit(status);
+ }
++#else
++#define exit_tryhelp(a) exit(a)
++#define exit_error(a, b, ...) exit(a)
++#endif /* NO_OPTSIZE */
+ 
+ static void ipset_printf(const char *msg, ...)
+ {
+@@ -1653,6 +1658,7 @@ static void list_sets(const char name[IP
+ /* Prints help
+  * If settype is non null help for that type is printed as well
+  */
++#ifdef NO_OPTSIZE
+ static void set_help(const struct settype *settype)
+ {
+ 	printf("%s v%s\n\n"
+@@ -1712,6 +1718,9 @@ static void set_help(const struct settyp
+ 		settype->usage();
+ 	}
+ }
++#else
++#define set_help(a)
++#endif /* NO_OPTSIZE */
+ 
+ static int find_cmd(int option)
+ {
+--- ipset/ipset.h
++++ ipset/ipset.h
+@@ -160,7 +160,11 @@ extern void settype_register(struct sett
+ 
+ /* extern void unregister_settype(set_type_t *set_type); */
+ 
++#ifdef NO_OPTSIZE
+ extern void exit_error(int status, const char *msg, ...);
++#else
++#define exit_error(a, b, ...) exit(a)
++#endif
+ 
+ extern char *binding_ip_tostring(struct set *set,
+ 				 ip_set_ip_t ip, unsigned options);
+--- ipset/ipset_iphash.c
++++ ipset/ipset_iphash.c
+@@ -234,6 +234,7 @@ iphash_saveips(struct set *set UNUSED, v
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ iphash_usage(void)
+ {
+@@ -244,6 +245,9 @@ iphash_usage(void)
+ 	     "-D set IP\n"
+ 	     "-T set IP\n");
+ }
++#else
++#define iphash_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_iphash = {
+ 	.typename = SETTYPE_NAME,
+@@ -269,7 +273,9 @@ static struct settype settype_iphash = {
+ 	.saveheader = iphash_saveheader,
+ 	.saveips = iphash_saveips,
+ 	
++#ifdef NO_OPTSIZE
+ 	.usage = iphash_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(iphash)
+--- ipset/ipset_ipmap.c
++++ ipset/ipset_ipmap.c
+@@ -331,6 +331,7 @@ ipmap_saveips(struct set *set, void *dat
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ ipmap_usage(void)
+ {
+@@ -341,6 +342,9 @@ ipmap_usage(void)
+ 	     "-D set IP\n"
+ 	     "-T set IP\n");
+ }
++#else
++#define ipmap_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_ipmap = {
+ 	.typename = SETTYPE_NAME,
+@@ -366,7 +370,9 @@ static struct settype settype_ipmap = {
+ 	.saveheader = ipmap_saveheader,
+ 	.saveips = ipmap_saveips,
+ 	
++#ifdef NO_OPTSIZE
+ 	.usage = ipmap_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(ipmap)
+--- ipset/ipset_ipporthash.c
++++ ipset/ipset_ipporthash.c
+@@ -303,6 +303,7 @@ ipporthash_saveips(struct set *set, void
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ ipporthash_usage(void)
+ {
+@@ -315,6 +316,9 @@ ipporthash_usage(void)
+ 	     "-D set IP,port\n"
+ 	     "-T set IP,port\n");
+ }
++#else
++#define ipporthash_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_ipporthash = {
+ 	.typename = SETTYPE_NAME,
+@@ -340,7 +344,9 @@ static struct settype settype_ipporthash
+ 	.saveheader = ipporthash_saveheader,
+ 	.saveips = ipporthash_saveips,
+ 	
++#ifdef NO_OPTSIZE
+ 	.usage = ipporthash_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(ipporthash)
+--- ipset/ipset_ipportiphash.c
++++ ipset/ipset_ipportiphash.c
+@@ -314,6 +314,7 @@ ipportiphash_saveips(struct set *set, vo
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ ipportiphash_usage(void)
+ {
+@@ -326,6 +327,9 @@ ipportiphash_usage(void)
+ 	     "-D set IP,port,IP\n"
+ 	     "-T set IP,port,IP\n");
+ }
++#else
++#define ipportiphash_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_ipportiphash = {
+ 	.typename = SETTYPE_NAME,
+@@ -351,7 +355,9 @@ static struct settype settype_ipportipha
+ 	.saveheader = ipportiphash_saveheader,
+ 	.saveips = ipportiphash_saveips,
+ 	
++#ifdef NO_OPTSIZE
+ 	.usage = ipportiphash_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(ipportiphash)
+--- ipset/ipset_ipportnethash.c
++++ ipset/ipset_ipportnethash.c
+@@ -379,6 +379,7 @@ ipportnethash_saveips(struct set *set, v
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ ipportnethash_usage(void)
+ {
+@@ -391,6 +392,9 @@ ipportnethash_usage(void)
+ 	     "-D set IP,port,IP/net\n"
+ 	     "-T set IP,port,IP[/net]\n");
+ }
++#else
++#define ipportnethash()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_ipportnethash = {
+ 	.typename = SETTYPE_NAME,
+@@ -416,7 +420,9 @@ static struct settype settype_ipportneth
+ 	.saveheader = ipportnethash_saveheader,
+ 	.saveips = ipportnethash_saveips,
+ 	
++#ifdef NO_OPTSIZE
+ 	.usage = ipportnethash_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(ipportnethash)
+--- ipset/ipset_iptree.c
++++ ipset/ipset_iptree.c
+@@ -180,6 +180,7 @@ iptree_saveips(struct set *set, void *da
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ iptree_usage(void)
+ {
+@@ -189,6 +190,9 @@ iptree_usage(void)
+ 	     "-D set IP\n"
+ 	     "-T set IP\n");
+ }
++#else
++#define iptree_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_iptree = {
+ 	.typename = SETTYPE_NAME,
+@@ -214,7 +218,9 @@ static struct settype settype_iptree = {
+ 	.saveheader = iptree_saveheader,
+ 	.saveips = iptree_saveips,
+ 	
++#ifdef NO_OPTSIZE
+ 	.usage = iptree_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(iptree)
+--- ipset/ipset_iptreemap.c
++++ ipset/ipset_iptreemap.c
+@@ -167,6 +167,7 @@ iptreemap_saveips(struct set *set UNUSED
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ iptreemap_usage(void)
+ {
+@@ -177,6 +178,9 @@ iptreemap_usage(void)
+ 		"-T set IP\n"
+ 	);
+ }
++#else
++#define iptreemap_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_iptreemap = {
+ 	.typename = SETTYPE_NAME,
+@@ -199,7 +203,9 @@ static struct settype settype_iptreemap
+ 	.saveheader = iptreemap_saveheader,
+ 	.saveips = iptreemap_saveips,
+ 
++#ifdef NO_OPTSIZE
+ 	.usage = iptreemap_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(iptreemap)
+--- ipset/ipset_macipmap.c
++++ ipset/ipset_macipmap.c
+@@ -337,6 +337,7 @@ macipmap_saveips(struct set *set, void *
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ macipmap_usage(void)
+ {
+@@ -347,6 +348,9 @@ macipmap_usage(void)
+ 	     "-D set IP[,MAC]\n"
+ 	     "-T set IP[,MAC]\n");
+ }
++#else
++#define macipmap_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_macipmap = {
+ 	.typename = SETTYPE_NAME,
+@@ -372,7 +376,9 @@ static struct settype settype_macipmap =
+ 	.saveheader = macipmap_saveheader,
+ 	.saveips = macipmap_saveips,
+ 
++#ifdef NO_OPTSIZE
+ 	.usage = macipmap_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(macipmap)
+--- ipset/ipset_nethash.c
++++ ipset/ipset_nethash.c
+@@ -263,6 +263,7 @@ nethash_saveips(struct set *set UNUSED,
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ nethash_usage(void)
+ {
+@@ -273,6 +274,9 @@ nethash_usage(void)
+ 	     "-D set IP/cidr\n"
+ 	     "-T set IP/cidr\n");
+ }
++#else
++#define nethash_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_nethash = {
+ 	.typename = SETTYPE_NAME,
+@@ -298,7 +302,9 @@ static struct settype settype_nethash =
+ 	.saveheader = nethash_saveheader,
+ 	.saveips = nethash_saveips,
+ 	
++#ifdef NO_OPTSIZE
+ 	.usage = nethash_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(nethash)
+--- ipset/ipset_portmap.c
++++ ipset/ipset_portmap.c
+@@ -228,6 +228,7 @@ portmap_saveips(struct set *set, void *d
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ portmap_usage(void)
+ {
+@@ -237,6 +238,9 @@ portmap_usage(void)
+ 	     "-D set PORT\n"
+ 	     "-T set PORT\n");
+ }
++#else
++#define portmap_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_portmap = {
+ 	.typename = SETTYPE_NAME,
+@@ -262,7 +266,9 @@ static struct settype settype_portmap =
+ 	.saveheader = portmap_saveheader,
+ 	.saveips = portmap_saveips,
+ 	
++#ifdef NO_OPTSIZE
+ 	.usage = portmap_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(portmap)
+--- ipset/ipset_setlist.c
++++ ipset/ipset_setlist.c
+@@ -185,6 +185,7 @@ setlist_saveips(struct set *set, void *d
+ 	}
+ }
+ 
++#ifdef NO_OPTSIZE
+ static void
+ setlist_usage(void)
+ {
+@@ -194,6 +195,9 @@ setlist_usage(void)
+ 	     "-D set setname\n"
+ 	     "-T set setname\n");
+ }
++#else
++#define setlist_usage()
++#endif /* NO_OPTSIZE */
+ 
+ static struct settype settype_setlist = {
+ 	.typename = SETTYPE_NAME,
+@@ -219,7 +223,9 @@ static struct settype settype_setlist =
+ 	.saveheader = setlist_saveheader,
+ 	.saveips = setlist_saveips,
+ 	
++#ifdef NO_OPTSIZE
+ 	.usage = setlist_usage,
++#endif
+ };
+ 
+ CONSTRUCTOR(setlist)

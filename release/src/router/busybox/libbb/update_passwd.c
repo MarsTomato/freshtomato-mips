@@ -30,7 +30,18 @@ static void check_selinux_update_passwd(const char *username)
 	if (!seuser)
 		bb_error_msg_and_die("invalid context '%s'", context);
 	if (strcmp(seuser, username) != 0) {
-		if (checkPasswdAccess(PASSWD__PASSWD) != 0)
+		security_class_t tclass;
+		access_vector_t av;
+
+		tclass = string_to_security_class("passwd");
+		if (tclass == 0)
+			goto die;
+		av = string_to_av_perm(tclass, "passwd");
+		if (av == 0)
+			goto die;
+
+		if (selinux_check_passwd_access(av) != 0)
+ die:
 			bb_error_msg_and_die("SELinux: access denied");
 	}
 	if (ENABLE_FEATURE_CLEAN_UP)
@@ -169,6 +180,7 @@ int FAST_FUNC update_passwd(const char *filename,
 		if (!line) /* EOF/error */
 			break;
 
+#if ENABLE_FEATURE_ADDUSER_TO_GROUP || ENABLE_FEATURE_DEL_USER_FROM_GROUP
 		if (!name && member) {
 			/* Delete member from all groups */
 			/* line is "GROUP:PASSWD:[member1[,member2]...]" */
@@ -198,6 +210,7 @@ int FAST_FUNC update_passwd(const char *filename,
 			fprintf(new_fp, "%s\n", line);
 			goto next;
 		}
+#endif
 
 		cp = is_prefixed_with(line, name_colon);
 		if (!cp) {
@@ -257,10 +270,16 @@ int FAST_FUNC update_passwd(const char *filename,
 			if (shadow && *cp == ':') {
 				/* /etc/shadow's field 3 (passwd change date) needs updating */
 				/* move past old change date */
+				unsigned time_days = (unsigned long)(time(NULL)) / (24*60*60);
+
+				if (time_days == 0) {
+					/* 0 as change date has special meaning, avoid it */
+					time_days = 1;
+				}
 				cp = strchrnul(cp + 1, ':');
 				/* "name:" + "new_passwd" + ":" + "change date" + ":rest of line" */
 				fprintf(new_fp, "%s%s:%u%s\n", name_colon, new_passwd,
-					(unsigned)(time(NULL)) / (24*60*60), cp);
+					time_days, cp);
 			} else {
 				/* "name:" + "new_passwd" + ":rest of line" */
 				fprintf(new_fp, "%s%s%s\n", name_colon, new_passwd, cp);

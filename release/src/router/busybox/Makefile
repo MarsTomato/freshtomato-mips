@@ -1,5 +1,5 @@
 VERSION = 1
-PATCHLEVEL = 25
+PATCHLEVEL = 31
 SUBLEVEL = 1
 EXTRAVERSION =
 NAME = Unnamed
@@ -178,7 +178,7 @@ endif
 # SUBARCH is subsequently ignored.
 
 ifneq ($(CROSS_COMPILE),)
-SUBARCH := $(shell echo $(CROSS_COMPILE) | cut -d- -f1)
+SUBARCH := $(shell echo $(CROSS_COMPILE) | cut -d- -f1 | sed 's:^.*/::g')
 else
 SUBARCH := $(shell uname -m)
 endif
@@ -361,14 +361,14 @@ scripts/basic/%: scripts_basic ;
 
 # This target generates Kbuild's and Config.in's from *.c files
 PHONY += gen_build_files
-gen_build_files: $(wildcard $(srctree)/*/*.c) $(wildcard $(srctree)/*/*/*.c)
+gen_build_files: $(wildcard $(srctree)/*/*.c) $(wildcard $(srctree)/*/*/*.c) $(wildcard $(srctree)/embed/*)
 	$(Q)$(srctree)/scripts/gen_build_files.sh $(srctree) $(objtree)
 
 # bbox: we have helpers in applets/
 # we depend on scripts_basic, since scripts/basic/fixdep
 # must be built before any other host prog
 PHONY += applets_dir
-applets_dir: scripts_basic gen_build_files
+applets_dir: scripts_basic gen_build_files include/config/MARKER
 	$(Q)$(MAKE) $(build)=applets
 
 applets/%: applets_dir ;
@@ -470,6 +470,7 @@ libs-y		:= \
 		coreutils/ \
 		coreutils/libcoreutils/ \
 		debianutils/ \
+		klibc-utils/ \
 		e2fsprogs/ \
 		editors/ \
 		findutils/ \
@@ -508,6 +509,8 @@ ifeq ($(dot-config),1)
 # To avoid any implicit rule to kick in, define an empty command
 .config .kconfig.d: ;
 
+-include $(srctree)/arch/$(ARCH)/Makefile
+
 # Now we can define CFLAGS etc according to .config
 include $(srctree)/Makefile.flags
 
@@ -530,8 +533,6 @@ endif
 # This allow a user to issue only 'make' to build a kernel including modules
 # Defaults busybox but it is usually overridden in the arch makefile
 all: busybox doc
-
--include $(srctree)/arch/$(ARCH)/Makefile
 
 # arch Makefile may override CC so keep this after arch Makefile is included
 #bbox# NOSTDINC_FLAGS += -nostdinc -isystem $(shell $(CC) -print-file-name=include)
@@ -849,11 +850,14 @@ quiet_cmd_gen_common_bufsiz = GEN     include/common_bufsiz.h
       cmd_gen_common_bufsiz = $(srctree)/scripts/generate_BUFSIZ.sh include/common_bufsiz.h
 quiet_cmd_split_autoconf   = SPLIT   include/autoconf.h -> include/config/*
       cmd_split_autoconf   = scripts/basic/split-include include/autoconf.h include/config
+quiet_cmd_gen_embedded_scripts = GEN     include/embedded_scripts.h
+      cmd_gen_embedded_scripts = $(srctree)/scripts/embedded_scripts include/embedded_scripts.h $(srctree)/embed $(srctree)/applets_sh
 #bbox# piggybacked generation of few .h files
-include/config/MARKER: scripts/basic/split-include include/autoconf.h
+include/config/MARKER: scripts/basic/split-include include/autoconf.h $(wildcard $(srctree)/embed/*) $(wildcard $(srctree)/applets_sh/*) $(srctree)/scripts/embedded_scripts
 	$(call cmd,split_autoconf)
 	$(call cmd,gen_bbconfigopts)
 	$(call cmd,gen_common_bufsiz)
+	$(call cmd,gen_embedded_scripts)
 	@touch $@
 
 # Generate some files
@@ -973,6 +977,7 @@ MRPROPER_FILES += .config .config.old include/asm .version .old_version \
 		  include/autoconf.h \
 		  include/bbconfigopts.h \
 		  include/bbconfigopts_bz2.h \
+		  include/embedded_scripts.h \
 		  include/usage_compressed.h \
 		  include/applet_tables.h \
 		  include/applets.h \

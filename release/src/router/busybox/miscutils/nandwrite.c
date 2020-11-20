@@ -7,20 +7,19 @@
  *
  * TODO: add support for large (>4GB) MTD devices
  */
-
 //config:config NANDWRITE
-//config:	bool "nandwrite"
+//config:	bool "nandwrite (4.8 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Write to the specified MTD device, with bad blocks awareness
+//config:	Write to the specified MTD device, with bad blocks awareness
 //config:
 //config:config NANDDUMP
-//config:	bool "nanddump"
+//config:	bool "nanddump (5.2 kb)"
 //config:	default y
 //config:	select PLATFORM_LINUX
 //config:	help
-//config:	  Dump the content of raw NAND chip
+//config:	Dump the content of raw NAND chip
 
 //applet:IF_NANDWRITE(APPLET(nandwrite, BB_DIR_USR_SBIN, BB_SUID_DROP))
 //applet:IF_NANDDUMP(APPLET_ODDNAME(nanddump, nandwrite, BB_DIR_USR_SBIN, BB_SUID_DROP, nanddump))
@@ -37,7 +36,7 @@
 //usage:     "\n	-s ADDR	Start address"
 
 //usage:#define nanddump_trivial_usage
-//usage:	"[-no]" IF_LONG_OPTS(" [--bb=padbad|skipbad]") " [-s ADDR] [-l LEN] [-f FILE] MTD_DEVICE"
+//usage:	"[-no]" IF_LONG_OPTS(" [--bb padbad|skipbad]") " [-s ADDR] [-l LEN] [-f FILE] MTD_DEVICE"
 //usage:#define nanddump_full_usage "\n\n"
 //usage:	"Dump MTD_DEVICE\n"
 //usage:     "\n	-n	Read without ecc"
@@ -46,13 +45,22 @@
 //usage:     "\n	-l LEN	Length"
 //usage:     "\n	-f FILE	Dump to file ('-' for stdout)"
 //usage:     IF_LONG_OPTS(
-//usage:     "\n	--bb=METHOD:"
+//usage:     "\n	--bb METHOD"
 //usage:     "\n		skipbad: skip bad blocks"
 //usage:     "\n		padbad: substitute bad blocks by 0xff (default)"
 //usage:     )
 
 #include "libbb.h"
 #include <mtd/mtd-user.h>
+
+/* Old headers call it MTD_MODE_RAW.
+ * FIXME: In kernel headers, MTD_FILE_MODE_RAW is not a define,
+ * it's an enum. How I can test for existence of an enum?
+ */
+#if !defined(MTD_FILE_MODE_RAW)
+# define MTD_FILE_MODE_RAW 3
+#endif
+
 
 #define IS_NANDDUMP  (ENABLE_NANDDUMP && (!ENABLE_NANDWRITE || (applet_name[4] == 'd')))
 #define IS_NANDWRITE (ENABLE_NANDWRITE && (!ENABLE_NANDDUMP || (applet_name[4] != 'd')))
@@ -123,15 +131,12 @@ int nandwrite_main(int argc UNUSED_PARAM, char **argv)
 	const char *opt_s = "0", *opt_f = "-", *opt_l, *opt_bb;
 
 	if (IS_NANDDUMP) {
-		opt_complementary = "=1";
-#if ENABLE_LONG_OPTS
-		applet_long_options =
-			"bb\0" Required_argument "\xff"; /* no short equivalent */
-#endif
-		opts = getopt32(argv, "ons:f:l:", &opt_s, &opt_f, &opt_l, &opt_bb);
+		opts = getopt32long(argv, "^" "ons:f:l:" "\0" "=1",
+				"bb\0" Required_argument "\xff", /* no short equivalent */
+				&opt_s, &opt_f, &opt_l, &opt_bb
+		);
 	} else { /* nandwrite */
-		opt_complementary = "-1:?2";
-		opts = getopt32(argv, "pns:", &opt_s);
+		opts = getopt32(argv, "^" "pns:" "\0" "-1:?2", &opt_s);
 	}
 	argv += optind;
 

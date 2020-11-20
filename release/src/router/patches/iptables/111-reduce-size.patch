@@ -72,6 +72,70 @@
  
  static struct option opts[] = {
  	{ "connbytes", 1, 0, '1' },
+@@ -113,16 +115,16 @@
+ {
+ 	switch (sinfo->what) {
+ 		case IPT_CONNBYTES_PKTS:
+-			fputs("packets ", stdout);
++			printf("packets ");
+ 			break;
+ 		case IPT_CONNBYTES_BYTES:
+-			fputs("bytes ", stdout);
++			printf("bytes ");
+ 			break;
+ 		case IPT_CONNBYTES_AVGPKT:
+-			fputs("avgpkt ", stdout);
++			printf("avgpkt ");
+ 			break;
+ 		default:
+-			fputs("unknown ", stdout);
++			printf("unknown ");
+ 			break;
+ 	}
+ }
+@@ -131,16 +133,16 @@
+ {
+ 	switch (sinfo->direction) {
+ 		case IPT_CONNBYTES_DIR_ORIGINAL:
+-			fputs("original ", stdout);
++			printf("original ");
+ 			break;
+ 		case IPT_CONNBYTES_DIR_REPLY:
+-			fputs("reply ", stdout);
++			printf("reply ");
+ 			break;
+ 		case IPT_CONNBYTES_DIR_BOTH:
+-			fputs("both ", stdout);
++			printf("both ");
+ 			break;
+ 		default:
+-			fputs("unknown ", stdout);
++			printf("unknown ");
+ 			break;
+ 	}
+ }
+@@ -161,7 +163,7 @@
+ 			sinfo->count.to);
+ 	print_mode(sinfo);
+ 
+-	fputs("direction ", stdout);
++	printf("direction ");
+ 	print_direction(sinfo);
+ }
+ 
+@@ -177,10 +179,10 @@
+ 		printf("--connbytes %llu:%llu ", sinfo->count.from,
+ 			sinfo->count.to);
+ 
+-	fputs("--connbytes-mode ", stdout);
++	printf("--connbytes-mode ");
+ 	print_mode(sinfo);
+ 
+-	fputs("--connbytes-dir ", stdout);
++	printf("--connbytes-dir ");
+ 	print_direction(sinfo);
+ }
+ 
 @@ -190,7 +192,9 @@
  	.version 	= IPTABLES_VERSION,
  	.size 		= IP6T_ALIGN(sizeof(struct ipt_connbytes_info)),
@@ -380,6 +444,62 @@
  
  static struct option opts[] = {
  	{ "hashlimit", 1, 0, '%' },
+@@ -279,25 +281,25 @@
+ 	if (r->cfg.mode & XT_HASHLIMIT_HASH_SIP) {
+ 		if (prevmode)
+ 			putchar(separator);
+-		fputs("srcip", stdout);
++		printf("srcip");
+ 		prevmode = 1;
+ 	}
+ 	if (r->cfg.mode & XT_HASHLIMIT_HASH_SPT) {
+ 		if (prevmode)
+ 			putchar(separator);
+-		fputs("srcport", stdout);
++		printf("srcport");
+ 		prevmode = 1;
+ 	}
+ 	if (r->cfg.mode & XT_HASHLIMIT_HASH_DIP) {
+ 		if (prevmode)
+ 			putchar(separator);
+-		fputs("dstip", stdout);
++		printf("dstip");
+ 		prevmode = 1;
+ 	}
+ 	if (r->cfg.mode & XT_HASHLIMIT_HASH_DPT) {
+ 		if (prevmode)
+ 			putchar(separator);
+-		fputs("dstport", stdout);
++		printf("dstport");
+ 	}
+ 	putchar(' ');
+ }
+@@ -310,9 +312,9 @@
+ {
+ 	struct xt_hashlimit_info *r = 
+ 		(struct xt_hashlimit_info *)match->data;
+-	fputs("limit: avg ", stdout); print_rate(r->cfg.avg);
++	printf("limit: avg "); print_rate(r->cfg.avg);
+ 	printf("burst %u ", r->cfg.burst);
+-	fputs("mode ", stdout);
++	printf("mode ");
+ 	print_mode(r, '-');
+ 	if (r->cfg.size)
+ 		printf("htable-size %u ", r->cfg.size);
+@@ -330,11 +332,11 @@
+ 	struct xt_hashlimit_info *r = 
+ 		(struct xt_hashlimit_info *)match->data;
+ 
+-	fputs("--hashlimit ", stdout); print_rate(r->cfg.avg);
++	printf("--hashlimit "); print_rate(r->cfg.avg);
+ 	if (r->cfg.burst != XT_HASHLIMIT_BURST)
+ 		printf("--hashlimit-burst %u ", r->cfg.burst);
+ 
+-	fputs("--hashlimit-mode ", stdout);
++	printf("--hashlimit-mode ");
+ 	print_mode(r, ',');
+ 	
+ 	printf("--hashlimit-name %s ", r->name);
 @@ -354,7 +356,9 @@
  	.version	= IPTABLES_VERSION,
  	.size		= IP6T_ALIGN(sizeof(struct xt_hashlimit_info)),
@@ -1644,6 +1764,15 @@
  
  static struct option opts[] = {
  	{ .name = "level", .has_arg = 1, .flag = 0, .val = '1' },
+@@ -72,7 +74,7 @@
+ 
+ static void print_protocol(int n, int invert, int numeric)
+ {
+-	fputs("childlevel ", stdout);
++	pritnf("childlevel ");
+ 	if (invert) fputc('!', stdout);
+ 	printf("%d ", n);
+ }
 @@ -101,7 +103,9 @@
  	.version	= IPTABLES_VERSION,
  	.size		= IPT_ALIGN(sizeof(struct ipt_childlevel_info)),
@@ -1784,6 +1913,70 @@
  
  static struct option opts[] = {
  	{ "connbytes", 1, 0, '1' },
+@@ -112,16 +114,16 @@
+ {
+ 	switch (sinfo->what) {
+ 		case IPT_CONNBYTES_PKTS:
+-			fputs("packets ", stdout);
++			printf("packets ");
+ 			break;
+ 		case IPT_CONNBYTES_BYTES:
+-			fputs("bytes ", stdout);
++			printf("bytes ");
+ 			break;
+ 		case IPT_CONNBYTES_AVGPKT:
+-			fputs("avgpkt ", stdout);
++			printf("avgpkt ");
+ 			break;
+ 		default:
+-			fputs("unknown ", stdout);
++			printf("unknown ");
+ 			break;
+ 	}
+ }
+@@ -130,16 +132,16 @@
+ {
+ 	switch (sinfo->direction) {
+ 		case IPT_CONNBYTES_DIR_ORIGINAL:
+-			fputs("original ", stdout);
++			printf("original ");
+ 			break;
+ 		case IPT_CONNBYTES_DIR_REPLY:
+-			fputs("reply ", stdout);
++			printf("reply ");
+ 			break;
+ 		case IPT_CONNBYTES_DIR_BOTH:
+-			fputs("both ", stdout);
++			printf("both ");
+ 			break;
+ 		default:
+-			fputs("unknown ", stdout);
++			printf("unknown ");
+ 			break;
+ 	}
+ }
+@@ -160,7 +162,7 @@
+ 			sinfo->count.to);
+ 	print_mode(sinfo);
+ 
+-	fputs("direction ", stdout);
++	printf("direction ");
+ 	print_direction(sinfo);
+ }
+ 
+@@ -176,10 +178,10 @@
+ 		printf("--connbytes %llu:%llu ", sinfo->count.from,
+ 			sinfo->count.to);
+ 
+-	fputs("--connbytes-mode ", stdout);
++	printf("--connbytes-mode ");
+ 	print_mode(sinfo);
+ 
+-	fputs("--connbytes-dir ", stdout);
++	printf("--connbytes-dir ");
+ 	print_direction(sinfo);
+ }
+ 
 @@ -189,7 +191,9 @@
  	.version 	= IPTABLES_VERSION,
  	.size 		= IPT_ALIGN(sizeof(struct ipt_connbytes_info)),
@@ -2315,6 +2508,62 @@
  
  static struct option opts[] = {
  	{ "hashlimit", 1, 0, '%' },
+@@ -279,25 +281,25 @@
+ 	if (r->cfg.mode & IPT_HASHLIMIT_HASH_SIP) {
+ 		if (prevmode)
+ 			putchar(separator);
+-		fputs("srcip", stdout);
++		printf("srcip");
+ 		prevmode = 1;
+ 	}
+ 	if (r->cfg.mode & IPT_HASHLIMIT_HASH_SPT) {
+ 		if (prevmode)
+ 			putchar(separator);
+-		fputs("srcport", stdout);
++		printf("srcport");
+ 		prevmode = 1;
+ 	}
+ 	if (r->cfg.mode & IPT_HASHLIMIT_HASH_DIP) {
+ 		if (prevmode)
+ 			putchar(separator);
+-		fputs("dstip", stdout);
++		printf("dstip");
+ 		prevmode = 1;
+ 	}
+ 	if (r->cfg.mode & IPT_HASHLIMIT_HASH_DPT) {
+ 		if (prevmode)
+ 			putchar(separator);
+-		fputs("dstport", stdout);
++		printf("dstport");
+ 	}
+ 	putchar(' ');
+ }
+@@ -310,9 +312,9 @@
+ {
+ 	struct ipt_hashlimit_info *r = 
+ 		(struct ipt_hashlimit_info *)match->data;
+-	fputs("limit: avg ", stdout); print_rate(r->cfg.avg);
++	printf("limit: avg "); print_rate(r->cfg.avg);
+ 	printf("burst %u ", r->cfg.burst);
+-	fputs("mode ", stdout);
++	printf("mode ");
+ 	print_mode(r, '-');
+ 	if (r->cfg.size)
+ 		printf("htable-size %u ", r->cfg.size);
+@@ -330,11 +332,11 @@
+ 	struct ipt_hashlimit_info *r = 
+ 		(struct ipt_hashlimit_info *)match->data;
+ 
+-	fputs("--hashlimit ", stdout); print_rate(r->cfg.avg);
++	printf("--hashlimit "); print_rate(r->cfg.avg);
+ 	if (r->cfg.burst != IPT_HASHLIMIT_BURST)
+ 		printf("--hashlimit-burst %u ", r->cfg.burst);
+ 
+-	fputs("--hashlimit-mode ", stdout);
++	printf("--hashlimit-mode ");
+ 	print_mode(r, ',');
+ 	
+ 	printf("--hashlimit-name %s ", r->name);
 @@ -354,7 +356,9 @@
  	.version	= IPTABLES_VERSION,
  	.size		= IPT_ALIGN(sizeof(struct ipt_hashlimit_info)),
@@ -2593,6 +2842,15 @@
  
  static struct option opts[] = {
  	{ .name = "l7proto", .has_arg = 1, .flag = 0, .val = '1' },
+@@ -358,7 +360,7 @@
+ 
+ static void print_protocol(char s[], int invert, int numeric)
+ {
+-	fputs("l7proto ", stdout);
++	printf("l7proto ");
+ 	if (invert) fputc('!', stdout);
+ 	printf("%s ", s);
+ }
 @@ -390,7 +392,9 @@
      .version       = IPTABLES_VERSION,
      .size          = IPT_ALIGN(sizeof(struct ipt_layer7_info)),
@@ -3828,7 +4086,7 @@
      .final_check	= final_check,
 --- iptables/extensions/libipt_TARPIT.c
 +++ iptables/extensions/libipt_TARPIT.c
-@@ -12,6 +12,7 @@
+@@ -12,13 +12,15 @@
  #define xtables_register_target register_target
  #endif
  
@@ -3836,9 +4094,11 @@
  static void
  help(void)
  {
-@@ -19,6 +20,7 @@
+-	fputs(
++	printf(
  "TARPIT takes no options\n"
- "\n", stdout);
+-"\n", stdout);
++"\n");
  }
 +#endif /* NO_OPTSIZE */
  
@@ -3975,7 +4235,7 @@
  static void
  help(void)
  {
-@@ -41,6 +42,7 @@ help(void)
+@@ -41,6 +42,7 @@
  "                            not specified, then default to their smallest\n",
  IPTABLES_VERSION);
  }
@@ -3983,7 +4243,7 @@
  
  static struct option opts[] = {
  	{ "timestart", 1, 0, '1' },
-@@ -183,7 +185,9 @@ parse_days_string(int *days, const char
+@@ -183,7 +185,9 @@
  {
  	int len;
  	int i=0;
@@ -3993,7 +4253,7 @@
  
  	len = strlen(daystring);
  	if (len < 3)
-@@ -534,7 +538,9 @@ struct iptables_match timestruct = {
+@@ -534,7 +538,9 @@
  	.version	= IPTABLES_VERSION,
  	.size		= IPT_ALIGN(sizeof(struct ipt_time_info)),
  	.userspacesize	= offsetof(struct ipt_time_info, kerneltime),
@@ -4503,6 +4763,48 @@
  
  static void
  generic_opt_check(int command, int options)
+@@ -1282,9 +1284,9 @@
+ 		if (!(format & FMT_NOCOUNTS)) {
+ 			fputc(' ', stdout);
+ 			print_num(counters.pcnt, (format|FMT_NOTABLE));
+-			fputs("packets, ", stdout);
++			printf("packets, ");
+ 			print_num(counters.bcnt, (format|FMT_NOTABLE));
+-			fputs("bytes", stdout);
++			printf("bytes");
+ 		}
+ 		printf(")\n");
+ 	} else {
+@@ -1308,9 +1310,9 @@
+ 	}
+ 	if (!(format & FMT_NOTARGET))
+ 		printf(FMT("%-9s ","%s "), "target");
+-	fputs(" prot ", stdout);
++	printf(" prot ");
+ 	if (format & FMT_OPTIONS)
+-		fputs("opt", stdout);
++		printf("opt");
+ 	if (format & FMT_VIA) {
+ 		printf(FMT(" %-6s ","%s "), "in");
+ 		printf(FMT("%-6s ","%s "), "out");
+@@ -1384,7 +1386,7 @@
+ 
+ 	if (format & FMT_OPTIONS) {
+ 		if (format & FMT_NOTABLE)
+-			fputs("opt ", stdout);
++			printf("opt ");
+ 		fputc(' ', stdout); /* Invert flag of FRAG */
+ 		fputc(' ', stdout); /* -f */
+ 		fputc(' ', stdout);
+@@ -1447,7 +1449,7 @@
+ 	}
+ 
+ 	if (format & FMT_NOTABLE)
+-		fputs("  ", stdout);
++		printf("  ");
+ 
+ #ifdef IP6T_F_GOTO
+ 	if(fw->ipv6.flags & IP6T_F_GOTO)
 --- iptables/ip6tables-restore.c
 +++ iptables/ip6tables-restore.c
 @@ -42,7 +42,11 @@
@@ -4517,9 +4819,18 @@
  			"	   [ --binary ]\n"
  			"	   [ --counters ]\n"
  			"	   [ --verbose ]\n"
+@@ -186,7 +190,7 @@
+ 			continue;
+ 		else if (buffer[0] == '#') {
+ 			if (verbose)
+-				fputs(buffer, stdout);
++				printf(buffer);
+ 			continue;
+ 		} else if ((strcmp(buffer, "COMMIT\n") == 0) && (in_table)) {
+ 			if (!testing) {
 --- iptables/iptables.c
 +++ iptables/iptables.c
-@@ -376,6 +376,7 @@ static void free_opts(int reset_offset)
+@@ -376,6 +376,7 @@
  	}
  }
  
@@ -4527,7 +4838,7 @@
  void
  exit_error(enum exittype status, char *msg, ...)
  {
-@@ -492,6 +493,7 @@ exit_printhelp(struct iptables_rule_matc
+@@ -492,6 +493,7 @@
  	}
  	exit(0);
  }
@@ -4535,7 +4846,7 @@
  
  static void
  generic_opt_check(int command, int options)
-@@ -529,6 +531,7 @@ generic_opt_check(int command, int optio
+@@ -529,6 +531,7 @@
  	}
  }
  
@@ -4543,7 +4854,7 @@
  static char
  opt2char(int option)
  {
-@@ -546,6 +549,7 @@ cmd2char(int option)
+@@ -546,6 +549,7 @@
  
  	return *ptr;
  }
@@ -4551,6 +4862,48 @@
  
  static void
  add_command(unsigned int *cmd, const int newcmd, const int othercmds, 
+@@ -1351,9 +1355,9 @@
+ 		if (!(format & FMT_NOCOUNTS)) {
+ 			fputc(' ', stdout);
+ 			print_num(counters.pcnt, (format|FMT_NOTABLE));
+-			fputs("packets, ", stdout);
++			printf("packets, ");
+ 			print_num(counters.bcnt, (format|FMT_NOTABLE));
+-			fputs("bytes", stdout);
++			printf("bytes");
+ 		}
+ 		printf(")\n");
+ 	} else {
+@@ -1377,9 +1381,9 @@
+ 	}
+ 	if (!(format & FMT_NOTARGET))
+ 		printf(FMT("%-9s ","%s "), "target");
+-	fputs(" prot ", stdout);
++	printf(" prot ");
+ 	if (format & FMT_OPTIONS)
+-		fputs("opt", stdout);
++		printf("opt");
+ 	if (format & FMT_VIA) {
+ 		printf(FMT(" %-6s ","%s "), "in");
+ 		printf(FMT("%-6s ","%s "), "out");
+@@ -1453,7 +1457,7 @@
+ 
+ 	if (format & FMT_OPTIONS) {
+ 		if (format & FMT_NOTABLE)
+-			fputs("opt ", stdout);
++			printf("opt ");
+ 		fputc(fw->ip.invflags & IPT_INV_FRAG ? '!' : '-', stdout);
+ 		fputc(flags & IPT_F_FRAG ? 'f' : '-', stdout);
+ 		fputc(' ', stdout);
+@@ -1514,7 +1518,7 @@
+ 	}
+ 
+ 	if (format & FMT_NOTABLE)
+-		fputs("  ", stdout);
++		printf("  ");
+ 
+ #ifdef IPT_F_GOTO
+ 	if(fw->ip.flags & IPT_F_GOTO)
 --- iptables/iptables-restore.c
 +++ iptables/iptables-restore.c
 @@ -39,7 +39,11 @@
@@ -4565,3 +4918,23 @@
  			"	   [ --binary ]\n"
  			"	   [ --counters ]\n"
  			"	   [ --verbose ]\n"
+@@ -185,7 +189,7 @@
+ 			continue;
+ 		else if (buffer[0] == '#') {
+ 			if (verbose)
+-				fputs(buffer, stdout);
++				printf(buffer);
+ 			continue;
+ 		} else if ((strcmp(buffer, "COMMIT\n") == 0) && (in_table)) {
+ 			if (!testing) {
+--- iptables/libipq/libipq.c
++++ iptables/libipq/libipq.c
+@@ -369,7 +369,7 @@
+ 	if (s)
+ 		fputs(s, stderr);
+ 	else
+-		fputs("ERROR", stderr);
++		fprintf(stdout, "ERROR");
+ 	if (ipq_errno)
+ 		fprintf(stderr, ": %s", ipq_errstr());
+ 	if (errno)

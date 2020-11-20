@@ -300,7 +300,10 @@ endif
 # Only include the https option if it is compiled in
 ifneq ($(TCONFIG_HTTPS),y)
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/HTTPS-BEGIN/,/HTTPS-END/d"
+# depends on USB and NAS pages - only if USB Support is configured in
+ifeq ($(TCONFIG_USB),y)
 	sed -i $(INSTALLDIR)/www/nas-ftp.asp -e "/HTTPS-BEGIN/,/HTTPS-END/d"
+endif
 endif
 
 # Only include the TLS keys generator option if it is compiled in

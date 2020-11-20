@@ -43,6 +43,33 @@
 // #define DEBUG_IPTFILE
 // #define DEBUG_RCTEST
 // #define DEBUG_NOISY
+#ifdef TCONFIG_BCMARM
+#define DISABLE_SYSLOG_OSM	0
+#define DISABLE_SYSLOG_OS	0
+#else
+#define DISABLE_SYSLOG_OSM	IF_TCONFIG_OPTIMIZE_SIZE_MORE(1) IF_NOT_TCONFIG_OPTIMIZE_SIZE_MORE(0)
+#define DISABLE_SYSLOG_OS	(DISABLE_SYSLOG_OSM | (IF_TCONFIG_OPTIMIZE_SIZE(1) IF_NOT_TCONFIG_OPTIMIZE_SIZE(0)))
+#endif
+
+#ifndef DEBUG_SYSLOG
+#define IF_NOT_DEBUG_SYSLOG(...) __VA_ARGS__
+#define IF_DEBUG_SYSLOG(...)
+#else
+#define IF_NOT_DEBUG_SYSLOG(...)
+#define IF_DEBUG_SYSLOG(...) __VA_ARGS__
+#endif
+
+#define logmsg(level, args...) \
+	do { \
+		IF_NOT_DEBUG_SYSLOG( \
+			if ((LOGMSG_DISABLE == 0) && (level < LOG_DEBUG)) \
+				syslog(level, args); \
+		) \
+		IF_DEBUG_SYSLOG( \
+			if ((LOGMSG_DISABLE == 0) && ((nvram_get_int(LOGMSG_NVDEBUG)) || (level < LOG_DEBUG))) \
+				syslog(level, args); \
+		) \
+	} while (0)
 
 #define MOUNT_ROOT	"/tmp/mnt"
 #define PROC_SCSI_ROOT	"/proc/scsi"
@@ -343,6 +370,7 @@ extern void create_test_iptfile(void);
 #endif
 extern void allow_fastnat(const char *service, int allow);
 extern void try_enabling_fastnat(void);
+extern void log_segfault(void);
 
 /* forward.c */
 extern void ipt_forward(ipt_table_t table);
@@ -440,7 +468,7 @@ extern int mtd_unlock_erase_main(int argc, char *argv[]);
 /* buttons.c */
 extern int buttons_main(int argc, char *argv[]);
 
-#if defined(TCONFIG_BCMARM) || defined(CONFIG_BLINK)
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_BLINK)
 /* blink.c */
 extern int blink_main(int argc, char *argv[]);
 
@@ -547,10 +575,10 @@ extern void stop_tinc();
 extern void run_tinc_firewall_script();
 #endif
 
-/* new_qoslimit.c */
-extern void ipt_qoslimit(int chain);
-extern void new_qoslimit_start(void);
-extern void new_qoslimit_stop(void);
+/* bwlimit.c */
+extern void ipt_bwlimit(int chain);
+extern void bwlimit_start(void);
+extern void bwlimit_stop(void);
 
 /* arpbind.c */
 extern void start_arpbind(void);

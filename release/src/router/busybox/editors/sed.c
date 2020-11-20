@@ -12,7 +12,6 @@
  *
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
-
 /* Code overview.
  *
  * Files are laid out to avoid unnecessary function declarations.  So for
@@ -29,7 +28,6 @@
  *
  * sed_main() is where external code calls into this, with a command line.
  */
-
 /* Supported features and commands in this version of sed:
  *
  * - comments ('#')
@@ -55,21 +53,20 @@
  * http://pubs.opengroup.org/onlinepubs/9699919799/utilities/sed.html
  * http://sed.sourceforge.net/sedfaq3.html
  */
-
 //config:config SED
-//config:	bool "sed"
+//config:	bool "sed (12 kb)"
 //config:	default y
 //config:	help
-//config:	  sed is used to perform text transformations on a file
-//config:	  or input from a pipeline.
-
-//kbuild:lib-$(CONFIG_SED) += sed.o
+//config:	sed is used to perform text transformations on a file
+//config:	or input from a pipeline.
 
 //applet:IF_SED(APPLET(sed, BB_DIR_BIN, BB_SUID_DROP))
 
+//kbuild:lib-$(CONFIG_SED) += sed.o
+
 //usage:#define sed_trivial_usage
-//usage:       "[-inrE] [-f FILE]... [-e CMD]... [FILE]...\n"
-//usage:       "or: sed [-inrE] CMD [FILE]..."
+//usage:       "[-i[SFX]] [-nrE] [-f FILE]... [-e CMD]... [FILE]...\n"
+//usage:       "or: sed [-i[SFX]] [-nrE] CMD [FILE]..."
 //usage:#define sed_full_usage "\n\n"
 //usage:       "	-e CMD	Add CMD to sed commands to be executed"
 //usage:     "\n	-f FILE	Add FILE contents to sed commands to be executed"
@@ -183,18 +180,23 @@ static void sed_free_and_close_stuff(void)
 		if (sed_cmd->sw_file)
 			fclose(sed_cmd->sw_file);
 
-		if (sed_cmd->beg_match) {
-			regfree(sed_cmd->beg_match);
-			free(sed_cmd->beg_match);
-		}
-		if (sed_cmd->end_match) {
-			regfree(sed_cmd->end_match);
-			free(sed_cmd->end_match);
-		}
-		if (sed_cmd->sub_match) {
-			regfree(sed_cmd->sub_match);
-			free(sed_cmd->sub_match);
-		}
+		/* Used to free regexps, but now there is code
+		 * in get_address() which can reuse a regexp
+		 * for constructs as /regexp/cmd1;//cmd2
+		 * leading to double-frees here:
+		 */
+		//if (sed_cmd->beg_match) {
+		//	regfree(sed_cmd->beg_match);
+		//	free(sed_cmd->beg_match);
+		//}
+		//if (sed_cmd->end_match) {
+		//	regfree(sed_cmd->end_match);
+		//	free(sed_cmd->end_match);
+		//}
+		//if (sed_cmd->sub_match) {
+		//	regfree(sed_cmd->sub_match);
+		//	free(sed_cmd->sub_match);
+		//}
 		free(sed_cmd->string);
 		free(sed_cmd);
 		sed_cmd = sed_cmd_next;
@@ -337,7 +339,7 @@ static int get_address(const char *my_str, int *linenum, regex_t ** regex)
 
 	if (isdigit(*my_str)) {
 		*linenum = strtol(my_str, (char**)&pos, 10);
-		/* endstr shouldnt ever equal NULL */
+		/* endstr shouldn't ever equal NULL */
 	} else if (*my_str == '$') {
 		*linenum = -1;
 		pos++;
@@ -350,10 +352,16 @@ static int get_address(const char *my_str, int *linenum, regex_t ** regex)
 		if (*my_str == '\\')
 			delimiter = *++pos;
 		next = index_of_next_unescaped_regexp_delim(delimiter, ++pos);
-		temp = copy_parsing_escapes(pos, next);
-		*regex = xzalloc(sizeof(regex_t));
-		xregcomp(*regex, temp, G.regex_type);
-		free(temp);
+		if (next != 0) {
+			temp = copy_parsing_escapes(pos, next);
+			G.previous_regex_ptr = *regex = xzalloc(sizeof(regex_t));
+			xregcomp(*regex, temp, G.regex_type);
+			free(temp);
+		} else {
+			*regex = G.previous_regex_ptr;
+			if (!G.previous_regex_ptr)
+				bb_error_msg_and_die("no previous regexp");
+		}
 		/* Move position to next character after last delimiter */
 		pos += (next+1);
 	}
@@ -363,25 +371,25 @@ static int get_address(const char *my_str, int *linenum, regex_t ** regex)
 /* Grab a filename.  Whitespace at start is skipped, then goes to EOL. */
 static int parse_file_cmd(/*sed_cmd_t *sed_cmd,*/ const char *filecmdstr, char **retval)
 {
-	int start = 0, idx, hack = 0;
+	const char *start;
+	const char *eol;
 
 	/* Skip whitespace, then grab filename to end of line */
-	while (isspace(filecmdstr[start]))
-		start++;
-	idx = start;
-	while (filecmdstr[idx] && filecmdstr[idx] != '\n')
-		idx++;
-
-	/* If lines glued together, put backslash back. */
-	if (filecmdstr[idx] == '\n')
-		hack = 1;
-	if (idx == start)
+	start = skip_whitespace(filecmdstr);
+	eol = strchrnul(start, '\n');
+	if (eol == start)
 		bb_error_msg_and_die("empty filename");
-	*retval = xstrndup(filecmdstr+start, idx-start+hack+1);
-	if (hack)
-		(*retval)[idx] = '\\';
 
-	return idx;
+	if (*eol) {
+		/* If lines glued together, put backslash back. */
+		*retval = xstrndup(start, eol-start + 1);
+		(*retval)[eol-start] = '\\';
+	} else {
+		/* eol is NUL */
+		*retval = xstrdup(start);
+	}
+
+	return eol - filecmdstr;
 }
 
 static int parse_subst_cmd(sed_cmd_t *sed_cmd, const char *substr)
@@ -444,7 +452,7 @@ static int parse_subst_cmd(sed_cmd_t *sed_cmd, const char *substr)
 			free(fname);
 			break;
 		}
-		/* Ignore case (gnu exension) */
+		/* Ignore case (gnu extension) */
 		case 'i':
 		case 'I':
 			cflags |= REG_ICASE;
@@ -587,7 +595,7 @@ static const char *parse_cmd_args(sed_cmd_t *sed_cmd, const char *cmdstr)
 		free(match);
 		free(replace);
 	}
-	/* if it wasnt a single-letter command that takes no arguments
+	/* if it wasn't a single-letter command that takes no arguments
 	 * then it must be an invalid command.
 	 */
 	else if (idx >= IDX_nul) { /* not d,D,g,G,h,H,l,n,N,p,P,q,x,=,{,} */
@@ -751,7 +759,7 @@ static void do_subst_w_backrefs(char *line, char *replace)
 				continue;
 			}
 			/* I _think_ it is impossible to get '\' to be
-			 * the last char in replace string. Thus we dont check
+			 * the last char in replace string. Thus we don't check
 			 * for replace[i] == NUL. (counterexample anyone?) */
 			/* if we find a backslash escaped character, print the character */
 			pipe_putc(replace[i]);
@@ -892,7 +900,10 @@ static sed_cmd_t *branch_to(char *label)
 	sed_cmd_t *sed_cmd;
 
 	for (sed_cmd = G.sed_cmd_head; sed_cmd; sed_cmd = sed_cmd->next) {
-		if (sed_cmd->cmd == ':' && sed_cmd->string && !strcmp(sed_cmd->string, label)) {
+		if (sed_cmd->cmd == ':'
+		 && sed_cmd->string
+		 && strcmp(sed_cmd->string, label) == 0
+		) {
 			return sed_cmd;
 		}
 	}
@@ -982,7 +993,7 @@ static void flush_append(char *last_puts_char)
 static char *get_next_line(char *gets_char, char *last_puts_char)
 {
 	char *temp = NULL;
-	int len;
+	size_t len;
 	char gc;
 
 	flush_append(last_puts_char);
@@ -1086,6 +1097,8 @@ static void process_files(void)
 		int old_matched, matched;
 
 		old_matched = sed_cmd->in_match;
+		if (!old_matched)
+			sed_cmd->end_line = sed_cmd->end_line_orig;
 
 		/* Determine if this command matches this line: */
 
@@ -1300,16 +1313,17 @@ static void process_files(void)
 		case 'n':
 			if (!G.be_quiet)
 				sed_puts(pattern_space, last_gets_char);
-			if (next_line) {
-				free(pattern_space);
-				pattern_space = next_line;
-				last_gets_char = next_gets_char;
-				next_line = get_next_line(&next_gets_char, &last_puts_char);
-				substituted = 0;
-				linenum++;
-				break;
+			if (next_line == NULL) {
+				/* If no next line, jump to end of script and exit. */
+				goto discard_line;
 			}
-			/* fall through */
+			free(pattern_space);
+			pattern_space = next_line;
+			last_gets_char = next_gets_char;
+			next_line = get_next_line(&next_gets_char, &last_puts_char);
+			substituted = 0;
+			linenum++;
+			break;
 
 		/* Quit.  End of script, end of input. */
 		case 'q':
@@ -1503,22 +1517,21 @@ int sed_main(int argc UNUSED_PARAM, char **argv)
 	/* do normal option parsing */
 	opt_e = opt_f = NULL;
 	opt_i = NULL;
-	opt_complementary = "e::f::" /* can occur multiple times */
-	                    "nn"; /* count -n */
-
-	IF_LONG_OPTS(applet_long_options = sed_longopts);
-
 	/* -i must be first, to match OPT_in_place definition */
 	/* -E is a synonym of -r:
 	 * GNU sed 4.2.1 mentions it in neither --help
 	 * nor manpage, but does recognize it.
 	 */
-	opt = getopt32(argv, "i::rEne:f:", &opt_i, &opt_e, &opt_f,
-			    &G.be_quiet); /* counter for -n */
+	opt = getopt32long(argv, "^"
+			"i::rEne:*f:*"
+			"\0" "nn"/*count -n*/,
+			sed_longopts,
+			&opt_i, &opt_e, &opt_f,
+			&G.be_quiet); /* counter for -n */
 	//argc -= optind;
 	argv += optind;
 	if (opt & OPT_in_place) { // -i
-		atexit(cleanup_outname);
+		die_func = cleanup_outname;
 	}
 	if (opt & (2|4))
 		G.regex_type |= REG_EXTENDED; // -r or -E

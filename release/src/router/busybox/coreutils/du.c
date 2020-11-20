@@ -8,10 +8,6 @@
  *
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
-
-/* BB_AUDIT SUSv3 compliant (unless default blocksize set to 1k) */
-/* http://www.opengroup.org/onlinepubs/007904975/utilities/du.html */
-
 /* Mar 16, 2003      Manuel Novoa III   (mjn3@codepoet.org)
  *
  * Mostly rewritten for SUSv3 compliance and to fix bugs/defects.
@@ -22,6 +18,24 @@
  * 3) Added error checking of output.
  * 4) Fixed busybox bug #1284 involving long overflow with human_readable.
  */
+//config:config DU
+//config:	bool "du (6.3 kb)"
+//config:	default y
+//config:	help
+//config:	du is used to report the amount of disk space used
+//config:	for specified files.
+//config:
+//config:config FEATURE_DU_DEFAULT_BLOCKSIZE_1K
+//config:	bool "Use default blocksize of 1024 bytes (else it's 512 bytes)"
+//config:	default y
+//config:	depends on DU
+
+//applet:IF_DU(APPLET(du, BB_DIR_USR_BIN, BB_SUID_DROP))
+
+//kbuild:lib-$(CONFIG_DU) += du.o
+
+/* BB_AUDIT SUSv3 compliant (unless default blocksize set to 1k) */
+/* http://www.opengroup.org/onlinepubs/007904975/utilities/du.html */
 
 //usage:#define du_trivial_usage
 //usage:       "[-aHLdclsx" IF_FEATURE_HUMAN_READABLE("hm") "k] [FILE]..."
@@ -226,8 +240,11 @@ int du_main(int argc UNUSED_PARAM, char **argv)
 	 * ignore -a.  This is consistent with -s being equivalent to -d 0.
 	 */
 #if ENABLE_FEATURE_HUMAN_READABLE
-	opt_complementary = "h-km:k-hm:m-hk:H-L:L-H:s-d:d-s:d+";
-	opt = getopt32(argv, "aHkLsx" "d:" "lc" "hm", &G.max_print_depth);
+	opt = getopt32(argv, "^"
+			"aHkLsxd:+lchm"
+			"\0" "h-km:k-hm:m-hk:H-L:L-H:s-d:d-s",
+			&G.max_print_depth
+	);
 	argv += optind;
 	if (opt & OPT_h_for_humans) {
 		G.disp_unit = 0;
@@ -239,8 +256,11 @@ int du_main(int argc UNUSED_PARAM, char **argv)
 		G.disp_unit = 1024;
 	}
 #else
-	opt_complementary = "H-L:L-H:s-d:d-s:d+";
-	opt = getopt32(argv, "aHkLsx" "d:" "lc", &G.max_print_depth);
+	opt = getopt32(argv, "^"
+			"aHkLsxd:+lc"
+			"\0" "H-L:L-H:s-d:d-s",
+			&G.max_print_depth
+	);
 	argv += optind;
 #if !ENABLE_FEATURE_DU_DEFAULT_BLOCKSIZE_1K
 	if (opt & OPT_k_kbytes) {
@@ -270,11 +290,11 @@ int du_main(int argc UNUSED_PARAM, char **argv)
 	total = 0;
 	do {
 		total += du(*argv);
-		/* otherwise du /dir /dir won't show /dir twice: */
-		reset_ino_dev_hashtable();
 		G.slink_depth = slink_depth_save;
 	} while (*++argv);
 
+	if (ENABLE_FEATURE_CLEAN_UP)
+		reset_ino_dev_hashtable();
 	if (opt & OPT_c_total)
 		print(total, "total");
 

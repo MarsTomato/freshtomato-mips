@@ -8,7 +8,6 @@
  *
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
-
 #include "libbb.h"
 
 
@@ -121,11 +120,11 @@ void FAST_FUNC free_procps_scan(procps_status_t* sp)
 }
 
 #if ENABLE_FEATURE_TOPMEM || ENABLE_PMAP
-static unsigned long fast_strtoul_16(char **endptr)
+static unsigned long long fast_strtoull_16(char **endptr)
 {
 	unsigned char c;
 	char *str = *endptr;
-	unsigned long n = 0;
+	unsigned long long n = 0;
 
 	/* Need to stop on both ' ' and '\n' */
 	while ((c = *str++) > ' ') {
@@ -239,8 +238,8 @@ int FAST_FUNC procps_read_smaps(pid_t pid, struct smaprec *total,
 
 			*tp = ' ';
 			tp = buf;
-			currec.smap_start = fast_strtoul_16(&tp);
-			currec.smap_size = (fast_strtoul_16(&tp) - currec.smap_start) >> 10;
+			currec.smap_start = fast_strtoull_16(&tp);
+			currec.smap_size = (fast_strtoull_16(&tp) - currec.smap_start) >> 10;
 
 			strncpy(currec.smap_mode, tp, sizeof(currec.smap_mode)-1);
 
@@ -370,6 +369,7 @@ procps_status_t* FAST_FUNC procps_scan(procps_status_t* sp, int flags)
 			| PSSCAN_TTY | PSSCAN_NICE
 			| PSSCAN_CPU)
 		) {
+			int s_idx;
 			char *cp, *comm1;
 			int tty;
 #if !ENABLE_FEATURE_FAST_TOP
@@ -468,17 +468,20 @@ procps_status_t* FAST_FUNC procps_scan(procps_status_t* sp, int flags)
 #if ENABLE_FEATURE_PS_ADDITIONAL_COLUMNS
 			sp->niceness = tasknice;
 #endif
-
-			if (sp->vsz == 0 && sp->state[0] != 'Z')
+			sp->state[1] = ' ';
+			sp->state[2] = ' ';
+			s_idx = 1;
+			if (sp->vsz == 0 && sp->state[0] != 'Z') {
+				/* not sure what the purpose of this flag */
 				sp->state[1] = 'W';
-			else
-				sp->state[1] = ' ';
-			if (tasknice < 0)
-				sp->state[2] = '<';
-			else if (tasknice) /* > 0 */
-				sp->state[2] = 'N';
-			else
-				sp->state[2] = ' ';
+				s_idx = 2;
+			}
+			if (tasknice != 0) {
+				if (tasknice < 0)
+					sp->state[s_idx] = '<';
+				else /* > 0 */
+					sp->state[s_idx] = 'N';
+			}
 		}
 
 #if ENABLE_FEATURE_TOPMEM

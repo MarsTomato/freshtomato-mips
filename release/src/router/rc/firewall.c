@@ -23,6 +23,7 @@
 
 */
 
+
 #include "rc.h"
 
 #include <stdarg.h>
@@ -130,6 +131,11 @@ void try_enabling_fastnat(void)
 void enable_ip_forward(void)
 {
 	f_write_string("/proc/sys/net/ipv4/ip_forward", "1", 0, 0);
+}
+
+void log_segfault(void)
+{
+	f_write_string("/proc/sys/kernel/print-fatal-signals", (nvram_get_int("debug_logsegfault") ? "1" : "0"), 0, 0);
 }
 
 #ifdef TCONFIG_IPV6
@@ -616,7 +622,7 @@ static void mangle_table(void)
 	) {
 		ipt_qos();
 		/* 1 for mangle */
-		ipt_qoslimit(1);
+		ipt_bwlimit(1);
 
 		p = nvram_safe_get("nf_ttl");
 		if (strncmp(p, "c:", 2) == 0) {
@@ -783,7 +789,7 @@ static void nat_table(void)
 	          chain_wan_prerouting);
 
 	/* 2 for nat */
-	ipt_qoslimit(2);
+	ipt_bwlimit(2);
 
 	if (gateway_mode) {
 		for (i = 0; i < wanfaces.count; ++i) {
@@ -868,7 +874,6 @@ static void nat_table(void)
 				modprobe("ipt_REDIRECT");
 				for (i = 0; i < BRIDGE_COUNT; i++) {
 					if ((strcmp(lanface[i], "") != 0) || (i == 0)) {
-						ipt_write("-A PREROUTING -p tcp -m tcp -i %s --dport 123 -j REDIRECT --to-port 123\n", lanface[i]);
 						ipt_write("-A PREROUTING -p udp -m udp -i %s --dport 123 -j REDIRECT --to-port 123\n", lanface[i]);
 					}
 				}
@@ -1107,7 +1112,7 @@ static void filter_input(void)
 
 #ifdef TCONFIG_BCMARM
 	/* 3 for filter */
-	ipt_qoslimit(3);
+	ipt_bwlimit(3);
 #endif
 
 	foreach_wan_input(wanup, wanfaces);
@@ -1205,7 +1210,7 @@ static void filter_input(void)
 			/* allow ICMP packets to be received, but restrict the flow to avoid ping flood attacks */
 			ipt_write("-A INPUT -p icmp -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_icmp"), chain_in_accept);
 			/* allow udp traceroute packets, but restrict the flow to avoid ping flood attacks */
-			ipt_write("-A INPUT -p udp --dport 33434:33534 -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_tr"), chain_in_accept);
+			ipt_write("-A INPUT -p udp --dport 33434:33534 -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_icmp"), chain_in_accept);
 		}
 	}
 
@@ -1640,7 +1645,7 @@ static void filter6_input(void)
 	if (remotemanage) {
 		ip6t_write("-N wwwlimit\n"
 		           "-A wwwlimit -m recent --set --name www\n"
-		           "-A wwwlimit -m recent --update --hitcount 11 --seconds 5 --name www -j %s\n",
+		           "-A wwwlimit -m recent --update --hitcount 15 --seconds 5 --name www -j %s\n",
 		           chain_in_drop);
 		ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j wwwlimit\n", nvram_safe_get("http_wanport"));
 	}
@@ -1656,9 +1661,15 @@ static void filter6_input(void)
 	}
 #endif	/* TCONFIG_FTP */
 
-	ip6t_write("-A INPUT -i %s -j ACCEPT\n"	/* anything coming from LAN */
-	           "-A INPUT -i lo -j ACCEPT\n",
+	ip6t_write("-A INPUT -i lo -j ACCEPT\n"
+	           "-A INPUT -i %s -j ACCEPT\n", /* anything coming from LAN */
 	           lanface[0]);
+	if (strcmp(lanface[1], "") != 0)
+		ip6t_write("-A INPUT -i %s -j ACCEPT\n", lanface[1]);
+	if (strcmp(lanface[2], "") != 0)
+		ip6t_write("-A INPUT -i %s -j ACCEPT\n", lanface[2]);
+	if (strcmp(lanface[3], "") != 0)
+		ip6t_write("-A INPUT -i %s -j ACCEPT\n", lanface[3]);
 
 	switch (get_ipv6_service()) {
 	case IPV6_ANYCAST_6TO4:
@@ -1781,6 +1792,8 @@ int start_firewall(void)
 	wan3up = check_wanup("wan3");
 	wan4up = check_wanup("wan4");
 #endif
+
+	log_segfault();
 
 	/* NAT performance tweaks
 	 * These values can be overriden later if needed via firewall script

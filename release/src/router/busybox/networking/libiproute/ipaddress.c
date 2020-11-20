@@ -7,7 +7,6 @@
  * Changes:
  * Laszlo Valko <valko@linux.karinthy.hu> 990223: address label must be zero terminated
  */
-
 #include <fnmatch.h>
 #include <net/if.h>
 #include <net/if_arp.h>
@@ -24,6 +23,7 @@
 
 struct filter_t {
 	char *label;
+	/* Flush cmd buf. If !NULL, print_addrinfo() constructs flush commands in it */
 	char *flushb;
 	struct rtnl_handle *rth;
 	int scope, scopemask;
@@ -35,6 +35,8 @@ struct filter_t {
 	smallint showqueue;
 	smallint oneline;
 	smallint up;
+	/* Misnomer. Does not mean "flushed something" */
+	/* More like "flush commands were constructed by print_addrinfo()" */
 	smallint flushed;
 	inet_prefix pfx;
 } FIX_ALIASING;
@@ -114,7 +116,7 @@ static NOINLINE int print_linkinfo(const struct nlmsghdr *n)
 	if (G_filter.up && !(ifi->ifi_flags & IFF_UP))
 		return 0;
 
-	memset(tb, 0, sizeof(tb));
+	//memset(tb, 0, sizeof(tb)); - parse_rtattr does this
 	parse_rtattr(tb, IFLA_MAX, IFLA_RTA(ifi), len);
 	if (tb[IFLA_IFNAME] == NULL) {
 		bb_error_msg("nil ifname");
@@ -202,7 +204,7 @@ static NOINLINE int print_linkinfo(const struct nlmsghdr *n)
 
 static int flush_update(void)
 {
-	if (rtnl_send(G_filter.rth, G_filter.flushb, G_filter.flushp) < 0) {
+	if (rtnl_send_check(G_filter.rth, G_filter.flushb, G_filter.flushp) < 0) {
 		bb_perror_msg("can't send flush request");
 		return -1;
 	}
@@ -228,7 +230,7 @@ static int FAST_FUNC print_addrinfo(const struct sockaddr_nl *who UNUSED_PARAM,
 	if (G_filter.flushb && n->nlmsg_type != RTM_NEWADDR)
 		return 0;
 
-	memset(rta_tb, 0, sizeof(rta_tb));
+	//memset(rta_tb, 0, sizeof(rta_tb)); - parse_rtattr does this
 	parse_rtattr(rta_tb, IFA_MAX, IFA_RTA(ifa), n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa)));
 
 	if (!rta_tb[IFA_LOCAL])
@@ -328,6 +330,10 @@ static int FAST_FUNC print_addrinfo(const struct sockaddr_nl *who UNUSED_PARAM,
 		ifa->ifa_flags &= ~IFA_F_TENTATIVE;
 		printf("tentative ");
 	}
+	if (ifa->ifa_flags & IFA_F_DADFAILED) {
+		ifa->ifa_flags &= ~IFA_F_DADFAILED;
+		printf("dadfailed ");
+	}
 	if (ifa->ifa_flags & IFA_F_DEPRECATED) {
 		ifa->ifa_flags &= ~IFA_F_DEPRECATED;
 		printf("deprecated ");
@@ -421,7 +427,6 @@ int FAST_FUNC ipaddr_list_or_flush(char **argv, int flush)
 	struct nlmsg_list *l;
 	struct rtnl_handle rth;
 	char *filter_dev = NULL;
-	int no_link = 0;
 
 	ipaddr_reset_filter(oneline);
 	G_filter.showqueue = 1;
@@ -508,13 +513,9 @@ int FAST_FUNC ipaddr_list_or_flush(char **argv, int flush)
 		xrtnl_dump_filter(&rth, store_nlmsg, &ainfo);
 	}
 
-
 	if (G_filter.family && G_filter.family != AF_PACKET) {
 		struct nlmsg_list **lp;
 		lp = &linfo;
-
-		if (G_filter.oneline)
-			no_link = 1;
 
 		while ((l = *lp) != NULL) {
 			int ok = 0;
@@ -536,7 +537,7 @@ int FAST_FUNC ipaddr_list_or_flush(char **argv, int flush)
 					continue;
 				if (G_filter.pfx.family || G_filter.label) {
 					struct rtattr *tb[IFA_MAX+1];
-					memset(tb, 0, sizeof(tb));
+					//memset(tb, 0, sizeof(tb)); - parse_rtattr does this
 					parse_rtattr(tb, IFA_MAX, IFA_RTA(ifa), IFA_PAYLOAD(n));
 					if (!tb[IFA_LOCAL])
 						tb[IFA_LOCAL] = tb[IFA_ADDRESS];
@@ -571,7 +572,10 @@ int FAST_FUNC ipaddr_list_or_flush(char **argv, int flush)
 	}
 
 	for (l = linfo; l; l = l->next) {
-		if (no_link || print_linkinfo(&l->h) == 0) {
+		if ((oneline && G_filter.family != AF_PACKET)
+		/* ^^^^^^^^^ "ip -oneline a" does not print link info */
+		 || (print_linkinfo(&l->h) == 0)
+		) {
 			struct ifinfomsg *ifi = NLMSG_DATA(&l->h);
 			if (G_filter.family != AF_PACKET)
 				print_selected_addrinfo(ifi->ifi_index, ainfo);
@@ -593,9 +597,13 @@ static int default_scope(inet_prefix *lcl)
 /* Return value becomes exitcode. It's okay to not return at all */
 static int ipaddr_modify(int cmd, int flags, char **argv)
 {
+	/* If you add stuff here, update ipaddr_full_usage */
 	static const char option[] ALIGN1 =
 		"peer\0""remote\0""broadcast\0""brd\0"
 		"anycast\0""scope\0""dev\0""label\0""local\0";
+#define option_peer      option
+#define option_broadcast (option           + sizeof("peer") + sizeof("remote"))
+#define option_anycast   (option_broadcast + sizeof("broadcast") + sizeof("brd"))
 	struct rtnl_handle rth;
 	struct {
 		struct nlmsghdr  n;
@@ -627,7 +635,7 @@ static int ipaddr_modify(int cmd, int flags, char **argv)
 
 		if (arg <= 1) { /* peer, remote */
 			if (peer_len) {
-				duparg("peer", *argv);
+				duparg(option_peer, *argv);
 			}
 			get_prefix(&peer, *argv, req.ifa.ifa_family);
 			peer_len = peer.bytelen;
@@ -639,7 +647,7 @@ static int ipaddr_modify(int cmd, int flags, char **argv)
 		} else if (arg <= 3) { /* broadcast, brd */
 			inet_prefix addr;
 			if (brd_len) {
-				duparg("broadcast", *argv);
+				duparg(option_broadcast, *argv);
 			}
 			if (LONE_CHAR(*argv, '+')) {
 				brd_len = -1;
@@ -655,7 +663,7 @@ static int ipaddr_modify(int cmd, int flags, char **argv)
 		} else if (arg == 4) { /* anycast */
 			inet_prefix addr;
 			if (any_len) {
-				duparg("anycast", *argv);
+				duparg(option_anycast, *argv);
 			}
 			get_addr(&addr, *argv, req.ifa.ifa_family);
 			if (req.ifa.ifa_family == AF_UNSPEC) {

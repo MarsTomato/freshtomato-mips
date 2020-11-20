@@ -10,6 +10,7 @@
 
 */
 
+
 #include "rc.h"
 
 #include <ctype.h>
@@ -30,6 +31,10 @@
 #include <bcmdevs.h>
 
 #define SHELL "/bin/sh"
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"init_debug"
+
 
 int restore_defaults_fb = 0;
 
@@ -256,7 +261,7 @@ static void shutdn(int rb)
 	int act;
 	sigset_t ss;
 
-	_dprintf("shutdn rb=%d\n", rb);
+	logmsg(LOG_DEBUG, "*** %s: shutdn rb=%d", __FUNCTION__, rb);
 
 	sigemptyset(&ss);
 	for (i = 0; i < sizeof(fatalsigs) / sizeof(fatalsigs[0]); i++)
@@ -267,7 +272,7 @@ static void shutdn(int rb)
 
 	for (i = 30; i > 0; --i) {
 		if (((act = check_action()) == ACT_IDLE) || (act == ACT_REBOOT)) break;
-		_dprintf("Busy with %d. Waiting before shutdown... %d\n", act, i);
+		logmsg(LOG_DEBUG, "*** %s: busy with %d. Waiting before shutdown... %d", __FUNCTION__, act, i);
 		sleep(1);
 	}
 	set_action(ACT_REBOOT);
@@ -276,12 +281,12 @@ static void shutdn(int rb)
 	stop_pptp("wan");
 	stop_l2tp("wan");
 
-	_dprintf("TERM\n");
+	logmsg(LOG_DEBUG, "*** %s: TERM", __FUNCTION__);
 	kill(-1, SIGTERM);
 	sleep(3);
 	sync();
 
-	_dprintf("KILL\n");
+	logmsg(LOG_DEBUG, "*** %s: KILL", __FUNCTION__);
 	kill(-1, SIGKILL);
 	sleep(1);
 	sync();
@@ -317,7 +322,7 @@ static void shutdn(int rb)
 
 static void handle_fatalsigs(int sig)
 {
-	_dprintf("fatal sig=%d\n", sig);
+	logmsg(LOG_DEBUG, "*** %s: fatal sig=%d", __FUNCTION__, sig);
 	shutdn(-1);
 }
 
@@ -340,7 +345,7 @@ static int check_nv(const char *name, const char *value)
 	const char *p;
 	if (!nvram_match("manual_boot_nv", "1")) {
 		if (((p = nvram_get(name)) == NULL) || (strcmp(p, value) != 0)) {
-			_dprintf("Error: Critical variable %s is invalid. Resetting.\n", name);
+			logmsg(LOG_DEBUG, "*** %s: error: critical variable %s is invalid. Resetting", __FUNCTION__, name);
 			nvram_set(name, value);
 			return 1;
 		}
@@ -679,7 +684,7 @@ static void check_bootnv(void)
 		!nvram_get("scratch") ||
 		!nvram_get("et0macaddr") ||
 		((hardware != HW_BCM4704_BCM5325F) && (!nvram_get("vlan0ports") || !nvram_get("vlan0hwname")))) {
-			_dprintf("Unable to find critical settings, erasing NVRAM\n");
+			logmsg(LOG_DEBUG, "*** %s: unable to find critical settings, erasing NVRAM", __FUNCTION__);
 			mtd_erase("nvram");
 			goto REBOOT;
 	}
@@ -892,7 +897,7 @@ static int init_nvram(void)
 			}
 			break;
 		default:
-			syslog(LOG_WARNING, "Unexpected: boardflag=%lX", bf);
+			logmsg(LOG_WARNING, "unexpected: boardflag=%lX", bf);
 			break;
 		}
 		break;
@@ -1299,9 +1304,6 @@ static int init_nvram(void)
 #endif
 	}
 
-	/* !!TB - do not force country code here to allow nvram override */
-	//nvram_set("wl_country", "JP");
-	//nvram_set("wl_country_code", "JP");
 	nvram_set("wan_get_dns", "");
 	nvram_set("wan_get_domain", "");
 	nvram_set("wan_ppp_get_ip", "0.0.0.0");
@@ -1357,7 +1359,7 @@ static void load_files_from_nvram(void)
 			if ((cp = strchr(name, '=')) == NULL)
 				continue;
 			*cp = 0;
-			syslog(LOG_INFO, "Loading file '%s' from nvram", name + 5);
+			logmsg(LOG_INFO, "loading file '%s' from nvram", name + 5);
 			nvram_nvram2file(name, name + 5);
 			if (memcmp(".autorun", cp - 8, 9) == 0) 
 				++ar_loaded;
@@ -1668,7 +1670,7 @@ int init_main(int argc, char *argv[])
 			/* SIGHUP (RESTART) falls through */
 
 			//nvram_set("wireless_restart_req", "1"); /* restart wifi twice to make sure all is working ok! not needed right now M_ars */
-			syslog(LOG_INFO, "FreshTomato RESTART ...");
+			logmsg(LOG_INFO, "FreshTomato RESTART ...");
 
 		case SIGUSR2:		/* START */
 			start_syslog();
@@ -1694,6 +1696,7 @@ int init_main(int argc, char *argv[])
 				add_remove_usbhost("-1", 1);
 #endif
 
+			log_segfault();
 			create_passwd();
 			start_vlan();
 			start_lan();
@@ -1702,7 +1705,7 @@ int init_main(int argc, char *argv[])
 			start_services();
 
 			if (restore_defaults_fb /*|| nvram_match("wireless_restart_req", "1")*/) {
-				syslog(LOG_INFO, "%s: FreshTomato WiFi restarting ... (restore defaults)", nvram_safe_get("t_model_name"));
+				logmsg(LOG_INFO, "%s: FreshTomato WiFi restarting ... (restore defaults)", nvram_safe_get("t_model_name"));
 				restore_defaults_fb = 0; /* reset */
 				//nvram_set("wireless_restart_req", "0");
 				restart_wireless();
@@ -1712,7 +1715,7 @@ int init_main(int argc, char *argv[])
 #ifdef CONFIG_BCMWL5
 				/* If a virtual SSID is disabled, it requires two initialisations */
 				if (foreach_wif(1, NULL, disabled_wl)) {
-					syslog(LOG_INFO, "%s: FreshTomato WiFi restarting ... (virtual SSID disabled)", nvram_safe_get("t_model_name"));
+					logmsg(LOG_INFO, "%s: FreshTomato WiFi restarting ... (virtual SSID disabled)", nvram_safe_get("t_model_name"));
 					restart_wireless();
 				}
 #endif
@@ -1732,7 +1735,7 @@ int init_main(int argc, char *argv[])
 			}
 #endif
 
-			syslog(LOG_INFO, "%s: FreshTomato %s", nvram_safe_get("t_model_name"), tomato_version);
+			logmsg(LOG_INFO, "%s: FreshTomato %s", nvram_safe_get("t_model_name"), tomato_version);
 
 			led(LED_DIAG, LED_OFF);
 			switch(get_model())

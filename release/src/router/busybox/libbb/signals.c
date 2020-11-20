@@ -8,7 +8,6 @@
  *
  * Licensed under GPLv2, see file LICENSE in this source tree.
  */
-
 #include "libbb.h"
 
 /* All known arches use small ints for signals */
@@ -30,6 +29,16 @@ int FAST_FUNC sigprocmask_allsigs(int how)
 	sigset_t set;
 	sigfillset(&set);
 	return sigprocmask(how, &set, NULL);
+}
+
+int FAST_FUNC sigprocmask2(int how, sigset_t *set)
+{
+	// Grr... gcc 8.1.1:
+	// "passing argument 3 to restrict-qualified parameter aliases with argument 2"
+	// dance around that...
+	sigset_t *oset FIX_ALIASING;
+	oset = set;
+	return sigprocmask(how, set, oset);
 }
 
 void FAST_FUNC bb_signals(int sigs, void (*f)(int))

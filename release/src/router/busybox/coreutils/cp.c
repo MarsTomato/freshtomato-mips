@@ -7,13 +7,35 @@
  *
  * Licensed under GPLv2 or later, see file LICENSE in this source tree.
  */
-
-/* http://www.opengroup.org/onlinepubs/007904975/utilities/cp.html */
-
 /* Mar 16, 2003      Manuel Novoa III   (mjn3@codepoet.org)
  *
  * Size reduction.
  */
+//config:config CP
+//config:	bool "cp (10 kb)"
+//config:	default y
+//config:	help
+//config:	cp is used to copy files and directories.
+//config:
+//config:config FEATURE_CP_LONG_OPTIONS
+//config:	bool "Enable long options"
+//config:	default y
+//config:	depends on CP && LONG_OPTS
+//config:	help
+//config:	Enable long options.
+//config:	Also add support for --parents option.
+//config:
+//config:config FEATURE_CP_REFLINK
+//config:	bool "Enable --reflink[=auto]"
+//config:	default y
+//config:	depends on FEATURE_CP_LONG_OPTIONS
+
+//applet:IF_CP(APPLET_NOEXEC(cp, cp, BB_DIR_BIN, BB_SUID_DROP, cp))
+/* NOEXEC despite cases when it can be a "runner" (cp -r LARGE_DIR NEW_DIR) */
+
+//kbuild:lib-$(CONFIG_CP) += cp.o
+
+/* http://www.opengroup.org/onlinepubs/007904975/utilities/cp.html */
 
 //usage:#define cp_trivial_usage
 //usage:       "[OPTIONS] SOURCE... DEST"
@@ -31,6 +53,7 @@
 //usage:     "\n	-f	Overwrite"
 //usage:     "\n	-i	Prompt before overwrite"
 //usage:     "\n	-l,-s	Create (sym)links"
+//usage:     "\n	-T	Treat DEST as a normal file"
 //usage:     "\n	-u	Copy only newer files"
 
 #include "libbb.h"
@@ -54,18 +77,24 @@ int cp_main(int argc, char **argv)
 #if ENABLE_FEATURE_CP_LONG_OPTIONS
 		/*OPT_rmdest  = FILEUTILS_RMDEST = 1 << FILEUTILS_CP_OPTNUM */
 		OPT_parents = 1 << (FILEUTILS_CP_OPTNUM+1),
+		OPT_reflink = 1 << (FILEUTILS_CP_OPTNUM+2),
 #endif
 	};
 
-	// Need at least two arguments
-	// Soft- and hardlinking doesn't mix
-	// -P and -d are the same (-P is POSIX, -d is GNU)
-	// -r and -R are the same
-	// -R (and therefore -r) turns on -d (coreutils does this)
-	// -a = -pdR
-	opt_complementary = "-2:l--s:s--l:Pd:rRd:Rd:apdR";
 #if ENABLE_FEATURE_CP_LONG_OPTIONS
-	applet_long_options =
+# if ENABLE_FEATURE_CP_REFLINK
+	char *reflink = NULL;
+# endif
+	flags = getopt32long(argv, "^"
+		FILEUTILS_CP_OPTSTR
+		"\0"
+		// Need at least two arguments
+		// Soft- and hardlinking doesn't mix
+		// -P and -d are the same (-P is POSIX, -d is GNU)
+		// -r and -R are the same
+		// -R (and therefore -r) turns on -d (coreutils does this)
+		// -a = -pdR
+		"-2:l--s:s--l:Pd:rRd:Rd:apdR",
 		"archive\0"        No_argument "a"
 		"force\0"          No_argument "f"
 		"interactive\0"    No_argument "i"
@@ -74,13 +103,34 @@ int cp_main(int argc, char **argv)
 		"no-dereference\0" No_argument "P"
 		"recursive\0"      No_argument "R"
 		"symbolic-link\0"  No_argument "s"
+		"no-target-directory\0" No_argument "T"
 		"verbose\0"        No_argument "v"
 		"update\0"         No_argument "u"
 		"remove-destination\0" No_argument "\xff"
 		"parents\0"        No_argument "\xfe"
-		;
+# if ENABLE_FEATURE_CP_REFLINK
+		"reflink\0"        Optional_argument "\xfd"
+		, &reflink
+# endif
+	);
+# if ENABLE_FEATURE_CP_REFLINK
+	BUILD_BUG_ON((int)OPT_reflink != (int)FILEUTILS_REFLINK);
+	if (flags & FILEUTILS_REFLINK) {
+		if (!reflink)
+			flags |= FILEUTILS_REFLINK_ALWAYS;
+		else if (strcmp(reflink, "always") == 0)
+			flags |= FILEUTILS_REFLINK_ALWAYS;
+		else if (strcmp(reflink, "auto") != 0)
+			bb_show_usage();
+	}
+# endif
+#else
+	flags = getopt32(argv, "^"
+		FILEUTILS_CP_OPTSTR
+		"\0"
+		"-2:l--s:s--l:Pd:rRd:Rd:apdR"
+	);
 #endif
-	flags = getopt32(argv, FILEUTILS_CP_OPTSTR);
 	/* Options of cp from GNU coreutils 6.10:
 	 * -a, --archive
 	 * -f, --force
@@ -102,6 +152,8 @@ int cp_main(int argc, char **argv)
 	 *	remove each existing destination file before attempting to open
 	 * --parents
 	 *	use full source file name under DIRECTORY
+	 * -T, --no-target-directory
+	 *	treat DEST as a normal file
 	 * NOT SUPPORTED IN BBOX:
 	 * --backup[=CONTROL]
 	 *	make a backup of each existing destination file
@@ -120,8 +172,6 @@ int cp_main(int argc, char **argv)
 	 *	override the usual backup suffix
 	 * -t, --target-directory=DIRECTORY
 	 *	copy all SOURCE arguments into DIRECTORY
-	 * -T, --no-target-directory
-	 *	treat DEST as a normal file
 	 * -x, --one-file-system
 	 *	stay on this file system
 	 * -Z, --context=CONTEXT
@@ -156,6 +206,12 @@ int cp_main(int argc, char **argv)
 		if (d_flags < 0)
 			return EXIT_FAILURE;
 
+		if (flags & FILEUTILS_NO_TARGET_DIR) { /* -T */
+			if (!(s_flags & 2) && (d_flags & 2))
+				/* cp -T NOTDIR DIR */
+				bb_error_msg_and_die("'%s' is a directory", last);
+		}
+
 #if ENABLE_FEATURE_CP_LONG_OPTIONS
 		//bb_error_msg("flags:%x FILEUTILS_RMDEST:%x OPT_parents:%x",
 		//	flags, FILEUTILS_RMDEST, OPT_parents);
@@ -173,11 +229,14 @@ int cp_main(int argc, char **argv)
 		if (!((s_flags | d_flags) & 2)
 		    /* ...or: recursing, the 1st is a directory, and the 2nd doesn't exist... */
 		 || ((flags & FILEUTILS_RECUR) && (s_flags & 2) && !d_flags)
+		 || (flags & FILEUTILS_NO_TARGET_DIR)
 		) {
 			/* Do a simple copy */
 			dest = last;
 			goto DO_COPY; /* NB: argc==2 -> *++argv==last */
 		}
+	} else if (flags & FILEUTILS_NO_TARGET_DIR) {
+		bb_error_msg_and_die("too many arguments");
 	}
 
 	while (1) {
