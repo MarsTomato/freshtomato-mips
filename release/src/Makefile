@@ -1000,7 +1000,7 @@ define KernelConfig
 	        echo "CONFIG_NVRAM_64K=y" >>$(1); \
 	else \
 	        echo "# CONFIG_NVRAM_64K is not set" >>$(1); \
-	fi \
+	fi; \
 	if [ "$(BUILD_DESC)" = "AIO" ] || [ "$(BUILD_DESC)" = "Mega-VPN" ]; then \
 		sed -i "s/# CONFIG_NETFILTER_XT_MATCH_STATISTIC is not set/CONFIG_NETFILTER_XT_MATCH_STATISTIC=m/g" $(1); \
 		sed -i "s/# CONFIG_NETFILTER_XT_MATCH_COMMENT is not set/CONFIG_NETFILTER_XT_MATCH_COMMENT=y/g" $(1); \

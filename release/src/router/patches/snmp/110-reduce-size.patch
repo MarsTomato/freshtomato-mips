@@ -1,0 +1,39 @@
+--- snmp/include/net-snmp/output_api.h
++++ snmp/include/net-snmp/output_api.h
+@@ -39,12 +39,18 @@ extern "C" {
+ 
+     /* Logging messages */
+ 
++#ifdef NO_OPTSIZE
+     NETSNMP_IMPORT
+     int  snmp_log( int priority, const char *format, ...)
+         NETSNMP_ATTRIBUTE_FORMAT(printf, 2, 3);
+     NETSNMP_IMPORT
+     int  snmp_vlog(int priority, const char *format, va_list ap);
+     NETSNMP_IMPORT
++#else
++#define snmp_log(prio, fmt, ...) do { } while(0)
++#define snmp_vlog(prio, fmt, valist) do { } while(0)
++#endif /* NO_OPTSIZE */
++
+     int  snmp_get_do_logging(    void);
+     NETSNMP_IMPORT
+     void netsnmp_logging_restart(void);
+--- snmp/snmplib/snmp_logging.c
++++ snmp/snmplib/snmp_logging.c
+@@ -1366,6 +1366,7 @@ snmp_log_string(int priority, const char
+  *
+  * @see snmp_log
+  */
++#ifdef NO_OPTSIZE
+ int
+ snmp_vlog(int priority, const char *format, va_list ap)
+ {
+@@ -1400,6 +1401,7 @@ snmp_log(int priority, const char *forma
+     va_end(ap);
+     return (ret);
+ }
++#endif /* NO_OPTSIZE */
+ 
+ /*
+  * log a critical error.
