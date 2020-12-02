@@ -20,7 +20,7 @@ export HAVE_TOMATO := y
 
 define patch_files
  find patches/$(1) -maxdepth 1 -type f -name '*.patch' | sort -t '\0' -n | while read FILE; do \
-  ( if patch -p0 -s --dry-run < $$FILE 2>/dev/null; then \
+  ( if patch -p0 -N -s --dry-run < $$FILE 2>/dev/null; then \
    patch -p0 -N -r - --no-backup-if-mismatch < $$FILE; \
   fi ) \
  done
@@ -290,11 +290,6 @@ obj-y += hotplug2
 obj-y += udevtrigger
 obj-y += wanuptime
 
-
-# Specify iptables path for miniupnpd
-IPTABLESPATH=$(TOP)/iptables
-export IPTABLESPATH
-
 obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
 obj-install := $(foreach obj,$(obj-y),$(obj)-install)
 
@@ -440,7 +435,7 @@ endif
 ifeq ($(TCONFIG_SSH),y)
 	install $(LIBDIR)/libutil.so.0 $(TARGETDIR)/lib/
 endif
-ifeq ($(TCONFIG_BBT),y)
+ifeq ($(TCONFIG_USB),y)
 	install $(LIBDIR)/librt-0.9.30.1.so $(TARGETDIR)/lib/librt.so.0
 endif
 ifneq ($(TCONFIG_NGINX)$(TCONFIG_NANO),)
@@ -915,7 +910,7 @@ dnsmasq: $(DNSSEC_BACKEND)
 	@$(SEP)
 	$(call patch_files,dnsmasq)
 	$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
-	CFLAGS="-Os -ffunction-sections -fdata-sections $(EXTRACFLAGS) $(OPTSIZE_FLAG)" \
+	CFLAGS="-Os -ffunction-sections -fdata-sections $(EXTRACFLAGS) $(OPTSIZE_MORE_FLAG)" \
 	COPTS="-DNO_INOTIFY -DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_GMP -DNO_SCRIPT $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-DNO_TFTP -DNO_LOOP -DNO_AUTH,) -DUSE_IPSET -DEDNS_PKTSZ=1280 \
 		$(if $(DNSSEC_OPENSSL),-I$(TOP)/$(OPENSSLDIR)/include -DHAVE_DNSSEC,) \
 		$(if $(DNSSEC_NETTLE),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST,) \
@@ -1032,10 +1027,6 @@ rp-pppoe-install:
 #	install -D rp-pppoe/src/pppoe-relay $(INSTALLDIR)/rp-pppoe/usr/sbin/pppoe-relay
 #	$(STRIP) $(INSTALLDIR)/rp-pppoe/usr/sbin/pppoe-relay
 
-
-upnp: nvram shared iptables
-	@$(SEP)
-
 libnfnetlink/stamp-h1:
 	cd libnfnetlink && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
@@ -1058,24 +1049,27 @@ libnfnetlink-clean:
 	-@$(MAKE) -C libnfnetlink distclean
 	@rm -f libnfnetlink/stamp-h1
 
-miniupnpd-config:
+miniupnpd/stamp-h1:
 	$(call patch_files,miniupnpd)
-	@cd miniupnpd && ./genconfig.sh --leasefile --vendorcfg --portinuse $(if $(TCONFIG_IPV6),--ipv6,)
+	cd miniupnpd && \
+		./configure --leasefile --vendorcfg --portinuse $(if $(TCONFIG_IPV6),--ipv6,) --iptablespath=$(if $(TCONFIG_BCMARM),$(TOP)/iptables-1.8.x,$(TOP)/iptables)
+	@touch $@
 
-miniupnpd: iptables miniupnpd-config
+miniupnpd: $(IPTABLES_TARGET) miniupnpd/stamp-h1
 	@$(SEP)
-	$(MAKE) -C miniupnpd -f Makefile.freshtomato $(PARALLEL_BUILD) \
+	$(MAKE) -C miniupnpd $(PARALLEL_BUILD) \
 		EXTRACFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-L$(TOP)/iptables -liptc -ffunction-sections -fdata-sections -Wl,--gc-sections"
-
-miniupnpd-clean:
-	-@$(MAKE) -C miniupnpd -f Makefile.freshtomato clean
-	@rm -f miniupnpd/config.h
-	$(call unpatch_files,miniupnpd)
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--as-needed -L$(TOP)/$(OPENSSLDIR) -pthread -Wl,--allow-multiple-definition"
 
 miniupnpd-install:
 	install -D miniupnpd/miniupnpd $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
 	$(STRIP) $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
+
+miniupnpd-clean:
+	-@$(MAKE) -C miniupnpd clean
+	@rm -f miniupnpd/config.h
+	@rm -f miniupnpd/stamp-h1
+	$(call unpatch_files,miniupnpd)
 
 shared: busybox
 
@@ -1249,7 +1243,7 @@ pppd/Makefile: pppd/linux/Makefile.top
 
 pppd: pppd/Makefile
 	@$(SEP)
-	@$(MAKE) -C pppd MFLAGS='$(if $(TCONFIG_IPV6),HAVE_INET6=y,) $(if $(TCONFIG_HTTPS),,USE_CRYPT=y) EXTRACFLAGS="$(EXTRACFLAGS) $(OPTSIZE_FLAG)"'
+	@$(MAKE) -C pppd MFLAGS='$(if $(TCONFIG_IPV6),HAVE_INET6=y,) $(if $(TCONFIG_HTTPS),,USE_CRYPT=y) EXTRACFLAGS="$(EXTRACFLAGS) $(OPTSIZE_MORE_FLAG)"'
 
 pppd-install:
 	install -D pppd/pppd/pppd $(INSTALLDIR)/pppd/usr/sbin/pppd
@@ -1428,7 +1422,7 @@ ffmpeg/stamp-h1: zlib
 		$(FFMPEG_CONFIGURE_PARSERS) \
 		$(FFMPEG_CONFIGURE_DECODERS) \
 		$(FFMPEG_CONFIGURE_PROTOCOLS) \
-		--extra-cflags="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib" \
+		--extra-cflags="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib $(OPTSIZE_FLAG)" \
 		--extra-ldflags="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		--extra-libs="-L$(TOP)/zlib -lz" \
 		--enable-zlib --disable-debug
@@ -1653,6 +1647,7 @@ minidlna-install:
 	$(STRIP) $(INSTALLDIR)/minidlna/usr/sbin/minidlna
 
 igmpproxy/src/Makefile: igmpproxy/src/Makefile.in
+	$(call patch_files,igmpproxy)
 	cd igmpproxy && \
 	autoreconf -fsi && \
 	$(CONFIGURE) --prefix=/usr
@@ -1660,7 +1655,7 @@ igmpproxy/src/Makefile: igmpproxy/src/Makefile.in
 igmpproxy: igmpproxy/src/Makefile
 	@$(SEP)
 	@$(MAKE) -C igmpproxy/src \
-	CFLAGS="-Os -g -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	CFLAGS="-Os -g -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(OPTSIZE_MORE_FLAG)" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(PARALLEL_BUILD)
 
@@ -1671,6 +1666,7 @@ igmpproxy-install:
 igmpproxy-clean:
 	-@$(MAKE) -C igmpproxy/src clean
 	@rm -f igmpproxy/src/Makefile
+	$(call unpatch_files,igmpproxy)
 
 hotplug2:
 	@$(SEP)
@@ -2570,7 +2566,7 @@ snmp/stamp-h1:
 		$(CONFIGURE) --prefix=/usr --with-persistent-directory=/tmp/snmp-persist --with-logfile=/var/log/snmpd.log \
 		--disable-debugging --disable-manuals --disable-scripts --disable-applications --disable-privacy \
 		--disable-ipv6 --disable-mibs --disable-mib-loading --disable-embedded-perl --with-perl-modules=no --without-opaque-special-types \
-		--without-openssl --without-efence --without-rsaref --without-kmem-usage --without-rpm --without-dmalloc \
+		--without-openssl --without-rsaref --without-kmem-usage --without-rpm \
 		--with-out-transports=UDPIPv6,TCPIPv6,AAL5PVC,IPX,TCP,Unix \
 		--with-out-mib-modules=snmpv3mibs,agent_mibs,agentx,notification,utilities,target \
 		--with-mib-modules="\
@@ -2760,19 +2756,20 @@ udpxy/stamp-h1:
 
 udpxy: udpxy/stamp-h1
 	@$(SEP)
+	NO_UDPXREC=yes \
 	$(MAKE) -C udpxy lean CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
-
-udpxy-clean:
-	-@$(MAKE) -C udpxy clean
-	@rm -f udpxy/stamp-h1
-	$(call unpatch_files,udpxy)
 
 udpxy-install:
 	install -d $(INSTALLDIR)/udpxy/usr/bin
 	install -D udpxy/udpxy $(INSTALLDIR)/udpxy/bin/udpxy
 	$(STRIP) -s $(INSTALLDIR)/udpxy/bin/udpxy
+
+udpxy-clean:
+	-@$(MAKE) -C udpxy clean
+	@rm -f udpxy/stamp-h1
+	$(call unpatch_files,udpxy)
 
 mdadm:
 	@$(SEP)
@@ -2788,7 +2785,7 @@ mdadm-clean:
 ipset:
 	@$(SEP)
 	$(call patch_files,ipset)
-	$(MAKE) -C ipset binaries COPT_FLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections --param large-function-growth=800 --param max-inline-insns-single=3000"
+	$(MAKE) -C ipset binaries COPT_FLAGS="-Os -Wall $(EXTRACFLAGS) $(OPTSIZE_FLAG) -ffunction-sections -fdata-sections --param large-function-growth=800 --param max-inline-insns-single=3000"
 
 ipset-install:
 	install -D ipset/ipset $(INSTALLDIR)/ipset/usr/sbin/ipset

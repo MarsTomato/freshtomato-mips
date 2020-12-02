@@ -1201,14 +1201,16 @@ static void filter_input(void)
 	/* ICMP request from WAN interface */
 	if (nvram_match("block_wan", "0")) {
 		if (nvram_match("block_wan_limit", "0")) {
-			/* allow ICMP packets to be received */
-			ipt_write("-A INPUT -p icmp -j %s\n", chain_in_accept);
+			/* allow ICMP echo/traceroute packets to be received */
+			ipt_write("-A INPUT -p icmp --icmp-type 8 -m state --state NEW,ESTABLISHED,RELATED -j %s\n", chain_in_accept);
+			ipt_write("-A INPUT -p icmp --icmp-type 30 -m state --state NEW,ESTABLISHED,RELATED -j %s\n", chain_in_accept);
 			/* allow udp traceroute packets */
 			ipt_write("-A INPUT -p udp --dport 33434:33534 -j %s\n", chain_in_accept);
 		}
 		else {
-			/* allow ICMP packets to be received, but restrict the flow to avoid ping flood attacks */
-			ipt_write("-A INPUT -p icmp -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_icmp"), chain_in_accept);
+			/* allow ICMP echo/traceroute packets to be received, but restrict the flow to avoid ping flood attacks */
+			ipt_write("-A INPUT -p icmp --icmp-type 8 -m state --state NEW,ESTABLISHED,RELATED -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_icmp"), chain_in_accept);
+			ipt_write("-A INPUT -p icmp --icmp-type 30 -m state --state NEW,ESTABLISHED,RELATED -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_icmp"), chain_in_accept);
 			/* allow udp traceroute packets, but restrict the flow to avoid ping flood attacks */
 			ipt_write("-A INPUT -p udp --dport 33434:33534 -m limit --limit %d/second -j %s\n", nvram_get_int("block_wan_limit_icmp"), chain_in_accept);
 		}
@@ -1633,12 +1635,12 @@ static void filter6_input(void)
 		           atoi(hit) + 1, sec, chain_in_drop);
 
 		if (n & 1) {
-			ip6t_write("-A INPUT -i %s -p tcp --dport %s -m state --state NEW -j shlimit\n", lanface[0], nvram_safe_get("sshd_port"));
+			ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j shlimit\n", nvram_safe_get("sshd_port"));
 			if (nvram_get_int("sshd_remote") && nvram_invmatch("sshd_rport", nvram_safe_get("sshd_port")))
 				ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j shlimit\n", nvram_safe_get("sshd_rport"));
 		}
 		if (n & 2)
-			ip6t_write("-A INPUT -i %s -p tcp --dport %s -m state --state NEW -j shlimit\n", lanface[0], nvram_safe_get("telnetd_port"));
+			ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j shlimit\n", nvram_safe_get("telnetd_port"));
 	}
 
 	/* Protect against brute force on port defined for remote GUI access */

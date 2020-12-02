@@ -1,0 +1,59 @@
+--- igmpproxy/src/igmpproxy.c
++++ igmpproxy/src/igmpproxy.c
+@@ -44,6 +44,7 @@
+ 
+ #include "igmpproxy.h"
+ 
++#ifdef NO_OPTSIZE
+ static const char Usage[] =
+ "Usage: igmpproxy [-h] [-n] [-d] [-v [-v]] <configfile>\n"
+ "\n"
+@@ -54,6 +55,7 @@
+ "\n"
+ PACKAGE_STRING "\n"
+ ;
++#endif /* NO_OPTSIZE */
+ 
+ // Local function Prototypes
+ static void signalHandler(int);
+@@ -100,7 +102,9 @@
+                 LogLevel = LOG_INFO;
+             break;
+         case 'h':
++#ifdef NO_OPTSIZE
+             fputs(Usage, stderr);
++#endif
+             exit(0);
+             break;
+         default:
+--- igmpproxy/src/igmpproxy.h
++++ igmpproxy/src/igmpproxy.h
+@@ -108,7 +108,11 @@
+ extern bool Log2Stderr;           // Log to stderr instead of to syslog
+ extern int  LogLevel;             // Log threshold, LOG_WARNING .... LOG_DEBUG
+ 
++#ifdef NO_OPTSIZE
+ void my_log( int Serverity, int Errno, const char *FmtSt, ... );
++#else
++#define my_log(a, b, c, ...) do { } while(0)
++#endif
+ 
+ /* ifvc.c
+  */
+--- igmpproxy/src/syslog.c
++++ igmpproxy/src/syslog.c
+@@ -37,6 +37,7 @@
+ int LogLevel = LOG_WARNING;
+ bool Log2Stderr = false;
+ 
++#ifdef NO_OPTSIZE
+ void my_log( int Severity, int Errno, const char *FmtSt, ... )
+ {
+     char LogMsg[ 128 ];
+@@ -61,3 +62,6 @@
+     if( Severity <= LOG_ERR )
+         exit( -1 );
+ }
++#else
++#define my_log(a, b, c, ...) do { } while(0)
++#endif

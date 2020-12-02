@@ -32,7 +32,7 @@ CFLAGS += -DSMP
 endif
 
 ifeq ($(TOMATO_EXPERIMENTAL),1)
-CFLAGS += -DDEBUG_SYSLOG
+CFLAGS += -DDEBUG_LOGMSG
 endif
 
 OBJS := rc.o init.o interface.o network.o wan.o services.o dhcp.o \

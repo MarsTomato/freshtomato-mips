@@ -1,5 +1,5 @@
---- miniupnpd/genconfig.sh
-+++ miniupnpd/genconfig.sh
+--- miniupnpd/configure
++++ miniupnpd/configure
 @@ -426,19 +426,19 @@
  esac
  

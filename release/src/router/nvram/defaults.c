@@ -143,7 +143,7 @@ const defaults_t defaults[] = {
 	{ "wan4_status_script",		"0"				},
 #endif
 	{ "wan4_ckmtd",			"2"				},
-#endif
+#endif /* TCONFIG_MULTIWAN */
 
 #ifdef TCONFIG_DNSSEC
 	{ "dnssec_enable",		"0"				},
@@ -629,7 +629,7 @@ const defaults_t defaults[] = {
 	{ "nf_loopback",		"0"				},
 	{ "block_wan",			"1"				},	// block inbound icmp
 	{ "block_wan_limit",		"1"				},
-	{ "block_wan_limit_icmp",	"1"				},
+	{ "block_wan_limit_icmp",	"3"				},
 	{ "multicast_pass",		"0"				},	// enable multicast proxy
 	{ "multicast_lan",		"0"				},	// on LAN (br0)
 	{ "multicast_lan1",		"0"				},	// on LAN1 (br1)
