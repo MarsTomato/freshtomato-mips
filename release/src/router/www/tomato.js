@@ -2277,7 +2277,7 @@ function escapeHTML(s) {
 }
 
 function escapeCGI(s) {
-	return escape(s).replace(/\+/g, '%2B');	/* escape() doesn't handle + */
+	return encodeURIComponent(s)
 }
 
 function escapeD(s) {
@@ -2867,4 +2867,10 @@ function cancelDefaultAction(e) {
 	if (evt.preventDefault) evt.preventDefault();
 	evt.returnValue = false;
 	return false;
+}
+
+function eventHandler() {
+	var elements = document.getElementsByClassName('new_window');
+	for (var i = 0; i < elements.length; i++) if (elements[i].nodeName.toLowerCase()==='a')
+		addEvent(elements[i], 'click', function(e) { cancelDefaultAction(e); window.open(this,'_blank'); } );
 }

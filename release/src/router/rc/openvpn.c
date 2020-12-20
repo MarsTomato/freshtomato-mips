@@ -547,18 +547,9 @@ void start_ovpn_client(int unit)
 		            (nvi ? "DROP" : "ACCEPT"),
 		            iface);
 
-		if (route_mode == NAT) {
-			/* Add the nat for all active bridges */
-			for (i = 0; i < BRIDGE_COUNT; i++) {
-				int ret1, ret2;
-
-				ret1 = sscanf(getNVRAMVar((i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i), "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
-				ret2 = sscanf(getNVRAMVar((i == 0 ? "lan_netmask" : "lan%d_netmask"), i), "%d.%d.%d.%d", &nm[0], &nm[1], &nm[2], &nm[3]);
-				if (ret1 == 4 && ret2 == 4) {
-					fprintf(fp, "iptables -t nat -I POSTROUTING -s %d.%d.%d.%d/%s -o %s -j MASQUERADE\n", ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], getNVRAMVar((i == 0 ? "lan_netmask" : "lan%d_netmask"), i), iface);
-				}
-			}
-		}
+		if (route_mode == NAT)
+			/* masquerade all client outbound traffic regardless of source subnet */
+			fprintf(fp, "iptables -t nat -I POSTROUTING -o %s -j MASQUERADE\n", iface);
 
 		/* Create firewall rules for IPv6 */
 #ifdef TCONFIG_IPV6
@@ -603,10 +594,8 @@ void start_ovpn_client(int unit)
 		eval(buffer);
 	}
 
-#ifdef TCONFIG_OPTIMIZE_SIZE_MORE
-	/* In case of openvpn unexpectedly dies and leaves it added - flush tun IF, otherwise openvpn will not re-start (required by iproute2 with OpenVPN 2.4 only) */
+	/* In case of openvpn unexpectedly dies and leaves it added - flush tun IF, otherwise openvpn will not re-start (required by iproute2) */
 	eval("/usr/sbin/ip", "addr", "flush", "dev", iface);
-#endif
 
 	/* Start the VPN client */
 	memset(buffer, 0, BUF_SIZE);
@@ -696,21 +685,23 @@ void stop_ovpn_client(int unit)
 
 void start_ovpn_server(int unit)
 {
-	FILE *fp, *ccd;
+	FILE *fp;
 	ovpn_auth_t auth_mode;
 	ovpn_if_t if_type;
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
 	char buffer2[32];
-	char *chp, *route;
-	char *br_ipaddr, *br_netmask;
-	int push_lan[4] = {0};
-	int dont_push_active = 0;
-	int c2c = 0;
-	int nvi, ip[4], nm[4];
+	int nvi, pid, taskset_ret = 0;
 	long int nvl;
-	int pid, i;
-	int taskset_ret = 0;
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
+	FILE *ccd;
+	char *br_ipaddr, *br_netmask;
+	char *chp, *route;
+	int i, ip[4], nm[4];
+	int c2c = 0;
+	int dont_push_active = 0;
+	int push_lan[4] = {0};
+#endif
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	char cpulist[2];
 	int cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
@@ -786,6 +777,7 @@ void start_ovpn_server(int unit)
 	            nvram_get_int(buffer),
 	            iface);
 
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	if (auth_mode == OVPN_AUTH_TLS) {
 		if (if_type == OVPN_IF_TUN) {
 			fprintf(fp, "topology subnet\n"
@@ -828,7 +820,9 @@ void start_ovpn_server(int unit)
 			fprintf(fp, "\n");
 		}
 	}
-	else if (auth_mode == OVPN_AUTH_STATIC) {
+	else
+#endif
+	     if (auth_mode == OVPN_AUTH_STATIC) {
 		if (if_type == OVPN_IF_TUN) {
 			fprintf(fp, "ifconfig %s ", getNVRAMVar("vpn_server%d_local", unit));
 			fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_remote", unit));
@@ -840,24 +834,19 @@ void start_ovpn_server(int unit)
 
 	/* Cipher */
 	strlcpy(buffer, getNVRAMVar("vpn_server%d_ncp_ciphers", unit), sizeof(buffer));
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	if (auth_mode == OVPN_AUTH_TLS) {
 		if (buffer[0] != '\0')
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			fprintf(fp, "data-ciphers %s\n", buffer);
-#else
-			fprintf(fp, "ncp-ciphers %s\n", buffer);
-#endif
 	}
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
-	else {	/* SECRET/CUSTOM */
+	else
 #endif
+	     {	/* SECRET/CUSTOM */
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_cipher", unit);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	}
-#endif
 
 	/* Digest */
 	memset(buffer, 0, BUF_SIZE);
@@ -885,6 +874,7 @@ void start_ovpn_server(int unit)
 	if ((nvl = atol(getNVRAMVar("vpn_server%d_reneg", unit))) >= 0)
 		fprintf(fp, "reneg-sec %ld\n", nvl);
 
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	if (auth_mode == OVPN_AUTH_TLS) {
 		if (if_type == OVPN_IF_TUN) {
 			/* push LANs */
@@ -1043,10 +1033,8 @@ void start_ovpn_server(int unit)
 		if (!nvram_is_empty(buffer) && nvi >= 0) {
 			if (nvi == 3)
 				fprintf(fp, "tls-crypt static.key");
-#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			else if (nvi == 4)
 				fprintf(fp, "tls-crypt-v2 static.key");
-#endif
 			else
 				fprintf(fp, "tls-auth static.key");
 
@@ -1070,13 +1058,15 @@ void start_ovpn_server(int unit)
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_crl", unit);
 		if (!nvram_is_empty(buffer))
-			fprintf(fp, "crl crl.pem\n");
+			fprintf(fp, "crl-verify crl.pem\n");
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_key", unit);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "key server.key\n");
 	}
-	else if (auth_mode == OVPN_AUTH_STATIC) {
+	else
+#endif
+	     if (auth_mode == OVPN_AUTH_STATIC) {
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_static", unit);
 		if (!nvram_is_empty(buffer))
@@ -1091,6 +1081,7 @@ void start_ovpn_server(int unit)
 	fclose(fp);
 
 	/* Write certification and key files */
+#ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	if (auth_mode == OVPN_AUTH_TLS) {
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_ca", unit);
@@ -1147,6 +1138,7 @@ void start_ovpn_server(int unit)
 			fclose(fp);
 		}
 	}
+#endif
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "vpn_server%d_hmac", unit);
 	if ((auth_mode == OVPN_AUTH_STATIC) || (auth_mode == OVPN_AUTH_TLS && nvram_get_int(buffer) >= 0)) {

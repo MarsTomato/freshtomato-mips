@@ -327,11 +327,13 @@ ifeq ($(TCONFIG_OPTIMIZE_SIZE),y)
 	sed -i $(INSTALLDIR)/www/about.asp -e "/OPTSIZE-BEGIN/,/OPTSIZE-END/d"
 endif
 
-# Only include LZ4 compression option if normal OpenVPN is build
+# Only include LZ4 compression option/TLS server support if normal and 2.5+ OpenVPN is build
 ifeq ($(TCONFIG_OPENVPN),y)
 ifeq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
 	sed -i $(INSTALLDIR)/www/vpn-client.asp -e "/SIZEOPTMORE-BEGIN/,/SIZEOPTMORE-END/d"
 	sed -i $(INSTALLDIR)/www/vpn-server.asp -e "/SIZEOPTMORE-BEGIN/,/SIZEOPTMORE-END/d"
+else
+	sed -i $(INSTALLDIR)/www/vpn-server.asp -e "/SIZEOPTMORE0-BEGIN/,/SIZEOPTMORE0-END/d"
 endif
 endif
 
@@ -401,6 +403,7 @@ endif
 		-e "/TERMLIB0-BEGIN/d"	-e "/TERMLIB0-END/d"\
 		-e "/OPTSIZE-BEGIN/d"	-e "/OPTSIZE-END/d" \
 		-e "/SIZEOPTMORE-BEGIN/d" -e "/SIZEOPTMORE-END/d" \
+		-e "/SIZEOPTMORE0-BEGIN/d" -e "/SIZEOPTMORE0-END/d" \
 		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
 		-e "/ADVTHEMES-BEGIN/d"	-e "/ADVTHEMES-END/d" \
 		|| true; \

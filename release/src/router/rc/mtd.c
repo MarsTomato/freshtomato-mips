@@ -326,7 +326,7 @@ int mtd_write_main(int argc, char *argv[])
 			error = "Not enough memory";
 			goto ERROR;
 		}
-		if (safe_fread(buf, 1, n, f) != n) {
+		if (safe_fread(buf, 1, n, f) != (int) n) {
 			goto ERROR;
 		}
 		free(buf);
@@ -461,7 +461,7 @@ int mtd_write_main(int argc, char *argv[])
 
 	for (ei.start = 0; ei.start < total; ei.start += ei.length) {
 		n = MIN(ei.length, trx.len) - ofs;
-		if (safe_fread(buf + ofs, 1, n, f) != n) {
+		if (safe_fread(buf + ofs, 1, n, f) != (int) n) {
 			error = "Error reading file";
 			break;
 		}
@@ -500,7 +500,7 @@ int mtd_write_main(int argc, char *argv[])
 			error = "Error erasing MTD block";
 			break;
 		} 
-		if (write(mf, buf, n) != n) {
+		if (write(mf, buf, n) != (int) n) {
 			error = "Error writing to MTD device";
 			break;
 		}
@@ -539,7 +539,7 @@ int mtd_write_main(int argc, char *argv[])
 		if (buf) free(buf);
 		if (!(buf = malloc(mi.erasesize)))
 			goto ERROR2;
-		if (read(mf, buf, mi.erasesize) != mi.erasesize)
+		if (read(mf, buf, mi.erasesize) != (int) mi.erasesize)
 			goto ERROR2;
 		if (lseek(mf, ei.start, SEEK_SET) < 0)
 			goto ERROR2;
@@ -557,7 +557,7 @@ int mtd_write_main(int argc, char *argv[])
 		if (ioctl(mf, MEMERASE, &ei) != 0)
 			goto ERROR2;
 
-		if (write(mf, buf, mi.erasesize) != mi.erasesize)
+		if (write(mf, buf, mi.erasesize) != (int) mi.erasesize)
 			goto ERROR2;
 #endif
 

@@ -1,0 +1,11 @@
+--- miniupnpd/Makefile.linux
++++ miniupnpd/Makefile.linux
+@@ -87,7 +87,7 @@
+ 
+ # OpenWrt packager disables https server for IGD v2 and hardcodes libuuid support
+ ifeq ($(TARGET_OPENWRT),)
+-LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l libssl)
++LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l $(if $(TCONFIG_HTTPS),libssl))
+ 
+ #TEST := $(shell $(PKG_CONFIG) --exists uuid && echo 1)
+ #ifeq ($(TEST),1)

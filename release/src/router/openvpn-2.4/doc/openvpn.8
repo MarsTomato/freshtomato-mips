@@ -3014,6 +3014,19 @@ as with a
 configuration file.  This option will ignore
 .B \-\-push
 options at the global config file level.
+
+NOTE:
+.B \-\-push\-reset
+is very thorough: it will remove almost all options from the list of
+to-be-pushed options.  In many cases, some of these options will need
+to be re-configured afterwards - specifically,
+.B \-\-topology subnet
+and
+.B \-\-route-gateway
+will get lost and this will break client configs in many cases.  Thus,
+for most purposes,
+.B \-\-push-remove
+is better suited to selectively remove push options for individual clients.
 .\"*********************************************************
 .TP
 .B \-\-push\-remove opt
@@ -3361,11 +3374,10 @@ an error status.
 
 The
 .B \-\-client\-disconnect
-command is passed the same pathname as the corresponding
-.B \-\-client\-connect
-command as its last argument. (after any arguments specified in
+command is not passed any extra arguments
+(only those arguments specified in
 .B cmd
-).
+if any).
 .B 
 .\"*********************************************************
 .TP
@@ -4273,6 +4285,8 @@ NCP server (v2.4+) with "\-\-cipher BF\-CBC" and "\-\-ncp\-ciphers
 AES\-256\-GCM:AES\-256\-CBC" set can either specify "\-\-cipher BF\-CBC" or
 "\-\-cipher AES\-256\-CBC" and both will work.
 
+This list is restricted to be 127 chars long after conversion to OpenVPN
+ciphers.
 .\"*********************************************************
 .TP
 .B \-\-ncp\-disable

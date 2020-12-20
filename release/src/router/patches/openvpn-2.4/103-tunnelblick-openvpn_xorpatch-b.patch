@@ -30,7 +30,7 @@
  
      if (o->http_proxy_options)
      {
-@@ -5947,6 +5956,46 @@
+@@ -5960,6 +5969,46 @@
          }
          options->proto_force = proto_force;
      }

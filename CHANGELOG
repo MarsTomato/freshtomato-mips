@@ -5,6 +5,116 @@ FreshTomato-MIPS Changelog
 
 
 
+2020.8          2020.12.19
+--------------------------
+
+- kernel: net_sched: fix datalen for ematch
+- openvpn: update to 2.5.0
+- openvpn-2.4: update to 2.4.10
+- nano: update to 5.4
+- nginx: update to 1.19.5
+- dropbear: update to 2020.81
+- xl2tpd: update to 1.3.16 
+- busybox: update to 1.31.1
+- tor: update to 0.4.4.6
+- SNMP: update to 5.9; clean sources, add patches instead 
+- igmpproxy: update to 78eda58 (2020-09-05) snapshot; reduce size for the smallest targets
+- udpxy: update to 1.0-25.1
+- miniupnpd: update to 2.2.0
+- adminer: update to 4.7.8
+- gmp: update to 6.2.1
+- openssl-1.1: update to 1.1.1i
+- sqlite: update to 3.34.0
+- uqmi: update to 2020.11.22 (0a19b5b) snapshot
+- wsdd2: update to 2020.11.19 (e0cf50d) snapshot
+- libcurl: update CA certificate bundle as of 2020-10-14
+- build: add D-Link DIR-865L support
+- build: harmonize BW Limiter filenames, service name, variables names, etc., also in NVRAM; it was a real mess...; Note: those using BW Limiter must either manually rename the variables in NVRAM or enter the values from scratch
+- build: don't include USB pages and other stuff on routers with wl_high module but without USB support
+- build: fix rp-pppoe recipe - patches were not applied
+- build: kernel: add comment and statistic netfilter for iptables (Mega-VPN and AIO targets)
+- build: reduce size for pppd/dnsmasq only for smallest targets
+- build: changes in patch_files macro
+- build: librt is required on every target with USB support (for e2fsprogs)
+- IPv6: extend GUI status page (status-overview.asp) - show IPv6 WAN DNS addresses
+- IPv6: send ICMPv6 RSes only when RAs are accepted; see https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?h=v3.19&id=026359bc6eddfdc2d2e684bf0b51691649b90f33
+- IPv6: unify logic evaluating inet6_dev's accept_ra property; see https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?h=v3.19&id=aeaf6e9d2f49d793d3eb8c1af4095cf25e061b94
+- IPv6: make 'addrconf_rs_timer' send Router Solicitations (and re-arm itself) if Router Advertisements are accepted; see https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?h=v3.19&id=9ba2add3cf5c103b7236f82a023c8ee05a51e4d1
+- IPv6: split IPv6 / IPv4 up and down logic (they work independent of each other now)
+- GUI: openvpn: remove option to enable/disable NCP (deprecated)
+- GUI: openvpn: make Data Ciphers (ncp-ciphers) editable
+- GUI: openvpn: only use the old --cipher setting in static key mode
+- GUI: openvpn: add stub/stub-v2 compression support to OpenVPN client 
+- GUI: openvpn: implement tls-crypt-v2 support
+- GUI: openvpn server: fix bug with generating client configuration in 'secret' mode
+- GUI: openvpn server: implement 'Serial number' for generated client configuration in 'tls' mode
+- GUI: openvpn server: implement CRL file
+- GUI: openvpn client: distinguish between remote-cert-tls and verify-x509-name options
+- GUI: advanced-wlanvifs.asp - add AP Isolation setting also for VIFs
+- GUI: Admin: Debugging: add Clear Cache link (removes all Storage Object item for domain/IP address)
+- GUI: also add localStorage.clear() on admin-upgrade and admin-access pages
+- GUI: basic-network.asp - repair scan button function and provide control channel at wireless survey
+- GUI: improvement to shutdown() - added 2nd pop-up with confirmation
+- GUI: Advanced: DHCP/DNS: extend allowed dnsmasq custom configuration text area to 4096 characters
+- GUI: MultiWAN Routing: extend Domain field to 70 characters
+- GUI: QoS Graphs: fix displaying correct number of connections for the lowest priority class in BW Distribution
+- GUI: tinc: properly format the display of information on the Status page
+- GUI: Admin: Debugging: add possibility to enable segfault logging to syslog
+- GUI: Advanced: Firewall: simplify the part with WAN behavior for ping and traceroute
+- GUI: advanced-wireless - restrict tx power range (for very low values); Via GUI we allow a tx power range in mW from 5 to 1000 or default value 0 (-1 will be used for the wl driver) --> AVOID 1-4 mW area; see latest findings https://www.linksysinfo.org/index.php?threads/tenda-ac15-ac1900-tomato-firmware-support.71709/page-14#post-321389
+- adblock: update blacklist URLs
+- busybox: add (conditionally, only for AIO and Mega-VPN targets) time and getopt applets
+- dropbear: use common random source for ltm
+- dropbear: libtommath: enable fixed cutoffs as size-optimization
+- ebtables: reduce size (except for Mega-VPN and AIO targets)
+- ffmpeg/minidlna: do not reduce size for Mega-VPN and AIO targets
+- firewall: RT and RT-N branches (MIPS) do not load ipt_REDIRECT automagically
+- firewall: adjust limit connection attempts (ssh/telnet) for IPv6 (and align to IPv4 --> remove incoming device, apply to all)
+- dnsmasq: suppress more unwanted errors/warning about ipset
+- dnsmasq: add default edns_pktsz
+- firewall: allow incoming IPv6 from br0 to br3 (and align also to IPv4)
+- getdns: listeners reply returned wireformat (fix from upstream, issue #430)
+- ipset: reduce size
+- ipset: do not reduce size for Mega-VPN and AIO targets
+- iptables: update reduce size patch
+- MOTD: only display Wireless info if that radio is enabled
+- MOTD: fix motd and remove ethstate leftovers
+- multiwan: in case of multiwan, don't set default gateway route. mwanroute script will handle this
+- multiwan: mwan_load_balance: if connection is down, clear old mwan state
+- multiwan: make watchdog less destructive to the routing table (only modify route of test hosts); change default checker to curl
+- watchdog: new method of checking without breaking existing connections to the check hosts
+- watchdog: fix incorrect ISPPPD check and condition
+- ntp: implement ntp server properly
+- openvpn: switch to the subnet topology, instead of the deprecated net30 topology; Ref: https://community.openvpn.net/openvpn/wiki/Topology#Topologysubnet
+- openvpn: ensure DHCP doesn't override our default route (fixes TAP+DHCP)
+- openvpn: hide build date
+- openvpn: add 'mode p2p' option to generated client config if auth mode is static
+- openvpn: fix some OpenVPN issues in the smallest image (MiniVPN - j)
+- openvpn-2.4: reduce size (disable des)
+- openssl: conf: add extendedKeyUsage also to usr_cert section
+- patches: dropbear: add forgotten LOCAL_IDENT to override orig ident
+- pppd: fix/correction for commit IPv6: split IPv6 / IPv4 up and down logic (see https://bitbucket.org/pedro311/freshtomato-arm/commits/d365748b8f458a196a6351849f0aa985263bd1b0); fix for: PPTP Server and Client not working anymore
+- pppd: add two patches from openwrt: retain foreign default routes on Linux, remove runtime kernel checks
+- vpnrouting: do not add local routes if in PBR strict mode; also use 'via $route_vpn_gateway' if available
+- vsftpd: add native support for basic ftp_tls using router httpd cert/key
+- httpd: openvpn.c: fix generation of client configuration file for user&pass/user&pass only Auth
+- httpd: fix problems with server.pem key when using HTTPS
+- httpd: use UTF-8 decoding for SSIDs
+- www: fix escapeCGI to properly encode unicode
+- defaults.c : disable IP Traffic (cstats) Monitoring feature by default and save cpu workload; In additon disabling cstats avoids the waring/note at basic-network.asp that netmask should have at least 22 bits (255.255.252.0); fix issue #72
+- rc: firewall.c: use REDIRECT target instead of DNAT to intercept dns traffic, as it's more efficient
+- rc: firewall.c: raise a little allowed hit count in BF protection for remote GUI access (part 2 for IPv6)
+- rc: firewall.c: only intercept udp requests to port 123, ntpd does not listen to tcp
+- rc: firewall.c: be more restrictive, only allow ICMP messages we need
+- rc: openvpn.c: add keepalive to client config
+- rc: openvpn.c: client: fix ineffective "route" directives when PBR active; discussion: https://www.linksysinfo.org/index.php?threads/openvpn-client-bug-flaw-ineffective-route-directives-when-pbr-active.75941/
+- rc: ppp.c: - set nvram "wan_iface" also in case IPv6 link up (function ip6up_main()); fix for: ipup_main() not yet (or later) called --> nvram variable "wan_iface" needed for function start_dhcp6c()
+- rc: vsftpd: disable (broken) process isolation under MIPS
+- rc: services: adjust function start_dnsmasq() and check wireless bridge after stop_dnsmasq(); fix for: in wireless ethernet bridge mode, router time not working anymore
+- rc: wan.c - adjust function config_pppd() and start/add IPv6 only for "wan" (no IPv6 multiwan support)
+- shared: defaults: change wifi rxchain powersave mode; turn it off by default now; Note: this can/could help some netgear router user
+
+
 2020.7          2020.10.01
 --------------------------
 

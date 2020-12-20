@@ -1065,11 +1065,15 @@ const defaults_t defaults[] = {
 	{ "vpn_server1_proto",		"udp"				},
 	{ "vpn_server1_port",		"1194"				},
 	{ "vpn_server1_firewall",	"auto"				},
+#ifdef TCONFIG_OPTIMIZE_SIZE_MORE
+	{ "vpn_server1_crypt",		"secret"			},
+#else
 	{ "vpn_server1_crypt",		"tls"				},
+#endif
 	{ "vpn_server1_comp",		"-1"				},
 	{ "vpn_server1_cipher",		"AES-128-CBC"			},
-#if 0
-	{ "vpn_server1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
+#ifdef TCONFIG_OPTIMIZE_SIZE_MORE
+	{ "vpn_server1_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
 #else
 	{ "vpn_server1_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
 #endif
@@ -1110,11 +1114,15 @@ const defaults_t defaults[] = {
 	{ "vpn_server2_proto",		"udp"				},
 	{ "vpn_server2_port",		"1195"				},
 	{ "vpn_server2_firewall",	"auto"				},
+#ifdef TCONFIG_OPTIMIZE_SIZE_MORE
+	{ "vpn_server2_crypt",		"secret"			},
+#else
 	{ "vpn_server2_crypt",		"tls"				},
+#endif
 	{ "vpn_server2_comp",		"-1"				},
 	{ "vpn_server2_cipher",		"AES-128-CBC"			},
-#if 0
-	{ "vpn_server2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
+#ifdef TCONFIG_OPTIMIZE_SIZE_MORE
+	{ "vpn_server2_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
 #else
 	{ "vpn_server2_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
 #endif
@@ -1164,8 +1172,8 @@ const defaults_t defaults[] = {
 	{ "vpn_client1_crypt",		"tls"				},
 	{ "vpn_client1_comp",		"-1"				},
 	{ "vpn_client1_cipher",		"default"			},
-#if 0
-	{ "vpn_client1_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
+#ifdef TCONFIG_OPTIMIZE_SIZE_MORE
+	{ "vpn_client1_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
 #else
 	{ "vpn_client1_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
 #endif
@@ -1201,8 +1209,8 @@ const defaults_t defaults[] = {
 	{ "vpn_client2_crypt",		"tls"				},
 	{ "vpn_client2_comp",		"-1"				},
 	{ "vpn_client2_cipher",		"default"			},
-#if 0
-	{ "vpn_client2_ncp_ciphers",	"AES-256-GCM:AES-128-GCM:AES-256-CBC:AES-128-CBC"},
+#ifdef TCONFIG_OPTIMIZE_SIZE_MORE
+	{ "vpn_client2_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
 #else
 	{ "vpn_client2_ncp_ciphers",	"CHACHA20-POLY1305:AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
 #endif
