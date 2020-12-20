@@ -373,7 +373,7 @@ int mtd_write_main(int argc, char *argv[])
 		
 		// Read (formatted) Netgear CHK header (now that we know how long it is)
 		//rewind(f); ... disabled, not working for some reason? Adjust structure above to account for this.
-		if (safe_fread(&netgear_hdr, 1, n-sizeof(sig)-sizeof(n), f) != n-sizeof(sig)-sizeof(n)) {
+		if (safe_fread(&netgear_hdr, 1, n-sizeof(sig)-sizeof(n), f) != (int) (n-sizeof(sig)-sizeof(n))) {
 			goto ERROR;
 		} else
 			logmsg(LOG_DEBUG, "*** %s: read Netgear header, magic=0x%x, length=0x%x", __FUNCTION__, sig, n);
@@ -514,7 +514,7 @@ int mtd_write_main(int argc, char *argv[])
 
 	for (ei.start = 0; ei.start < total; ei.start += ei.length) {
 		n = MIN(ei.length, trx.len) - ofs;
-		if (safe_fread(buf + ofs, 1, n, f) != n) {
+		if (safe_fread(buf + ofs, 1, n, f) != (int) n) {
 			error = "Error reading file";
 			break;
 		}
@@ -553,7 +553,7 @@ int mtd_write_main(int argc, char *argv[])
 			error = "Error erasing MTD block";
 			break;
 		} 
-		if (write(mf, buf, n) != n) {
+		if (write(mf, buf, n) != (int) n) {
 			error = "Error writing to MTD device";
 			break;
 		}
@@ -614,7 +614,7 @@ int mtd_write_main(int argc, char *argv[])
 			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: malloc() error", __FUNCTION__);
 			goto ERROR2;
 		}
-		if (read(mf, buf, mi.erasesize) != mi.erasesize) {
+		if (read(mf, buf, mi.erasesize) != (int) mi.erasesize) {
 			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: read() error", __FUNCTION__);
 			goto ERROR2;
 		}
@@ -638,7 +638,7 @@ int mtd_write_main(int argc, char *argv[])
 			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: ioctl() error", __FUNCTION__);
 			goto ERROR2;
 		}
-		if (write(mf, buf, mi.erasesize) != mi.erasesize) {
+		if (write(mf, buf, mi.erasesize) != (int) mi.erasesize) {
 			logmsg(LOG_DEBUG, "*** %s: Netgear CRC: write() error", __FUNCTION__);
 			goto ERROR2;
 		}

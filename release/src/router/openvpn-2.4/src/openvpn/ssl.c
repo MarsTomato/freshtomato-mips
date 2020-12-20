@@ -452,8 +452,6 @@ ssl_set_auth_nocache(void)
 {
     passbuf.nocache = true;
     auth_user_pass.nocache = true;
-    /* wait for push-reply, because auth-token may still need the username */
-    auth_user_pass.wait_for_push = true;
 }
 
 /*
@@ -1941,7 +1939,10 @@ tls_session_generate_data_channel_keys(struct tls_session *session)
     const struct session_id *server_sid = !session->opt->server ?
                                           &ks->session_id_remote : &session->session_id;
 
-    ASSERT(ks->authenticated);
+    if (!ks->authenticated) {
+        msg(D_TLS_ERRORS, "TLS Error: key_state not authenticated");
+        goto cleanup;
+    }
 
     ks->crypto_options.flags = session->opt->crypto_flags;
     if (!generate_key_expansion(&ks->crypto_options.key_ctx_bi,
@@ -2308,7 +2309,17 @@ push_peer_info(struct buffer *buf, struct tls_session *session)
         if (session->opt->ncp_enabled
             && (session->opt->mode == MODE_SERVER || session->opt->pull))
         {
+            /* We keep announcing IV_NCP=2 in OpenVPN 2.4 even though it is
+             * technically wrong to ensure not to break 2.4 setups on a
+             * minor release */
             buf_printf(&out, "IV_NCP=2\n");
+            buf_printf(&out, "IV_CIPHERS=%s", session->opt->config_ncp_ciphers);
+            if (!tls_item_in_cipher_list(session->opt->config_ciphername,
+                                         session->opt->config_ncp_ciphers))
+            {
+                buf_printf(&out, ":%s", session->opt->config_ciphername);
+            }
+            buf_printf(&out, "\n");
         }
 
         /* push compression status */
@@ -2428,14 +2439,15 @@ key_method_2_write(struct buffer *buf, struct tls_session *session)
         }
         /* if auth-nocache was specified, the auth_user_pass object reaches
          * a "complete" state only after having received the push-reply
-         * message.
+         * message. The push message might contain an auth-token that needs
+         * the username of auth_user_pass.
          *
          * For this reason, skip the purge operation here if no push-reply
          * message has been received yet.
          *
          * This normally happens upon first negotiation only.
          */
-        if (!auth_user_pass.wait_for_push)
+        if (!session->opt->pull)
         {
             purge_user_pass(&auth_user_pass, false);
         }
@@ -4309,12 +4321,74 @@ done:
 }
 
 void
-delayed_auth_pass_purge(void)
+ssl_clean_user_pass(void)
 {
-    auth_user_pass.wait_for_push = false;
     purge_user_pass(&auth_user_pass, false);
 }
 
+char *
+mutate_ncp_cipher_list(const char *list, struct gc_arena *gc)
+{
+    bool error_found = false;
+
+    struct buffer new_list  = alloc_buf(MAX_NCP_CIPHERS_LENGTH);
+
+    char *const tmp_ciphers = string_alloc(list, NULL);
+    const char *token = strtok(tmp_ciphers, ":");
+    while (token)
+    {
+        /*
+         * Going through a roundtrip by using translate_cipher_name_from_openvpn
+         * and translate_cipher_name_to_openvpn also normalises the cipher name,
+         * e.g. replacing AeS-128-gCm with AES-128-GCM
+         */
+        const char *cipher_name = translate_cipher_name_from_openvpn(token);
+        const cipher_kt_t *ktc = cipher_kt_get(cipher_name);
+        if (!ktc)
+        {
+            msg(M_WARN, "Unsupported cipher in --ncp-ciphers: %s", token);
+            error_found = true;
+        }
+        else
+        {
+            const char *ovpn_cipher_name =
+                translate_cipher_name_to_openvpn(cipher_kt_name(ktc));
+
+            if (buf_len(&new_list)> 0)
+            {
+                /* The next if condition ensure there is always space for
+                 * a :
+                 */
+                buf_puts(&new_list, ":");
+            }
+
+            /* Ensure buffer has capacity for cipher name + : + \0 */
+            if (!(buf_forward_capacity(&new_list) >
+                  strlen(ovpn_cipher_name) + 2))
+            {
+                msg(M_WARN, "Length of --ncp-ciphers is over the "
+                    "limit of 127 chars");
+                error_found = true;
+            }
+            else
+            {
+                buf_puts(&new_list, ovpn_cipher_name);
+            }
+        }
+        token = strtok(NULL, ":");
+    }
+
+    char *ret = NULL;
+    if (!error_found && buf_len(&new_list) > 0)
+    {
+        buf_null_terminate(&new_list);
+        ret = string_alloc(buf_str(&new_list), gc);
+    }
+    free(tmp_ciphers);
+    free_buf(&new_list);
+
+    return ret;
+}
 #else  /* if defined(ENABLE_CRYPTO) */
 static void
 dummy(void)

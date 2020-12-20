@@ -156,6 +156,11 @@ function verifyFields(focused, quiet) {
 	for (i = 0; i < tabs.length; ++i) {
 		t = tabs[i][0];
 
+/* SIZEOPTMORE0-BEGIN */
+		if (E('_vpn_'+t+'_crypt').value == 'tls')
+			E('_vpn_'+t+'_crypt').value = 'secret';
+		E('_vpn_'+t+'_crypt').options[0].disabled = 1;
+/* SIZEOPTMORE0-END */
 		auth = E('_vpn_'+t+'_crypt').value;
 		iface = E('_vpn_'+t+'_if').value;
 		hmac = E('_vpn_'+t+'_hmac').value;
@@ -768,7 +773,9 @@ function downloadClientConfig(serverNumber) {
 /* KEYGEN-END */
 				},
 				{ title: 'CRL file', name: 'vpn_'+t+'_crl', type: 'textarea', value: eval('nvram.vpn_'+t+'_crl') },
+/* KEYGEN-BEGIN */
 				{ title: '', custom: '<input type="button" value="Generate keys" onclick="generateKeys('+(i+1)+')" id="_vpn_keygen_'+t+'_button">' },
+/* KEYGEN-END */
 				{ title: 'Diffie Hellman parameters', name: 'vpn_'+t+'_dh', type: 'textarea', value: eval('nvram.vpn_'+t+'_dh'),
 /* KEYGEN-BEGIN */
 					prefix: '<div id="'+t+'_dh_progress_div" style="display:none"><p class="keyhelp">Please wait while we\'re generating DH parameters...<img src="spin.gif" alt=""><\/p><\/div>' },

@@ -33,15 +33,15 @@ static int get_btn(const char *name, uint32_t *bit, uint32_t *pushed)
 
 int buttons_main(int argc, char *argv[])
 {
-	uint32_t gpio;
+	long gpio;
+	long last;
+	long brau_state;
 	uint32_t mask;
-	uint32_t last;
 	uint32_t ses_mask;
 	uint32_t ses_pushed;
 	uint32_t reset_mask;
 	uint32_t reset_pushed;
 	uint32_t brau_mask;
-	uint32_t brau_state;
 	int brau_count_stable;
 	int brau_flag;
 	int count;
