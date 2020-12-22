@@ -223,8 +223,8 @@ else
 export CFLAG_OPTIMIZE = -Os
 endif
 
-obj-$(TCONFIG_SAMBASR) += samba3
-obj-$(TCONFIG_SAMBASR) += wsdd2
+obj-$(TCONFIG_SAMBASRV) += samba3
+obj-$(TCONFIG_SAMBASRV) += wsdd2
 
 ifeq ($(CONFIG_BCMWL6),y)
 ifeq ($(TCONFIG_UFSD),y)
