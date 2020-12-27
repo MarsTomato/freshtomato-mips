@@ -43,13 +43,16 @@
 #define LOGMSG_NVDEBUG	"interface_debug"
 
 
-int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr)
+int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr, int mtu)
 {
 	int s;
 	struct ifreq ifr;
 	struct in_addr in_addr, in_netmask, in_broadaddr;
 
-	logmsg(LOG_DEBUG, "*** %s: name=%s flags=%s addr=%s netmask=%s\n", __FUNCTION__, name, (flags == IFUP ? "IFUP" : "0"), addr, netmask);
+	logmsg(LOG_DEBUG, "*** %s: name=%s flags=%04x %s addr=%s netmask=%s mtu=%d\n", __FUNCTION__, name ? : "", flags, (flags & IFUP) ? "IFUP" : "", addr ? : "", netmask ? : "", mtu ? : 0);
+
+	if (!name)
+		return -1;
 
 	/* open a raw socket to the kernel */
 	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
@@ -88,7 +91,7 @@ int _ifconfig(const char *name, int flags, const char *addr, const char *netmask
 	}
 
 	/* set dst or P-t-P IP address */
-	if (dstaddr) {
+	if (dstaddr && *dstaddr) {
 		inet_aton(dstaddr, &in_addr);
 		sin_addr(&ifr.ifr_dstaddr).s_addr = in_addr.s_addr;
 		ifr.ifr_dstaddr.sa_family = AF_INET;
@@ -96,19 +99,26 @@ int _ifconfig(const char *name, int flags, const char *addr, const char *netmask
 			goto error;
 	}
 
+	/* set MTU */
+	if (mtu > 0) {
+		ifr.ifr_mtu = mtu;
+		if (ioctl(s, SIOCSIFMTU, &ifr) < 0)
+			goto error;
+	}
+
 	close(s);
 	return 0;
 
 error:
-	close(s);
 	perror(name);
+	close(s);
 
 	return errno;
 }
 
 static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway, char *genmask)
 {
-	int s;
+	int s, err = 0;
 	struct rtentry rt;
 
 	logmsg(LOG_DEBUG, "*** %s: cmd=%s name=%s addr=%s netmask=%s gateway=%s metric=%d\n", __FUNCTION__, cmd == SIOCADDRT ? "ADD" : "DEL", name, dst, genmask, gateway, metric);
@@ -141,13 +151,12 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 	rt.rt_genmask.sa_family = AF_INET;
 
 	if (ioctl(s, cmd, &rt) < 0) {
+		err = errno;
 		perror(name);
-		close(s);
-		return errno;
 	}
 
 	close(s);
-	return 0;
+	return err;
 }
 
 int route_add(char *name, int metric, char *dst, char *gateway, char *genmask)
@@ -165,11 +174,9 @@ void route_del(char *name, int metric, char *dst, char *gateway, char *genmask)
 /* configure loopback interface */
 void config_loopback(void)
 {
-	struct ifreq ifr;
-
 	/* bring down loopback interface */
 	if (is_intf_up("lo") > 0)
-		ifconfig(ifr.ifr_name, 0, NULL, NULL);
+		ifconfig("lo", 0, NULL, NULL);
 
 	/* bring up loopback interface */
 	ifconfig("lo", IFUP, "127.0.0.1", "255.0.0.0");

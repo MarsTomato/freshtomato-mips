@@ -125,12 +125,12 @@ static inline int fastnat_allowed(void)
 
 void try_enabling_fastnat(void)
 {
-	f_write_string("/proc/sys/net/ipv4/netfilter/ip_conntrack_fastnat", (fastnat_allowed() ? "1" : "0"), 0, 0);
+	f_write_procsysnet("ipv4/netfilter/ip_conntrack_fastnat", (fastnat_allowed() ? "1" : "0"));
 }
 
 void enable_ip_forward(void)
 {
-	f_write_string("/proc/sys/net/ipv4/ip_forward", "1", 0, 0);
+	f_write_procsysnet("ipv4/ip_forward", "1");
 }
 
 void log_segfault(void)
@@ -141,14 +141,14 @@ void log_segfault(void)
 #ifdef TCONFIG_IPV6
 void enable_ip6_forward(void)
 {
-	f_write_string("/proc/sys/net/ipv6/conf/default/forwarding", (ipv6_enabled() ? "1" : "0"), 0, 0);
-	f_write_string("/proc/sys/net/ipv6/conf/all/forwarding", (ipv6_enabled() ? "1" : "0"), 0, 0);
+	f_write_procsysnet("ipv6/conf/default/forwarding", (ipv6_enabled() ? "1" : "0"));
+	f_write_procsysnet("ipv6/conf/all/forwarding", (ipv6_enabled() ? "1" : "0"));
 }
 
 static void enable_ndp_proxy(void)
 {
-	f_write_string("/proc/sys/net/ipv6/conf/default/proxy_ndp", (ipv6_enabled() ? "1" : "0"), 0, 0);
-	f_write_string("/proc/sys/net/ipv6/conf/all/proxy_ndp", (ipv6_enabled() ? "1" : "0"), 0, 0);
+	f_write_procsysnet("ipv6/conf/default/proxy_ndp", (ipv6_enabled() ? "1" : "0"));
+	f_write_procsysnet("ipv6/conf/all/proxy_ndp", (ipv6_enabled() ? "1" : "0"));
 }
 #endif /* TCONFIG_IPV6 */
 
@@ -250,16 +250,16 @@ void ip6t_write(const char *format, ...)
 #endif
 }
 
-static void foreach_wan_input(int wanup, wanface_list_t wanfaces)
+static void foreach_wan_input(int wanXup, wanface_list_t wanXfaces)
 {
 	int i, br;
 
-	if ((nvram_get_int("nf_loopback") != 0) && (wanup)) {
-		for (i = 0; i < wanfaces.count; ++i) {
-			if (*(wanfaces.iface[i].name)) {
+	if ((nvram_get_int("nf_loopback") != 0) && (wanXup)) {
+		for (i = 0; i < wanXfaces.count; ++i) {
+			if (*(wanXfaces.iface[i].name)) {
 				for (br = 0; br < BRIDGE_COUNT; br++) {
 					if ((strcmp(lanface[br], "") != 0) || (br == 0)) {
-						ipt_write("-A INPUT -i %s -d %s -j DROP\n", lanface[br], wanfaces.iface[i].ip);
+						ipt_write("-A INPUT -i %s -d %s -j DROP\n", lanface[br], wanXfaces.iface[i].ip);
 					}
 				}
 			}
@@ -267,16 +267,16 @@ static void foreach_wan_input(int wanup, wanface_list_t wanfaces)
 	}
 }
 
-static void foreach_wan_nat(int wanup, wanface_list_t wanfaces, char *p)
+static void foreach_wan_nat(int wanXup, wanface_list_t wanXfaces, char *p)
 {
 	int i;
 
-	for (i = 0; i < wanfaces.count; ++i) {
-		if (*(wanfaces.iface[i].name)) {
-			if ((!wanup) || (nvram_get_int("ne_snat") != 1))
-				ipt_write("-A POSTROUTING %s -o %s -j MASQUERADE\n", p, wanfaces.iface[i].name);
+	for (i = 0; i < wanXfaces.count; ++i) {
+		if (*(wanXfaces.iface[i].name)) {
+			if ((!wanXup) || (nvram_get_int("ne_snat") != 1))
+				ipt_write("-A POSTROUTING %s -o %s -j MASQUERADE\n", p, wanXfaces.iface[i].name);
 			else
-				ipt_write("-A POSTROUTING %s -o %s -j SNAT --to-source %s\n", p, wanfaces.iface[i].name, wanfaces.iface[i].ip);
+				ipt_write("-A POSTROUTING %s -o %s -j SNAT --to-source %s\n", p, wanXfaces.iface[i].name, wanXfaces.iface[i].ip);
 		}
 	}
 }
@@ -1800,70 +1800,104 @@ int start_firewall(void)
 	/* NAT performance tweaks
 	 * These values can be overriden later if needed via firewall script
 	 */
-	f_write_string("/proc/sys/net/core/netdev_max_backlog", "2048", 0, 0);
-	f_write_string("/proc/sys/net/core/somaxconn", "1024", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_max_syn_backlog", "1024", 0, 0);
+	f_write_procsysnet("core/netdev_max_backlog", "2048");
+	f_write_procsysnet("core/somaxconn", "1024");
+	f_write_procsysnet("ipv4/tcp_max_syn_backlog", "1024");
+	f_write_procsysnet("ipv4/neigh/default/gc_thresh1", "1");
+	f_write_procsysnet("ipv4/neigh/default/gc_thresh2", "2048");
+	f_write_procsysnet("ipv4/neigh/default/gc_thresh3", "4096");
+#ifdef TCONFIG_IPV6
+	f_write_procsysnet("ipv6/neigh/default/gc_thresh1", "1");
+	f_write_procsysnet("ipv6/neigh/default/gc_thresh2", "2048");
+	f_write_procsysnet("ipv6/neigh/default/gc_thresh3", "4096");
+#endif
 
 	if (nvram_get_int("fw_nat_tuning") > 0) {
-		f_write_string("/proc/sys/net/core/netdev_max_backlog", "3072", 0, 0);
-		f_write_string("/proc/sys/net/core/somaxconn", "3072", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/neigh/default/gc_thresh1", "1024", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/neigh/default/gc_thresh2", "2048", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/neigh/default/gc_thresh3", "4096", 0, 0);
+		f_write_procsysnet("core/netdev_max_backlog", "3072");
+		f_write_procsysnet("core/somaxconn", "3072");
 	}
 
 	/* Medium buffers */
 	if (nvram_get_int("fw_nat_tuning") == 1) {
-		f_write_string("/proc/sys/net/ipv4/tcp_max_syn_backlog", "4096", 0, 0);
-		f_write_string("/proc/sys/net/core/rmem_default", "262144", 0, 0);
-		f_write_string("/proc/sys/net/core/rmem_max", "262144", 0, 0);
-		f_write_string("/proc/sys/net/core/wmem_default", "262144", 0, 0);
-		f_write_string("/proc/sys/net/core/wmem_max", "262144", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/tcp_rmem", "4096 131072 262144", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/tcp_wmem", "4096 131072 262144", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/udp_mem", "32768 131072 262144", 0, 0);
+		f_write_procsysnet("ipv4/tcp_max_syn_backlog", "4096");
+		f_write_procsysnet("core/rmem_default", "262144");
+		f_write_procsysnet("core/rmem_max", "262144");
+		f_write_procsysnet("core/wmem_default", "262144");
+		f_write_procsysnet("core/wmem_max", "262144");
+		f_write_procsysnet("ipv4/tcp_rmem", "4096 131072 262144");
+		f_write_procsysnet("ipv4/tcp_wmem", "4096 131072 262144");
+		f_write_procsysnet("ipv4/udp_mem", "32768 131072 262144");
 	}
 
 	/* Large buffers */
 	if (nvram_get_int("fw_nat_tuning") == 2) {
-		f_write_string("/proc/sys/net/ipv4/tcp_max_syn_backlog", "8192", 0, 0);
-		f_write_string("/proc/sys/net/core/rmem_default", "1040384", 0, 0);
-		f_write_string("/proc/sys/net/core/rmem_max", "1040384", 0, 0);
-		f_write_string("/proc/sys/net/core/wmem_default", "1040384", 0, 0);
-		f_write_string("/proc/sys/net/core/wmem_max", "1040384", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/tcp_rmem", "8192 131072 992000", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/tcp_wmem", "8192 131072 992000", 0, 0);
-		f_write_string("/proc/sys/net/ipv4/udp_mem", "122880 520192 992000", 0, 0);
+		f_write_procsysnet("ipv4/tcp_max_syn_backlog", "8192");
+		f_write_procsysnet("core/rmem_default", "1040384");
+		f_write_procsysnet("core/rmem_max", "1040384");
+		f_write_procsysnet("core/wmem_default", "1040384");
+		f_write_procsysnet("core/wmem_max", "1040384");
+		f_write_procsysnet("ipv4/tcp_rmem", "8192 131072 992000");
+		f_write_procsysnet("ipv4/tcp_wmem", "8192 131072 992000");
+		f_write_procsysnet("ipv4/udp_mem", "122880 520192 992000");
 	}
 
-	f_write_string("/proc/sys/net/ipv4/tcp_fin_timeout", "30", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_keepalive_time", "1800", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_keepalive_intvl", "24", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_keepalive_probes", "3", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_retries2", "5", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_syn_retries", "3", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_synack_retries", "3", 0, 0);
+	f_write_procsysnet("ipv4/tcp_fin_timeout", "30");
+	f_write_procsysnet("ipv4/tcp_keepalive_time", "1800");
+	f_write_procsysnet("ipv4/tcp_keepalive_intvl", "24");
+	f_write_procsysnet("ipv4/tcp_keepalive_probes", "3");
+	f_write_procsysnet("ipv4/tcp_retries2", "5");
+	f_write_procsysnet("ipv4/tcp_syn_retries", "3");
+	f_write_procsysnet("ipv4/tcp_synack_retries", "3");
 #if defined(TCONFIG_BCMARM)
-	f_write_string("/proc/sys/net/ipv4/tcp_tw_recycle", "0", 0, 0);
+	f_write_procsysnet("ipv4/tcp_tw_recycle", "0");
 #else
-	f_write_string("/proc/sys/net/ipv4/tcp_tw_recycle", "1", 0, 0);
+	f_write_procsysnet("ipv4/tcp_tw_recycle", "1");
 #endif
-	f_write_string("/proc/sys/net/ipv4/tcp_tw_reuse", "1", 0, 0);
+	f_write_procsysnet("ipv4/tcp_tw_reuse", "1");
 
 	/* DoS-related tweaks */
-	f_write_string("/proc/sys/net/ipv4/icmp_ignore_bogus_error_responses", "1", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/icmp_echo_ignore_broadcasts", "1", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_rfc1337", "1", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/ip_local_port_range", "1024 65535", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/tcp_syncookies", (nvram_get_int("ne_syncookies") ? "1" : "0"), 0, 0);
+	f_write_procsysnet("ipv4/icmp_ignore_bogus_error_responses", "1");
+	f_write_procsysnet("ipv4/icmp_echo_ignore_broadcasts", "1");
+	f_write_procsysnet("ipv4/tcp_rfc1337", "1");
+	f_write_procsysnet("ipv4/ip_local_port_range", "1024 65535");
+	f_write_procsysnet("ipv4/tcp_syncookies", (nvram_get_int("ne_syncookies") ? "1" : "0"));
 
 	wanproto = get_wan_proto();
-	f_write_string("/proc/sys/net/ipv4/ip_dynaddr", ((wanproto == WP_DISABLED) || (wanproto == WP_STATIC)) ? "0" : "1", 0, 0);
+	f_write_procsysnet("ipv4/ip_dynaddr", ((wanproto == WP_DISABLED) || (wanproto == WP_STATIC)) ? "0" : "1");
 
 	/* Force IGMPv2 if enabled via GUI (advanced-routing.asp) */
 	/* 0 - (default) No enforcement of a IGMP version, IGMPv1/v2 fallback allowed. Will back to IGMPv3 mode again if all IGMPv1/v2 Querier Present timer expires. */
-	f_write_string("/proc/sys/net/ipv4/conf/default/force_igmp_version", (nvram_match("force_igmpv2", "1") ? "2" : "0"), 0, 0);
-	f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", (nvram_match("force_igmpv2", "1") ? "2" : "0"), 0, 0);
+	f_write_procsysnet("ipv4/conf/default/force_igmp_version", (nvram_match("force_igmpv2", "1") ? "2" : "0"));
+	f_write_procsysnet("ipv4/conf/all/force_igmp_version", (nvram_match("force_igmpv2", "1") ? "2" : "0"));
+
+	/* Reduce and flush the route cache to ensure a more synchronous load balancing across multiwan */
+	if (nvram_get_int("mwan_tune_gc")) {
+		f_write_procsysnet("ipv4/route/flush", "1"); /* flush routing cache */
+		f_write_procsysnet("ipv4/route/gc_elasticity", "1");
+		f_write_procsysnet("ipv4/route/gc_interval", "1");
+		f_write_procsysnet("ipv4/route/gc_min_interval_ms", "20");
+		f_write_procsysnet("ipv4/route/gc_thresh", "1");
+		f_write_procsysnet("ipv4/route/gc_timeout", "1");
+#ifndef TCONFIG_BCMARM
+		f_write_procsysnet("ipv4/route/max_delay", "1");
+		f_write_procsysnet("ipv4/route/min_delay", "0");
+		f_write_procsysnet("ipv4/route/secret_interval", "1");
+#endif
+	}
+	else { /* back to std values */
+		f_write_procsysnet("ipv4/route/gc_elasticity", "8");
+		f_write_procsysnet("ipv4/route/gc_interval", "60");
+		f_write_procsysnet("ipv4/route/gc_min_interval_ms", "500");
+		f_write_procsysnet("ipv4/route/gc_timeout", "300");
+#ifdef TCONFIG_BCMARM
+		f_write_procsysnet("ipv4/route/gc_thresh", "2048");
+#else
+		f_write_procsysnet("ipv4/route/gc_thresh", "1024");
+		f_write_procsysnet("ipv4/route/max_delay", "10");
+		f_write_procsysnet("ipv4/route/min_delay", "2");
+		f_write_procsysnet("ipv4/route/secret_interval", "600");
+#endif
+	}
 
 	n = nvram_get_int("log_in");
 	chain_in_drop = (n & 1) ? "logdrop" : "DROP";
@@ -1983,8 +2017,8 @@ int start_firewall(void)
 		}
 		closedir(dir);
 	}
-	f_write_string("/proc/sys/net/ipv4/conf/default/rp_filter", "1", 0, 0);
-	f_write_string("/proc/sys/net/ipv4/conf/all/rp_filter", "0", 0, 0);
+	f_write_procsysnet("ipv4/conf/default/rp_filter", "1");
+	f_write_procsysnet("ipv4/conf/all/rp_filter", "0");
 
 	/* Remote management */
 	remotemanage = 0;
