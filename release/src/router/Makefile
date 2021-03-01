@@ -2601,10 +2601,10 @@ snmp/stamp-h1:
 			host/hr_device,host/hr_disk,host/hr_filesys,host/hr_network,host/hr_partition,host/hr_print,host/hr_proc,host/hrSWRunTable,host/hr_storage,host/hr_system,\
 			mibII/at,mibII/icmp,mibII/ifTable,mibII/ip,mibII/ipAddr,mibII/kernel_linux,mibII/snmp_mib,mibII/sysORTable,mibII/system_mib,mibII/tcp,mibII/udp,mibII/vacm_context,mibII/vacm_vars,mibII/var_route,\
 			ucd-snmp/disk_hw,ucd-snmp/dlmod,ucd-snmp/extensible,ucd-snmp/loadave,ucd-snmp/logmatch,ucd-snmp/memory,ucd-snmp/pass,ucd-snmp/proc,ucd-snmp/proxy,ucd-snmp/vmstat,\
-			util_funcs"\
-		--with-default-snmp-version=3 --with-sys-contact=root --with-sys-location=Unknown \
+			util_funcs,if-mib/ifXTable,ip-mib/inetNetToMediaTable"\
+		--with-default-snmp-version=2 --with-sys-contact=root --with-sys-location=Unknown \
 		--with-endianness=little --enable-mini-agent --enable-shared=no --enable-static --with-gnu-ld \
-		--enable-internal-md5 --with-defaults --with-copy-persistent-files=no
+		--enable-internal-md5 --enable-mfd-rewrites --with-defaults --with-copy-persistent-files=no
 	@touch $@
 
 snmp: snmp/stamp-h1
@@ -2754,7 +2754,7 @@ getdns-clean:
 
 tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 	cd tor && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/include -ffunction-sections -fdata-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/include -ffunction-sections -fdata-sections $(if $(TCONFIG_KEYGEN),,-DOPENSSL_NO_ENGINE)" \
 		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \

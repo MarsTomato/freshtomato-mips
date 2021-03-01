@@ -23,10 +23,12 @@ NV() {
 }
 
 find_iface() {
+	# These IDs were intentionally picked to avoid overwriting
+	# marks set by QoS. See qos.c
 	if [ "$SERVICE" == "client1" ]; then
-		ID="311"
+		ID="2304" # 0x900
 	elif [ "$SERVICE" == "client2" ]; then
-		ID="312"
+		ID="2560" # 0xA00
 	else
 		$LOGS "Interface not found!"
 		exit 0
@@ -36,7 +38,7 @@ find_iface() {
 }
 
 deleteRules() {
-	sed -i 's/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g;s/PREROUTING\\ [0-9]\\ /PREROUTING\\g;s/POSTROUTING\\ [0-9]\\ /POSTROUTING\\g' "$1"
+	sed -i "s/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g;s/PREROUTING\\ [0-9]\\ /PREROUTING\\ /g;s/POSTROUTING\\ [0-9]\\ /POSTROUTING\\ /g" $1
 	$1
 }
 
@@ -47,7 +49,7 @@ cleanupRouting() {
 	ip route flush cache
 
 	[ "$(ip rule | grep "lookup $ID" | wc -l)" -gt 0 ] && {
-		ip rule del fwmark $ID table $ID
+		ip rule del fwmark $ID/0xf00 table $ID
 	}
 
 	deleteRules $FIREWALL_ROUTING
@@ -87,14 +89,14 @@ startRouting() {
 	} || {
 		ip route add table $ID default dev $IFACE
 	}
-	ip rule add fwmark $ID table $ID priority 90
+	ip rule add fwmark $ID/0xf00 table $ID priority 90
 
 	initTable
 
 	ipset --create vpnrouting$ID iphash
 
 	echo "#!/bin/sh" > $FIREWALL_ROUTING
-	echo "iptables -t mangle -A PREROUTING -m set --set vpnrouting$ID dst,src -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
+	echo "iptables -t mangle -A PREROUTING -m set --set vpnrouting$ID dst,src -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
 
 	# example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0>
 	for i in $(echo "$(NV vpn_"$SERVICE"_routing_val)" | tr ">" "\n"); do
@@ -107,11 +109,11 @@ startRouting() {
 			case "$VAL2" in
 				1)	# from source
 					$LOGS "Type: $VAL2 - add $VAL3"
-					echo "iptables -t mangle -A PREROUTING -s $VAL3 -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
+					echo "iptables -t mangle -A PREROUTING -s $VAL3 -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
 				;;
 				2)	# to destination
 					$LOGS "Type: $VAL2 - add $VAL3"
-					echo "iptables -t mangle -A PREROUTING -d $VAL3 -j MARK --set-mark $ID" >> $FIREWALL_ROUTING
+					echo "iptables -t mangle -A PREROUTING -d $VAL3 -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
 				;;
 				3)	# to domain
 					$LOGS "Type: $VAL2 - add $VAL3"

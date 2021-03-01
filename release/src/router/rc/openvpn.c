@@ -75,7 +75,7 @@ static int ovpn_waitfor(const char *name)
 {
 	int pid, n = 5;
 
-	killall_tk_period_wait(name, 10); /* wait time in seconds */
+	killall_tk_period_wait(name, 50); /* wait time in deciseconds (1/10 sec) */
 	while ((pid = pidof(name)) >= 0 && (n-- > 0)) {
 		/* Reap the zombie if it has terminated */
 		waitpid(pid, NULL, WNOHANG);
@@ -183,6 +183,44 @@ void ovpn_cleanup_dirs(ovpn_type_t type, int unit) {
 
 	rmdir(OVPN_DIR"/fw");
 	rmdir(OVPN_DIR);
+}
+
+void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
+{
+	FILE *fp;
+	char buffer[64], buffer2[64];
+	char taskname[20];
+	char *instanceType;
+	int nvi;
+
+	if (type == OVPN_TYPE_SERVER)
+		instanceType = "server";
+	else
+		instanceType = "client";
+
+	memset(buffer, 0, 64);
+	sprintf(buffer, "vpn_%s%d_poll", instanceType, unit);
+	if ((nvi = nvram_get_int(buffer)) > 0) {
+		memset(buffer, 0, 64);
+		sprintf(buffer, "/etc/openvpn/%s%d/watchdog.sh", instanceType, unit);
+
+		if ((fp = fopen(buffer, "w"))) {
+			fprintf(fp, "#!/bin/sh\n"
+			            "[ -z $(pidof vpn%s%d) ] && {\n"
+			            " service vpn%s%d restart\n"
+			            "}\n",
+			            instanceType, unit,
+			            instanceType, unit);
+			fclose(fp);
+			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
+
+			memset(taskname, 0, 20);
+			sprintf(taskname, "CheckVPN%s%d", instanceType, unit);
+			memset(buffer2, 0, 64);
+			sprintf(buffer2, "*/%d * * * * %s", nvi, buffer);
+			eval("cru", "a", taskname, buffer2);
+		}
+	}
 }
 
 void start_ovpn_client(int unit)
@@ -454,7 +492,9 @@ void start_ovpn_client(int unit)
 	fprintf(fp, "keepalive 15 60\n"
 	            "verb 3\n"
 	            "status-version 2\n"
-	            "status status 10\n\n" /* Update status file every 10 sec */
+	            "status status 10\n" /* Update status file every 10 sec */
+	            "pull-filter ignore \"ifconfig-ipv6\"\n" /* IPv6 currently not supported */
+	            "pull-filter ignore \"route-ipv6\"\n\n"
 	            "# Custom Configuration\n"
 	            "%s",
 	            getNVRAMVar("vpn_client%d_custom", unit));
@@ -622,21 +662,8 @@ void start_ovpn_client(int unit)
 	}
 
 	/* Set up cron job */
-	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_poll", unit);
-	if ((nvi = nvram_get_int(buffer)) > 0) {
-		/* check step value for cru minutes; values > 30 are not usefull;
-		 * Example: vpn_client1_poll = 45 (minutes) leads to: 18:00 --> 18:45 --> 19:00 --> 19:45
-		 */
-		if (nvi > 30)
-			nvi = 30;
+	ovpn_setup_watchdog(OVPN_TYPE_CLIENT, unit);
 
-		memset(buffer2, 0, 32);
-		sprintf(buffer2, "CheckVPNClient%d", unit);
-		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "*/%d * * * * service vpnclient%d start", nvi, unit);
-		eval("cru", "a", buffer2, buffer);
-	}
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "vpn_client%d", unit);
 	allow_fastnat(buffer, 0);
@@ -656,7 +683,7 @@ void stop_ovpn_client(int unit)
 
 	/* Remove cron job */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "CheckVPNClient%d", unit);
+	sprintf(buffer, "CheckVPNclient%d", unit);
 	eval("cru", "d", buffer);
 
 	/* Stop the VPN client */
@@ -690,7 +717,7 @@ void start_ovpn_server(int unit)
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
 	char buffer2[32];
-	int nvi, pid, taskset_ret = 0;
+	int nvi, pid, mwan_num, taskset_ret = 0;
 	long int nvl;
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	FILE *ccd;
@@ -829,7 +856,16 @@ void start_ovpn_server(int unit)
 	}
 
 	/* Proto */
-	fprintf(fp, "proto %s\n", getNVRAMVar("vpn_server%d_proto", unit)); /* full dual-stack functionality starting with OpenVPN 2.4.0 */
+	mwan_num = nvram_get_int("mwan_num"); /* check active WANs num */
+	if (mwan_num < 1)
+		mwan_num = 1;
+
+	memset(buffer, 0, BUF_SIZE);
+	sprintf(buffer, "vpn_server%d_proto", unit);
+	fprintf(fp, "proto %s\n", nvram_safe_get(buffer)); /* full dual-stack functionality starting with OpenVPN 2.4.0 */
+
+	if (nvram_contains_word(buffer, "udp") && mwan_num > 1) /* udp/udp4/udp6 - only if multiwan */
+		fprintf(fp, "multihome\n");
 
 	/* Cipher */
 	strlcpy(buffer, getNVRAMVar("vpn_server%d_ncp_ciphers", unit), sizeof(buffer));
@@ -907,8 +943,6 @@ void start_ovpn_server(int unit)
 			sprintf(buffer, "vpn_server%d_ccd_excl", unit);
 			if (nvram_get_int(buffer))
 				fprintf(fp, "ccd-exclusive\n");
-			else
-				fprintf(fp, "duplicate-cn\n");
 
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, OVPN_DIR"/server%d/ccd", unit);
@@ -977,14 +1011,15 @@ void start_ovpn_server(int unit)
 		sprintf(buffer, "vpn_server%d_userpass", unit);
 		if (nvram_get_int(buffer)) {
 			fprintf(fp, "plugin /lib/openvpn_plugin_auth_nvram.so vpn_server%d_users_val\n"
-			            "script-security 2\n"
-			            "username-as-common-name\n",
+			            "script-security 2\n",
 			            unit);
 
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "vpn_server%d_nocert", unit);
-			if (nvram_get_int(buffer))
-				fprintf(fp, "verify-client-cert optional\n");
+			if (nvram_get_int(buffer)) {
+				fprintf(fp, "verify-client-cert optional\n"
+				            "username-as-common-name\n");
+			}
 		}
 
 		memset(buffer, 0, BUF_SIZE);
@@ -1166,11 +1201,18 @@ void start_ovpn_server(int unit)
 		fprintf(fp, "#!/bin/sh\n");
 		memset(buffer, 0, BUF_SIZE);
 		strncpy(buffer, getNVRAMVar("vpn_server%d_proto", unit), BUF_SIZE);
-		fprintf(fp, "iptables -t nat -I PREROUTING -p %s ", strtok(buffer, "-"));
+
+		memset(buffer2, 0, 32);
+		if ((!strcmp(buffer, "udp")) || (!strcmp(buffer, "udp4")) || (!strcmp(buffer, "udp6")))
+			sprintf(buffer2, "udp");
+		else
+			sprintf(buffer2, "tcp");
+
+		fprintf(fp, "iptables -t nat -I PREROUTING -p %s ", buffer2);
 		fprintf(fp, "--dport %d -j ACCEPT\n", atoi(getNVRAMVar("vpn_server%d_port", unit)));
 		memset(buffer, 0, BUF_SIZE);
 		strncpy(buffer, getNVRAMVar("vpn_server%d_proto", unit), BUF_SIZE);
-		fprintf(fp, "iptables -I INPUT -p %s ", strtok(buffer, "-"));
+		fprintf(fp, "iptables -I INPUT -p %s ", buffer2);
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_port", unit);
 		fprintf(fp, "--dport %d -j ACCEPT\n", nvram_get_int(buffer));
@@ -1187,7 +1229,7 @@ void start_ovpn_server(int unit)
 #ifdef TCONFIG_IPV6
 		if (ipv6_enabled()) {
 			strncpy(buffer, getNVRAMVar("vpn_server%d_proto", unit), BUF_SIZE);
-			fprintf(fp, "ip6tables -I INPUT -p %s ", strtok(buffer, "-"));
+			fprintf(fp, "ip6tables -I INPUT -p %s ", buffer2);
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "vpn_server%d_port", unit);
 			fprintf(fp, "--dport %d -j ACCEPT\n", nvram_get_int(buffer));
@@ -1230,27 +1272,13 @@ void start_ovpn_server(int unit)
 	taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret) {
-		logmsg(LOG_WARNING, "Starting VPN instance failed...");
+		logmsg(LOG_WARNING, "Starting OpenVPN server failed...");
 		stop_ovpn_client(unit);
 		return;
 	}
 
 	/* Set up cron job */
-	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d_poll", unit);
-	if ((nvi = nvram_get_int(buffer)) > 0) {
-		/* check step value for cru minutes; values > 30 are not usefull;
-		 * Example: vpn_server1_poll = 45 (minutes) leads to: 18:00 --> 18:45 --> 19:00 --> 19:45
-		 */
-		if (nvi > 30)
-			nvi = 30;
-
-		memset(buffer2, 0, 32);
-		sprintf(buffer2, "CheckVPNServer%d", unit);
-		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "*/%d * * * * service vpnserver%d start", nvi, unit);
-		eval("cru", "a", buffer2, buffer);
-	}
+	ovpn_setup_watchdog(OVPN_TYPE_SERVER, unit);
 
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "vpn_server%d", unit);
@@ -1271,7 +1299,7 @@ void stop_ovpn_server(int unit)
 
 	/* Remove cron job */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "CheckVPNServer%d", unit);
+	sprintf(buffer, "CheckVPNserver%d", unit);
 	eval("cru", "d", buffer);
 
 	/* Stop the VPN server */

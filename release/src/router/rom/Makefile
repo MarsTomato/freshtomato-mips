@@ -27,9 +27,9 @@ install:
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/protocols > $(INSTALLDIR)/rom/etc/protocols
 
 ifneq ($(TCONFIG_STUBBY),y)
-	rm -f $(INSTALLDIR)/rom/etc/stubby.yml
 	rm -f $(INSTALLDIR)/rom/etc/ssl/certs/ca-certificates.crt
 else
+	install -m 0644 others/dot-servers.dat $(INSTALLDIR)/rom/dot-servers.dat
 	$(MAKE) certs-install
 endif
 

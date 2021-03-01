@@ -6,7 +6,7 @@
  #
 -COPTS = -O2 -pipe -Wall -g
 +COPTS = -Os -pipe -Wall -g -ffunction-sections -fdata-sections
- LIBS =
+ LIBS = -lrt
  
  # Uncomment the next line to include support for Microsoft's
 @@ -183,7 +183,7 @@ endif

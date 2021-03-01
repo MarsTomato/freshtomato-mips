@@ -1592,11 +1592,14 @@ select + input {
 	margin-left: 20px;
 }
 
-span[id$="_dhcpc"] {
+span[id$="_dhcpc"],
+span[id$="_codi"] {
 	font-size: 0px;
+	margin-right: 20px;
 }
 
-span[id$="_dhcpc"] input {
+span[id$="_dhcpc"] input,
+span[id$="_codi"] input {
 	font-size: 1rem;
 }
 
@@ -2067,6 +2070,7 @@ input[type="button"][value="Restore"],
 input[type="button"][value="Upgrade"],
 input[type="submit"][value="Upgrade"],
 input[type="button"][value="Start Now"],
+input[type="button"][value="Restart Now"],
 input[type="button"][value="Start test"],
 input[type="button"][value="Ping"],
 input[type="button"][value="Trace"],
@@ -2106,7 +2110,8 @@ input[type="button"][value="Stop Now"] {
 	background-image: var(--icon-button-stop);
 }
 
-input[type="button"][value="Refresh"] {
+input[type="button"][value="Refresh"],
+input[type="button"][value="Restart Now"] {
 	background-image: var(--icon-button-refresh);
 }
 

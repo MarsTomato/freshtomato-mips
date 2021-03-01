@@ -38,7 +38,7 @@
  }
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -1802,7 +1802,11 @@ device_script(program, in, out, dont_wai
+@@ -1762,7 +1762,11 @@ device_script(program, in, out, dont_wai
      setgid(getgid());
      setuid(uid);
      if (getuid() != uid) {
@@ -52,7 +52,7 @@
      update_system_environment();
 --- pppd/pppd/options.c
 +++ pppd/pppd/options.c
-@@ -1068,7 +1068,11 @@ static void
+@@ -1065,7 +1065,11 @@ static void
  usage()
  {
      if (phase == PHASE_INITIALIZE)
@@ -64,7 +64,7 @@
  }
  
  /*
-@@ -1093,7 +1097,11 @@ showversion(argv)
+@@ -1090,7 +1094,11 @@ showversion(argv)
      char **argv;
  {
      if (phase == PHASE_INITIALIZE) {
@@ -76,7 +76,7 @@
  	exit(0);
      }
      return 0;
-@@ -1120,7 +1128,11 @@ option_error __V((char *fmt, ...))
+@@ -1117,7 +1125,11 @@ option_error __V((char *fmt, ...))
      vslprintf(buf, sizeof(buf), fmt, args);
      va_end(args);
      if (phase == PHASE_INITIALIZE)
@@ -254,7 +254,7 @@
  }
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
-@@ -543,9 +543,17 @@ size_t strlcat __P((char *, const char *
+@@ -542,9 +542,17 @@ size_t strlcat __P((char *, const char *
  void dbglog __P((char *, ...));	/* log a debug message */
  void info __P((char *, ...));	/* log an informational message */
  void notice __P((char *, ...));	/* log a notice-level message */

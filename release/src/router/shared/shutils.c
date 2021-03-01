@@ -37,6 +37,10 @@
 #include "shutils.h"
 #include "shared.h"
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"shutils_debug"
+
 /*
  * Concatenates NULL-terminated list of arguments into a single
  * commmand and executes it
@@ -345,6 +349,24 @@ void cprintf(const char *format, ...)
 #endif
 }
 
+int _vstrsep(char *buf, const char *sep, ...)
+{
+	va_list ap;
+	char **p;
+	int n;
+
+	n = 0;
+	va_start(ap, sep);
+	while ((p = va_arg(ap, char **)) != NULL) {
+		if ((*p = strsep(&buf, sep)) == NULL)
+			break;
+
+		++n;
+	}
+	va_end(ap);
+
+	return n;
+}
 
 #ifndef WL_BSS_INFO_VERSION
 #error WL_BSS_INFO_VERSION
@@ -932,14 +954,38 @@ osifname_to_nvifname(const char *osifname, char *nvifname_buf,
 
 #endif	// #if WL_BSS_INFO_VERSION >= 108
 
+void killall_tk_period_wait(const char *name, int wait_ds) /* time in deciseconds (1/10 sec) */
+{
+	int n;
 
+	if (killall(name, SIGTERM) == 0) {
+		n = wait_ds;
+		while ((killall(name, 0) == 0) && (n-- > 0)) {
+			logmsg(LOG_DEBUG, "*** %s: waiting name=%s n=%d", __FUNCTION__, name, n);
+			usleep(100 * 1000); /* 100 ms */
+		}
+		if (n < 0) {
+			n = wait_ds * 2;
+			while ((killall(name, SIGKILL) == 0) && (n-- > 0)) {
+				logmsg(LOG_DEBUG, "*** %s: SIGKILL name=%s n=%d", __FUNCTION__, name, n);
+				usleep(100 * 1000); /* 100 ms */
+			}
+		}
+	}
+}
 
+int kill_pidfile_s(char *pidfile, int sig)
+{
+	char tmp[100];
+	int pid;
 
+	if (f_read_string(pidfile, tmp, sizeof(tmp)) > 0) {
+		if ((pid = atoi(tmp)) > 1)
+			return kill(pid, sig);
+	}
 
-// -----------------------------------------------------------------------------
-
-
-
+	return -1;
+}
 
 #if 0
 /*

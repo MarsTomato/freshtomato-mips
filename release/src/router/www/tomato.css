@@ -531,7 +531,6 @@ table.fields {
 	float: left;
 }
 
-.vpn-refresh,
 .bwm-count,
 .qos-count,
 .bwm-pct,
@@ -711,18 +710,22 @@ table.tomato-grid.vpn-status-table {
 #wlif-grid .co4,
 #wlif-grid .co6,
 #wlif-grid .centered,
-#ul-grid .co2,
 #sms-grid .header .co5,
 #survey-grid .co5,
 #survey-grid .co6,
 #survey-grid .co7,
 #lan-grid,
 #lan-grid .centered,
-#bs-grid .centered {
+#bs-grid .centered,
+div[id$="_ccd"] .centered,
+div[id$="_users"] .centered {
 	text-align: center;
 }
 
-#th-grid .co1 {
+#th-grid .co1,
+#stubby-grid .co1,
+div[id$="_ccd"] .co2,
+div[id$="_users"] .co2 {
 	width: 10%;
 	text-align: center;
 }
@@ -925,7 +928,8 @@ table.tomato-grid.vpn-status-table {
 
 #res-bp-grid .box5,
 #res-bp-grid .box7,
-#sm-grid .co2 {
+#sm-grid .co2,
+#stubby-grid .co2 {
 	width: 70%;
 }
 
@@ -1058,7 +1062,8 @@ table.tomato-grid.vpn-status-table {
 	width: 65%;
 }
 
-#usb-grid .co4 {
+#usb-grid .co4,
+div[id$="_ccd"] .co6 {
 	width: 16%;
 	text-align: center;
 }
@@ -1080,7 +1085,9 @@ table.tomato-grid.vpn-status-table {
 	width: 53%;
 }
 
-#tg-grid .co1 {
+#tg-grid .co1,
+div[id$="_ccd"] .co1,
+div[id$="_users"] .co1 {
 	width: 5%;
 	text-align: center;
 }
@@ -1477,4 +1484,58 @@ div#sptime {
 #svg-crossY {
 	stroke: #f77;
 	stroke-width: 1px;
+}
+
+.svg-path {
+	stroke: #000;
+	stroke-width: 1px;
+	stroke-opacity: 0.3;
+}
+
+.svg-color1 {
+	color: #fafafa;
+}
+
+.svg-color2 {
+	color: #b0c4de;
+}
+
+.svg-color3 {
+	color: #999900;
+}
+
+.svg-color4 {
+	color: #3cb371;
+}
+
+.svg-color5 {
+	color: #4363d8;
+}
+
+.svg-color6 {
+	color: #ffd700;
+}
+
+.svg-color7 {
+	color: #f58231;
+}
+
+.svg-color8 {
+	color: #deb887;
+}
+
+.svg-color9 {
+	color: #d96da0;
+}
+
+.svg-color10 {
+	color: #D70000;
+}
+
+.svg-color11 {
+	color: #929293;
+}
+
+.svg-color12 {
+	color: #323232;
 }

@@ -13,12 +13,25 @@
 #define CLASSES_NUM	10
 static char qosfn[] = "/etc/wanX_qos";
 static char qosdev[] = "iXXX";
-
+static int qos_wan_num = 0;
+static int qos_rate_start_index = 0;
+#ifdef TCONFIG_MULTIWAN
+const char disabled_classification_rates[] = "5-100,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,"
+                                             "5-100,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,"
+                                             "5-100,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,"
+                                             "5-100,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0";
+#else
+const char disabled_classification_rates[] = "5-100,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,"
+                                             "5-100,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0,0-0";
+#endif
+const char disabled_classification_rules[] = "0<<-2<a<<0<<<<0<Default";
 
 void prep_qosstr(char *prefix)
 {
 	if (!strcmp(prefix, "wan")) {
 		strcpy(qosfn, "/etc/wan_qos");
+		qos_wan_num = 1;
+		qos_rate_start_index = 0;
 #ifdef TCONFIG_BCMARM
 		strcpy(qosdev, "ifb0");
 #else
@@ -27,6 +40,8 @@ void prep_qosstr(char *prefix)
 	}
 	else if (!strcmp(prefix, "wan2")) {
 		strcpy(qosfn, "/etc/wan2_qos");
+		qos_wan_num = 2;
+		qos_rate_start_index = 10;
 #ifdef TCONFIG_BCMARM
 		strcpy(qosdev, "ifb1");
 #else
@@ -36,6 +51,8 @@ void prep_qosstr(char *prefix)
 #ifdef TCONFIG_MULTIWAN
 	else if (!strcmp(prefix, "wan3")) {
 		strcpy(qosfn, "/etc/wan3_qos");
+		qos_wan_num = 3;
+		qos_rate_start_index = 20;
 #ifdef TCONFIG_BCMARM
 		strcpy(qosdev, "ifb2");
 #else
@@ -44,6 +61,8 @@ void prep_qosstr(char *prefix)
 	}
 	else if (!strcmp(prefix, "wan4")) {
 		strcpy(qosfn, "/etc/wan4_qos");
+		qos_wan_num = 4;
+		qos_rate_start_index = 30;
 #ifdef TCONFIG_BCMARM
 		strcpy(qosdev, "ifb3");
 #else
@@ -56,6 +75,20 @@ void prep_qosstr(char *prefix)
 /* in mangle table */
 void ipt_qos(void)
 {
+	/*
+	 * Mark bytes: F FF FF F F F
+	 *             ^ ^^ ^^ ^ | ^---- QoS priority (1-10) - matched by tc filter
+	 *             | |  |  | |______ Bandwidth limiter brX general rule (matched by tc filter)
+	 *             | |  |  |________ 1-8 WAN number (PBR) - matched by ip rule (see pbr.c)
+	 *             | |  |            9-15 OpenVPN connection number (PBR) - matched by ip rule (see vpnrouting.sh)
+	 *             | |  |___________ QoS size group - matched by iptables to clear mark after max bytes passed.
+	 *             | |               255 is a reserved value which indicates to disable skipping QOSO even if
+	 *             | |               the connection got classified (needed for all rules after L7 rule or size range
+	 *             | |               with max rule and all after it)
+	 *             | |______________ Bandwidth limiter br0 specific rules (matched by tc filter)
+	 *             |________________ Unused.
+	 */
+
 	char *buf;
 	char *g;
 	char *p;
@@ -81,11 +114,19 @@ void ipt_qos(void)
 	unsigned long min;
 	unsigned long max;
 	unsigned long prev_max;
-	int gum;
+	int process_size_groups;
 	const char *qface;
 	int sizegroup;
 	int class_flag;
 	int rule_num;
+	int wan2_up;
+#ifdef TCONFIG_MULTIWAN
+	int wan3_up;
+	int wan4_up;
+	int mwan_num = 4;
+#else
+	int mwan_num = 2;
+#endif
 #ifndef TCONFIG_BCMARM
 	int qosDevNumStr = 0;
 #endif
@@ -94,16 +135,26 @@ void ipt_qos(void)
 		return;
 
 	inuse = 0;
-	gum = 0x100;
+	class_flag = 0;
+	process_size_groups = 1;
 	sizegroup = 0;
 	prev_max = 0;
 	rule_num = 0;
 
+	/* Don't reclassify an already classified connection (qos class is in rightmost half-byte of mark)
+	 * that also doesn't have a size group. If it has a size group, processing needs to continue
+	 * to allow the mark to get cleared after the max bytes have been sent/received by QOSSIZE chain
+	 */
 	ip46t_write(":QOSO - [0:0]\n"
-	            "-A QOSO -j CONNMARK --restore-mark --mask 0xff\n"
-	            "-A QOSO -m connmark ! --mark 0/0x0f00 -j RETURN\n");
+	            "-A QOSO -m connmark --mark 0/0xff000 -m connmark ! --mark 0/0xf -j RETURN\n");
 
-	g = buf = strdup(nvram_safe_get("qos_orules"));
+#ifdef TCONFIG_BCMARM
+	if (!nvram_get_int("qos_classify"))
+		g = buf = strdup(disabled_classification_rules);
+	else
+#endif
+		g = buf = strdup(nvram_safe_get("qos_orules"));
+
 	while (g) {
 
 		/*
@@ -177,7 +228,6 @@ void ipt_qos(void)
 		if (ipv6_enabled())
 			v4v6_ok |= IPT_V6;
 #endif
-		class_flag = gum;
 
 		saddr[0] = '\0';
 		end[0] = '\0';
@@ -200,12 +250,6 @@ void ipt_qos(void)
 
 		if (app[0]) {
 			v4v6_ok &= ~IPT_V6; /* temp: l7 not working either! */
-			class_flag = 0x100;
-			/* IPP2P and L7 rules may need more than one packet before matching
-			 * so port-based rules that come after them in the list can't be sticky
-			 *  or else these rules might never match
-			 */
-			gum = 0;
 #ifdef TCONFIG_BCMARM
 			strcat(saddr, app);
 #else
@@ -222,6 +266,8 @@ void ipt_qos(void)
 			strcat(end, s);
 #endif
 
+		class_flag = 0;
+
 		/* -m connbytes --connbytes x:y --connbytes-dir both --connbytes-mode bytes */
 		if (*bcount) {
 			min = strtoul(bcount, &p, 10);
@@ -233,36 +279,49 @@ void ipt_qos(void)
 				else {
 					max = strtoul(p, NULL, 10);
 					sprintf(saddr + strlen(saddr), "%lu:%lu", min * 1024, (max * 1024) - 1);
-					if (gum) {
-						if (!sizegroup) {
-							/* create table of connbytes sizes, pass appropriate connections there and only continue processing them if mark was wiped */
-							ip46t_write(":QOSSIZE - [0:0]\n"
-							            "-I QOSO 3 -m connmark ! --mark 0/0xff000 -j QOSSIZE\n"
-							            "-I QOSO 4 -m connmark ! --mark 0/0xff000 -j RETURN\n");
-						}
-						if (max != prev_max && sizegroup < 255) {
-							class_flag = ++sizegroup << 12;
-							prev_max = max;
-							ip46t_flagged_write(v4v6_ok, "-A QOSSIZE -m connmark --mark 0x%x/0xff000 -m connbytes --connbytes-mode bytes --connbytes-dir both "
-							                             "--connbytes %lu: -j CONNMARK --set-return 0x00000/0xFF\n", (sizegroup << 12), (max * 1024));
-#ifdef TCONFIG_BCMARM
-							ip46t_flagged_write(v4v6_ok, "-A QOSSIZE -m connmark --mark 0x%x/0xff000 -m connbytes --connbytes-mode bytes --connbytes-dir both "
-							                             "--connbytes %lu: -j RETURN\n", (sizegroup << 12), (max * 1024));
-#endif
-						}
-						else
-							class_flag = sizegroup << 12;
+					if (!sizegroup) {
+						/* create table of connbytes sizes, pass appropriate connections there and only continue processing them if mark was wiped */
+						ip46t_write(":QOSSIZE - [0:0]\n"
+						            "-I QOSO 2 -m connmark ! --mark 0/0xff000 -j QOSSIZE\n"
+						            "-I QOSO 3 -m connmark ! --mark 0/0xff000 -m connmark ! --mark 0xff000/0xff000 -j RETURN\n");
 					}
+					if (max != prev_max && sizegroup < 255) {
+						class_flag = ++sizegroup << 12;
+						prev_max = max;
+						/* Clear the QoS mark to allow the packet to be reclassified. Note: the last used size group will remain left behind so that
+						 * we can match on it in the next rule and return from the chain
+						 */
+						ip46t_flagged_write(v4v6_ok, "-A QOSSIZE -m connmark --mark 0x%x/0xff000 -m connbytes --connbytes-mode bytes --connbytes-dir both "
+						                             "--connbytes %lu: -j CONNMARK --set-mark 0xff000/0xff00f\n", (sizegroup << 12), (max * 1024));
+						ip46t_flagged_write(v4v6_ok, "-A QOSSIZE -m connmark --mark 0xff000/0xff000 -m connbytes --connbytes-mode bytes --connbytes-dir both "
+						                             "--connbytes %lu: -j RETURN\n", (max * 1024));
+					}
+					else
+						class_flag = sizegroup << 12;
 				}
 			}
 			else
 				bcount = "";
 		}
 
+		/* If any rule requires the QOSSIZE chain, set all subsequent rules to be "non-persistent"
+		 * by setting a reserved value for the size group: 0xff. Non-persistent means that
+		 * the QOS0 chain will have to be processed for that connection each time
+		 */
+		if (sizegroup > 0 && class_flag == 0)
+			class_flag = 255 << 12;
+
 		chain = "QOSO";
 		class_num |= class_flag;
-		class_num |= rule_num << 20;
-		sprintf(end + strlen(end), " -j CONNMARK --set-return 0x%x/0xFF\n", class_num);
+		sprintf(end + strlen(end), " -j CONNMARK --set-mark 0x%x/0xff00f\n", class_num);
+
+		/* If we found a L7 rule, make all next rules follow the case as if we found
+		 * a size rule, but do this AFTER the L7 rule mark was computed because L7
+		 * classification is final (not like size which has a max after which the
+		 * classification is cleared)
+		 */
+		if (app[0] && sizegroup == 0)
+			++sizegroup;
 
 		/* protocol & ports */
 		proto_num = atoi(proto);
@@ -281,29 +340,21 @@ void ipt_qos(void)
 
 				if (proto_num != 6) {
 					ip46t_flagged_write(v4v6_ok, "-A %s -p %s %s %s %s", chain, "udp", sport, saddr, end);
-#ifdef TCONFIG_BCMARM
 					ip46t_flagged_write(v4v6_ok, "-A %s -p %s %s %s -j RETURN\n", chain, "udp", sport, saddr);
-#endif
 				}
 				if (proto_num != 17) {
 					ip46t_flagged_write(v4v6_ok, "-A %s -p %s %s %s %s", chain, "tcp", sport, saddr, end);
-#ifdef TCONFIG_BCMARM
 					ip46t_flagged_write(v4v6_ok, "-A %s -p %s %s %s -j RETURN\n", chain, "tcp", sport, saddr);
-#endif
 				}
 			}
 			else {
 				ip46t_flagged_write(v4v6_ok, "-A %s -p %d %s %s", chain, proto_num, saddr, end);
-#ifdef TCONFIG_BCMARM
 				ip46t_flagged_write(v4v6_ok, "-A %s -p %d %s -j RETURN\n", chain, proto_num, saddr);
-#endif
 			}
 		}
 		else { /* any protocol */
 			ip46t_flagged_write(v4v6_ok, "-A %s %s %s", chain, saddr, end);
-#ifdef TCONFIG_BCMARM
 			ip46t_flagged_write(v4v6_ok, "-A %s %s -j RETURN\n", chain, saddr);
-#endif
 		}
 	}
 	free(buf);
@@ -312,56 +363,50 @@ void ipt_qos(void)
 	if ((i < 0) || (i > 9))
 		i = 3; /* "low" */
 
+	if (class_flag != 0)
+		class_flag = 255 << 12;
+
 	class_num = i + 1;
-	class_num |= 0xFF00000; /* use rule_num=255 for default */
-	ip46t_write("-A QOSO -j CONNMARK --set-return 0x%x\n", class_num);
-#ifdef TCONFIG_BCMARM
+	class_num |= class_flag;
+	ip46t_write("-A QOSO -j CONNMARK --set-mark 0x%x/0xff00f\n", class_num);
 	ip46t_write("-A QOSO -j RETURN\n");
+
+	wan2_up = check_wanup("wan2");
+#ifdef TCONFIG_MULTIWAN
+	wan3_up = check_wanup("wan3");
+	wan4_up = check_wanup("wan4");
 #endif
 
+	/* tc in tomato can only match from fw in filter using PACKET (not connection) mark.
+	 * Copy the connection mark to packet mark in POSTROUTING (to apply egress qos)
+	 */
 	qface = wanfaces.iface[0].name;
 	ipt_write("-A FORWARD -o %s -j QOSO\n"
 	          "-A OUTPUT -o %s -j QOSO\n"
-#ifdef TCONFIG_BCMARM
-	          "-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-	          "-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-	          qface, qface
-#endif
-	          ,qface, qface);
+	          "-A POSTROUTING -o %s -j CONNMARK --restore-mark --mask 0xf\n"
+	          ,qface, qface, qface);
 
-	if (check_wanup("wan2")) {
+	if (wan2_up) {
 		qface = wan2faces.iface[0].name;
 		ipt_write("-A FORWARD -o %s -j QOSO\n"
 		          "-A OUTPUT -o %s -j QOSO\n"
-#ifdef TCONFIG_BCMARM
-		          "-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-		          "-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-		          qface, qface
-#endif
-		          ,qface, qface);
+		          "-A POSTROUTING -o %s -j CONNMARK --restore-mark --mask 0xf\n"
+		          ,qface, qface, qface);
 	}
 #ifdef TCONFIG_MULTIWAN
-	if (check_wanup("wan3")) {
+	if (wan3_up) {
 		qface = wan3faces.iface[0].name;
 		ipt_write("-A FORWARD -o %s -j QOSO\n"
 		          "-A OUTPUT -o %s -j QOSO\n"
-#ifdef TCONFIG_BCMARM
-		          "-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-		          "-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-		          qface, qface
-#endif
-		          ,qface, qface);
+		          "-A POSTROUTING -o %s -j CONNMARK --restore-mark --mask 0xf\n"
+		          ,qface, qface, qface);
 	}
-	if (check_wanup("wan4")) {
+	if (wan4_up) {
 		qface = wan4faces.iface[0].name;
 		ipt_write("-A FORWARD -o %s -j QOSO\n"
 		          "-A OUTPUT -o %s -j QOSO\n"
-#ifdef TCONFIG_BCMARM
-		          "-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-		          "-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-		          qface, qface
-#endif
-		          ,qface, qface);
+		          "-A POSTROUTING -o %s -j CONNMARK --restore-mark --mask 0xf\n"
+		          ,qface, qface, qface);
 	}
 #endif /* TCONFIG_MULTIWAN */
 
@@ -370,12 +415,8 @@ void ipt_qos(void)
 		ip6t_write("-A FORWARD -o %s -j QOSO\n"
 		           "-A OUTPUT -o %s -p icmpv6 -j RETURN\n"
 		           "-A OUTPUT -o %s -j QOSO\n"
-#ifdef TCONFIG_MULTIWAN
-		           "-A FORWARD -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n"
-		           "-A OUTPUT -o %s -m connmark ! --mark 0 -j CONNMARK --save-mark\n",
-		           wan6face, wan6face
-#endif
-		           ,wan6face, wan6face, wan6face);
+		           "-A POSTROUTING -o %s -j CONNMARK --restore-mark --mask 0xf\n"
+		           ,wan6face, wan6face, wan6face, wan6face);
 #endif /* TCONFIG_IPV6 */
 
 	inuse |= (1 << i) | 1; /* default and highest are always built */
@@ -383,11 +424,17 @@ void ipt_qos(void)
 	sprintf(s, "%d", inuse);
 	nvram_set("qos_inuse", s);
 
-	g = buf = strdup(nvram_safe_get("qos_irates"));
-	for (i = 0; i < CLASSES_NUM; ++i) {
+#ifdef TCONFIG_BCMARM
+	if (!nvram_get_int("qos_classify"))
+		g = buf = strdup(disabled_classification_rates);
+	else
+#endif
+		g = buf = strdup(nvram_safe_get("qos_irates"));
+
+	for (i = 0; i < (CLASSES_NUM * mwan_num) ; ++i) {
 		if ((!g) || ((p = strsep(&g, ",")) == NULL))
 			continue;
-		if ((inuse & (1 << i)) == 0)
+		if ((inuse & (1 << (i % CLASSES_NUM))) == 0)
 			continue;
 		
 		unsigned int rate;
@@ -396,33 +443,26 @@ void ipt_qos(void)
 		/* check if we've got a percentage definition in the form of "rate-ceiling" and that rate > 1 */
 		if ((sscanf(p, "%u-%u", &rate, &ceil) == 2) && (rate >= 1)) {
 			qface = wanfaces.iface[0].name;
-			ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xff\n", qface);
-#ifdef TCONFIG_BCMARM
-			ipt_write("-A PREROUTING -i %s -j RETURN\n", qface);
-#endif
 
-			if (check_wanup("wan2")) {
+			/* tc in tomato can only match from fw in filter using PACKET (not connection) mark.
+			 * Copy the connection mark to packet mark in PREROUTING (to apply ingress qos)
+			 */
+			ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xf\n", qface);
+
+			if (wan2_up) {
 				qface = wan2faces.iface[0].name;
-				ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xff\n", qface);
-#ifdef TCONFIG_BCMARM
-				ipt_write("-A PREROUTING -i %s -j RETURN\n", qface);
-#endif
+				ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xf\n", qface);
 			}
 
 #ifdef TCONFIG_MULTIWAN
-			if (check_wanup("wan3")) {
+			if (wan3_up) {
 				qface = wan3faces.iface[0].name;
-				ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xff\n", qface);
-#ifdef TCONFIG_BCMARM
-				ipt_write("-A PREROUTING -i %s -j RETURN\n", qface);
-#endif
+				ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xf\n", qface);
 			}
-			if (check_wanup("wan4")) {
+
+			if (wan4_up) {
 				qface = wan4faces.iface[0].name;
-				ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xff\n", qface);
-#ifdef TCONFIG_BCMARM
-				ipt_write("-A PREROUTING -i %s -j RETURN\n", qface);
-#endif
+				ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xf\n", qface);
 			}
 #endif
 
@@ -430,7 +470,7 @@ void ipt_qos(void)
 #ifdef TCONFIG_PPTPD
 			if (nvram_get_int("pptp_client_enable") && !nvram_match("pptp_client_iface", "")) {
 				qface = nvram_safe_get("pptp_client_iface");
-				ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xff\n", qface);
+				ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xf\n", qface);
 			}
 #endif /* TCONFIG_PPTPD */
 
@@ -439,18 +479,18 @@ void ipt_qos(void)
 				qosDevNumStr = 0;
 				ipt_write("-A PREROUTING -i %s -p tcp -j IMQ --todev %d\n", qface, qosDevNumStr); /* pass only tcp */
 
-				if (check_wanup("wan2")) {
+				if (wan2_up) {
 					qface = wan2faces.iface[0].name;
 					qosDevNumStr = 1;
 					ipt_write("-A PREROUTING -i %s -p tcp -j IMQ --todev %d\n", qface, qosDevNumStr); /* pass only tcp */
 				}
 #ifdef TCONFIG_MULTIWAN
-				if (check_wanup("wan3")) {
+				if (wan3_up) {
 					qface = wan3faces.iface[0].name;
 					qosDevNumStr = 2;
 					ipt_write("-A PREROUTING -i %s -p tcp -j IMQ --todev %d\n", qface, qosDevNumStr); /* pass only tcp */
 				}
-				if (check_wanup("wan4")) {
+				if (wan4_up) {
 					qface = wan4faces.iface[0].name;
 					qosDevNumStr = 3;
 					ipt_write("-A PREROUTING -i %s -p tcp -j IMQ --todev %d\n", qface, qosDevNumStr); /* pass only tcp */
@@ -462,18 +502,18 @@ void ipt_qos(void)
 				qosDevNumStr = 0;
 				ipt_write("-A PREROUTING -i %s -j IMQ --todev %d\n", qface, qosDevNumStr); /* pass everything thru ingress */
 
-				if (check_wanup("wan2")) {
+				if (wan2_up) {
 					qface = wan2faces.iface[0].name;
 					qosDevNumStr = 1;
 					ipt_write("-A PREROUTING -i %s -j IMQ --todev %d\n", qface, qosDevNumStr); /* pass everything thru ingress */
 				}
 #ifdef TCONFIG_MULTIWAN
-				if (check_wanup("wan3")) {
+				if (wan3_up) {
 					qface = wan3faces.iface[0].name;
 					qosDevNumStr = 2;
 					ipt_write("-A PREROUTING -i %s -j IMQ --todev %d\n", qface, qosDevNumStr); /* pass everything thru ingress */
 				}
-				if (check_wanup("wan4")) {
+				if (wan4_up) {
 					qface = wan4faces.iface[0].name;
 					qosDevNumStr = 3;
 					ipt_write("-A PREROUTING -i %s -j IMQ --todev %d\n", qface, qosDevNumStr); /* pass everything thru ingress */
@@ -484,16 +524,14 @@ void ipt_qos(void)
 
 #ifdef TCONFIG_IPV6
 			if (*wan6face) {
-				ip6t_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xff\n", wan6face);
-#ifdef TCONFIG_BCMARM
-				ip6t_write("-A PREROUTING -i %s -j RETURN\n", wan6face);
-#else
+				ip6t_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xf\n", wan6face);
+#ifndef TCONFIG_BCMARM
 				qosDevNumStr = 0;
 				if (nvram_get_int("qos_udp"))
 						ip6t_write("-A PREROUTING -i %s -p tcp -j IMQ --todev %d\n", wan6face, qosDevNumStr); /* pass only tcp */
 				else
 						ip6t_write("-A PREROUTING -i %s -j IMQ --todev %d\n", wan6face, qosDevNumStr); /* pass everything thru ingress */
-#endif /* TCONFIG_BCMARM */
+#endif /* !TCONFIG_BCMARM */
 			}
 #endif /* TCONFIG_IPV6 */
 			break;
@@ -529,6 +567,11 @@ void start_qos(char *prefix)
 	char burst_root[32];
 	char burst_leaf[32];
 	char tmp[100];
+	int cake;
+#ifdef TCONFIG_BCMARM
+	char *cake_encap_root = "";
+	char *cake_prio_mode_root = "";
+#endif
 
 	/* Network Congestion Control */
 	x = nvram_get_int("ne_vegas");
@@ -579,9 +622,9 @@ void start_qos(char *prefix)
 	else
 		burst_leaf[0] = 0;
 
-	mtu = strtoul(nvram_safe_get("wan_mtu"), NULL, 10);
+	mtu = strtoul(nvram_safe_get(strcat_r(prefix, "_mtu", tmp)), NULL, 10);
 	bw = strtoul(nvram_safe_get(strcat_r(prefix, "_qos_obw", tmp)), NULL, 10);
-	overhead = strtoul(nvram_safe_get("atm_overhead"), NULL, 10);
+	overhead = strtoul(nvram_safe_get(strcat_r(prefix, "_qos_overhead", tmp)), NULL, 10);
 	r2q = 10;
 
 	if ((bw * 1000) / (8 * r2q) < mtu) {
@@ -602,6 +645,14 @@ void start_qos(char *prefix)
 	else
 		qos = "sfq perturb 10";
 
+	x = nvram_get_int("qos_mode");
+	if (x == 2) {
+		qos = "cake";
+		cake = 1;
+	}
+	else
+		cake = 0;
+
 	fprintf(f, "#!/bin/sh\n"
 	           "WAN_DEV=%s\n"
 	           "QOS_DEV=%s\n"
@@ -615,66 +666,134 @@ void start_qos(char *prefix)
 	           "\n"
 	           "case \"$1\" in\n"
 	           "start)\n"
-	           "\ttc qdisc del dev $WAN_DEV root 2>/dev/null\n"
-	           "\t$TQA root handle 1: htb default %u r2q %u\n"
-	           "\t$TCA parent 1: classid 1:1 htb rate %ukbit ceil %ukbit %s",
+	           "\ttc qdisc del dev $WAN_DEV root 2>/dev/null\n",
 	           get_wanface(prefix),
 	           qosdev,
-	           qos,
-	           qosDefaultClassId, r2q,
-	           bw, bw, burst_root);
+	           qos);
 
-	if (overhead > 0)
 #ifdef TCONFIG_BCMARM
-		fprintf(f, " overhead %u linklayer atm", overhead);
+	if (cake) {
+		fprintf(f, "\t$TQA root handle 1: cake bandwidth %ukbit nat egress fwmark 0xf", bw);
+
+		if (overhead > 0)
+			fprintf(f, " overhead %u", overhead);
+
+		switch (nvram_get_int(strcat_r(prefix, "_qos_encap", tmp))) {
+			case 1:
+				cake_encap_root = " atm";
+				break;
+			case 2:
+				cake_encap_root = " ptm";
+				break;
+			default:
+				cake_encap_root = " noatm";
+		}
+		fprintf(f, cake_encap_root);
+
+		switch (nvram_get_int("qos_cake_prio_mode")) {
+			case 1:
+				/* 8 priority classes - see cake_config_diffserv8 in sch_cake.c */
+				cake_prio_mode_root = " diffserv8";
+				break;
+			case 2:
+				/* 4 priority classes - see cake_config_diffserv4 in sch_cake.c */
+				cake_prio_mode_root = " diffserv4";
+				break;
+			case 3:
+				/* 3 priority classes - see cake_config_diffserv4 in sch_cake.c */
+				cake_prio_mode_root = " diffserv3";
+				break;
+			case 4:
+				cake_prio_mode_root = " precedence";
+				break;
+			default:
+				/* All fwmarks ignored */
+				cake_prio_mode_root = " besteffort";
+				break;
+		}
+		fprintf(f, cake_prio_mode_root);
+
+		if (nvram_get_int("qos_cake_wash"))
+			fprintf(f, " wash");
+	}
+	else
+#endif /* TCONFIG_BCMARM */
+	{
+		fprintf(f, "\t$TQA root handle 1: htb default %u r2q %u\n"
+		           "\t$TCA parent 1: classid 1:1 htb rate %ukbit ceil %ukbit %s",
+		           qosDefaultClassId, r2q,
+		           bw, bw, burst_root);
+
+		if (overhead > 0) {
+			fprintf(f, " overhead %u", overhead);
+
+			/* HTB only supports ATM value */
+			if (nvram_get_int(strcat_r(prefix, "_qos_encap", tmp)))
+#ifdef TCONFIG_BCMARM
+				fprintf(f, " linklayer atm");
 #else
-		fprintf(f, " overhead %u atm", overhead);
+				fprintf(f, " atm");
 #endif
+		}
+	}
 
 	fprintf(f, "\n");
 
 	inuse = nvram_get_int("qos_inuse");
+#ifdef TCONFIG_BCMARM
+	if (!nvram_get_int("qos_classify"))
+		g = buf = strdup(disabled_classification_rates);
+	else
+#endif
+		g = buf = strdup(nvram_safe_get("qos_orates"));
 
-	g = buf = strdup(nvram_safe_get("qos_orates"));
-	for (i = 0; i < CLASSES_NUM; ++i) {
-		if ((!g) || ((p = strsep(&g, ",")) == NULL))
-			break;
+	/* Cake doesn't support setting rate/ceil for each class and it can read
+	 * the "tin" number directly from the fwmark
+	 */
+	if (!cake) {
+		for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
+			if ((!g) || ((p = strsep(&g, ",")) == NULL))
+				break;
 
-		if ((inuse & (1 << i)) == 0)
-			continue;
+			if (i < qos_rate_start_index || (inuse & (1 << (i % CLASSES_NUM))) == 0)
+				continue;
 
-		/* check if we've got a percentage definition in the form of "rate-ceiling" */
-		if ((sscanf(p, "%u-%u", &rate, &ceil) != 2) || (rate < 1))
-			continue; /* 0=off */
+			/* check if we've got a percentage definition in the form of "rate-ceiling" */
+			if ((sscanf(p, "%u-%u", &rate, &ceil) != 2) || (rate < 1))
+				continue; /* 0=off */
 
-		if (ceil > 0)
-			sprintf(s, "ceil %ukbit", calc(bw, ceil));
-		else
-			s[0] = 0;
+			if (ceil > 0)
+				sprintf(s, "ceil %ukbit", calc(bw, ceil));
+			else
+				s[0] = 0;
 
-		x = (i + 1) * 10;
+			x = (i + 1) * 10;
 
-		fprintf(f, "# egress %d: %u-%u%%\n"
-		           "\t$TCA parent 1:1 classid 1:%d htb rate %ukbit %s %s prio %d quantum %u",
-		           i, rate, ceil,
+		fprintf(f, "\t$TCA parent 1:1 classid 1:%d htb rate %ukbit %s %s prio %d quantum %u",
 		           x, calc(bw, rate), s, burst_leaf, (i + 1), mtu);
 
-		if (overhead > 0)
-#ifdef TCONFIG_BCMARM
-			fprintf(f, " overhead %u linklayer atm", overhead);
-#else
-			fprintf(f, " overhead %u atm", overhead);
-#endif
+			if (overhead > 0) {
+				fprintf(f, " overhead %u", overhead);
 
-		fprintf(f, "\n\t$TQA parent 1:%d handle %d: $Q\n"
-		           "\t$TFA parent 1: prio %d protocol ip handle %d fw flowid 1:%d\n",
-		           x, x,
-		           x, (i + 1), x);
+				/* HTB only supports ATM value */
+				if (nvram_get_int(strcat_r(prefix, "_qos_encap", tmp)))
+#ifdef TCONFIG_BCMARM
+					fprintf(f, " linklayer atm");
+#else
+					fprintf(f, " atm");
+#endif
+			}
+
+			fprintf(f, "\n\t$TQA parent 1:%d handle %d: $Q\n"
+			           "\t$TFA parent 1: prio %d protocol ip handle %d/0xf fw flowid 1:%d\n",
+			           x, x,
+			           x, (i + 1), x);
 
 #ifdef TCONFIG_IPV6
-		fprintf(f, "\t$TFA parent 1: prio %d protocol ipv6 handle %d fw flowid 1:%d\n",
-		           x + 100, (i + 1), x);
+			fprintf(f, "\t$TFA parent 1: prio %d protocol ipv6 handle %d/0xf fw flowid 1:%d\n",
+			           x + 100, (i + 1), x);
 #endif
+		}
 	}
 	free(buf);
 
@@ -685,7 +804,7 @@ void start_qos(char *prefix)
 	 * 00001 = FIN
 	*/
 
-	if (nvram_get_int("qos_ack"))
+	if (nvram_get_int("qos_ack") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 14 protocol ip u32 "
 		           "match ip protocol 6 0xff "		/* TCP */
 		           "match u8 0x05 0x0f at 0 "		/* IP header length */
@@ -693,7 +812,7 @@ void start_qos(char *prefix)
 		           "match u8 0x10 0xff at 33 "		/* ACK only */
 		           "flowid 1:10\n");
 
-	if (nvram_get_int("qos_syn"))
+	if (nvram_get_int("qos_syn") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 15 protocol ip u32 "
 		           "match ip protocol 6 0xff "		/* TCP */
 		           "match u8 0x05 0x0f at 0 "		/* IP header length */
@@ -701,7 +820,7 @@ void start_qos(char *prefix)
 		           "match u8 0x02 0x02 at 33 "		/* SYN,* */
 		           "flowid 1:10\n");
 
-	if (nvram_get_int("qos_fin"))
+	if (nvram_get_int("qos_fin") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 17 protocol ip u32 "
 		           "match ip protocol 6 0xff "		/* TCP */
 		           "match u8 0x05 0x0f at 0 "		/* IP header length */
@@ -709,7 +828,7 @@ void start_qos(char *prefix)
 		           "match u8 0x01 0x01 at 33 "		/* FIN,* */
 		           "flowid 1:10\n");
 
-	if (nvram_get_int("qos_rst"))
+	if (nvram_get_int("qos_rst") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 19 protocol ip u32 "
 		           "match ip protocol 6 0xff "		/* TCP */
 		           "match u8 0x05 0x0f at 0 "		/* IP header length */
@@ -717,64 +836,89 @@ void start_qos(char *prefix)
 		           "match u8 0x04 0x04 at 33 "		/* RST,* */
 		           "flowid 1:10\n");
 
-	if (nvram_get_int("qos_icmp"))
+	if (nvram_get_int("qos_icmp") && !cake)
 		fprintf(f, "\n\t$TFA parent 1: prio 13 protocol ip u32 match ip protocol 1 0xff flowid 1:10\n");
-
 
 	/*
 	 * INCOMING TRAFFIC SHAPING
 	 */
-	
-	first = 1;
-	overhead = strtoul(nvram_safe_get("atm_overhead"), NULL, 10);
-
-	g = buf = strdup(nvram_safe_get("qos_irates"));
-	
-	for (i = 0; i < CLASSES_NUM; ++i) {
-		if ((!g) || ((p = strsep(&g, ",")) == NULL))
-			break;
-
-		if ((inuse & (1 << i)) == 0)
-			continue;
-
-		/* check if we've got a percentage definition in the form of "rate-ceiling" */
-		if ((sscanf(p, "%u-%u", &rate, &ceil) != 2) || (rate < 1))
-			continue; /* 0=off */
-
-		/* class ID */
-		unsigned int classid = ((unsigned int)i + 1) * 10;
-
-		/* priority */
-		unsigned int priority = (unsigned int)i + 1; /* prios 1-10 */
-
-		/* rate in kb/s */
-		unsigned int rateInkbps = calc(incomingBWkbps, rate);
-
-		/* ceiling in kb/s */
-		unsigned int ceilingInkbps = calc(incomingBWkbps, ceil);
-
-		r2q = 10;
-		if ((incomingBWkbps * 1000) / (8 * r2q) < mtu) {
-			r2q = (incomingBWkbps * 1000) / (8 * mtu);
-			if (r2q < 1)
-				r2q = 1;
-		} 
-		else if ((incomingBWkbps * 1000) / (8 * r2q) > 60000) 
-			r2q = (incomingBWkbps * 1000) / (8 * 60000) + 1;
-
-		if (first) {
-			first = 0;
 #ifdef TCONFIG_BCMARM
-			fprintf(f, "\n\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n"
-			           "\t$TQA handle ffff: ingress\n");
+	if (!nvram_get_int("qos_classify"))
+		g = buf = strdup(disabled_classification_rates);
+	else
 #endif
-			fprintf(f, "\n\tip link set $QOS_DEV up\n"
-			           "\ttc qdisc del dev $QOS_DEV 2>/dev/null\n"
-			           "\t$TQA_QOS handle 1: root htb default %u r2q %u\n"
-			           "\t$TCA_QOS parent 1: classid 1:1 htb rate %ukbit ceil %ukbit",
-			           qosDefaultClassId, r2q,
-			           incomingBWkbps,
-			           incomingBWkbps);
+		g = buf = strdup(nvram_safe_get("qos_irates"));
+
+#ifdef TCONFIG_BCMARM
+	fprintf(f, "\n\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n"
+	           "\t$TQA handle ffff: ingress\n");
+#endif
+
+	fprintf(f, "\n\ttc qdisc del dev $QOS_DEV 2>/dev/null\n");
+
+	/* Cake doesn't support setting rate/ceil for each class and it can read
+	 * the "tin" number directly from the fwmark
+	 */
+	if (!cake) {
+		first = 1;
+		for (i = 0; i < (CLASSES_NUM * qos_wan_num) ; ++i) {
+			if ((!g) || ((p = strsep(&g, ",")) == NULL))
+				break;
+
+			if (i < qos_rate_start_index || (inuse & (1 << (i % CLASSES_NUM))) == 0)
+				continue;
+
+			/* check if we've got a percentage definition in the form of "rate-ceiling" */
+			if ((sscanf(p, "%u-%u", &rate, &ceil) != 2) || (rate < 1))
+				continue; /* 0=off */
+
+			/* class ID */
+			unsigned int classid = ((unsigned int)i + 1) * 10;
+
+			/* priority */
+			unsigned int priority = (unsigned int)i + 1; /* prios 1-10 */
+
+			/* rate in kb/s */
+			unsigned int rateInkbps = calc(incomingBWkbps, rate);
+
+			/* ceiling in kb/s */
+			unsigned int ceilingInkbps = calc(incomingBWkbps, ceil);
+
+			r2q = 10;
+			if ((incomingBWkbps * 1000) / (8 * r2q) < mtu) {
+				r2q = (incomingBWkbps * 1000) / (8 * mtu);
+				if (r2q < 1)
+					r2q = 1;
+			}
+			else if ((incomingBWkbps * 1000) / (8 * r2q) > 60000)
+				r2q = (incomingBWkbps * 1000) / (8 * 60000) + 1;
+
+			if (first) {
+				first = 0;
+
+				fprintf(f, "\t$TQA_QOS handle 1: root htb default %u r2q %u\n"
+				           "\t$TCA_QOS parent 1: classid 1:1 htb rate %ukbit ceil %ukbit",
+				           qosDefaultClassId, r2q,
+				           incomingBWkbps,
+				           incomingBWkbps);
+
+				if (overhead > 0) {
+					fprintf(f, " overhead %u", overhead);
+
+					/* HTB only supports ATM value */
+					if (nvram_get_int(strcat_r(prefix, "_qos_encap", tmp)))
+#ifdef TCONFIG_BCMARM
+						fprintf(f, " linklayer atm");
+#else
+						fprintf(f, " atm");
+#endif
+				}
+			}
+
+			fprintf(f, "\n\t# class id %u: rate %ukbit ceil %ukbit\n"
+			           "\t$TCA_QOS parent 1:1 classid 1:%u htb rate %ukbit ceil %ukbit prio %u quantum %u",
+			           classid, rateInkbps, ceilingInkbps,
+			           classid, rateInkbps, ceilingInkbps, priority, mtu);
 
 			if (overhead > 0)
 #ifdef TCONFIG_BCMARM
@@ -783,45 +927,50 @@ void start_qos(char *prefix)
 				fprintf(f, " overhead %u atm", overhead);
 #endif
 
-#ifdef TCONFIG_BCMARM
-			fprintf(f, "\n\n\t$TFA parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $QOS_DEV\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst 0.0.0.0/0"));
+			fprintf(f, "\n\t$TQA_QOS parent 1:%u handle %u: $Q\n"
+			           "\t$TFA_QOS parent 1: prio %u protocol ip handle %u/0xf fw flowid 1:%u\n",
+			           classid, classid,
+			           classid, priority, classid);
 #ifdef TCONFIG_IPV6
-			fprintf(f, "\t$TFA parent ffff: protocol ipv6 prio 11 u32 match ip6 %s action mirred egress redirect dev $QOS_DEV\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst ::/0"));
+			fprintf(f, "\t$TFA_QOS parent 1: prio %u protocol ipv6 handle %u/0xf fw flowid 1:%u\n", (classid + 100), priority, classid);
+#endif
+		} /* for */
+	}
+#ifdef TCONFIG_BCMARM
+	else {
+		fprintf(f, "\t$TQA_QOS root handle 1: cake bandwidth %ukbit nat ingress fwmark 0xf", incomingBWkbps);
+
+		if (overhead > 0)
+			fprintf(f, " overhead %u", overhead);
+
+		fprintf(f, cake_encap_root);
+		fprintf(f, cake_prio_mode_root);
+
+		if (nvram_get_int("qos_cake_wash"))
+			fprintf(f, " wash");
+
+		fprintf(f, "\n");
+	} /* if (!cake) */
+#endif /* TCONFIG_BCMARM */
+	free(buf);
+
+#ifdef TCONFIG_BCMARM
+	fprintf(f, "\n\t$TFA parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $QOS_DEV\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst 0.0.0.0/0"));
+#ifdef TCONFIG_IPV6
+	fprintf(f, "\t$TFA parent ffff: protocol ipv6 prio 11 u32 match ip6 %s action mirred egress redirect dev $QOS_DEV\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst ::/0"));
 #endif
 #endif /* TCONFIG_BCMARM */
 
-		}
-
-		fprintf(f, "\n\t# class id %u: rate %ukbit ceil %ukbit\n"
-		           "\t$TCA_QOS parent 1:1 classid 1:%u htb rate %ukbit ceil %ukbit prio %u quantum %u",
-		           classid, rateInkbps, ceilingInkbps,
-		           classid, rateInkbps, ceilingInkbps, priority, mtu);
-
-		if (overhead > 0)
-#ifdef TCONFIG_BCMARM
-			fprintf(f, " overhead %u linklayer atm", overhead);
-#else
-			fprintf(f, " overhead %u atm", overhead);
-#endif
-
-		fprintf(f, "\n\t$TQA_QOS parent 1:%u handle %u: $Q\n"
-		           "\t$TFA_QOS parent 1: prio %u protocol ip handle %u fw flowid 1:%u\n",
-		           classid, classid,
-		           classid, priority, classid);
-#ifdef TCONFIG_IPV6
-		fprintf(f, "\t$TFA_QOS parent 1: prio %u protocol ipv6 handle %u fw flowid 1:%u\n", (classid + 100), priority, classid);
-#endif
-	} /* for */
-	free(buf);
-
 	/* write commands which adds rule to forward traffic to IFB device */
 	fprintf(f, "\n\t# set up the IFB device (otherwise this won't work) to limit the incoming data\n"
-	           "\tip link set $QOS_DEV up\n"
+	           "\tip link set $QOS_DEV up\n\n"
+	           "\tlogger -t qos \"QoS (%s) is started\"\n"
 	           "\t;;\n"
 	           "stop)\n"
 	           "\tip link set $QOS_DEV down\n"
 	           "\ttc qdisc del dev $WAN_DEV root 2>/dev/null\n"
-	           "\ttc qdisc del dev $QOS_DEV root 2>/dev/null\n");
+	           "\ttc qdisc del dev $QOS_DEV root 2>/dev/null\n",
+	           prefix);
 
 #ifdef TCONFIG_BCMARM
 	fprintf(f, "\ttc filter del dev $WAN_DEV parent ffff: protocol ip prio 10 u32 match ip %s action mirred egress redirect dev $QOS_DEV 2>/dev/null\n", (nvram_get_int("qos_udp") ? "protocol 6 0xff" : "dst 0.0.0.0/0"));
@@ -830,7 +979,9 @@ void start_qos(char *prefix)
 #endif
 #endif /* TCONFIG_BCMARM */
 
-	fprintf(f, "\t;;\n"
+	fprintf(f, "\ttc qdisc del dev $WAN_DEV ingress 2>/dev/null\n\n"
+	           "\tlogger -t qos \"QoS (%s) is stopped\"\n"
+	           "\t;;\n"
 	           "*)\n"
 	           "\techo \"...\"\n"
 	           "\techo \"... OUTGOING QDISCS AND CLASSES FOR $WAN_DEV\"\n"
@@ -846,7 +997,8 @@ void start_qos(char *prefix)
 	           "\techo\n"
 	           "\ttc -s -d class ls dev $QOS_DEV\n"
 	           "\techo\n"
-	           "esac\n");
+	           "esac\n",
+	           prefix);
 
 	fclose(f);
 
@@ -857,7 +1009,14 @@ void start_qos(char *prefix)
 
 void stop_qos(char *prefix)
 {
+	FILE *f;
+
 	prep_qosstr(prefix);
+
+	if ((f = fopen(qosfn, "r")) == NULL)
+		return;
+
+	fclose(f);
 
 	eval(qosfn, "stop");
 }

@@ -98,22 +98,15 @@ For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12
     $ git clone https://bitbucket.org/pedro311/freshtomato-mips.git
     ```
   
-13. Edit .profile (or .bashrc) file, add:
-    ```text
-    PATH="$PATH:/home/[username]/freshtomato-mips/tools/brcm/hndtools-mipsel-linux/bin"
-    PATH="$PATH:/home/[username]/freshtomato-mips/tools/brcm/hndtools-mipsel-uclibc/bin"
-    PATH="$PATH:/bin:/sbin:/usr/bin:/usr/X11R6/bin"
-    ```
+13. Reboot system
   
-14. Reboot system
-  
-15. Add your email address to git config:
+14. Add your email address to git config:
     ```sh
     $ cd freshtomato-mips
     $ git config --global user.email "[email-address]"
     ```
   
-16. Add your username to git config:
+15. Add your username to git config:
     ```sh
     $ cd freshtomato-mips
     $ git config --global user.name [name]

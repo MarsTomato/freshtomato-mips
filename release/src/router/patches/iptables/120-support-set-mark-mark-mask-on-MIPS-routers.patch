@@ -1,0 +1,311 @@
+--- iptables/extensions/libip6t_MARK.c
++++ iptables/extensions/libip6t_MARK.c
+@@ -16,7 +16,7 @@ help(void)
+ {
+ 	printf(
+ "MARK target v%s options:\n"
+-"  --set-mark value                   Set nfmark value\n"
++"  --set-mark value[/mask]            Clear bits in mask and OR value into nfmark\n"
+ "\n",
+ IPTABLES_VERSION);
+ }
+@@ -44,14 +44,22 @@ parse(int c, char **argv, int invert, unsigned int *flags,
+ 		= (struct ip6t_mark_target_info *)(*target)->data;
+ 
+ 	switch (c) {
++		char *end;
+ 	case '1':
+ #ifdef KERNEL_64_USERSPACE_32
+-		if (string_to_number_ll(optarg, 0, 0, 
+-				     &markinfo->mark))
++		markinfo->mark = strtoull(optarg, &end, 0);
++		if (*end == '/') {
++			markinfo->mask = strtoull(end+1, &end, 0);
++		} else
++			markinfo->mask = 0xffffffffffffffffULL;
+ #else
+-		if (string_to_number_l(optarg, 0, 0, 
+-				     &markinfo->mark))
++		markinfo->mark = strtoul(optarg, &end, 0);
++		if (*end == '/') {
++			markinfo->mask = strtoul(end+1, &end, 0);
++		} else
++			markinfo->mask = 0xffffffff;
+ #endif
++		if (*end != '\0' || end == optarg)
+ 			exit_error(PARAMETER_PROBLEM, "Bad MARK value `%s'", optarg);
+ 		if (*flags)
+ 			exit_error(PARAMETER_PROBLEM,
+@@ -76,15 +84,21 @@ final_check(unsigned int flags)
+ 
+ #ifdef KERNEL_64_USERSPACE_32
+ static void
+-print_mark(unsigned long long mark)
++print_mark(unsigned long long mark, unsigned long long mask, int numeric)
+ {
+-	printf("0x%llx ", mark);
++	if(mask != 0xffffffffffffffffULL)
++		printf("0x%llx/0x%llx ", mark, mask);
++	else
++		printf("0x%llx ", mark);
+ }
+ #else
+ static void
+-print_mark(unsigned long mark)
++print_mark(unsigned long mark, unsigned long mask, int numeric)
+ {
+-	printf("0x%lx ", mark);
++	if(mask != 0xffffffff)
++		printf("0x%lx/0x%lx ", mark, mask);
++	else
++		printf("0x%lx ", mark);
+ }
+ #endif
+ 
+@@ -98,7 +112,7 @@ print(const struct ip6t_ip6 *ip,
+ 		(const struct ip6t_mark_target_info *)target->data;
+ 
+ 	printf("MARK set ");
+-	print_mark(markinfo->mark);
++	print_mark(markinfo->mark, markinfo->mask, numeric);
+ }
+ 
+ /* Saves the union ipt_targinfo in parsable form to stdout. */
+@@ -109,7 +123,7 @@ save(const struct ip6t_ip6 *ip, const struct ip6t_entry_target *target)
+ 		(const struct ip6t_mark_target_info *)target->data;
+ 
+ 	printf("--set-mark ");
+-	print_mark(markinfo->mark);
++	print_mark(markinfo->mark, markinfo->mask, 0);
+ }
+ 
+ static
+--- iptables/extensions/libipt_MARK.c
++++ iptables/extensions/libipt_MARK.c
+@@ -16,7 +16,7 @@ help(void)
+ {
+ 	printf(
+ "MARK target v%s options:\n"
+-"  --set-mark value                   Set nfmark value\n"
++"  --set-mark value[/mask]            Clear bits in mask and OR value into nfmark\n"
+ "  --and-mark value                   Binary AND the nfmark with value\n"
+ "  --or-mark  value                   Binary OR  the nfmark with value\n"
+ "  --set-mark-return value            Set nfmark value and RETURN\n"
+@@ -54,14 +54,22 @@ parse_v0(int c, char **argv, int invert, unsigned int *flags,
+ 		= (struct ipt_mark_target_info *)(*target)->data;
+ 
+ 	switch (c) {
++		char *end;
+ 	case '1':
+ #ifdef KERNEL_64_USERSPACE_32
+-		if (string_to_number_ll(optarg, 0, 0, 
+-				     &markinfo->mark))
++		markinfo->mark = strtoull(optarg, &end, 0);
++		if (*end == '/') {
++			markinfo->mask = strtoull(end+1, &end, 0);
++		} else
++			markinfo->mask = 0xffffffffffffffffULL;
+ #else
+-		if (string_to_number_l(optarg, 0, 0, 
+-				     &markinfo->mark))
++		markinfo->mark = strtoul(optarg, &end, 0);
++		if (*end == '/') {
++			markinfo->mask = strtoul(end+1, &end, 0);
++		} else
++			markinfo->mask = 0xffffffff;
+ #endif
++		if (*end != '\0' || end == optarg)
+ 			exit_error(PARAMETER_PROBLEM, "Bad MARK value `%s'", optarg);
+ 		if (*flags)
+ 			exit_error(PARAMETER_PROBLEM,
+@@ -121,11 +129,33 @@ parse_v1(int c, char **argv, int invert, unsigned int *flags,
+ 		= (struct ipt_mark_target_info_v1 *)(*target)->data;
+ 
+ 	switch (c) {
++		char *end;
+ 	case '1':
+ 	        markinfo->mode = IPT_MARK_SET;
++#ifdef KERNEL_64_USERSPACE_32
++		markinfo->mark = strtoull(optarg, &end, 0);
++		if (*end == '/') {
++			markinfo->mask = strtoull(end+1, &end, 0);
++		} else
++			markinfo->mask = 0xffffffffffffffffULL;
++#else
++		markinfo->mark = strtoul(optarg, &end, 0);
++		if (*end == '/') {
++			markinfo->mask = strtoul(end+1, &end, 0);
++		} else
++			markinfo->mask = 0xffffffff;
++#endif
++		if (*end != '\0' || end == optarg)
++			exit_error(PARAMETER_PROBLEM, "Bad MARK value `%s'", optarg);
+ 		break;
+ 	case '2':
+ 	        markinfo->mode = IPT_MARK_AND;
++#ifdef KERNEL_64_USERSPACE_32
++	if (string_to_number_ll(optarg, 0, 0,  &markinfo->mark))
++#else
++	if (string_to_number_l(optarg, 0, 0, &markinfo->mark))
++#endif
++		exit_error(PARAMETER_PROBLEM, "Bad MARK value `%s'", optarg);
+ 		break;
+ 	case '3':
+ 	        markinfo->mode = IPT_MARK_OR;
+@@ -138,17 +168,16 @@
+ 		break;
+ 	case '6':
+ 	        markinfo->mode = IPT_MARK_OR_RETURN;
+-		break;
+-	default:
+-		return 0;
+-	}
+-
+ #ifdef KERNEL_64_USERSPACE_32
+ 	if (string_to_number_ll(optarg, 0, 0,  &markinfo->mark))
+ #else
+ 	if (string_to_number_l(optarg, 0, 0, &markinfo->mark))
+ #endif
+ 		exit_error(PARAMETER_PROBLEM, "Bad MARK value `%s'", optarg);
++		break;
++	default:
++		return 0;
++	}
+ 
+ 	if (*flags)
+ 		exit_error(PARAMETER_PROBLEM,
+@@ -160,15 +189,21 @@ parse_v1(int c, char **argv, int invert, unsigned int *flags,
+ 
+ #ifdef KERNEL_64_USERSPACE_32
+ static void
+-print_mark(unsigned long long mark)
++print_mark(unsigned long long mark, unsigned long long mask, int numeric)
+ {
+-	printf("0x%llx ", mark);
++	if(mask != 0xffffffffffffffffULL)
++		printf("0x%llx/0x%llx ", mark, mask);
++	else
++		printf("0x%llx ", mark);
+ }
+ #else
+ static void
+-print_mark(unsigned long mark)
++print_mark(unsigned long mark, unsigned long mask, int numeric)
+ {
+-	printf("0x%lx ", mark);
++	if(mask != 0xffffffff)
++		printf("0x%lx/0x%lx ", mark, mask);
++	else
++		printf("0x%lx ", mark);
+ }
+ #endif
+ 
+@@ -181,7 +216,7 @@ print_v0(const struct ipt_ip *ip,
+ 	const struct ipt_mark_target_info *markinfo =
+ 		(const struct ipt_mark_target_info *)target->data;
+ 	printf("MARK set ");
+-	print_mark(markinfo->mark);
++	print_mark(markinfo->mark, markinfo->mask, numeric);
+ }
+ 
+ /* Saves the union ipt_targinfo in parsable form to stdout. */
+@@ -192,7 +227,7 @@ save_v0(const struct ipt_ip *ip, const struct ipt_entry_target *target)
+ 		(const struct ipt_mark_target_info *)target->data;
+ 
+ 	printf("--set-mark ");
+-	print_mark(markinfo->mark);
++	print_mark(markinfo->mark, markinfo->mask, 0);
+ }
+ 
+ /* Prints out the targinfo. */
+@@ -207,12 +242,15 @@ print_v1(const struct ipt_ip *ip,
+ 	switch (markinfo->mode) {
+ 	case IPT_MARK_SET:
+ 		printf("MARK set ");
++		print_mark(markinfo->mark, markinfo->mask, numeric);
+ 		break;
+ 	case IPT_MARK_AND:
+ 		printf("MARK and ");
++		print_mark(markinfo->mark, 0xffffffff, numeric);
+ 		break;
+ 	case IPT_MARK_OR: 
+ 		printf("MARK or ");
++		print_mark(markinfo->mark, 0xffffffff, numeric);
+ 		break;
+ 	case IPT_MARK_SET_RETURN:
+ 		printf("MARK set RETURN");
+@@ -223,8 +261,7 @@ print_v1(const struct ipt_ip *ip,
+ 	case IPT_MARK_OR_RETURN: 
+ 		printf("MARK or RETURN");
+ 		break;
+-	}
+-	print_mark(markinfo->mark);
++	}
+ }
+ 
+ /* Saves the union ipt_targinfo in parsable form to stdout. */
+@@ -237,12 +274,15 @@ save_v1(const struct ipt_ip *ip, const struct ipt_entry_target *target)
+ 	switch (markinfo->mode) {
+ 	case IPT_MARK_SET:
+ 		printf("--set-mark ");
++		print_mark(markinfo->mark, markinfo->mask, 0);
+ 		break;
+ 	case IPT_MARK_AND:
+ 		printf("--and-mark ");
++		print_mark(markinfo->mark, 0xffffffff, 0);
+ 		break;
+ 	case IPT_MARK_OR: 
+ 		printf("--or-mark ");
++		print_mark(markinfo->mark, 0xffffffff, 0);
+ 		break;
+ 	case IPT_MARK_SET_RETURN:
+ 		printf("--set-mark-return ");
+@@ -254,7 +294,6 @@ save_v1(const struct ipt_ip *ip, const struct ipt_entry_target *target)
+ 		printf("--or-mark-return ");
+ 		break;
+ 	}
+-	print_mark(markinfo->mark);
+ }
+ 
+ static
+--- iptables/include/linux/netfilter_ipv4/ipt_MARK.h
++++ iptables/include/linux/netfilter_ipv4/ipt_MARK.h
+@@ -3,9 +3,9 @@
+ 
+ struct ipt_mark_target_info {
+ #ifdef KERNEL_64_USERSPACE_32
+-	unsigned long long mark;
++	unsigned long long mark, mask;
+ #else
+-	unsigned long mark;
++	unsigned long mark, mask;
+ #endif
+ };
+ 
+@@ -20,9 +20,9 @@ enum {
+ 
+ struct ipt_mark_target_info_v1 {
+ #ifdef KERNEL_64_USERSPACE_32
+-	unsigned long long mark;
++	unsigned long long mark, mask;
+ #else
+-	unsigned long mark;
++	unsigned long mark, mask;
+ #endif
+ 	u_int8_t mode;
+ };
+--- iptables/include/linux/netfilter_ipv6/ip6t_MARK.h
++++ iptables/include/linux/netfilter_ipv6/ip6t_MARK.h
+@@ -3,9 +3,9 @@
+ 
+ struct ip6t_mark_target_info {
+ #ifdef KERNEL_64_USERSPACE_32
+-	unsigned long long mark;
++	unsigned long long mark, mask;
+ #else
+-	unsigned long mark;
++	unsigned long mark, mask;
+ #endif
+ };
+ 
+

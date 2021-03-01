@@ -78,6 +78,7 @@ const defaults_t defaults[] = {
 	{ "mwan_ckdst",			"google.com,microsoft.com"	},	// target1,target2
 	{ "mwan_debug",			"0"				},
 	{ "mwan_tune_gc",		"0"				},	/* tune route cache for multiwan in load balancing */
+	{ "mwan_state_init",		"1"				},	/* init wan state files with this value */
 	{ "pbr_rules",			""				},
 
 	/* WAN H/W parameters */
@@ -163,22 +164,20 @@ const defaults_t defaults[] = {
 #endif
 #ifdef TCONFIG_STUBBY
 	{ "stubby_proxy",		"0"				},
-	{ "stubby_priority",		"2"				},	// 0=none, 1=strict-order, 2=no-resolv
-	{ "stubby_log",			"4"				},	// log level
+	{ "stubby_priority",		"2"				},	/* 0=none, 1=strict-order, 2=no-resolv */
+	{ "stubby_port",		"5453"				},	/* local port */
+	{ "stubby_resolvers",		"<1.1.1.1>>cloudflare-dns.com><1.0.0.1>>cloudflare-dns.com>"},	/* default DoT resolvers */
+	{ "stubby_log",			"4"				},	/* log level */
 #endif
 	{ "wan_wins",			""				},	// x.x.x.x x.x.x.x ...
 	{ "wan_lease",			"86400"				},	// WAN lease time in seconds
-	{ "wan_islan",			"0"				},
 	{ "wan_modem_ipaddr",		"0.0.0.0"			},	// modem IP address (i.e. PPPoE bridged modem)
 
 	{ "wan_primary",		"1"				},	// Primary wan connection
 	{ "wan_unit",			"0"				},	// Last configured connection
-	{ "wan2_islan",			"0"				},
 	{ "wan2_modem_ipaddr",		"0.0.0.0"			},	// modem IP address (i.e. PPPoE bridged modem)
 #ifdef TCONFIG_MULTIWAN
-	{ "wan3_islan",			"0"				},
 	{ "wan3_modem_ipaddr",		"0.0.0.0"			},	// modem IP address (i.e. PPPoE bridged modem)
-	{ "wan4_islan",			"0"				},
 	{ "wan4_modem_ipaddr",		"0.0.0.0"			},	// modem IP address (i.e. PPPoE bridged modem)
 #endif
 
@@ -328,6 +327,7 @@ const defaults_t defaults[] = {
 	{ "ipv6_dhcpd",			"1"				},	// Enable DHCPv6
 	{ "ipv6_lease_time",		"12"				},	// DHCP IPv6 default lease time in hours
 	{ "ipv6_accept_ra",		"1"				},	// Enable Accept RA on WAN (bit 0) and/or LAN (bit 1) interfaces (br0...br3 if available)
+	{ "ipv6_fast_ra",		"0"				},	// Enable fast RA option --> send frequent RAs
 	{ "ipv6_ifname",		"six0"				},	// The interface facing the rest of the IPv6 world
 	{ "ipv6_tun_v4end",		"0.0.0.0"			},	// Foreign IPv4 endpoint of SIT tunnel
 	{ "ipv6_relay",			"1"				},	// Foreign IPv4 endpoint host of SIT tunnel 192.88.99.?
@@ -646,6 +646,7 @@ const defaults_t defaults[] = {
 	{ "udpxy_stats",		"0"				},
 	{ "udpxy_clients",		"3"				},
 	{ "udpxy_port",			"4022"				},
+	{ "udpxy_wanface",		""				},	/* alternative wanface */
 	{ "ne_syncookies",		"0"				},	// tcp_syncookies
 	{ "DSCP_fix_enable",		"1"				},	// Comacst DSCP fix
 	{ "ne_snat",			"0"				},	// use SNAT instead of MASQUERADE
@@ -723,7 +724,6 @@ const defaults_t defaults[] = {
 #endif
 
 /* qos */
-	{ "atm_overhead",		"0"				},
 	{ "qos_enable",			"0"				},
 	{ "qos_ack",			"0"				},
 	{ "qos_syn",			"1"				},
@@ -734,13 +734,17 @@ const defaults_t defaults[] = {
 	{ "qos_reset",			"1"				},
 	{ "wan_qos_obw",		"700"				},
 	{ "wan_qos_ibw",		"16000"				},
+	{ "wan_qos_overhead",		"0"				},
 	{ "wan2_qos_obw",		"700"				},
 	{ "wan2_qos_ibw",		"16000"				},
+	{ "wan2_qos_overhead",		"0"				},
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_qos_obw",		"700"				},
 	{ "wan3_qos_ibw",		"16000"				},
+	{ "wan3_qos_overhead",		"0"				},
 	{ "wan4_qos_obw",		"700"				},
 	{ "wan4_qos_ibw",		"16000"				},
+	{ "wan4_qos_overhead",		"0"				},
 #endif
 #if defined(TCONFIG_NVRAM_32K) || defined(TCONFIG_OPTIMIZE_SIZE_MORE)
 	{ "qos_orules",			"0<<-1<d<53<0<<0:10<<0<DNS"	},
@@ -821,7 +825,6 @@ const defaults_t defaults[] = {
 	{ "rstats_stime",		"48"				},
 	{ "rstats_offset",		"1"				},
 	{ "rstats_data",		""				},
-	{ "rstats_colors",		""				},
 	{ "rstats_exclude",		""				},
 	{ "rstats_sshut",		"1"				},
 	{ "rstats_bak",			"0"				},
@@ -880,6 +883,7 @@ const defaults_t defaults[] = {
 	{ "log_out",			"0"				},
 	{ "log_mark",			"60"				},
 	{ "log_events",			""				},
+	{ "log_dropdups",		"0"				},
 
 /* admin-log-webmonitor */
 	{ "log_wm",			"0"				},
@@ -1109,7 +1113,6 @@ const defaults_t defaults[] = {
 	{ "vpn_server1_key",		""				},
 	{ "vpn_server1_dh",		""				},
 	{ "vpn_server1_br",		"br0"				},
-	{ "vpn_server1_serial",		"00"				},
 	{ "vpn_server2_poll",		"0"				},
 	{ "vpn_server2_if",		"tun"				},
 	{ "vpn_server2_proto",		"udp"				},
@@ -1158,7 +1161,6 @@ const defaults_t defaults[] = {
 	{ "vpn_server2_key",		""				},
 	{ "vpn_server2_dh",		""				},
 	{ "vpn_server2_br",		"br0"				},
-	{ "vpn_server2_serial",		"00"				},
 	{ "vpn_client_eas",		""				},
 	{ "vpn_client1_poll",		"0"				},
 	{ "vpn_client1_if",		"tun"				},

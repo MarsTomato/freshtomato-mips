@@ -222,7 +222,7 @@ var form = {
 	},
 
 	submit: function(fom, async, url) {
-		var e, v, f, i, wait, msg, sb, cb;
+		var e, v, f, i, wait, msg, sb, cb, nomsg = 0;
 
 		fom = E(fom);
 
@@ -256,17 +256,22 @@ var form = {
 				else
 					wait = Math.abs(wait);
 			}
+			if (f.name == '_nofootermsg') {
+				nomsg = f.value * 1;
+				if (isNaN(nomsg))
+					nomsg = 0;
+			}
 			v.push(escapeCGI(f.name) + '=' + escapeCGI(f.value));
 		}
 
-		if ((msg = E('footer-msg')) != null) {
+		if ((msg = E('footer-msg')) != null && !nomsg) {
 			msg.innerHTML = 'Saving...';
 			msg.style.display = 'inline';
 		}
 
 		this.xhttp = new XmlHttp();
 		this.xhttp.onCompleted = function(text, xml) {
-			if (msg) {
+			if (msg && !nomsg) {
 				if (text.match(/@msg:(.+)/))
 					msg.innerHTML = escapeHTML(RegExp.$1);
 				else
@@ -1564,7 +1569,7 @@ TomatoGrid.prototype = {
 								break;
 							}
 						}
-						attrib += ' autocomplete="off"';
+						attrib += ' autocomplete="off" autocorrect="off" autocapitalize="off"';
 						if (f.peekaboo && id) attrib += ' onfocus=\'peekaboo("' + id + '",1)\'';
 						/* drop */
 					case 'text':
@@ -1580,7 +1585,7 @@ TomatoGrid.prototype = {
 					case 'select':
 						s += '<select' + common + attrib + '>';
 						for (var k = 0; k < f.options.length; ++k) {
-							a = f.options[k];
+							var a = f.options[k];
 							if (which == 'edit') {
 								s += '<option value="' + a[0] + '"' + ((a[0] == values[vi]) ? ' selected="selected">' : '>') + a[1] + '</option>';
 							}
@@ -2141,7 +2146,7 @@ TomatoRefresh.prototype = {
 			if (v > 0) v = (v * 1000) + (delay || 0);
 		}
 		else if (def) {
-			v = def;
+			v = def * 1000;
 			if (e) e.value = def;
 		}
 		else v = 0;
@@ -2277,7 +2282,7 @@ function escapeHTML(s) {
 }
 
 function escapeCGI(s) {
-	return encodeURIComponent(s)
+	return encodeURIComponent(s);
 }
 
 function escapeD(s) {
@@ -2362,6 +2367,75 @@ function show_notice1(s) {
 }
 
 // -----------------------------------------------------------------------------
+
+function getColor(classname) {
+	var styleSheets = document.styleSheets;
+	for (var i = 0; i < styleSheets.length; i++) {
+		if (styleSheets[i].rules)
+			var classes = styleSheets[i].rules;
+		else {
+			try {
+				if (!styleSheets[i].cssRules)
+					continue;
+			}
+
+			catch(e) {
+				if (e.name == 'SecurityError')
+					continue;
+			}
+			var classes = styleSheets[i].cssRules;
+		}
+		for (var x = 0; x < classes.length; x++) {
+			if (classes[x].selectorText == classname)
+				return classes[x].style.color;
+		}
+	}
+}
+
+function checkSVG() {
+	var i, e, d, w;
+
+	try {
+		for (i = 2; i >= 0; --i) {
+			e = E('svg'+i);
+			d = e.getSVGDocument();
+
+			if (d.defaultView)
+				w = d.defaultView;
+			else
+				w = e.getWindow();
+
+			if (!w.ready)
+				break;
+
+			switch (i) {
+				case 0: {
+					updateCD = w.updateSVG;
+					break;
+				}
+				case 1: {
+					updateBI = w.updateSVG;
+					break;
+				}
+				case 2: {
+					updateBO = w.updateSVG;
+					break;
+				}
+			}
+		}
+	}
+	catch (ex) {
+	}
+
+	if (i < 0) {
+		svgReady = 1;
+		updateCD(nfmarks, abc);
+		updateBI(irates, abc);
+		updateBO(orates, abc);
+	}
+	else if (--svgReady > -5)
+		setTimeout(checkSVG, 500);
+}
 
 function myName() {
 	var name, i;
@@ -2603,7 +2677,7 @@ function createFieldTable(flags, desc) {
 	var tr;
 
 	if ((flags.indexOf('noopen') == -1)) buf.push('<table class="fields">');
-	for (desci = 0; desci < desc.length; ++desci) {
+	for (var desci = 0; desci < desc.length; ++desci) {
 		var v = desc[desci];
 
 		if (!v) {
@@ -2670,7 +2744,7 @@ function createFieldTable(flags, desc) {
 						}
 					}
 					if (f.type == 'password') {
-						common += ' autocomplete="off"';
+						common += ' autocomplete="off" autocorrect="off" autocapitalize="off"';
 						if (f.peekaboo) common += ' onfocus=\'peekaboo("' + id + '",1)\'';
 					}
 					/* drop */

@@ -18,6 +18,7 @@
 
 #define MAX_NVPARSE 255
 #define sin_addr(s) (((struct sockaddr_in *)(s))->sin_addr)
+#define sin6_addr(s) (((struct sockaddr_in6 *)(s))->sin6_addr)
 
 extern int doSystem(char *fmt, ...);
 #if 0
@@ -82,7 +83,7 @@ extern int _cpu_eval(int *ppid, char *cmds[]);
  * @param	pidfile	PID file
  * @return	0 on success and errno on failure
  */
-extern int kill_pidfile(char *pidfile);
+extern void killall_tk_period_wait(const char *name, int wait_ds);
 extern int kill_pidfile_s(char *pidfile, int sig);
 
 /*
@@ -298,8 +299,8 @@ int ure_any_enabled(void);
 
 int is_hwnat_loaded(void);
 
-#define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
 extern int _vstrsep(char *buf, const char *sep, ...);
+#define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
 
 extern char *sort_list(char *inlist, int inlist_size);
 
