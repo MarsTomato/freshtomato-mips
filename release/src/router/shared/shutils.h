@@ -15,6 +15,10 @@
 #ifndef _shutils_h_
 #define _shutils_h_
 #include <string.h>
+
+#define sin_addr(s) (((struct sockaddr_in *)(s))->sin_addr)
+#define sin6_addr(s) (((struct sockaddr_in6 *)(s))->sin6_addr)
+
 /*
  * Reads file and returns contents
  * @param	fd	file descriptor
@@ -61,7 +65,8 @@ extern int _eval(char *const argv[], const char *path, int timeout, pid_t *ppid)
  * @param	pidfile	PID file
  * @return	0 on success and errno on failure
  */
-extern int kill_pidfile(char *pidfile);
+extern void killall_tk_period_wait(const char *name, int wait_ds);
+extern int kill_pidfile_s(char *pidfile, int sig);
 
 /*
  * fread() with automatic retry on syscall interrupt
@@ -237,5 +242,8 @@ extern int osifname_to_nvifname(const char *osifname, char *nvifname_buf,
                                 int nvifname_buf_len);
 
 int ure_any_enabled(void);
+
+extern int _vstrsep(char *buf, const char *sep, ...);
+#define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
 
 #endif /* _shutils_h_ */

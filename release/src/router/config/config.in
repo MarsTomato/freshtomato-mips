@@ -245,3 +245,7 @@ config TCONFIG_OPTIMIZE_SIZE
 config TCONFIG_OPTIMIZE_SIZE_MORE
 	bool "Flag to optimize code even more"
 	default n
+
+config TCONFIG_BONDING
+	bool "Include bonding module and link aggregation script"
+	default n

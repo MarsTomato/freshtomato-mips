@@ -17,7 +17,13 @@
  * 3  = Filter
  */
 
-static const char *bwlimitfn = "/etc/bwlimit";
+static char *bwlimitfn = "/etc/bwlimit";
+
+#ifdef TCONFIG_BCMARM
+static const char *leaf_qdisc = "fq_codel";
+#else
+static const char *leaf_qdisc = "sfq perturb 10";
+#endif
 
 #define IP_ADDRESS	0
 #define MAC_ADDRESS	1
@@ -65,8 +71,8 @@ void ipt_bwlimit(int chain)
 	char *g;
 	char *p;
 	char *ibw, *obw;		/* bandwidth */
-	char seq[4];			/* mark number */
-	int iSeq = 10;
+	char seq[32];			/* mark number */
+	int iSeq = 1;
 	char *ipaddr_old;
 	char ipaddr[30];		/* ip address */
 	char *dlrate, *dlceil;		/* guaranteed rate & maximum rate for download */
@@ -99,8 +105,11 @@ void ipt_bwlimit(int chain)
 	/* MANGLE */
 	if (chain == 1) {
 		if (nvram_get_int("bwl_br0_enable") == 1)
-			ipt_write("-A POSTROUTING ! -s %s/%s -d %s/%s -j MARK --set-mark 100\n"
-			          "-A PREROUTING  -s %s/%s ! -d %s/%s -j MARK --set-mark 100\n",
+			/* These mark values and masks have been intentionally chosen to avoid conflicting
+			 * with qos, wan pbr, and vpnrouting marks. See qos.c
+			 */
+			ipt_write("-A POSTROUTING ! -s %s/%s -d %s/%s -j MARK --set-mark 0x10/0xf0\n"
+			          "-A PREROUTING  -s %s/%s ! -d %s/%s -j MARK --set-mark 0x10/0xf0\n",
 			          lanipaddr, lanmask, lanipaddr, lanmask,
 			          lanipaddr, lanmask, lanipaddr, lanmask);
 
@@ -109,10 +118,10 @@ void ipt_bwlimit(int chain)
 			lanX_ipaddr = nvram_safe_get("lan1_ipaddr");
 			lanX_mask = nvram_safe_get("lan1_netmask");
 
-			ipt_write("-A POSTROUTING -d %s/%s -j MARK --set-mark 401\n"
-			          "-A PREROUTING -s %s/%s -j MARK --set-mark 501\n",
-			          lanX_ipaddr, lanX_mask,
-			          lanX_ipaddr, lanX_mask);
+			ipt_write("-A POSTROUTING ! -s %s/%s -d %s/%s -j MARK --set-mark 0x20/0xf0\n"
+			          "-A PREROUTING -s %s/%s ! -d %s/%s -j MARK --set-mark 0x20/0xf0\n",
+			          lanX_ipaddr, lanX_mask, lanX_ipaddr, lanX_mask,
+			          lanX_ipaddr, lanX_mask, lanX_ipaddr, lanX_mask);
 		}
 
 		/* br2 */
@@ -120,10 +129,10 @@ void ipt_bwlimit(int chain)
 			lanX_ipaddr = nvram_safe_get("lan2_ipaddr");
 			lanX_mask = nvram_safe_get("lan2_netmask");
 
-			ipt_write("-A POSTROUTING -d %s/%s -j MARK --set-mark 601\n"
-			          "-A PREROUTING -s %s/%s -j MARK --set-mark 701\n",
-			          lanX_ipaddr, lanX_mask,
-			          lanX_ipaddr, lanX_mask);
+			ipt_write("-A POSTROUTING ! -s %s/%s -d %s/%s -j MARK --set-mark 0x30/0xf0\n"
+			          "-A PREROUTING -s %s/%s ! -d %s/%s -j MARK --set-mark 0x30/0xf0\n",
+			          lanX_ipaddr, lanX_mask, lanX_ipaddr, lanX_mask,
+			          lanX_ipaddr, lanX_mask, lanX_ipaddr, lanX_mask);
 		}
 
 		/* br3 */
@@ -131,10 +140,10 @@ void ipt_bwlimit(int chain)
 			lanX_ipaddr = nvram_safe_get("lan3_ipaddr");
 			lanX_mask = nvram_safe_get("lan3_netmask");
 
-			ipt_write("-A POSTROUTING -d %s/%s -j MARK --set-mark 801\n"
-			          "-A PREROUTING -s %s/%s -j MARK --set-mark 901\n",
-			          lanX_ipaddr, lanX_mask,
-			          lanX_ipaddr, lanX_mask);
+			ipt_write("-A POSTROUTING ! -s %s/%s -d %s/%s -j MARK --set-mark 0x40/0xf0\n"
+			          "-A PREROUTING -s %s/%s ! -d %s/%s -j MARK --set-mark 0x40/0xf0\n",
+			          lanX_ipaddr, lanX_mask, lanX_ipaddr, lanX_mask,
+			          lanX_ipaddr, lanX_mask, lanX_ipaddr, lanX_mask);
 		}
 	}
 
@@ -177,10 +186,10 @@ void ipt_bwlimit(int chain)
 		if (!strcmp(ipaddr_old, ""))
 			continue;
 		
-		address_checker (&address_type, ipaddr_old, ipaddr);
-		memset(seq, 0, 4);
-		sprintf(seq, "%d", iSeq);
-		iSeq++; 
+		address_checker(&address_type, ipaddr_old, ipaddr);
+		memset(seq, 0, sizeof(seq));
+		sprintf(seq, "0x%x/0xff00000", iSeq << 20);
+		iSeq++;
 
 		if (!strcmp(dlceil, ""))
 			strcpy(dlceil, dlrate);
@@ -270,15 +279,16 @@ void ipt_bwlimit(int chain)
 	free(buf);
 }
 
-void bwlimit_start(void)
+void start_bwlimit(void)
 {
 	FILE *tc;
 	char *buf;
 	char *g;
 	char *p;
 	char *ibw, *obw;		/* bandwidth */
-	char seq[4];			/* mark number */
-	int iSeq = 10;
+	int mark;			/* mark number */
+	int seq;
+	int iSeq = 1;
 	char *ipaddr_old; 
 	char ipaddr[30];		/* ip address */
 	char *dlrate, *dlceil;		/* guaranteed rate & maximum rate for download */
@@ -325,24 +335,27 @@ void bwlimit_start(void)
 	            "TCAU=\"tc class add dev %s\"\n"
 	            "TFAU=\"tc filter add dev %s\"\n"
 	            "TQAU=\"tc qdisc add dev %s\"\n"
-	            "Q=\"sfq perturb 10\"\n"
+	            "Q=\"%s\"\n"
 	            "\n"
-	            "tc qdisc del dev br0 root 2>/dev/null\n"
-	            "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-	            "\ttc qdisc del dev %s root 2>/dev/null\n"
-	            "}\n"
+	            "case \"$1\" in\n"
+	            "start)\n"
+	            "\ttc qdisc del dev br0 root 2>/dev/null\n"
+	            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+	            "\t\ttc qdisc del dev %s root 2>/dev/null\n"
+	            "\t}\n"
 	            "\n"
-	            "$TQA root handle 1: htb\n"
-	            "$TCA parent 1: classid 1:1 htb rate %skbit\n"
+	            "\t$TQA root handle 1: htb\n"
+	            "\t$TCA parent 1: classid 1:1 htb rate %skbit\n"
 	            "\n"
-	            "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-	            "\t$TQAU root handle 2: htb\n"
-	            "\t$TCAU parent 2: classid 2:1 htb rate %skbit\n"
-	            "}\n"
+	            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+	            "\t\t$TQAU root handle 2: htb\n"
+	            "\t\t$TCAU parent 2: classid 2:1 htb rate %skbit\n"
+	            "\t}\n"
 	            "\n",
 	            waniface,
 	            waniface,
 	            waniface,
+	            leaf_qdisc,
 	            waniface,
 	            ibw,
 	            obw);
@@ -353,18 +366,20 @@ void bwlimit_start(void)
 		if (!strcmp(ulc, ""))
 			strcpy(ulc, ulr);
 
-		fprintf(tc, "$TCA parent 1:1 classid 1:100 htb rate %skbit ceil %skbit prio %s\n"
-		            "$TQA parent 1:100 handle 100: $Q\n"
-		            "$TFA parent 1:0 prio 3 protocol all handle 100 fw flowid 1:100\n"
+		fprintf(tc, "\t$TCA parent 1:1 classid 1:16 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t$TQA parent 1:16 handle 16: $Q\n"
+		            "\t$TFA parent 1:0 prio %s protocol all handle 0x10/0xf0 fw flowid 1:16\n"
 		            "\n"
-		            "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-		            "\t$TCAU parent 2:1 classid 2:100 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQAU parent 2:100 handle 100: $Q\n"
-		            "\t$TFAU parent 2:0 prio 3 protocol all handle 100 fw flowid 2:100\n"
-		            "}\n"
+		            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+		            "\t\t$TCAU parent 2:1 classid 2:16 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t\t$TQAU parent 2:16 handle 16: $Q\n"
+		            "\t\t$TFAU parent 2:0 prio %s protocol all handle 0x10/0xf0 fw flowid 2:16\n"
+		            "\t}\n"
 		            "\n",
 		            dlr, dlc, prio,
-		            ulr, ulc, prio);
+		            prio,
+		            ulr, ulc, prio,
+		            prio);
 	}
 
 	while (g) {
@@ -384,24 +399,25 @@ void bwlimit_start(void)
 			continue;
 
 		address_checker(&address_type, ipaddr_old, ipaddr);
-		memset(seq, 0, 4);
-		sprintf(seq, "%d", iSeq);
+		seq = iSeq * 10;
+		mark = iSeq << 20;
 		iSeq++;
+
 		if (!strcmp(dlceil, ""))
 			strcpy(dlceil, dlrate);
 
 		if (strcmp(dlrate, "") && strcmp(dlceil, "")) {
-			fprintf(tc, "$TCA parent 1:1 classid 1:%s htb rate %skbit ceil %skbit prio %s\n"
-			            "$TQA parent 1:%s handle %s: $Q\n",
+			fprintf(tc, "\t$TCA parent 1:1 classid 1:%d htb rate %skbit ceil %skbit prio %s\n"
+			            "\t$TQA parent 1:%d handle %d: $Q\n",
 			            seq, dlrate, dlceil, priority,
 			            seq, seq);
 
 			if (address_type != MAC_ADDRESS)
-				fprintf(tc, "$TFA parent 1:0 prio %s protocol all handle %s fw flowid 1:%s\n\n", priority, seq, seq);
+				fprintf(tc, "\t$TFA parent 1:0 prio %s protocol all handle 0x%x/0xff00000 fw flowid 1:%d\n\n", priority, mark, seq);
 			else if (address_type == MAC_ADDRESS) {
 				sscanf(ipaddr, "%02X:%02X:%02X:%02X:%02X:%02X", &s[0], &s[1], &s[2], &s[3], &s[4], &s[5]);
 
-				fprintf(tc, "$TFA parent 1:0 protocol all prio %s u32 match u16 0x0800 0xFFFF at -2 match u32 0x%02X%02X%02X%02X 0xFFFFFFFF at -12 match u16 0x%02X%02X 0xFFFF at -14 flowid 1:%s\n\n",
+				fprintf(tc, "\t$TFA parent 1:0 protocol all prio %s u32 match u16 0x0800 0xFFFF at -2 match u32 0x%02X%02X%02X%02X 0xFFFFFFFF at -12 match u16 0x%02X%02X 0xFFFF at -14 flowid 1:%d\n\n",
 				            priority, s[2], s[3], s[4], s[5], s[0], s[1], seq);
 			}
 		}
@@ -410,15 +426,15 @@ void bwlimit_start(void)
 			strcpy(ulceil, dlrate);
 
 		if (strcmp(ulrate, "") && strcmp(ulceil, ""))
-			fprintf(tc, "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-			            "\t$TCAU parent 2:1 classid 2:%s htb rate %skbit ceil %skbit prio %s\n"
-			            "\t$TQAU parent 2:%s handle %s: $Q\n"
-			            "\t$TFAU parent 2:0 prio %s protocol all handle %s fw flowid 2:%s\n"
-			            "}\n"
+			fprintf(tc, "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+			            "\t\t$TCAU parent 2:1 classid 2:%d htb rate %skbit ceil %skbit prio %s\n"
+			            "\t\t$TQAU parent 2:%d handle %d: $Q\n"
+			            "\t\t$TFAU parent 2:0 prio %s protocol all handle 0x%x/0xff00000 fw flowid 2:%d\n"
+			            "\t}\n"
 			            "\n",
 			            seq, ulrate, ulceil, priority,
 			            seq, seq,
-			            priority, seq, seq);
+			            priority, mark, seq);
 	} /* while */
 	free(buf);
 
@@ -436,25 +452,25 @@ void bwlimit_start(void)
 			strcpy(ulc, ulr);
 
 		/* download for br1 */
-		fprintf(tc, "TCA1=\"tc class add dev br1\"\n"
-		            "TFA1=\"tc filter add dev br1\"\n"
-		            "TQA1=\"tc qdisc add dev br1\"\n"
-		            "tc qdisc del dev br1 root\n"
-		            "tc qdisc add dev br1 root handle 4: htb\n"
-		            "tc class add dev br1 parent 4: classid 4:1 htb rate %skbit\n"
-		            "$TCA1 parent 4:1 classid 4:401 htb rate %skbit ceil %skbit prio %s\n"
-		            "$TQA1 parent 4:401 handle 401: $Q\n"
-		            "$TFA1 parent 4:0 prio %s protocol all handle 401 fw flowid 4:401\n",
+		fprintf(tc, "\tTCA1=\"tc class add dev br1\"\n"
+		            "\tTFA1=\"tc filter add dev br1\"\n"
+		            "\tTQA1=\"tc qdisc add dev br1\"\n"
+		            "\ttc qdisc del dev br1 root\n"
+		            "\ttc qdisc add dev br1 root handle 4: htb\n"
+		            "\ttc class add dev br1 parent 4: classid 4:1 htb rate %skbit\n"
+		            "\t$TCA1 parent 4:1 classid 4:32 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t$TQA1 parent 4:32 handle 32: $Q\n"
+		            "\t$TFA1 parent 4:0 prio %s protocol all handle 0x20/0xf0 fw flowid 4:32\n",
 		            ibw,
 		            dlr, dlc, prio,
 		            prio);
 
 		/* upload for br1 */
-		fprintf(tc, "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-		            "\t$TCAU parent 2:1 classid 2:501 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQAU parent 2:501 handle 501: $Q\n"
-		            "\t$TFAU parent 2:0 prio %s protocol all handle 501 fw flowid 2:501\n"
-		            "}\n",
+		fprintf(tc, "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+		            "\t\t$TCAU parent 2:1 classid 2:32 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t\t$TQAU parent 2:32 handle 32: $Q\n"
+		            "\t\t$TFAU parent 2:0 prio %s protocol all handle 0x20/0xf0 fw flowid 2:32\n"
+		            "\t}\n\n",
 		            ulr, ulc, prio,
 		            prio);
 	}
@@ -473,25 +489,25 @@ void bwlimit_start(void)
 			strcpy(ulc, ulr);
 
 		/* download for br2 */
-		fprintf(tc, "TCA2=\"tc class add dev br2\"\n"
-		            "TFA2=\"tc filter add dev br2\"\n"
-		            "TQA2=\"tc qdisc add dev br2\"\n"
-		            "tc qdisc del dev br2 root\n"
-		            "tc qdisc add dev br2 root handle 6: htb\n"
-		            "tc class add dev br2 parent 6: classid 6:1 htb rate %skbit\n"
-		            "$TCA2 parent 6:1 classid 6:601 htb rate %skbit ceil %skbit prio %s\n"
-		            "$TQA2 parent 6:601 handle 601: $Q\n"
-		            "$TFA2 parent 6:0 prio %s protocol all handle 601 fw flowid 6:601\n",
+		fprintf(tc, "\tTCA2=\"tc class add dev br2\"\n"
+		            "\tTFA2=\"tc filter add dev br2\"\n"
+		            "\tTQA2=\"tc qdisc add dev br2\"\n"
+		            "\ttc qdisc del dev br2 root\n"
+		            "\ttc qdisc add dev br2 root handle 6: htb\n"
+		            "\ttc class add dev br2 parent 6: classid 6:1 htb rate %skbit\n"
+		            "\t$TCA2 parent 6:1 classid 6:48 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t$TQA2 parent 6:48 handle 48: $Q\n"
+		            "\t$TFA2 parent 6:0 prio %s protocol all handle 0x30/0xf0 fw flowid 6:48\n",
 		            ibw,
 		            dlr, dlc, prio,
 		            prio);
 
 		/* upload for br2 */
-		fprintf(tc, "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-		            "\t$TCAU parent 2:1 classid 2:701 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQAU parent 2:701 handle 701: $Q\n"
-		            "\t$TFAU parent 2:0 prio %s protocol all handle 701 fw flowid 2:701\n"
-		            "}\n",
+		fprintf(tc, "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+		            "\t\t$TCAU parent 2:1 classid 2:48 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t\t$TQAU parent 2:48 handle 48: $Q\n"
+		            "\t\t$TFAU parent 2:0 prio %s protocol all handle 0x30/0xf0 fw flowid 2:48\n"
+		            "\t}\n\n",
 		            ulr, ulc, prio,
 		            prio);
 	}
@@ -510,60 +526,66 @@ void bwlimit_start(void)
 			strcpy(ulc, ulr);
 
 		/* download for br3 */
-		fprintf(tc, "TCA3=\"tc class add dev br3\"\n"
-		            "TFA3=\"tc filter add dev br3\"\n"
-		            "TQA3=\"tc qdisc add dev br3\"\n"
-		            "tc qdisc del dev br3 root\n"
-		            "tc qdisc add dev br3 root handle 8: htb\n"
-		            "tc class add dev br3 parent 8: classid 8:1 htb rate %skbit\n"
-		            "$TCA3 parent 8:1 classid 8:801 htb rate %skbit ceil %skbit prio %s\n"
-		            "$TQA3 parent 8:801 handle 801: $Q\n"
-		            "$TFA3 parent 8:0 prio %s protocol all handle 801 fw flowid 8:801\n",
+		fprintf(tc, "\tTCA3=\"tc class add dev br3\"\n"
+		            "\tTFA3=\"tc filter add dev br3\"\n"
+		            "\tTQA3=\"tc qdisc add dev br3\"\n"
+		            "\ttc qdisc del dev br3 root\n"
+		            "\ttc qdisc add dev br3 root handle 8: htb\n"
+		            "\ttc class add dev br3 parent 8: classid 8:1 htb rate %skbit\n"
+		            "\t$TCA3 parent 8:1 classid 8:64 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t$TQA3 parent 8:64 handle 64: $Q\n"
+		            "\t$TFA3 parent 8:0 prio %s protocol all handle 0x40/0xf0 fw flowid 8:64\n",
 		            ibw,
 		            dlr, dlc, prio,
 		            prio);
 
 		/* upload for br3 */
-		fprintf(tc, "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-		            "\t$TCAU parent 2:1 classid 2:901 htb rate %skbit ceil %skbit prio %s\n"
-		            "\t$TQAU parent 2:901 handle 901: $Q\n"
-		            "\t$TFAU parent 2:0 prio %s protocol all handle 901 fw flowid 2:901\n"
-		            "}\n",
+		fprintf(tc, "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+		            "\t\t$TCAU parent 2:1 classid 2:64 htb rate %skbit ceil %skbit prio %s\n"
+		            "\t\t$TQAU parent 2:64 handle 64: $Q\n"
+		            "\t\t$TFAU parent 2:0 prio %s protocol all handle 0x40/0xf0 fw flowid 2:64\n"
+		            "\t}\n\n",
 		            ulr, ulc, prio,
 		            prio);
 	}
+
+	fprintf(tc, "\tlogger -t bwlimit \"BW Limiter is started\"\n"
+	            "\t;;\n"
+	            "stop)\n"
+	            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
+	            "\t\ttc qdisc del dev %s root\n"
+	            "\t}\n"
+	            "\ttc qdisc del dev br0 root 2>/dev/null\n"
+	            "\ttc qdisc del dev br1 root 2>/dev/null\n"
+	            "\ttc qdisc del dev br2 root 2>/dev/null\n"
+	            "\ttc qdisc del dev br3 root 2>/dev/null\n\n"
+	            "\tlogger -t bwlimit \"BW Limiter is stopped\"\n"
+	            "\t;;\n"
+	            "*)\n"
+	            "\techo \"Usage: $0 <start|stop>\"\n"
+	            "esac\n",
+	            waniface);
 
 	fclose(tc);
 
 	chmod(bwlimitfn, 0700);
 
-	eval((char *)bwlimitfn, "start");
+
+	eval(bwlimitfn, "start");
 }
 
-void bwlimit_stop(void)
+void stop_bwlimit(void)
 {
-	FILE *f;
-	char *s = "/tmp/bwlimit_stop.sh";
+	FILE *tc;
 
-	if ((f = fopen(s, "w")) == NULL) {
-		perror(s);
+	if ((tc = fopen(bwlimitfn, "r")) == NULL)
 		return;
-	}
 
-	fprintf(f, "#!/bin/sh\n"
-	           "[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"
-	           "\ttc qdisc del dev %s root\n"
-	           "}\n"
-	           "tc qdisc del dev br0 root\n"
-	           "\n",
-	           nvram_safe_get("wan_iface"));
+	fclose(tc);
 
-	fclose(f);
-
-	chmod(s, 0700);
-
-	eval(s, "stop");
+	eval(bwlimitfn, "stop");
 }
+
 /*
  * PREROUTING (mn) ----> x ----> FORWARD (f) ----> + ----> POSTROUTING (n)
  *            QD         |                         ^

@@ -64,6 +64,11 @@ endif
 #MOTD
 	install -m 0700 mymotd $(INSTALLDIR)/usr/sbin
 
+#Link Aggregation
+ifeq ($(TCONFIG_BONDING),y)
+	install -m 0700 linkagg $(INSTALLDIR)/usr/sbin
+endif
+
 #Web Monitor Backup Script
 	install -m 0700 webmon_bkp $(INSTALLDIR)/usr/sbin
 

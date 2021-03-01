@@ -81,15 +81,10 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 
 #define IFUP (IFF_UP | IFF_RUNNING | IFF_BROADCAST | IFF_MULTICAST)
 
-#define sin_addr(s) (((struct sockaddr_in *)(s))->sin_addr)
-#define sin6_addr(s) (((struct sockaddr_in6 *)(s))->sin6_addr)
-
 #define IPT_V4			0x01
 #define IPT_V6			0x02
 #define IPT_ANY_AF		(IPT_V4 | IPT_V6)
 #define IPT_AF_IS_EMPTY(f)	((f & IPT_ANY_AF) == 0)
-
-#define BRIDGE_COUNT		4
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
@@ -140,8 +135,8 @@ extern void start_pppoe(int, char *prefix);
 extern void stop_pppoe(char *prefix);
 extern void start_l2tp(char *prefix);
 extern void stop_l2tp(char *prefix);
-extern void start_wan_if(int mode, char *prefix);
-extern void start_wan(int mode);
+extern void start_wan_if(char *prefix);
+extern void start_wan(void);
 extern void start_wan_done(char *ifname,char *prefix);
 extern void start_wanall_done(void);
 extern char *wan_gateway(char *prefix);
@@ -201,6 +196,7 @@ extern int dhcpc_release_main(int argc, char **argv);
 extern int dhcpc_renew_main(int argc, char **argv);
 extern void start_dhcpc(char *prefix);
 extern void stop_dhcpc(char *prefix);
+extern void do_connect_file(unsigned int renew, char *prefix);
 #ifdef TCONFIG_IPV6
 extern int dhcp6c_state_main(int argc, char **argv);
 extern void start_dhcp6c(void);
@@ -267,6 +263,15 @@ extern void stop_6rd_tunnel(void);
 extern void start_ipv6(void);
 extern void stop_ipv6(void);
 #endif /* TCONFIG_IPV6 */
+#ifdef TCONFIG_BCMBSD
+int start_bsd(void);
+void stop_bsd(void);
+#endif /* TCONFIG_BCMBSD */
+#ifdef TCONFIG_SAMBASRV
+extern void start_samba(void);
+extern void stop_samba(void);
+#endif /* TCONFIG_SAMBASRV */
+
 
 /* usb.c */
 #ifdef TCONFIG_USB
@@ -410,12 +415,8 @@ extern int host_addrtypes(const char *name, int af);
 extern void inc_mac(char *mac, int plus);
 extern void set_mac(const char *ifname, const char *nvname, int plus);
 extern const char *default_wanif(void);
-#define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
-extern int _vstrsep(char *buf, const char *sep, ...);
 extern void simple_unlock(const char *name);
 extern void simple_lock(const char *name);
-extern void killall_tk_period_wait(const char *name, int wait);
-extern int kill_pidfile_s(char *pidfile, int sig);
 extern int mkdir_if_none(const char *path);
 extern long fappend(FILE *out, const char *fname);
 extern long fappend_file(const char *path, const char *fname);
@@ -552,8 +553,8 @@ extern void run_tinc_firewall_script();
 
 /* bwlimit.c */
 extern void ipt_bwlimit(int chain);
-extern void bwlimit_start(void);
-extern void bwlimit_stop(void);
+extern void start_bwlimit(void);
+extern void stop_bwlimit(void);
 
 /* arpbind.c */
 extern void start_arpbind(void);
@@ -569,7 +570,6 @@ extern void stop_mmc(void);
 #ifdef TCONFIG_NOCAT
 extern void start_nocat();
 extern void stop_nocat();
-extern void reset_nocat();
 #endif
 
 /* nginx.c */

@@ -26,14 +26,14 @@
 
 <script>
 
-//	<% nvram("wan_ifname,wan_proto,wan_iface,wan2_ifname,wan2_proto,wan2_iface,wan3_ifname,wan3_proto,wan3_iface,wan4_ifname,wan4_proto,wan4_iface,lan_ifname,wl_ifname,web_svg,web_css,cstats_enable,cstats_colors,dhcpd_static,lan_ipaddr,lan_netmask,lan1_ipaddr,lan1_netmask,lan2_ipaddr,lan2_netmask,lan3_ipaddr,lan3_netmask,cstats_labels"); %>
+//	<% nvram("wan_ifname,wan_proto,wan_iface,wan2_ifname,wan2_proto,wan2_iface,wan3_ifname,wan3_proto,wan3_iface,wan4_ifname,wan4_proto,wan4_iface,lan_ifname,wl_ifname,web_svg,web_css,cstats_enable,dhcpd_static,lan_ipaddr,lan_netmask,lan1_ipaddr,lan1_netmask,lan2_ipaddr,lan2_netmask,lan3_ipaddr,lan3_netmask,cstats_labels"); %>
 
 //	<% devlist(); %>
 
 var cprefix = 'ipt_';
-var updateInt = 120;
+var updateInt = 60;
 var updateDiv = updateInt;
-var updateMaxL = 720;
+var updateMaxL = 1440;
 var updateReTotal = 1;
 var hours = 24;
 var lastHours = 0;
@@ -55,7 +55,7 @@ function switchHours(h) {
 	if ((!svgReady) || (updating)) return;
 
 	hours = h;
-	updateMaxL = (720 / 24) * hours;
+	updateMaxL = (1440 / 24) * hours;
 	showHours();
 	loadData();
 	cookie.set(cprefix + 'hrs', hours);
@@ -98,7 +98,7 @@ ref.refresh = function(text) {
 			if (cstats_busy) {
 				cstats_busy = 0;
 			}
-			this.refreshTime = (fixInt(speed_history._next, 1, 120, 60) + 2) * 1000;
+			this.refreshTime = (fixInt(speed_history._next, 1, 60, 30) + 2) * 1000;
 		} catch (ex) {
 			speed_history = {};
 			cstats_busy = 1;
@@ -198,7 +198,7 @@ REMOVE-END */
 	}
 
 	hours = fixInt(cookie.get(cprefix + 'hrs'), 1, 24, 24);
-	updateMaxL = (720 / 24) * hours;
+	updateMaxL = (1440 / 24) * hours;
 	showHours();
 
 	initCommon(1, 0, 0, 1);
@@ -300,7 +300,7 @@ function verifyFields(focused, quiet) {
 		</script>
 
 		<div id="bwm-controls">
-			<small>(2 minute interval)</small><br>
+			<small>(1 minute interval)</small><br>
 
 			<br>
 
