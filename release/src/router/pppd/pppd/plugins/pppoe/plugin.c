@@ -46,7 +46,6 @@ static char const RCSID[] =
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
-#include <net/ethernet.h>
 #include <net/if_arp.h>
 #include <linux/ppp_defs.h>
 #include <linux/if_pppox.h>
@@ -68,6 +67,9 @@ static char *existingSession = NULL;
 static int printACNames = 0;
 static char *pppoe_reqd_mac = NULL;
 unsigned char pppoe_reqd_mac_addr[6];
+static char *pppoe_host_uniq;
+static int pppoe_padi_timeout = PADI_TIMEOUT;
+static int pppoe_padi_attempts = MAX_PADI_ATTEMPTS;
 
 static int PPPoEDevnameHook(char *cmd, char **argv, int doit);
 static option_t Options[] = {
@@ -75,16 +77,32 @@ static option_t Options[] = {
       "PPPoE device name",
       OPT_DEVNAM | OPT_PRIVFIX | OPT_NOARG  | OPT_A2STRVAL | OPT_STATIC,
       devnam},
-    { "rp_pppoe_service", o_string, &pppd_pppoe_service,
+    { "pppoe-service", o_string, &pppd_pppoe_service,
       "Desired PPPoE service name" },
-    { "rp_pppoe_ac",      o_string, &acName,
+    { "rp_pppoe_service", o_string, &pppd_pppoe_service,
+      "Legacy alias for pppoe-service", OPT_ALIAS },
+    { "pppoe-ac",      o_string, &acName,
       "Desired PPPoE access concentrator name" },
-    { "rp_pppoe_sess",    o_string, &existingSession,
+    { "rp_pppoe_ac",      o_string, &acName,
+      "Legacy alias for pppoe-ac", OPT_ALIAS },
+    { "pppoe-sess",    o_string, &existingSession,
       "Attach to existing session (sessid:macaddr)" },
+    { "rp_pppoe_sess",    o_string, &existingSession,
+      "Legacy alias for pppoe-sess", OPT_ALIAS },
+    { "pppoe-verbose", o_int, &printACNames,
+      "Be verbose about discovered access concentrators" },
     { "rp_pppoe_verbose", o_int, &printACNames,
-      "Be verbose about discovered access concentrators"},
+      "Legacy alias for pppoe-verbose", OPT_ALIAS },
     { "pppoe-mac", o_string, &pppoe_reqd_mac,
       "Only connect to specified MAC address" },
+    { "pppoe-host-uniq", o_string, &pppoe_host_uniq,
+      "Set the Host-Uniq to the supplied hex string" },
+    { "host-uniq", o_string, &pppoe_host_uniq,
+      "Legacy alias for pppoe-host-uniq", OPT_ALIAS },
+    { "pppoe-padi-timeout", o_int, &pppoe_padi_timeout,
+      "Initial timeout for discovery packets in seconds" },
+    { "pppoe-padi-attempts", o_int, &pppoe_padi_attempts,
+      "Number of discovery attempts" },
     { NULL }
 };
 int (*OldDevnameHook)(char *cmd, char **argv, int doit) = NULL;
@@ -110,9 +128,9 @@ PPPOEInitDevice(void)
     conn->ifName = devnam;
     conn->discoverySocket = -1;
     conn->sessionSocket = -1;
-    conn->useHostUniq = 1;
     conn->printACNames = printACNames;
-    conn->discoveryTimeout = PADI_TIMEOUT;
+    conn->discoveryTimeout = pppoe_padi_timeout;
+    conn->discoveryAttempts = pppoe_padi_attempts;
     return 1;
 }
 
@@ -166,6 +184,17 @@ PPPOEConnectDevice(void)
     if (lcp_wantoptions[0].mru > ifr.ifr_mtu - TOTAL_OVERHEAD)
 	lcp_wantoptions[0].mru = ifr.ifr_mtu - TOTAL_OVERHEAD;
 
+    if (pppoe_host_uniq) {
+	if (!parseHostUniq(pppoe_host_uniq, &conn->hostUniq))
+	    fatal("Illegal value for pppoe-host-uniq option");
+    } else {
+	/* if a custom host-uniq is not supplied, use our PID */
+	pid_t pid = getpid();
+	conn->hostUniq.type = htons(TAG_HOST_UNIQ);
+	conn->hostUniq.length = htons(sizeof(pid));
+	memcpy(conn->hostUniq.payload, &pid, sizeof(pid));
+    }
+
     conn->acName = acName;
     conn->serviceName = pppd_pppoe_service;
     strlcpy(ppp_devnam, devnam, sizeof(ppp_devnam));
@@ -175,7 +204,7 @@ PPPOEConnectDevice(void)
 	if (sscanf(existingSession, "%d:%x:%x:%x:%x:%x:%x",
 		   &ses, &mac[0], &mac[1], &mac[2],
 		   &mac[3], &mac[4], &mac[5]) != 7) {
-	    fatal("Illegal value for rp_pppoe_sess option");
+	    fatal("Illegal value for pppoe-sess option");
 	}
 	conn->session = htons(ses);
 	for (i=0; i<ETH_ALEN; i++) {
@@ -184,6 +213,10 @@ PPPOEConnectDevice(void)
     } else {
 	conn->discoverySocket =
             openInterface(conn->ifName, Eth_PPPOE_Discovery, conn->myEth);
+	if (conn->discoverySocket < 0) {
+	    error("Failed to create PPPoE discovery socket: %m");
+	    goto errout;
+	}
 	discovery(conn);
 	if (conn->discoveryState != STATE_SESSION) {
 	    error("Unable to complete PPPoE Discovery");
@@ -380,8 +413,7 @@ plugin_init(void)
 
     add_options(Options);
 
-    info("RP-PPPoE plugin version %s compiled against pppd %s",
-	 RP_VERSION, VERSION);
+    info("PPPoE plugin from pppd %s", VERSION);
 }
 
 void pppoe_check_options(void)

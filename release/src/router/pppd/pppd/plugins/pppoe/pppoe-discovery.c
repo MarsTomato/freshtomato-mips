@@ -9,6 +9,7 @@
  *
  */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -26,10 +27,6 @@
 #include <netpacket/packet.h>
 #elif defined(HAVE_LINUX_IF_PACKET_H)
 #include <linux/if_packet.h>
-#endif
-
-#ifdef HAVE_NET_ETHERNET_H
-#include <net/ethernet.h>
 #endif
 
 #ifdef HAVE_ASM_TYPES_H
@@ -54,6 +51,14 @@ void usage(void);
 void die(int status)
 {
 	exit(status);
+}
+
+void error(char *fmt, ...)
+{
+    va_list pvar;
+    va_start(pvar, fmt);
+    vfprintf(stderr, fmt, pvar);
+    va_end(pvar);
 }
 
 /* Initialize frame types to RFC 2516 values.  Some broken peers apparently
@@ -125,7 +130,7 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr)
     if ((fd = socket(domain, stype, htons(type))) < 0) {
 	/* Give a more helpful message for the common error case */
 	if (errno == EPERM) {
-	    rp_fatal("Cannot create raw socket -- pppoe must be run as root.");
+	    fatal("Cannot create raw socket -- pppoe must be run as root.");
 	}
 	fatalSys("socket");
     }
@@ -143,17 +148,11 @@ openInterface(char const *ifname, UINT16_t type, unsigned char *hwaddr)
 	memcpy(hwaddr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 #ifdef ARPHRD_ETHER
 	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
-	    char buffer[256];
-	    sprintf(buffer, "Interface %.16s is not Ethernet", ifname);
-	    rp_fatal(buffer);
+	    fatal("Interface %.16s is not Ethernet", ifname);
 	}
 #endif
 	if (NOT_UNICAST(hwaddr)) {
-	    char buffer[256];
-	    sprintf(buffer,
-		    "Interface %.16s has broadcast/multicast MAC address??",
-		    ifname);
-	    rp_fatal(buffer);
+	    fatal("Interface %.16s has broadcast/multicast MAC address??", ifname);
 	}
     }
 
@@ -209,18 +208,18 @@ sendPacket(PPPoEConnection *conn, int sock, PPPoEPacket *pkt, int size)
 {
 #if defined(HAVE_STRUCT_SOCKADDR_LL)
     if (send(sock, pkt, size, 0) < 0) {
-	sysErr("send (sendPacket)");
+	fatalSys("send (sendPacket)");
 	return -1;
     }
 #else
     struct sockaddr sa;
 
     if (!conn) {
-	rp_fatal("relay and server not supported on Linux 2.0 kernels");
+	fatal("relay and server not supported on Linux 2.0 kernels");
     }
     strcpy(sa.sa_data, conn->ifName);
     if (sendto(sock, pkt, size, 0, &sa, sizeof(sa)) < 0) {
-	sysErr("sendto (sendPacket)");
+	fatalSys("sendto (sendPacket)");
 	return -1;
     }
 #endif
@@ -242,7 +241,7 @@ int
 receivePacket(int sock, PPPoEPacket *pkt, int *size)
 {
     if ((*size = recv(sock, pkt, sizeof(PPPoEPacket), 0)) < 0) {
-	sysErr("recv (receivePacket)");
+	fatalSys("recv (receivePacket)");
 	return -1;
     }
     return 0;
@@ -319,14 +318,10 @@ void
 parseForHostUniq(UINT16_t type, UINT16_t len, unsigned char *data,
 		 void *extra)
 {
-    int *val = (int *) extra;
-    if (type == TAG_HOST_UNIQ && len == sizeof(pid_t)) {
-	pid_t tmp;
-	memcpy(&tmp, data, len);
-	if (tmp == getpid()) {
-	    *val = 1;
-	}
-    }
+    PPPoETag *tag = extra;
+
+    if (type == TAG_HOST_UNIQ && len == ntohs(tag->length))
+	tag->length = memcmp(data, tag->payload, len);
 }
 
 /**********************************************************************
@@ -343,16 +338,16 @@ parseForHostUniq(UINT16_t type, UINT16_t len, unsigned char *data,
 int
 packetIsForMe(PPPoEConnection *conn, PPPoEPacket *packet)
 {
-    int forMe = 0;
+    PPPoETag hostUniq = conn->hostUniq;
 
     /* If packet is not directed to our MAC address, forget it */
     if (memcmp(packet->ethHdr.h_dest, conn->myEth, ETH_ALEN)) return 0;
 
     /* If we're not using the Host-Unique tag, then accept the packet */
-    if (!conn->useHostUniq) return 1;
+    if (!conn->hostUniq.length) return 1;
 
-    parsePacket(packet, parseForHostUniq, &forMe);
-    return forMe;
+    parsePacket(packet, parseForHostUniq, &hostUniq);
+    return !hostUniq.length;
 }
 
 /**********************************************************************
@@ -380,7 +375,9 @@ parsePADOTags(UINT16_t type, UINT16_t len, unsigned char *data,
     switch(type) {
     case TAG_AC_NAME:
 	pc->seenACName = 1;
-	printf("Access-Concentrator: %.*s\n", (int) len, data);
+	if (conn->printACNames) {
+	    printf("Access-Concentrator: %.*s\n", (int) len, data);
+	}
 	if (conn->acName && len == strlen(conn->acName) &&
 	    !strncmp((char *) data, conn->acName, len)) {
 	    pc->acNameOK = 1;
@@ -388,7 +385,7 @@ parsePADOTags(UINT16_t type, UINT16_t len, unsigned char *data,
 	break;
     case TAG_SERVICE_NAME:
 	pc->seenServiceName = 1;
-	if (len > 0) {
+	if (conn->printACNames && len > 0) {
 	    printf("       Service-Name: %.*s\n", (int) len, data);
 	}
 	if (conn->serviceName && len == strlen(conn->serviceName) &&
@@ -397,37 +394,47 @@ parsePADOTags(UINT16_t type, UINT16_t len, unsigned char *data,
 	}
 	break;
     case TAG_AC_COOKIE:
-	printf("Got a cookie:");
-	/* Print first 20 bytes of cookie */
-	for (i=0; i<len && i < 20; i++) {
-	    printf(" %02x", (unsigned) data[i]);
+	if (conn->printACNames) {
+	    printf("Got a cookie:");
+	    /* Print first 20 bytes of cookie */
+	    for (i=0; i<len && i < 20; i++) {
+		printf(" %02x", (unsigned) data[i]);
+	    }
+	    if (i < len) printf("...");
+	    printf("\n");
 	}
-	if (i < len) printf("...");
-	printf("\n");
 	conn->cookie.type = htons(type);
 	conn->cookie.length = htons(len);
 	memcpy(conn->cookie.payload, data, len);
 	break;
     case TAG_RELAY_SESSION_ID:
-	printf("Got a Relay-ID:");
-	/* Print first 20 bytes of relay ID */
-	for (i=0; i<len && i < 20; i++) {
-	    printf(" %02x", (unsigned) data[i]);
+	if (conn->printACNames) {
+	    printf("Got a Relay-ID:");
+	    /* Print first 20 bytes of relay ID */
+	    for (i=0; i<len && i < 20; i++) {
+		printf(" %02x", (unsigned) data[i]);
+	    }
+	    if (i < len) printf("...");
+	    printf("\n");
 	}
-	if (i < len) printf("...");
-	printf("\n");
 	conn->relayId.type = htons(type);
 	conn->relayId.length = htons(len);
 	memcpy(conn->relayId.payload, data, len);
 	break;
     case TAG_SERVICE_NAME_ERROR:
-	printf("Got a Service-Name-Error tag: %.*s\n", (int) len, data);
+	if (conn->printACNames) {
+	    printf("Got a Service-Name-Error tag: %.*s\n", (int) len, data);
+	}
 	break;
     case TAG_AC_SYSTEM_ERROR:
-	printf("Got a System-Error tag: %.*s\n", (int) len, data);
+	if (conn->printACNames) {
+	    printf("Got a System-Error tag: %.*s\n", (int) len, data);
+	}
 	break;
     case TAG_GENERIC_ERROR:
-	printf("Got a Generic-Error tag: %.*s\n", (int) len, data);
+	if (conn->printACNames) {
+	    printf("Got a Generic-Error tag: %.*s\n", (int) len, data);
+	}
 	break;
     }
 }
@@ -475,16 +482,12 @@ sendPADI(PPPoEConnection *conn)
     cursor += namelen + TAG_HDR_SIZE;
 
     /* If we're using Host-Uniq, copy it over */
-    if (conn->useHostUniq) {
-	PPPoETag hostUniq;
-	pid_t pid = getpid();
-	hostUniq.type = htons(TAG_HOST_UNIQ);
-	hostUniq.length = htons(sizeof(pid));
-	memcpy(hostUniq.payload, &pid, sizeof(pid));
-	CHECK_ROOM(cursor, packet.payload, sizeof(pid) + TAG_HDR_SIZE);
-	memcpy(cursor, &hostUniq, sizeof(pid) + TAG_HDR_SIZE);
-	cursor += sizeof(pid) + TAG_HDR_SIZE;
-	plen += sizeof(pid) + TAG_HDR_SIZE;
+    if (conn->hostUniq.length) {
+	int len = ntohs(conn->hostUniq.length);
+	CHECK_ROOM(cursor, packet.payload, len + TAG_HDR_SIZE);
+	memcpy(cursor, &conn->hostUniq, len + TAG_HDR_SIZE);
+	cursor += len + TAG_HDR_SIZE;
+	plen += len + TAG_HDR_SIZE;
     }
 
     packet.length = htons(plen);
@@ -583,7 +586,6 @@ waitForPADO(PPPoEConnection *conn, int timeout)
 		continue;
 	    }
 	    conn->numPADOs++;
-	    printf("--------------------------------------------------\n");
 	    if (pc.acNameOK && pc.serviceNameOK) {
 		memcpy(conn->peerEth, packet.ethHdr.h_source, ETH_ALEN);
 		if (conn->printACNames) {
@@ -594,6 +596,7 @@ waitForPADO(PPPoEConnection *conn, int timeout)
 			   (unsigned) conn->peerEth[3],
 			   (unsigned) conn->peerEth[4],
 			   (unsigned) conn->peerEth[5]);
+		    printf("--------------------------------------------------\n");
 		    continue;
 		}
 		conn->discoveryState = STATE_RECEIVED_PADO;
@@ -616,14 +619,14 @@ void
 discovery(PPPoEConnection *conn)
 {
     int padiAttempts = 0;
-    int timeout = PADI_TIMEOUT;
+    int timeout = conn->discoveryTimeout;
 
     conn->discoverySocket =
 	openInterface(conn->ifName, Eth_PPPOE_Discovery, conn->myEth);
 
     do {
 	padiAttempts++;
-	if (padiAttempts > MAX_PADI_ATTEMPTS) {
+	if (padiAttempts > conn->discoveryAttempts) {
 	    fprintf(stderr, "Timeout waiting for PADO packets\n");
 	    close(conn->discoverySocket);
 	    conn->discoverySocket = -1;
@@ -646,7 +649,11 @@ int main(int argc, char *argv[])
 
     memset(conn, 0, sizeof(PPPoEConnection));
 
-    while ((opt = getopt(argc, argv, "I:D:VUAS:C:h")) > 0) {
+    conn->printACNames = 1;
+    conn->discoveryTimeout = PADI_TIMEOUT;
+    conn->discoveryAttempts = MAX_PADI_ATTEMPTS;
+
+    while ((opt = getopt(argc, argv, "I:D:VUQS:C:W:t:a:h")) > 0) {
 	switch(opt) {
 	case 'S':
 	    conn->serviceName = xstrdup(optarg);
@@ -654,8 +661,44 @@ int main(int argc, char *argv[])
 	case 'C':
 	    conn->acName = xstrdup(optarg);
 	    break;
+	case 't':
+	    if (sscanf(optarg, "%d", &conn->discoveryTimeout) != 1) {
+		fprintf(stderr, "Illegal argument to -t: Should be -t timeout\n");
+		exit(EXIT_FAILURE);
+	    }
+	    if (conn->discoveryTimeout < 1) {
+		conn->discoveryTimeout = 1;
+	    }
+	    break;
+	case 'a':
+	    if (sscanf(optarg, "%d", &conn->discoveryAttempts) != 1) {
+		fprintf(stderr, "Illegal argument to -a: Should be -a attempts\n");
+		exit(EXIT_FAILURE);
+	    }
+	    if (conn->discoveryAttempts < 1) {
+		conn->discoveryAttempts = 1;
+	    }
+	    break;
 	case 'U':
-	    conn->useHostUniq = 1;
+	    if(conn->hostUniq.length) {
+		fprintf(stderr, "-U and -W are mutually exclusive\n");
+		exit(EXIT_FAILURE);
+	    } else {
+		pid_t pid = getpid();
+		conn->hostUniq.type = htons(TAG_HOST_UNIQ);
+		conn->hostUniq.length = htons(sizeof(pid));
+		memcpy(conn->hostUniq.payload, &pid, sizeof(pid));
+	    }
+	    break;
+	case 'W':
+	    if(conn->hostUniq.length) {
+		fprintf(stderr, "-U and -W are mutually exclusive\n");
+		exit(EXIT_FAILURE);
+	    }
+	    if (!parseHostUniq(optarg, &conn->hostUniq)) {
+		fprintf(stderr, "Invalid host-uniq argument: %s\n", optarg);
+		exit(EXIT_FAILURE);
+            }
 	    break;
 	case 'D':
 	    conn->debugFile = fopen(optarg, "w");
@@ -664,13 +707,13 @@ int main(int argc, char *argv[])
 			optarg, strerror(errno));
 		exit(1);
 	    }
-	    fprintf(conn->debugFile, "pppoe-discovery %s\n", RP_VERSION);
+	    fprintf(conn->debugFile, "pppoe-discovery from pppd %s\n", VERSION);
 	    break;
 	case 'I':
 	    conn->ifName = xstrdup(optarg);
 	    break;
-	case 'A':
-	    /* this is the default */
+	case 'Q':
+	    conn->printACNames = 0;
 	    break;
 	case 'V':
 	case 'h':
@@ -688,15 +731,22 @@ int main(int argc, char *argv[])
 
     conn->discoverySocket = -1;
     conn->sessionSocket = -1;
-    conn->printACNames = 1;
 
     discovery(conn);
-    exit(0);
+
+    if (!conn->numPADOs)
+	exit(1);
+    else
+	exit(0);
 }
 
-void rp_fatal(char const *str)
+void fatal(char * fmt, ...)
 {
-    fprintf(stderr, "%s\n", str);
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fputc('\n', stderr);
     exit(1);
 }
 
@@ -706,21 +756,29 @@ void fatalSys(char const *str)
     exit(1);
 }
 
-void sysErr(char const *str)
-{
-    rp_fatal(str);
-}
-
 char *xstrdup(const char *s)
 {
     register char *ret = strdup(s);
     if (!ret)
-	sysErr("strdup");
+	fatalSys("strdup");
     return ret;
 }
 
 void usage(void)
 {
     fprintf(stderr, "Usage: pppoe-discovery [options]\n");
-    fprintf(stderr, "\nVersion " RP_VERSION "\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "   -I if_name     -- Specify interface (default eth0)\n");
+    fprintf(stderr, "   -D filename    -- Log debugging information in filename.\n");
+    fprintf(stderr,
+	    "   -t timeout     -- Initial timeout for discovery packets in seconds\n"
+	    "   -a attempts    -- Number of discovery attempts\n"
+	    "   -V             -- Print version and exit.\n"
+	    "   -Q             -- Quit Mode: Do not print access concentrator names\n"
+	    "   -S name        -- Set desired service name.\n"
+	    "   -C name        -- Set desired access concentrator name.\n"
+	    "   -U             -- Use Host-Unique to allow multiple PPPoE sessions.\n"
+	    "   -W hexvalue    -- Set the Host-Unique to the supplied hex string.\n"
+	    "   -h             -- Print usage information.\n");
+    fprintf(stderr, "\npppoe-discovery from pppd " VERSION "\n");
 }

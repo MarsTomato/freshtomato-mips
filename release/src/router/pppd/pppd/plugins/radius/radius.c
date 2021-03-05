@@ -651,6 +651,9 @@ radius_setparams(VALUE_PAIR *vp, char *msg, REQUEST_INFO *req_info,
 		    memcpy(rstate.class, vp->strvalue, rstate.class_len);
 		} /* else too big for our buffer - ignore it */
 		break;
+	    case PW_FRAMED_MTU:
+		netif_set_mtu(rstate.client_port,MIN(netif_get_mtu(rstate.client_port),vp->lvalue));
+		break;
 	    }
 
 
@@ -898,7 +901,7 @@ radius_acct_start(void)
 
     rstate.start_time = time(NULL);
 
-    strncpy(rstate.session_id, rc_mksid(), sizeof(rstate.session_id));
+    strlcpy(rstate.session_id, rc_mksid(), MAXSESSIONID);
 
     rc_avpair_add(&send, PW_ACCT_SESSION_ID,
 		   rstate.session_id, 0, VENDOR_NONE);
@@ -995,6 +998,10 @@ radius_acct_stop(void)
 		   0, VENDOR_NONE);
 
     rc_avpair_add(&send, PW_USER_NAME, rstate.user, 0, VENDOR_NONE);
+
+    if (rstate.class_len > 0)
+	rc_avpair_add(&send, PW_CLASS,
+		      rstate.class, rstate.class_len, VENDOR_NONE);
 
     av_type = PW_STATUS_STOP;
     rc_avpair_add(&send, PW_ACCT_STATUS_TYPE, &av_type, 0, VENDOR_NONE);
@@ -1139,6 +1146,10 @@ radius_acct_interim(void *ignored)
 		   0, VENDOR_NONE);
 
     rc_avpair_add(&send, PW_USER_NAME, rstate.user, 0, VENDOR_NONE);
+
+    if (rstate.class_len > 0)
+	rc_avpair_add(&send, PW_CLASS,
+		      rstate.class, rstate.class_len, VENDOR_NONE);
 
     av_type = PW_STATUS_ALIVE;
     rc_avpair_add(&send, PW_ACCT_STATUS_TYPE, &av_type, 0, VENDOR_NONE);
