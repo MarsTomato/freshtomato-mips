@@ -1,15 +1,16 @@
-#CC	= gcc
-COPTS	= -O2 -g
-CFLAGS	= $(COPTS) -I../.. -I../../../include -fPIC
-LDFLAGS	= -shared
-INSTALL	= install
-
 #***********************************************************************
+CROSS_COMPILE=@CROSS_COMPILE@
+CC=$(CROSS_COMPILE)@CC@
+COPTS=@CFLAGS@
 
 DESTDIR = $(INSTROOT)@DESTDIR@
 LIBDIR = $(DESTDIR)/lib/pppd/$(VERSION)
 
 VERSION = $(shell awk -F '"' '/VERSION/ { print $$2; }' ../../patchlevel.h)
+
+CFLAGS	= $(COPTS) -I../.. -I../../../include -fPIC
+LDFLAGS_SHARED	= -shared
+INSTALL	= install
 
 PLUGIN := pppoatm.so
 PLUGIN_OBJS := pppoatm.o 
@@ -33,7 +34,7 @@ endif
 all: $(PLUGIN)
 
 $(PLUGIN): $(PLUGIN_OBJS)
-	$(CC) $(CFLAGS) -o $@ -shared $^ $(LIBS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(LDFLAGS_SHARED) $^ $(LIBS)
 
 install: all
 	$(INSTALL) -d -m 755 $(LIBDIR)
