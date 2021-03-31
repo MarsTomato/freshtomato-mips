@@ -381,7 +381,6 @@ const aspapi_t aspapi[] = {
 	{ "lanip",			asp_lanip			},
 	{ "layer7",			asp_layer7			},
 	{ "link_uptime",		asp_link_uptime			},
-	{ "lipp",			asp_lipp			},
 	{ "netdev",			asp_netdev			},
 
 	{ "iptraffic",			asp_iptraffic			},
@@ -1180,7 +1179,7 @@ static const nvset_t nvset_list[] = {
 
 
 // access restriction
-	{ "rruleN",			V_RANGE(0, 99)			},
+	{ "rruleN",			V_RANGE(-1, 99)			},
 //	{ "rrule##",			V_LENGTH(0, 2048)		},	// in save_variables()
 
 // admin-access
@@ -1459,8 +1458,13 @@ static const nvset_t nvset_list[] = {
 #endif
 	{ "qos_orules",			V_LENGTH(0, 4096)		},
 	{ "qos_default",		V_RANGE(0, 9)			},
+#ifdef TCONFIG_MULTIWAN
+	{ "qos_irates",			V_LENGTH(0, 256)		},
+	{ "qos_orates",			V_LENGTH(0, 256)		},
+#else
 	{ "qos_irates",			V_LENGTH(0, 128)		},
 	{ "qos_orates",			V_LENGTH(0, 128)		},
+#endif
 	{ "qos_classnames",		V_LENGTH(10, 128)		},	// !!TOASTMAN
 	{ "ne_vegas",			V_01				},
 	{ "ne_valpha",			V_NUM				},

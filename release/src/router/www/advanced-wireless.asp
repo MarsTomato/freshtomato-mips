@@ -128,7 +128,7 @@ function save() {
 
 /* / / / */
 
-			W('<div class="section-title">Wireless Settings (' + wl_display_ifname(uidx) + ') <\/div>');
+			W('<div class="section-title">Wireless settings for: '+wl_display_ifname(uidx)+'<\/div>');
 			W('<div class="section">');
 
 			at = ((nvram['wl'+u+'_security_mode'] != "wep") && (nvram['wl'+u+'_security_mode'] != "radius") && (nvram['wl'+u+'_security_mode'] != "disabled"));

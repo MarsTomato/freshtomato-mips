@@ -46,13 +46,10 @@ else
 endif
 
 ifeq ($(TCONFIG_MIPSR2),y)
-	sed -i $(INSTALLDIR)/www/tomato.js -e "/MIPSR1-BEGIN/,/MIPSR1-END/d"
-	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/MIPSR1-BEGIN/,/MIPSR1-END/d"
 	rm -f $(INSTALLDIR)/www/advanced-vlan-r1.asp
 else
-	sed -i $(INSTALLDIR)/www/tomato.js -e "/MIPSR2-BEGIN/,/MIPSR2-END/d"
-	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/MIPSR2-BEGIN/,/MIPSR2-END/d"
 	rm -f $(INSTALLDIR)/www/advanced-vlan.asp
+	mv $(INSTALLDIR)/www/advanced-vlan-r1.asp $(INSTALLDIR)/www/advanced-vlan.asp
 endif
 
 # Only include the CIFS pages if CIFS is configured in.
@@ -374,8 +371,6 @@ endif
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \
 		[ -f $(INSTALLDIR)/www/$$F ] && sed -i $$F \
-		-e "/MIPSR2-BEGIN/d"	-e "/MIPSR2-END/d" \
-		-e "/MIPSR1-BEGIN/d"	-e "/MIPSR1-END/d" \
 		-e "/USB-BEGIN/d"	-e "/USB-END/d" \
 		-e "/UPS-BEGIN/d"	-e "/UPS-END/d" \
 		-e "/NTFS-BEGIN/d"	-e "/NTFS-END/d" \

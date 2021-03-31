@@ -5,6 +5,69 @@ FreshTomato-MIPS Changelog
 
 
 
+2021.2          2021.03.28
+--------------------------
+
+- e2fsprogs: update to 1.46.2
+- nano: update to 5.6.1
+- nginx: update to 1.19.7
+- openssl: update to 1.1.1k
+- openvpn: update to 2.5.1
+- pppd: update to 2.4.8
+- tor: update to 0.4.5.6
+- sqlite: update to 3.34.01
+- libcurl: update CA certificate bundle as of 2021-01-19
+- build: Makefile: remove CIFS and NTFS from 'n60' (Tenda N60) target - image was still too big
+- GUI: Admin: Logging: add 'Drop duplicates' option
+- GUI: Admin: Debugging: add the ability to disable cache in the httpd daemon
+- GUI: Advanced: DHCP/DNS: add warning to dnscrypt-proxy/Stubby priority option regarding possible DNS leak
+- GUI: Advanced: Wireless: remove 'AP Isolation' option because it's already on 'Virtual Wireless' page (where it's also possible to use this option with virtual interfaces)
+- GUI: Advanced: VLAN: improvement to the page
+- GUI: Advanced: VLAN: add marking that the given WL is turned off
+- GUI: Advanced: VLAN: use the same port order as on Overview page
+- GUI: Advanced: VLAN: add correct port order for Linksys WRT160Nv3
+- GUI: Basic: Network: disable DNS and set to Auto if dnscrypt/Stubby with No-Resolv is enabled (except for static proto); fix variable in for loop
+- GUI: basic-network.asp - in case wan disabled (for ex. wireless bridge) make sure to use static dns
+- GUI: Basic: Network: fix LTE/3G fields checker (this mode can only be set to one WAN)
+- GUI: Basic: Network: fix problems with Wireless Client mode
+- GUI: Status: Overview: correct Connect/Disconnect buttons behaviour
+- GUI: Status: Overview: correctly display used DNS
+- GUI: change default colours of all speed graphs to Blue & Orange
+- GUI: modification to QoS and Bandwidth/IP-Traffic pages
+- GUI: update signal bar and ethernet images; thanks to @rs232
+- GUI: change of naming convention for WANs and LANs; also for WLs
+- adblock: fix the issue when only a custom black list is added (without any URL defined), dnsmasq restarts every 5 minutes
+- busybox: ntpd: fix the case where two replies received at once and first one causes a step; fix from upstream
+- busybox: enable CONFIG_FEATURE_SYSLOGD_DUP
+- busybox: ntpd: add -t switch to disable rfc4330 cross-check, parameters tuning
+- busybox: use CLOCK_MONOTONIC instead of gettimeofday
+- dhcp6c: use monotonic time if possible
+- ebtables: libebtc: Open the lockfile with O_CLOEXEC; fix from upstream
+- httpd: some changes to gencert.sh and httpd.c
+- httpd: add IP when logging bad password attempt; fix incorrect sizeof() in strlcpy() (line 820+)
+- openvpn: vpnrouting.sh: fix removal of firewall rules
+- pppd: use monotonic time if possible
+- rp-pppoe: use monotonic time if possible, added as a patch
+- rc: openvpn.c: don't allow duplicate-cn while in non-exclusive config-dir mode
+- rc: openvpn.c: only add 'username-as-common-name' to server config if user/pass auth only is checked
+- rc: further tweaks to ntpd handling on wanup
+- rc: services.c: also restart httpd on ntp sync
+- rc: adjust new ntpd handling for case wan disabled (time was not working after boot up; bridge mode and AP only)
+- stubby: update resolvers file
+- stubby: add location of alternative configuration file (/etc/stubby/stubby.alt) to bypass stubby UI configuration; fixes #108
+- tomatoanon: fix script
+- watchdog: fix problems with DHCP on multiwan
+- watchdog: also use temporary added route for WAN check in case of failover
+- www: advanced-dhcpdns.asp: fix javascript error on images without OpenVPN
+- www: .asp: fix potential problem with _service input field
+- www: basic-time.asp: fix potential problem with _service input field; display Router Time (almost) in real time
+- www: add Status_Router.asp with current IP (only WAN) for ddclient; use '-use=linksys-wrt854g' as a supported router (https://sourceforge.net/p/ddclient/git/ci/master/tree/ddclient)
+- www: always use advanced-vlan.asp as a link to Advanced -> VLAN page
+- IPv6: adjust linux setup and make it more stable
+- wndr3400v2 (and wndr3400v3) : rework button and led setup (v2)
+- wndr3400v2 / wndr3400v3: turn LED_AOSS (WPS LED) back ON if used for feedback (WPS Button); Check Startup LED setting (bit 2 used for LED_AOSS)
+
+
 2021.1          2021.02.20
 --------------------------
 

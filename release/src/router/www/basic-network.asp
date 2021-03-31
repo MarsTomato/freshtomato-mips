@@ -30,18 +30,18 @@ maxwan_num = 2;
 maxwan_num = 4;
 /* MULTIWAN-END */
 
-var sta_list = new Array();
+var sta_list = [];
 function refresh_sta_list() {
 	var u;
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx) < 0) {
 			u = wl_unit(uidx);
-			sta_list[u] = new Array();
+			sta_list[u] = [];
 			sta_list[u][0] = 'wl'+u;
 			sta_list[u][1] = wl_display_ifname(uidx);
 		}
 	}
-	sta_list[u + 1] = new Array();
+	sta_list[u + 1] = [];
 	sta_list[u + 1][0] = '';
 	sta_list[u + 1][1] = 'Disabled';
 }
@@ -397,11 +397,12 @@ function verifyFields(focused, quiet) {
 	var i;
 	var ok = 1;
 	var a, b, c, d, e;
-	var u, uidx, wan_uidx;
+	var u, n, uidx, wan_uidx;
 	var wmode, sm2;
 	var curr_mwan_num = E('_mwan_num').value;
+	var wanproto = [];
 
-	var n = E('_f_lan_state').checked;
+	n = E('_f_lan_state').checked;
 	E('_f_lan_desc').disabled = !n;
 	E('_f_lan_invert').disabled = !n;
 
@@ -446,7 +447,6 @@ function verifyFields(focused, quiet) {
 		_lan_gateway: 1
 	};
 
-	var wanproto = new Array();
 	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 		if (uidx <= curr_mwan_num) {
@@ -613,7 +613,6 @@ function verifyFields(focused, quiet) {
 
 	var wl_vis = [];
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx)<0) {
 			a = {
 				_f_wl_radio: 1,
@@ -1227,9 +1226,15 @@ REMOVE-END */
 		}
 	}
 
-	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+	if (typeof(wl_mode_last) == 'undefined')
+		wl_mode_last = [];
+
+	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx) < 0) {
-			var u = wl_unit(uidx);
+			u = wl_unit(uidx);
+			if (typeof(wl_mode_last[u]) == 'undefined')
+				wl_mode_last[u] = E('_f_wl'+u+'_mode').value;
+
 			E('_f_wl'+u+'_mode').options[0].disabled = 0;
 			E('_f_wl'+u+'_mode').options[1].disabled = 0;
 			E('_f_wl'+u+'_mode').options[2].disabled = 1;
@@ -1242,24 +1247,41 @@ REMOVE-END */
 		}
 	}
 
-	for (var uidx = 1; uidx <= curr_mwan_num; ++uidx) {
-		var u = (uidx > 1) ? uidx : '';
+	for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
+		u = (uidx > 1) ? uidx : '';
 		var sta_wl = E('_wan'+u+'_sta').value;
 		if (sta_wl != '') {
-			E('_f_'+sta_wl+'_mode').value = 'sta';
-			E('_f_'+sta_wl+'_mode').options[0].disabled = 1;
-			E('_f_'+sta_wl+'_mode').options[1].disabled = 1;
-			E('_f_'+sta_wl+'_mode').options[2].disabled = 0;
-			E('_f_'+sta_wl+'_mode').options[3].disabled = 1;
-			E('_f_'+sta_wl+'_mode').options[4].disabled = 1;
-			E('_'+sta_wl+'_security_mode').options[2].disabled = 1;
-			E('_'+sta_wl+'_security_mode').options[3].disabled = 1;
-			E('_'+sta_wl+'_security_mode').options[4].disabled = 1;
-			E('_'+sta_wl+'_security_mode').options[5].disabled = 1;
-			for (var i = uidx+1; i <= curr_mwan_num; ++i) {
+			var m_mode = E('_f_'+sta_wl+'_mode');
+			m_mode.value = 'sta';
+			m_mode.options[0].disabled = 1;
+			m_mode.options[1].disabled = 1;
+			m_mode.options[2].disabled = 0;
+			m_mode.options[3].disabled = 1;
+			m_mode.options[4].disabled = 1;
+			var s_mode = E('_'+sta_wl+'_security_mode');
+			s_mode.options[2].disabled = 1;
+			s_mode.options[3].disabled = 1;
+			s_mode.options[4].disabled = 1;
+			s_mode.options[5].disabled = 1;
+			if (s_mode.options[2].selected || s_mode.options[4].selected)
+				s_mode.options[6].selected = 1;
+
+			if (s_mode.options[3].selected || s_mode.options[5].selected)
+				s_mode.options[7].selected = 1;
+
+			for (i = uidx+1; i <= curr_mwan_num; ++i) {
 				if (E('_wan'+u+'_sta').value == E('_wan'+i+'_sta').value) {
 					ferror.set('_wan'+i+'_sta', 'Wireless Client mode can be set only to one WAN port', quiet || !ok);
 					ok = 0;
+				}
+			}
+		}
+		else {
+			for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+				if (wl_sunit(uidx) < 0) {
+					u = wl_unit(uidx);
+					if (E('_f_wl'+u+'_mode').value == 'sta')
+						E('_f_wl'+u+'_mode').value = wl_mode_last[u];
 				}
 			}
 		}
@@ -1271,19 +1293,16 @@ REMOVE-END */
 	}
 
 /* USB-BEGIN */
-	var count = 0;
-	if ((E('_wan_proto').value == 'lte') || (E('_wan_proto').value == 'ppp3g')) count++;
-	if ((E('_wan2_proto').value == 'lte') || (E('_wan2_proto').value == 'ppp3g')) count++;
-/* MULTIWAN-BEGIN */
-	if ((E('_wan3_proto').value == 'lte') || (E('_wan3_proto').value == 'ppp3g')) count++;
-	if ((E('_wan4_proto').value == 'lte') || (E('_wan4_proto').value == 'ppp3g')) count++;
-/* MULTIWAN-END */
-
-	if (count > 1) {
-		for (var g = 0; g <= curr_mwan_num; g++) {
-			var h = ((g == 0) ? '' : g.toString());
-			ferror.set('_wan'+h+'_proto', '3G or LTE mode can be set only to one WAN port', quiet || !ok);
-			ok = 0;
+	for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
+		u = (uidx > 1) ? uidx : '';
+		var lte3g = E('_wan'+u+'_proto').value;
+		if (lte3g == 'lte' || lte3g == 'ppp3g') {
+			for (i = uidx+1; i <= curr_mwan_num; ++i) {
+				if ((E('_wan'+i+'_proto').value == 'lte') || (E('_wan'+i+'_proto').value == 'ppp3g')) {
+					ferror.set('_wan'+i+'_proto', '3G or LTE mode can be set only to one WAN port', quiet || !ok);
+					ok = 0;
+				}
+			}
 		}
 	}
 /* USB-END */
@@ -1631,12 +1650,7 @@ REMOVE-END -->
 /* MULTIWAN-BEGIN */
 										    ,['3','3 WAN'],['4','4 WAN']
 /* MULTIWAN-END */
-/* MIPSR1-BEGIN */
-			], value: nvram.mwan_num, suffix: '&nbsp; <small>Please configure <a href="advanced-vlan-r1.asp">VLAN<\/a> first<\/small>' },
-/* MIPSR1-END */
-/* MIPSR2-BEGIN */
 			], value: nvram.mwan_num, suffix: '&nbsp; <small>Please configure <a href="advanced-vlan.asp">VLAN<\/a> first<\/small>' },
-/* MIPSR2-END */
 		{ title: 'Tune route cache', name: 'f_mwan_tune_gc', type: 'checkbox', suffix: '&nbsp; <small>for multiwan in load balancing mode<\/small>', value: (nvram['mwan_tune_gc'] == 1) },
 		{ title: 'Check connections every', name: 'mwan_cktime', type: 'select', options: [
 			['0','Disabled'],['60','1 minute'],['120','2 minutes'],['180','3 minutes'],['300','5 minutes'],
@@ -1667,7 +1681,7 @@ REMOVE-END -->
 /* USB-BEGIN */
 		W('<input type="hidden" name="wan'+u+'_status_script">');
 /* USB-END */
-		W('<div class="section-title" id="wan'+u+'-title">WAN'+u+' Settings<\/div>');
+		W('<div class="section-title" id="wan'+u+'-title">WAN'+(uidx - 1)+' Settings<\/div>');
 		W('<div class="section" id="sesdiv_wan'+u+'">');
 		createFieldTable('', [
 			{ title: 'Type', name: 'wan'+u+'_proto', type: 'select', options: [['dhcp','DHCP'],['pppoe','PPPoE'],['static','Static'],['pptp','PPTP'],['l2tp','L2TP'],
@@ -1794,7 +1808,7 @@ REMOVE-END -->
 			W('<input type="hidden" id="_wl'+u+'_nbw" name="wl'+u+'_nbw">');
 
 			W('<div class="section-title" id="wl'+u+'">Wireless');
-			W(' ('+wl_display_ifname(uidx)+')');
+			W(' '+wl_display_ifname(uidx));
 			W('<\/div>');
 			W('<div class="section">');
 
