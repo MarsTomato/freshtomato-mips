@@ -3696,8 +3696,9 @@ static int init_nvram(void)
 			nvram_set("wan_ifnameX", "vlan2");
 			nvram_set("wl_ifname", "eth1");
 		}
+		xstart("gpio", "disable", "16"); /* turn on Power LED (active LOW); GPIO 16 controls state (on/off) and GPIO 14 controls color, see led.c */
+		xstart("gpio", "enable", "21"); /* turn on USB supply (active HIGH) */
 		break;
-
 	case MODEL_WNDR3400v3:
 		mfr = "Netgear";
 		name = "WNDR3400v3";
@@ -3884,7 +3885,8 @@ static int init_nvram(void)
 			nvram_set(s, extra_params->value);
 			extra_params++;
 		}
-
+		xstart("gpio", "disable", "16"); /* turn on Power LED (active LOW); GPIO 16 controls state (on/off) and GPIO 14 controls color, see led.c */
+		xstart("gpio", "enable", "21"); /* turn on USB supply (active HIGH) */
 		break;
 #endif	// CONFIG_BCMWL5
 
@@ -4476,8 +4478,6 @@ int init_main(int argc, char *argv[])
 					gpio_write(1 << 2, 1); // By BaoWeiQuan Clear power light blinking
 					break;
 				case MODEL_WNDR3400:
-				case MODEL_WNDR3400v2:
-				case MODEL_WNDR3400v3:
 				case MODEL_WNDR3700v3:
 				case MODEL_WNDR4000:
 					led(LED_WHITE, LED_ON);

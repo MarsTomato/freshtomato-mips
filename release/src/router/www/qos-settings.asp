@@ -247,7 +247,7 @@ function init() {
 		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 			var u = (uidx > 1) ? uidx : '';
 			encap_fields.push({
-				title: 'Overhead Value - WAN'+u, name: 'wan'+u+'_qos_overhead', type: 'select', options: overhead_options,
+				title: 'Overhead Value - WAN'+(uidx - 1), name: 'wan'+u+'_qos_overhead', type: 'select', options: overhead_options,
 				value: nvram["wan"+u+"_qos_overhead"]
 			});
 			encap_fields.push(null);
@@ -267,7 +267,7 @@ function init() {
 
 		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 			var u = (uidx > 1) ? uidx : '';
-			f.push({ title: 'WAN '+uidx+'<br>Inbound Bandwidth Limit', name: 'wan'+u+'_qos_ibw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram['wan'+u+'_qos_ibw'] });
+			f.push({ title: 'WAN'+(uidx - 1)+'<br>Inbound Bandwidth Limit', name: 'wan'+u+'_qos_ibw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram['wan'+u+'_qos_ibw'] });
 
 			f.push(null);
 			f.push({
@@ -310,7 +310,7 @@ function init() {
 
 		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 			var u = (uidx >1) ? uidx : '';
-			f.push({ title: 'WAN '+uidx+'<br>Outbound Bandwidth Limit', name: 'wan'+u+'_qos_obw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram['wan'+u+'_qos_obw'] });
+			f.push({ title: 'WAN'+(uidx - 1)+'<br>Outbound Bandwidth Limit', name: 'wan'+u+'_qos_obw', type: 'text', maxlen: 8, size: 8, suffix: ' <small>kbit/s<\/small>', value: nvram['wan'+u+'_qos_obw'] });
 
 			f.push(null);
 			f.push({

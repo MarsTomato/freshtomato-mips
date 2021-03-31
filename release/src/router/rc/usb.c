@@ -76,9 +76,6 @@ void start_usb(void)
 	if (nvram_match("boardtype", "0x052b")) { // Netgear WNR3500L v2 - initialize USB port
 		xstart("gpio", "enable", "20");
 	}
-	if (nvram_match("boardtype", "0x0550")) { // Netgear WNDR3400 v2/v3 - initialize USB port
-		xstart("gpio", "enable", "21");
-	}
 
 	if (nvram_match("boardtype", "0x0617") &&  nvram_match("boardrev", "0x1102")) { /* DIR-865L enable USB */
 		xstart("gpio", "enable", "7");

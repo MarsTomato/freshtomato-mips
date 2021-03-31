@@ -382,8 +382,6 @@ endif
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \
 		[ -f $(INSTALLDIR)/www/$$F ] && sed -i $$F \
-		-e "/MIPSR2-BEGIN/d"	-e "/MIPSR2-END/d" \
-		-e "/MIPSR1-BEGIN/d"	-e "/MIPSR1-END/d" \
 		-e "/USB-BEGIN/d"	-e "/USB-END/d" \
 		-e "/UPS-BEGIN/d"	-e "/UPS-END/d" \
 		-e "/NTFS-BEGIN/d"	-e "/NTFS-END/d" \

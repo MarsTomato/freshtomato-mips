@@ -381,7 +381,6 @@ const aspapi_t aspapi[] = {
 	{ "lanip",			asp_lanip			},
 	{ "layer7",			asp_layer7			},
 	{ "link_uptime",		asp_link_uptime			},
-	{ "lipp",			asp_lipp			},
 	{ "netdev",			asp_netdev			},
 
 	{ "iptraffic",			asp_iptraffic			},
@@ -1191,7 +1190,7 @@ static const nvset_t nvset_list[] = {
 
 
 // access restriction
-	{ "rruleN",			V_RANGE(0, 99)			},
+	{ "rruleN",			V_RANGE(-1, 99)			},
 //	{ "rrule##",			V_LENGTH(0, 2048)		},	// in save_variables()
 
 // admin-access

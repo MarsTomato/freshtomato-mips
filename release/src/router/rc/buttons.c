@@ -237,13 +237,14 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_AOSS;
 		break;
 	case MODEL_WNDR3400:
-	case MODEL_WNDR3400v2:
 		reset_mask = 1 << 4;
 		ses_mask = 1 << 8;
 		break;
+	case MODEL_WNDR3400v2:
 	case MODEL_WNDR3400v3:
 		reset_mask = 1 << 12;
 		ses_mask = 1 << 23;
+		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed */
 		break;
 	case MODEL_F7D3301:
 	case MODEL_F7D3302:
@@ -406,12 +407,15 @@ int buttons_main(int argc, char *argv[])
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & ses_mask) == ses_pushed));
 			gpio &= mask;
 
-			/* for WNDR3400/3400v2/3700v3/4000, bwq518 */
+			/* for WNDR3400/3700v3/4000, bwq518 */
 			if ((model == MODEL_WNDR3400) ||
-			    (model == MODEL_WNDR3400v2) ||
-			    (model == MODEL_WNDR3400v3) ||
 			    (model == MODEL_WNDR3700v3) ||
 			    (model == MODEL_WNDR4000)) led(ses_led, LED_ON);
+
+			/* turn LED_AOSS (WPS LED for WNDR3400v2/v3) back on if used for feedback (WPS Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
+			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
+			    ((model == MODEL_WNDR3400v2) ||
+			     (model == MODEL_WNDR3400v3))) led(ses_led, LED_ON);
 
 			if ((ses_led == LED_DMZ) && (nvram_get_int("dmz_enable") > 0)) led(LED_DMZ, LED_ON); /* turn LED_DMZ back on if used for feedback */
 

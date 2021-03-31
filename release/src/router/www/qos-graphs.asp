@@ -106,13 +106,14 @@ function showData() {
 	elem.setInnerHTML('bocntx-total', (ort / 8192).toFixed(2));
 }
 
-function init() {
+function earlyInit() {
 	if (nvram.qos_enable != '1') {
 		E('qosstats').style.display = 'none';
 		E('qosstatsoff').style.display = 'block';
 		E('note-disabled').style.display = 'block';
 		E('refresh-time').setAttribute('disabled', 'disabled');
 		E('refresh-button').setAttribute('disabled', 'disabled');
+
 		return;
 	}
 
@@ -127,7 +128,7 @@ function init() {
 </script>
 </head>
 
-<body onload="init()">
+<body>
 <form id="t_fom" action="javascript:{}">
 <table id="container">
 <tr><td colspan="2" id="header">
@@ -245,5 +246,6 @@ function init() {
 </td></tr>
 </table>
 </form>
+<script>earlyInit();</script>
 </body>
 </html>
