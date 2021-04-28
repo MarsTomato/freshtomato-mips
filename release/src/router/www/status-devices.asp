@@ -38,7 +38,7 @@ function find(mac, ip) {
 	mac = mac.toUpperCase();
 	for (i = list.length - 1; i >= 0; --i) {
 		e = list[i];
-		if (((e.mac == mac) && ((e.ip == ip) || (e.ip == '') || (ip == null))) || ((e.mac == '00:00:00:00:00:00') && (e.ip == ip)))
+		if (((e.mac == mac) && ((e.ip == ip) || (e.ip == '') || (ip == null))) || ((e.mac == mac_null) && (e.ip == ip)))
 			return e;
 	}
 
@@ -72,7 +72,8 @@ function get(mac, ip) {
 		lease: '',
 		lan: '',
 		wan: '',
-		proto: ''
+		proto: '',
+		media: ''
 	};
 	list.push(e);
 
@@ -196,6 +197,10 @@ dg.populate = function() {
 	var a, b, c, e, f;
 	var mode = '';
 
+/* IPV6-BEGIN */
+	var i2, e2;
+/* IPV6-END */
+
 	list = [];
 	wl_info = [];
 
@@ -215,6 +220,7 @@ dg.populate = function() {
 		list[i].lan = '';
 		list[i].wan = '';
 		list[i].proto = '';
+		list[i].media = '';
 	}
 
 	/* [ "eth1", "0", 0, -1, "SSID", "MAC", 1, 16, "wet", "MAC2" ] */
@@ -347,6 +353,7 @@ dg.populate = function() {
 		}
 	}
 
+	/* step 1: prepare list */
 	for (i = list.length - 1; i >= 0; --i) {
 		e = list[i];
 
@@ -392,6 +399,54 @@ dg.populate = function() {
 				e.proto = nvram['wan'+k+'_proto'];
 			}
 		}
+	}
+
+/* IPV6-BEGIN */
+	/* step 2: sync IPv4 Infos to IPv6 with matching mac addr (extra line/entry for IPv6 with mac, ipv6, name and lease and synced IPv4 infos) */
+	for (i = list.length - 1; i >= 0; --i) {
+		e = list[i];
+		for (i2 = list.length - 1; i2 >= 0; --i2) {
+			e2 = list[i2];
+			if ((e.mac == e2.mac) && (e.ip != e2.ip)) { /* match mac */
+				if ((e2.bridge == '') || (e2.lan == '')) { /* check infos before sync */
+					e2.ifname = e.ifname;
+					e2.ifstatus = e.ifstatus;
+					e2.bridge = e.bridge;
+					e2.freq = e.freq;
+					e2.ssid = e.ssid;
+					e2.mode = e.mode;
+					e2.unit = e.unit;
+					e2.rssi = e.rssi;
+					e2.qual = e.qual;
+					e2.txrx = e.txrx;
+					e2.lan = e.lan;
+				}
+				else {
+					e.ifname = e2.ifname;
+					e.ifstatus = e2.ifstatus;
+					e.bridge = e2.bridge;
+					e.freq = e2.freq;
+					e.ssid = e2.ssid;
+					e.mode = e2.mode;
+					e.unit = e2.unit;
+					e.rssi = e2.rssi;
+					e.qual = e2.qual;
+					e.txrx = e2.txrx;
+					e.lan = e2.lan;
+				}
+				/* special case: name can be empty for IPv4 OR IPv6 - sync */
+				if ((e.name != '') && (e2.name == ''))
+					e2.name = e.name;
+				else if ((e2.name != '') && (e.name == ''))
+					e.name = e2.name;
+			}
+		}
+	}
+/* IPV6-END */
+
+	/* step 3: finish it */
+	for (i = list.length - 1; i >= 0; --i) {
+		e = list[i];
 
 		if ((e.mac.match(/^(..):(..):(..)/)) && e.proto != 'pppoe' && e.proto != 'pptp' && e.proto != 'l2tp') {
 			b = '<a href="javascript:searchOUI(\''+RegExp.$1+'-'+RegExp.$2+'-'+RegExp.$3+'\','+i+')" title="OUI Search">'+e.mac+'<\/a><div style="display:none" id="gW_'+i+'">&nbsp; <img src="spin.gif" alt="" style="vertical-align:middle"><\/div>'+
@@ -444,20 +499,28 @@ dg.populate = function() {
 			e.rssi = 1; /* fake value only for checking */
 
 		f = '';
-		if (e.freq != '')
+		if (e.freq != '') {
 			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta') ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
+			e.media = (e.freq == '5 GHz' ? '1' : '2');
+		}
 		else if (e.ifname != '' && mode != 'wet') {
 			c = (e.wan != '' ? 'style="filter:invert(1)"' : '');
 /* USB-BEGIN */
-			if ((e.proto == 'lte') || (e.proto == 'ppp3g'))
+			if ((e.proto == 'lte') || (e.proto == 'ppp3g')) {
 				f = '<img src="cell.gif"'+c+' alt="" title="LTE / 3G">';
+				e.media = '3';
+			}
 			else
 /* USB-END */
-			     if (e.rssi != 1)
+			     if (e.rssi != 1) {
 				f = '<img src="eth.gif"'+c+' alt="" title="Ethernet">';
+				e.media = '4';
+			}
 		}
-		if (e.rssi == 1)
+		if (e.rssi == 1) {
 			f = '<img src="dis.gif"'+c+' alt="" title="Disconnected">';
+			e.media = '5';
+		}
 
 		this.insert(-1, e, [ a, '<div id="media_'+i+'">'+f+'<\/div>', b, (e.ip == '-' ? '' : e.ip), e.name, (e.rssi < 0 ? e.rssi+' <small>dBm<\/small>' : ''),
 		                     (e.qual < 0 ? '' : '<small>'+e.qual+'<\/small> <img src="bar'+MIN(MAX(Math.floor(e.qual / 12), 1), 6)+'.gif" id="bar_'+i+'" alt="">'),
@@ -472,6 +535,9 @@ dg.sortCompare = function(a, b) {
 	var r;
 
 	switch (col) {
+	case 1:
+		r = cmpInt(ra.media, rb.media);
+	break;
 	case 3:
 		r = cmpIP(ra.ip, rb.ip);
 	break;

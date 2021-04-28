@@ -159,10 +159,10 @@ sub fixDyn
 
 #shibby
 	fixDynDep("transmission-daemon", "libevent-2.1.so.7");
-	fixDynDep("transmission-daemon", "libcurl.so.4.6.0");
+	fixDynDep("transmission-daemon", "libcurl.so.4.7.0");
 #	fixDynDep("transmission-daemon", "libiconv.so.2.6.1");
 	fixDynDep("transmission-remote", "libevent-2.1.so.7");
-	fixDynDep("transmission-remote", "libcurl.so.4.6.0");
+	fixDynDep("transmission-remote", "libcurl.so.4.7.0");
 #	fixDynDep("transmission-remote", "libiconv.so.2.6.1");
 	fixDynDep("radvd", "libdaemon.so.0.5.0");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
@@ -269,16 +269,16 @@ sub fixDyn
 	fixDynDep("php-cgi", "libpng.so.3.59.0");
 	fixDynDep("php-cgi", "libiconv.so.2.6.1");
 	fixDynDep("php-cgi", "libsqlite3.so.0.8.6");
-	fixDynDep("php-cgi", "libcurl.so.4.6.0");
+	fixDynDep("php-cgi", "libcurl.so.4.7.0");
 	fixDynDep("php-cli", "libxml2.so.2.9.10");
 	fixDynDep("php-cli", "libpng12.so.0.59.0");
 	fixDynDep("php-cli", "libpng.so.3.59.0");
 	fixDynDep("php-cli", "libiconv.so.2.6.1");
 	fixDynDep("php-cli", "libsqlite3.so.0.8.6");
-	fixDynDep("php-cli", "libcurl.so.4.6.0");
+	fixDynDep("php-cli", "libcurl.so.4.7.0");
 
-	fixDynDep("curl", "libcurl.so.4.6.0");
-	fixDynDep("mdu", "libcurl.so.4.6.0");
+	fixDynDep("curl", "libcurl.so.4.7.0");
+	fixDynDep("mdu", "libcurl.so.4.7.0");
 
 #!!TB - Updated Broadcom WL driver
 	fixDynDep("libbcmcrypto.so", "libc.so.0");
@@ -620,7 +620,7 @@ genSO("${root}/usr/lib/liblzo2.so.2.0.0", "${router}/lzo/src/.libs/liblzo2.a");
 genSO("${root}/usr/lib/libbcmcrypto.so", "${router}/libbcmcrypto/libbcmcrypto.a");
 
 #shibby
-genSO("${root}/usr/lib/libcurl.so.4.6.0", "${router}/libcurl/lib/.libs/libcurl.a", "", "-L${router}/zlib -L${router}/${openssldir}");
+genSO("${root}/usr/lib/libcurl.so.4.7.0", "${router}/libcurl/lib/.libs/libcurl.a", "", "-L${router}/zlib -L${router}/${openssldir}");
 genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a");
 genSO("${root}/usr/lib/libdaemon.so.0.5.0", "${router}/libdaemon/libdaemon/.libs/libdaemon.a");
 genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libiconv.a");

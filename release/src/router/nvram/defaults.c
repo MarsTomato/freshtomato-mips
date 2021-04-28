@@ -622,6 +622,7 @@ const defaults_t defaults[] = {
 	{ "dhcpc_minpkt",		"1"				},
 	{ "dhcpc_custom",		""				},
 	{ "dns_norebind",		"1"				},
+	{ "dns_fwd_local",		"0"				},
 	{ "dns_priv_override",		"0"				},
 	{ "dnsmasq_debug",		"0"				},
 	{ "dnsmasq_custom",		""				},

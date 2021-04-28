@@ -19,38 +19,30 @@
 
 */
 
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"cstats_debug"
 //#define DEBUG_CSTATS
-//#define DEBUG_NOISY
-//#define DEBUG_STIME
 
-//#ifdef DEBUG_NOISY
-//#define _dprintf(args...)	cprintf(args)
-//#define _dprintf(args...)	printf(args)
-//#else
-//#define _dprintf(args...)	do { } while (0)
-//#endif
+#define K 		1024
+#define M 		(1024 * 1024)
+#define G 		(1024 * 1024 * 1024)
 
-#define K 1024
-#define M (1024 * 1024)
-#define G (1024 * 1024 * 1024)
+#define SMIN		60
+#define	SHOUR		(60 * 60)
+#define	SDAY		(60 * 60 * 24)
 
-#define SMIN	60
-#define	SHOUR	(60 * 60)
-#define	SDAY	(60 * 60 * 24)
-#ifndef Y2K
-#define Y2K		946684800L
-#endif
+#define INTERVAL	60
 
-#define INTERVAL		60
-
-#define MAX_NSPEED		((24 * SHOUR) / INTERVAL)
-#define MAX_NDAILY		62
+#define MAX_NSPEED	((24 * SHOUR) / INTERVAL)
+#define MAX_NDAILY	62
 #define MAX_NMONTHLY	25
-#define MAX_ROLLOVER	(3750ULL * M) // 3750 MByte - new rollover limit
+#define MAX_ROLLOVER	(3750ULL * M) /* 3750 MByte - new rollover limit */
 
 #define MAX_COUNTER	2
-#define RX 			0
-#define TX 			1
+#define RX 		0
+#define TX 		1
 
 #define DAILY		0
 #define MONTHLY		1
@@ -61,6 +53,7 @@
 #define CURRENT_ID	ID_V2
 
 #define HI_BACK		5
+
 
 const char history_fn[] = "/var/lib/misc/cstats-history";
 const char uncomp_fn[] = "/var/tmp/cstats-uncomp";
@@ -91,9 +84,9 @@ typedef struct _Node {
 	uint64_t speed[MAX_NSPEED][MAX_COUNTER];
 	uint64_t last[MAX_COUNTER];
 	int tail;
-	char sync;
+	int sync;
 
-	TREE_ENTRY(_Node)	linkage;
+	TREE_ENTRY(_Node) linkage;
 } Node;
 
 typedef TREE_HEAD(_Tree, _Node) Tree;
@@ -102,4 +95,3 @@ TREE_DEFINE(_Node, linkage);
 
 int Node_compare(Node *lhs, Node *rhs);
 Node *Node_new(char *ipaddr);
-

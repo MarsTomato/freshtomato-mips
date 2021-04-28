@@ -1,8 +1,16 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS) -Wsign-compare #-mips32
+CFLAGS	= -Os -Wall $(EXTRACFLAGS) -Wsign-compare
 CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared -ffunction-sections -fdata-sections
 LDFLAGS	= -ffunction-sections -fdata-sections -Wl,--gc-sections
+
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+export CFLAGS += -DDEBUG_LOGMSG
+endif
+
+ifeq ($(TCONFIG_BCMARM),y)
+LIBS += -lgcc_s
+endif
 
 OBJS = rstats.o
 
@@ -10,7 +18,11 @@ all: rstats
 
 rstats: $(OBJS)
 	@echo " [rstats] CC -o $@"
+ifeq ($(TCONFIG_BCMARM),y)
+	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) -L../nvram${BCMEX} -lnvram -L../shared -lshared $(LIBS)
+else
 	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) -L../nvram -lnvram -L../shared -lshared
+endif
 
 	$(SIZECHECK)
 	$(CPTMP)
