@@ -29,7 +29,11 @@ install:
 ifneq ($(TCONFIG_STUBBY),y)
 	rm -f $(INSTALLDIR)/rom/etc/ssl/certs/ca-certificates.crt
 else
+ifneq ($(TCONFIG_IPV6),y)
+	install -m 0644 others/dot-servers-ipv4.dat $(INSTALLDIR)/rom/dot-servers.dat
+else
 	install -m 0644 others/dot-servers.dat $(INSTALLDIR)/rom/dot-servers.dat
+endif
 	$(MAKE) certs-install
 endif
 

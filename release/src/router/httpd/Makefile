@@ -3,6 +3,10 @@ include ../common.mak
 CFLAGS = -Os -Wall $(EXTRACFLAGS) -Wsign-compare
 CFLAGS += -I$(SRCBASE) -I$(SRCBASE)/include -I. -I$(TOP)/shared
 
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+export CFLAGS += -DDEBUG_LOGMSG
+endif
+
 OBJS = httpd.o cgi.o tomato.o version.o
 OBJS += misc.o dhcp.o upgrade.o traceping.o parser.o upnp.o ctnf.o
 OBJS += nvram.o log.o webio.o wl.o devlist.o ddns.o config.o bwm.o

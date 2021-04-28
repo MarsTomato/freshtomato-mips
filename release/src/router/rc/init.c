@@ -1656,14 +1656,15 @@ int init_main(int argc, char *argv[])
 			stop_arpbind();
 			stop_lan();
 			stop_vlan();
-			stop_syslog();
 
 			if ((state == SIGTERM /* REBOOT */) ||
 			    (state == SIGQUIT /* HALT */)) {
 				remove_storage_main(1);
 				stop_usb();
+				stop_syslog();
 
 				shutdn(state == SIGTERM /* REBOOT */);
+				sync(); sync(); sync();
 				exit(0);
 			}
 			if (state == SIGINT /* STOP */) {
@@ -1676,6 +1677,7 @@ int init_main(int argc, char *argv[])
 			logmsg(LOG_INFO, "FreshTomato RESTART ...");
 
 		case SIGUSR2:		/* START */
+			stop_syslog();
 			start_syslog();
 
 			load_files_from_nvram();

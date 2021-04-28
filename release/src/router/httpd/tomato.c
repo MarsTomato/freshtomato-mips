@@ -260,9 +260,9 @@ void common_redirect(void)
 	if (atoi(webcgi_safeget("_ajax", ""))) {
 		send_header(200, NULL, mime_html, 0);
 		web_puts("OK");
-	} else {
-		redirect(webcgi_safeget("_redirect", "/"));
 	}
+	else
+		redirect(webcgi_safeget("_redirect", "/"));
 }
 
 // ----------------------------------------------------------------------------
@@ -281,11 +281,8 @@ const struct mime_handler mime_handlers[] = {
 	{ "cfg/restore.cgi",		mime_html,				0,	wi_restore,		wo_restore,		1 },
 	{ "cfg/defaults.cgi",		NULL,					0,	wi_generic,		wo_defaults,		1 },
 
-	{ "bwm/*.gz",			NULL,					0,	wi_generic,		wo_bwmbackup,		1 },
-	{ "bwm/restore.cgi",		NULL,					0,	wi_bwmrestore,		wo_bwmrestore,		1 },
-
-	{ "ipt/*.gz",			NULL,					0,	wi_generic,		wo_iptbackup,		1 },
-	{ "ipt/restore.cgi",		NULL,					0,	wi_iptrestore,		wo_iptrestore,		1 },
+	{ "stats/*.gz",			NULL,					0,	wi_generic,		wo_statsbackup,		1 },
+	{ "stats/restore.cgi",		NULL,					0,	wi_statsrestore,	wo_statsrestore,	1 },
 
 	{ "logs/view.cgi",		NULL,					0,	wi_generic,		wo_viewlog,		1 },
 	{ "logs/*.txt",			NULL,					0,	wi_generic,		wo_syslog,		1 },
@@ -385,7 +382,6 @@ const aspapi_t aspapi[] = {
 
 	{ "iptraffic",			asp_iptraffic			},
 	{ "iptmon",			asp_iptmon			},
-	{ "ipt_bandwidth",		asp_ipt_bandwidth		},
 
 	{ "notice",			asp_notice			},
 	{ "nv",				asp_nv				},
@@ -949,6 +945,7 @@ static const nvset_t nvset_list[] = {
 	{ "dhcpc_minpkt",		V_01				},
 	{ "dhcpc_custom",		V_TEXT(0, 256)			},
 	{ "dns_norebind",		V_01				},
+	{ "dns_fwd_local",		V_01				},	/* forward queries for local domain to upstream DNS server */
 	{ "dns_priv_override",		V_01				},	/* override DoH */
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 4096)			},

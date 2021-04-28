@@ -1,6 +1,6 @@
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1331,15 +1331,25 @@
+@@ -1344,15 +1344,25 @@
  #endif
  
  /* log.c */
@@ -39,7 +39,7 @@
  #include "dnsmasq.h"
  
  #ifdef __ANDROID__
-@@ -473,3 +474,4 @@
+@@ -479,3 +480,4 @@
    
    exit(exit_code);
  }
