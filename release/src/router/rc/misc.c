@@ -355,8 +355,10 @@ void setup_conntrack(void)
 	i = atoi(p);
 	if (i >= 127)
 		f_write_string("/sys/module/nf_conntrack/parameters/hashsize", p, 0, 0);
-	else if (f_read_string("/sys/module/nf_conntrack/parameters/hashsize", buf, sizeof(buf)) > 0)
-		if (atoi(buf) > 0) nvram_set("ct_hashsize", buf);
+	else if (f_read_string("/sys/module/nf_conntrack/parameters/hashsize", buf, sizeof(buf)) > 0) {
+		if (atoi(buf) > 0)
+			nvram_set("ct_hashsize", buf);
+	}
 
 	p = nvram_safe_get("ct_max");
 	i = atoi(p);
@@ -411,6 +413,15 @@ void setup_conntrack(void)
 		ct_modprobe_r("pptp");
 		ct_modprobe_r("proto_gre");
 	}
+}
+
+void remove_conntrack(void)
+{
+	ct_modprobe_r("pptp");
+	ct_modprobe_r("ftp");
+	ct_modprobe_r("rtsp");
+	ct_modprobe_r("h323");
+	ct_modprobe_r("sip");
 }
 
 int host_addr_info(const char *name, int af, struct sockaddr_storage *buf)

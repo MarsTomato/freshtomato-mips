@@ -230,7 +230,7 @@ function init() {
 
 <!-- / / / -->
 
-<script>checkRstats();</script>
+<script>checkStats('rstats');</script>
 
 <!-- / / / -->
 
