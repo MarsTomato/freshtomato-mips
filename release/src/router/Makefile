@@ -1360,7 +1360,7 @@ iproute2-clean:
 dropbear/config.h:
 	$(call patch_files,dropbear)
 	cd dropbear && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections $(OPTSIZE_MORE_FLAG)" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections $(OPTSIZE_FLAG)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		ac_cv_func_logout=no ac_cv_func_logwtmp=no \
 		$(CONFIGURE) --disable-zlib --enable-syslog --disable-lastlog --disable-utmp \
@@ -1373,7 +1373,7 @@ dropbear: dropbear/config.h
 ifeq ($(TCONFIG_ZEBRA),y)
 	@$(MAKE) -C dropbear PROGRAMS="dropbear dbclient dropbearkey scp" MULTI=1 $(PARALLEL_BUILD)
 else
-	@$(MAKE) -C dropbear PROGRAMS="dropbear dropbearkey $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),,scp)" MULTI=1 $(PARALLEL_BUILD)
+	@$(MAKE) -C dropbear PROGRAMS="dropbear dropbearkey $(if $(TCONFIG_OPTIMIZE_SIZE),,scp)" MULTI=1 $(PARALLEL_BUILD)
 endif
 
 dropbear-install:
@@ -1683,7 +1683,7 @@ igmpproxy/src/Makefile: igmpproxy/src/Makefile.in
 igmpproxy: igmpproxy/src/Makefile
 	@$(SEP)
 	@$(MAKE) -C igmpproxy/src \
-	CFLAGS="-Os -g -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(OPTSIZE_MORE_FLAG)" \
+	CFLAGS="-Os -g -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(OPTSIZE_FLAG)" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(PARALLEL_BUILD)
 

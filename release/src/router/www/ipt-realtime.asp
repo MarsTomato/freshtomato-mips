@@ -332,7 +332,7 @@ function verifyFields(focused, quiet) {
 
 <!-- / / / -->
 
-<script>checkCstats();</script>
+<script>checkStats('cstats');</script>
 
 <!-- / / / -->
 

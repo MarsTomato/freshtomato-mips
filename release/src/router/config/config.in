@@ -180,6 +180,7 @@ config TCONFIG_NVRAM_64K
 
 config TCONFIG_STUBBY
 	bool "  Stubby - DNS-over-TLS resolver"
+	depends on TCONFIG_DNSSEC
 	default n
 
 config TCONFIG_TOR

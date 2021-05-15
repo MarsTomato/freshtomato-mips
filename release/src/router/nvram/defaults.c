@@ -171,6 +171,8 @@ const defaults_t defaults[] = {
 	{ "stubby_priority",		"2"				},	/* 0=none, 1=strict-order, 2=no-resolv */
 	{ "stubby_port",		"5453"				},	/* local port */
 	{ "stubby_resolvers",		"<1.1.1.1>>cloudflare-dns.com><1.0.0.1>>cloudflare-dns.com>"},	/* default DoT resolvers */
+	{ "stubby_dnssec",		"0"				},	/* DNSSEC */
+	{ "stubby_force_tls13",		"0"				},	/* TLS version */
 	{ "stubby_log",			"4"				},	/* log level */
 #endif
 	{ "wan_wins",			""				},	// x.x.x.x x.x.x.x ...
@@ -223,7 +225,6 @@ const defaults_t defaults[] = {
 	{ "wan_modem_roam",		"2"				},
 	{ "wan_modem_if",		""				},
 	{ "wan_modem_type",		""				},
-	{ "wan_modem_modules",		""				},
 
 	{ "wan2_modem_pin",		""				},
 	{ "wan2_modem_dev",		""				},
@@ -234,7 +235,6 @@ const defaults_t defaults[] = {
 	{ "wan2_modem_roam",		"2"				},
 	{ "wan2_modem_if",		""				},
 	{ "wan2_modem_type",		""				},
-	{ "wan2_modem_modules",		""				},
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_modem_pin",		""				},
@@ -246,7 +246,6 @@ const defaults_t defaults[] = {
 	{ "wan3_modem_roam",		"2"				},
 	{ "wan3_modem_if",		""				},
 	{ "wan3_modem_type",		""				},
-	{ "wan3_modem_modules",		""				},
 
 	{ "wan4_modem_pin",		""				},
 	{ "wan4_modem_dev",		""				},
@@ -257,7 +256,6 @@ const defaults_t defaults[] = {
 	{ "wan4_modem_roam",		"2"				},
 	{ "wan4_modem_if",		""				},
 	{ "wan4_modem_type",		""				},
-	{ "wan4_modem_modules",		""				},
 #endif
 #endif
 
@@ -785,6 +783,7 @@ const defaults_t defaults[] = {
 	{ "http_wanport",		"8080"				},	// WAN port to listen on
 	{ "http_lanport",		"80"				},	// LAN port to listen on
 	{ "http_enable",		"1"				},	// HTTP server enable/disable
+	{ "remote_upgrade",		"1"				},	/* allow remote upgrade [1|0] - for brave guys */
 #ifdef TCONFIG_HTTPS
 	{ "remote_mgt_https",		"0"				},	// Remote Management use https [1|0]
 	{ "https_lanport",		"443"				},	// LAN port to listen on
