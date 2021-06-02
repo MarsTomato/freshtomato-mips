@@ -857,6 +857,23 @@ define BusyboxOptions
 	)
 endef
 
+define extrawlConfig
+	@( \
+	if [ "$(USBAP)" = "y" ]; then \
+		cp -f $(SRCBASE)/wl/linux/100/wl_apsta.o $(SRCBASE)/wl/linux/wl_apsta.o ; \
+		cp -f $(SRCBASE)/include/100/epivers.h $(SRCBASE)/include/epivers.h ; \
+	else \
+		if [ "$(CONFIG_BCMWL6)" = "y" ]; then \
+			cp -f $(SRCBASE)/../src-rt/wl/linux/110/wl_apsta.o $(SRCBASE)/../src-rt/wl/linux/wl_apsta.o ; \
+			cp -f $(SRCBASE)/../src-rt/include/110/epivers.h $(SRCBASE)/../src-rt/include/epivers.h ; \
+		else \
+			cp -f $(SRCBASE)/wl/linux/110/wl_apsta.o $(SRCBASE)/wl/linux/wl_apsta.o ; \
+			cp -f $(SRCBASE)/include/110/epivers.h $(SRCBASE)/include/epivers.h ; \
+		fi; \
+	fi; \
+	)
+endef
+
 define KernelConfig
 	@( \
 	sed -i "/CONFIG_NVRAM_SIZE/d" $(1); \
@@ -1016,6 +1033,7 @@ define KernelConfig
 		sed -i "s/# CONFIG_BONDING is not set/CONFIG_BONDING=m/g" $(1); \
 	fi; \
 	)
+	$(call extrawlConfig, $(1))
 endef
 
 
@@ -1264,7 +1282,7 @@ n60init:
 	@$(MAKE) bin MIPS32=r2 B=E USB="" NO_JFFS=y NO_ZEBRA=y NO_HTTPS=y NO_CIFS=y NO_XXTP=y NO_SSH=y BCMNAT=y BUILD_DESC="TendaN60-init"
 
 f9k:
-	@$(MAKE) bin MIPS32=r2 B=V MULTIWAN=y USB="USB" NVRAM_64K=y USBEXTRAS=y USBAP=y NO_JFFS=y NO_ZEBRA=y NO_CIFS=y NFS=y IPV6SUPP=y BCMNAT=y OPENVPN=y PPTPD=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="F9K1102"
+	@$(MAKE) bin MIPS32=r2 B=V MULTIWAN=y USB="USB" NVRAM_SIZE=32 USBEXTRAS=y USBAP=y NO_JFFS=y NO_ZEBRA=y NO_CIFS=y NFS=y IPV6SUPP=y BCMNAT=y OPENVPN=y PPTPD=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="F9K1102"
 
 
 ## Asus RT-N66u with 64K NVRAM ##

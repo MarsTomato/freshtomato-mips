@@ -3156,11 +3156,23 @@ static int init_nvram(void)
 			nvram_set("pci/1/1/pa25glidx", "0");
 			nvram_set("pci/1/1/pa25ghidx", "9");
 
-			/* WiFi settings/channels */
+			/* adjust cfe wifi country settings */
 			nvram_set("pci/1/1/ccode", "ALL");
 			nvram_set("sb/1/ccode", "ALL");
 			nvram_set("pci/1/1/regrev", "0");
 			nvram_set("sb/1/regrev", "0");
+
+			/* default wifi settings/channels */
+			nvram_set("wl0_country_code", "SG");
+			nvram_set("wl0_channel","6");
+			nvram_set("wl0_nbw","40");
+			nvram_set("wl0_nbw_cap", "1");
+			nvram_set("wl0_nctrlsb", "upper");
+			nvram_set("wl1_country_code", "SG");
+			nvram_set("wl1_channel", "36");
+			nvram_set("wl1_nbw","40");
+			nvram_set("wl1_nbw_cap", "1");
+			nvram_set("wl1_nctrlsb", "lower");
 		}
 		break;
 	case MODEL_WNDR4000:

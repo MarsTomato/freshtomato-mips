@@ -361,9 +361,9 @@ else
 endif
 endif
 
-# Only include "Remote Forwarding" if special size optimization is not required
-ifeq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
-	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/SIZEOPTMORE-BEGIN/,/SIZEOPTMORE-END/d"
+# Only include "Remote Forwarding" if size optimization is not required
+ifeq ($(TCONFIG_OPTIMIZE_SIZE),y)
+	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/OPTSIZE-BEGIN/,/OPTSIZE-END/d"
 endif
 
 # Only include Advanced Themes stuff if it is required

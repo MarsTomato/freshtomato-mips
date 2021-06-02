@@ -89,7 +89,8 @@ int fd;
 /* filesystem flags for building */
 int duplicate_checking = 1, noF = 0, no_fragments = 0, always_use_fragments = 0;
 int noI = 0, noD = 0, check_data = 0;
-int swap, silent = TRUE;
+extern int swap;
+int silent = TRUE;
 long long global_uid = -1, global_gid = -1;
 
 /* superblock attributes */

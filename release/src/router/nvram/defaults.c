@@ -626,6 +626,7 @@ const defaults_t defaults[] = {
 	{ "dnsmasq_custom",		""				},
 	{ "dnsmasq_static_only",	"0"				},
 	{ "dnsmasq_q",			"0"				},	// Bit0=quiet-dhcp, 1=dhcp6, 2=ra
+	{ "dnsmasq_gen_names",		"0"				},
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	"0"				},
 #endif

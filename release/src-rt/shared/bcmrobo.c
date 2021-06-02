@@ -1313,6 +1313,9 @@ bcm_robo_enable_switch(robo_info_t *robo)
 {
 	int i, max_port_ind, ret = 0;
 	uint8 val8;
+	uint16 val16 = 0;
+	char *boothwmodel = nvram_get("boot_hw_model");
+	char *boothwver = nvram_get("boot_hw_ver");
 
 	/* Enable management interface access */
 	if (robo->ops->enable_mgmtif)
@@ -1361,6 +1364,20 @@ bcm_robo_enable_switch(robo_info_t *robo)
 		/* Enable WAN port (#0) on the asus wl-500g deluxe boxes */
 		val8 = 0;
 		robo->ops->write_reg(robo, PAGE_CTRL, REG_CTRL_PORT0, &val8, sizeof(val8));
+	}
+
+	if (boothwmodel != NULL && !strcmp(boothwmodel, "E4200") && boothwver != NULL && !strcmp(boothwver, "1.0")) {
+		printk(KERN_EMERG "E4200 switch LEDs fix\n");
+		/* Taken from cfe */
+		val16 = 0x8008;
+		robo->ops->write_reg(robo, PAGE_CTRL, 0x12, &val16, sizeof(val16));
+
+		uint phy;
+		for (phy = 0; phy < MAX_NO_PHYS; phy++) {
+			robo->miiwr(robo->h, phy, 0x1c, 0xb8aa);
+			robo->miiwr(robo->h, phy, 0x17, 0x0f04);
+			robo->miiwr(robo->h, phy, 0x15, 0x0088);
+		}
 	}
 
 	/* Disable management interface access */
