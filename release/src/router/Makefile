@@ -63,7 +63,7 @@ endef
 #
 #
 SEP=`$(eval progress=$(shell echo $$(($(progress)+1))))` \
-echo "\033[41;1m   $@ ${progress}$\/${totalSteps} \033[0m\033]2;Building $@ ${progress}$\/${totalSteps}\007"
+printf "\n\033[41;1m   $@ ${progress}$\/${totalSteps} \033[0m\033]2;Building $@ ${progress}$\/${totalSteps}\007\n"
 
 
 ifeq ($(TCONFIG_OPTIMIZE_SIZE),y)
@@ -338,7 +338,7 @@ countInstallSteps:
 	@echo ${totalSteps}
 
 install package: countInstallSteps $(obj-install) $(LINUXDIR)/.config
-	@echo "\033[41;1m   Installing \033[0m\033]2;Installing\007"
+	@printf "\n\033[41;1m   Installing \033[0m\033]2;Installing\007\n"
 	install -d $(TARGETDIR)
 
 
@@ -1473,9 +1473,10 @@ endif
 	@true
 
 flac/stamp-h1: libogg
+	$(call patch_files,flac)
 	cd $(TOP)/flac && autoreconf -fsi && \
 	CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-	CPPFLAGS="-I$(TOP)/libogg/include -fPIC" \
+	CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC" \
 	LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix='' --disable-rpath \
 		--disable-doxygen-docs --disable-xmms-plugin --disable-cpplibs --disable-thorough-tests \
@@ -1490,6 +1491,7 @@ flac: flac/stamp-h1 libogg
 flac-clean:
 	-@$(MAKE) -C flac clean
 	@rm -f flac/stamp-h1
+	$(call unpatch_files,flac)
 
 flac-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
@@ -1845,9 +1847,8 @@ pcre-clean:
 
 libxml2/stamp-h1:
 	cd libxml2 && autoreconf -fsi && \
-		CFLAGS="-Os -Wall -I$(TOP)/zlib $(EXTRACFLAGS)" \
-		LDFLAGS="-L$(TOP)/zlib" \
-		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
+		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
 			--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
 	@touch $@
 
@@ -1857,11 +1858,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C libxml2 DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.9.10 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.10
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.10
+	install -D libxml2/.libs/libxml2.so.2.9.12 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.12
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.12
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.9.10 libxml2.so.2 && \
-		ln -sf libxml2.so.2.9.10 libxml2.so
+		ln -sf libxml2.so.2.9.12 libxml2.so.2 && \
+		ln -sf libxml2.so.2.9.12 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -2253,7 +2254,7 @@ openvpn-install:
 openvpn_plugin_auth_nvram: nvram
 
 nano/stamp-h1: libncurses
-	cd nano && autoreconf && \
+	cd nano && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libncurses/staged/usr/lib -fPIC" \
@@ -2322,6 +2323,7 @@ libevent/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib $(if $(TCONFIG_HTTPS),-I$(TOP)/$(OPENSSLDIR)/include,) -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/zlib $(if $(TCONFIG_HTTPS),-L$(TOP)/$(OPENSSLDIR),)" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/$(OPENSSLDIR)" \
 		$(CONFIGURE) $(if $(TCONFIG_HTTPS),,--disable-openssl) --disable-doxygen-html \
 			--disable-debug-mode --disable-samples --disable-dependency-tracking
 	@touch $@
@@ -2735,7 +2737,7 @@ tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 			--with-openssl-dir=$(TOP)/$(OPENSSLDIR) --with-zlib-dir=$(TOP)/zlib \
 			--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma \
 			--disable-seccomp --disable-libscrypt --disable-zstd-advanced-apis \
-			--disable-manpage --disable-html-manual --disable-dependency-tracking
+			--disable-manpage --disable-html-manual --disable-dependency-tracking --disable-zstd --disable-systemd
 	@touch $@
 
 tor: tor/stamp-h1

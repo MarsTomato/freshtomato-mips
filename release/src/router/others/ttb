@@ -41,7 +41,7 @@ LOGS="logger -t TTB[$PID]"
 			# can't download zip!!
 			} || {
 				$LOGS "Cannot download Online theme. Will try again soon ..."
-				cru a ttbDL "* * * * * /usr/sbin/ttb"
+				cru a ttbDL "/5* * * * * /usr/sbin/ttb"
 			}
 		}
 	}

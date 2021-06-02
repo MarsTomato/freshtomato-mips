@@ -1,0 +1,24 @@
+--- libjson-c/CMakeLists.txt
++++ libjson-c/CMakeLists.txt
+@@ -48,9 +48,9 @@ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_
+ add_subdirectory(tests)
+ endif()
+ 
+-if (NOT MSVC)  # cmd line apps don't built on Windows currently.
+-add_subdirectory(apps)
+-endif()
++#if (NOT MSVC)  # cmd line apps don't built on Windows currently.
++#add_subdirectory(apps)
++#endif()
+ 
+ # Set some packaging variables.
+ set(CPACK_PACKAGE_NAME              "${PROJECT_NAME}")
+@@ -401,8 +401,6 @@ set(JSON_C_SOURCES
+ include_directories(${PROJECT_SOURCE_DIR})
+ include_directories(${PROJECT_BINARY_DIR})
+ 
+-add_subdirectory(doc)
+-
+ # uninstall
+ add_custom_target(uninstall
+   COMMAND cat ${PROJECT_BINARY_DIR}/install_manifest.txt | xargs rm

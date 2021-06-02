@@ -20,7 +20,7 @@
 	June 2014 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - Mar 23 2021 - pedro **
+	** Last Updated - May 25 2021 - pedro **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -38,7 +38,7 @@
 
 <script>
 
-//	<% nvram ("t_model_name,vlan0ports,vlan1ports,vlan2ports,vlan3ports,vlan4ports,vlan5ports,vlan6ports,vlan7ports,vlan8ports,vlan9ports,vlan10ports,vlan11ports,vlan12ports,vlan13ports,vlan14ports,vlan15ports,vlan0hwname,vlan1hwname,vlan2hwname,vlan3hwname,vlan4hwname,vlan5hwname,vlan6hwname,vlan7hwname,vlan8hwname,vlan9hwname,vlan10hwname,vlan11hwname,vlan12hwname,vlan13hwname,vlan14hwname,vlan15hwname,wan_ifnameX,wan2_ifnameX,wan3_ifnameX,wan4_ifnameX,manual_boot_nv,boardtype,boardflags,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,vlan0tag,vlan0vid,vlan1vid,vlan2vid,vlan3vid,vlan4vid,vlan5vid,vlan6vid,vlan7vid,vlan8vid,vlan9vid,vlan10vid,vlan11vid,vlan12vid,vlan13vid,vlan14vid,vlan15vid,wl_ssid,wl_radio,wl_net_mode");%>
+//	<% nvram ("t_model_name,vlan0ports,vlan1ports,vlan2ports,vlan3ports,vlan4ports,vlan5ports,vlan6ports,vlan7ports,vlan8ports,vlan9ports,vlan10ports,vlan11ports,vlan12ports,vlan13ports,vlan14ports,vlan15ports,vlan0hwname,vlan1hwname,vlan2hwname,vlan3hwname,vlan4hwname,vlan5hwname,vlan6hwname,vlan7hwname,vlan8hwname,vlan9hwname,vlan10hwname,vlan11hwname,vlan12hwname,vlan13hwname,vlan14hwname,vlan15hwname,wan_ifnameX,wan2_ifnameX,wan3_ifnameX,wan4_ifnameX,manual_boot_nv,boardtype,boardflags,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,vlan0tag,vlan0vid,vlan1vid,vlan2vid,vlan3vid,vlan4vid,vlan5vid,vlan6vid,vlan7vid,vlan8vid,vlan9vid,vlan10vid,vlan11vid,vlan12vid,vlan13vid,vlan14vid,vlan15vid,wl_ssid,wl_radio,wl_net_mode,wl_nband");%>
 
 </script>
 
@@ -289,7 +289,7 @@ REMOVE-END */
 /* WLAN */
 				for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 					if (l[k].indexOf(wl_ifaces[uidx][0]) != -1)
-						E('_f_bridge_wlan'+wl_fface(uidx)+'_to').selectedIndex=i;
+						E('_f_bridge_wlan'+uidx+'_to').selectedIndex = i;
 				}
 			}
 		}
@@ -700,8 +700,7 @@ function trailingSpace(s) {
 
 function verifyFields(focused, quiet) {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		var u = wl_fface(uidx);
-		var wlan = E('_f_bridge_wlan'+u+'_to');
+		var wlan = E('_f_bridge_wlan'+uidx+'_to');
 		if (nvram.lan_ifname.length < 1)
 			wlan.options[0].disabled = 1;
 
@@ -806,10 +805,8 @@ REMOVE-END */
 	}
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-		var u = wl_fface(uidx);
-		var wlan = E('_f_bridge_wlan'+u+'_to');
+		var wlan = E('_f_bridge_wlan'+uidx+'_to');
 /* REMOVE-BEGIN
-		var wlan = E('_f_bridge_wlan_to');
 		alert(wlan.selectedIndex);
 REMOVE-END */
 		switch (parseInt(wlan.selectedIndex)) {
@@ -1033,13 +1030,15 @@ function init() {
 		<script>
 			var f = [];
 			for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-				var u = wl_fface(uidx);
-				var ssid = nvram['wl'+u+'_ssid'];
-				if (nvram['wl'+u+'_radio'] != '1' || nvram['wl'+u+'_net_mode'] == 'disabled')
-					ssid = '<s title="Disabled!" style="cursor:help">'+ssid+'<\/s>';
+				var u = wl_fface(uidx).toString();
+				if (u) {
+					var ssid = wl_ifaces[uidx][4] || '';
+					if (nvram['wl'+u+'_radio'] != '1' || nvram['wl'+u+'_net_mode'] == 'disabled')
+						ssid = '<s title="Disabled!" style="cursor:help">'+ssid+'<\/s>';
 
-				f.push( { title: 'Bridge '+wl_display_ifname(uidx), name: 'f_bridge_wlan'+u+'_to', type: 'select',
-				          options: [[0,'LAN0 (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']], prefix: 'to &nbsp;&nbsp;&nbsp;', suffix: '&nbsp; SSID: '+ssid, value: 4 } );
+					f.push( { title: 'Bridge '+wl_display_ifname(uidx), name: 'f_bridge_wlan'+uidx+'_to', type: 'select',
+					          options: [[0,'LAN0 (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']], prefix: 'to &nbsp;&nbsp;&nbsp;', suffix: '&nbsp; SSID: '+ssid, value: 4 } );
+				}
 			}
 			createFieldTable('', f);
 			if (port_vlan_supported)
