@@ -1130,6 +1130,8 @@ static int init_nvram(void)
 		name = nvram_safe_get("boot_hw_model");
 		if (strcmp(name, "E100") == 0)
 			name = "E1000 v1";
+		if (strcmp(name, "WRT310N") == 0)
+			name = "WRT310N v2";
 		features = SUP_SES | SUP_80211N | SUP_WHAM_LED;
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1");

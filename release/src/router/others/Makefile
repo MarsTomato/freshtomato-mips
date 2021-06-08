@@ -74,7 +74,9 @@ endif
 
 #optware/entware install script
 ifeq ($(TCONFIG_USB),y)
+ifneq ($(TCONFIG_BCMARM),y)
 	install -m 0700 optware-install.sh $(INSTALLDIR)/usr/sbin
+endif
 	install -m 0700 entware-install.sh $(INSTALLDIR)/usr/sbin
 endif
 
@@ -92,6 +94,11 @@ endif
 # BTGUI
 ifeq ($(TCONFIG_BT),y)
 	install -m 0755 btcheck $(INSTALLDIR)/usr/bin
+endif
+
+# network discovery script for status-devices page
+ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
+	install -m 0755 discovery.sh $(INSTALLDIR)/usr/sbin
 endif
 
 clean:

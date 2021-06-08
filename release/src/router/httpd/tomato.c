@@ -24,6 +24,9 @@ int rboot = 0;
 extern int post;
 
 static void asp_css(int argc, char **argv);
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
+static void asp_discovery(int argc, char **argv);
+#endif
 static void asp_resmsg(int argc, char **argv);
 
 //
@@ -394,6 +397,9 @@ const aspapi_t aspapi[] = {
 	{ "rrule",			asp_rrule			},
 	{ "statfs",			asp_statfs			},
 	{ "sysinfo",			asp_sysinfo			},
+#ifdef TCONFIG_BCMARM
+	{ "jiffies",			asp_jiffies			},
+#endif
 	{ "time",			asp_time			},
 	{ "upnpinfo",			asp_upnpinfo			},
 	{ "version",			asp_version			},
@@ -422,6 +428,9 @@ const aspapi_t aspapi[] = {
 	{ "calc6rdlocalprefix",		asp_calc6rdlocalprefix		},
 #endif
 	{ "css",			asp_css				},
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
+	{ "discovery",			asp_discovery			},
+#endif
 #ifdef TCONFIG_STUBBY
 	{ "stubby_presets",		asp_stubby_presets		},
 #endif
@@ -458,6 +467,20 @@ static void asp_css(int argc, char **argv)
 	}
 #endif
 }
+
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
+static void asp_discovery(int argc, char **argv)
+{
+	char buf[32] = "/usr/sbin/discovery.sh ";
+
+	if (strncmp(argv[0], "off", 3) == 0)
+		return;
+	else if (strncmp(argv[0], "traceroute", 10) == 0)
+		strcat(buf, argv[0]);
+
+	system(buf);
+}
+#endif
 
 // -----------------------------------------------------------------------------
 
@@ -711,7 +734,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_status_script",		V_01				},
 #endif
 	{ "wan4_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
-#endif
+#endif /* TCONFIG_MULTIWAN */
 
 	// LAN
 	{ "lan_ipaddr",			V_IP				},
@@ -876,7 +899,11 @@ static const nvset_t nvset_list[] = {
 	{ "wl_nmode",			V_NONE				},
 	{ "wl_nband",			V_RANGE(0, 2)			},	// 2 - 2.4GHz, 1 - 5GHz, 0 - Auto
 	{ "wl_nreqd",			V_NONE				},
-	{ "wl_nbw_cap",			V_RANGE(0, 2)			},	// 0 - 20MHz, 1 - 40MHz, 2 - Auto
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
+	{ "wl_nbw_cap",			V_RANGE(0, 3)			},	/* 0 - 20MHz, 1 - 40MHz, 2 - Auto, 3 - 80M */
+#else
+	{ "wl_nbw_cap",			V_RANGE(0, 2)			},	/* 0 - 20MHz, 1 - 40MHz, 2 - Auto */
+#endif
 	{ "wl_nbw",			V_NONE				},
 	{ "wl_mimo_preamble",		V_WORD				},	// 802.11n Preamble: mm/gf/auto/gfbcm
 	{ "wl_nctrlsb",			V_NONE				},	// none, lower, upper
@@ -993,7 +1020,11 @@ static const nvset_t nvset_list[] = {
 	{ "adblock_whitelist",		V_LENGTH(0, 4096)		},
 
 // advanced-misc
+#ifdef TCONFIG_BCMARM
+	{ "wait_time",			V_RANGE(0, 30)			},
+#else
 	{ "wait_time",			V_RANGE(3, 20)			},
+#endif
 	{ "wan_speed",			V_RANGE(0, 4)			},
 	{ "jumbo_frame_enable",		V_01				},	// Jumbo Frames support (for RT-N16/WNR3500L)
 	{ "jumbo_frame_size",		V_RANGE(1, 9720)		},
@@ -1042,7 +1073,9 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_ifnameX",		V_TEXT(0,8)			},
 	{ "lan_ifnames",		V_TEXT(0,64)			},
 	{ "manual_boot_nv",		V_01				},
+#ifndef TCONFIG_BCMARM
 	{ "trunk_vlan_so",		V_01				},
+#endif
 	{ "vlan0tag",			V_TEXT(0,5)			},
 	{ "vlan0vid",			V_TEXT(0,5)			},
 	{ "vlan1vid",			V_TEXT(0,5)			},
@@ -1097,13 +1130,28 @@ static const nvset_t nvset_list[] = {
 	{ "dr_wan4_tx",			V_LENGTH(0, 32)			},
 	{ "dr_wan4_rx",			V_LENGTH(0, 32)			},
 #endif
-#endif
+#endif /* TCONFIG_ZEBRA */
 
 // advanced-access
 	{ "lan_access",			V_LENGTH(0, 4096)		},
 
 // advanced-wireless
-	{ "wl_country_code",		V_LENGTH(0, 4)			},	// !!TB - Country code
+	{ "wl_country_code",		V_LENGTH(0, 4)			},	/* Country code */
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
+	{ "wl_country_rev",		V_RANGE(0, 999)			},	/* Country rev */
+	{ "0:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "1:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "pci/1/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
+	{ "pci/2/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
+	{ "0:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+	{ "1:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+	{ "pci/1/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
+	{ "pci/2/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
+#ifdef TCONFIG_AC3200
+	{ "2:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
+	{ "2:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+#endif
+#endif /* TCONFIG_BCMARM || CONFIG_BCMWL6 */
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
 	{ "wl_afterburner",		V_LENGTH(2, 4)			},	// off, on, auto
 	{ "wl_auth",			V_01				},
@@ -1120,7 +1168,11 @@ static const nvset_t nvset_list[] = {
 	{ "wl_plcphdr",			V_LENGTH(4, 5)			},	// long, short
 	{ "wl_antdiv",			V_RANGE(0, 3)			},
 	{ "wl_txant",			V_RANGE(0, 3)			},
+#ifdef TCONFIG_BCMARM
+	{ "wl_txpwr",			V_RANGE(0, 1000)		},
+#else
 	{ "wl_txpwr",			V_RANGE(0, 400)			},
+#endif
 	{ "wl_wme",			V_WORD				},	// auto, off, on
 	{ "wl_wme_no_ack",		V_ONOFF				},	// off, on
 	{ "wl_wme_apsd",		V_ONOFF				},	// off, on
@@ -1129,12 +1181,35 @@ static const nvset_t nvset_list[] = {
 	{ "wlx_hpamp",			V_01				},
 	{ "wlx_hperx",			V_01				},
 	{ "wl_reg_mode",		V_LENGTH(1, 3)			},	// !!TB - Regulatory: off, h, d
-	{ "wl_mitigation",		V_RANGE(0, 4)			},	// Interference Mitigation Mode (0|1|2|3|4)
-
+	{ "wl_mitigation",		V_RANGE(0, 4)			},	// NON-AC Interference Mitigation Mode (0|1|2|3|4)
+#ifdef CONFIG_BCMWL6
+	{ "wl_mitigation_ac",		V_RANGE(0, 7)			},	// AC Interference Mitigation Mode (bit mask (3 bits), values from 0 to 7)
+#endif
 	{ "wl_nmode_protection",	V_WORD,				},	// off, auto
 	{ "wl_nmcsidx",			V_RANGE(-2, 32),		},	// -2 - 32
 	{ "wl_obss_coex",		V_01				},
-	{ "wl_wmf_bss_enable",		V_01				},	// Toastman
+#ifdef TCONFIG_BCMARM
+#ifdef TCONFIG_EMF
+	{ "wl_igs",			V_01				},	/* BCM: sync with wl_wmf_bss_enable */
+	{ "wl_wmf_bss_enable",		V_01				},	/* Wireless Multicast Forwarding Enable/Disable */
+	{ "wl_wmf_ucigmp_query",	V_01				},	/* Disable Converting IGMP Query to ucast (default) */
+	{ "wl_wmf_mdata_sendup",	V_01				},	/* Disable Sending Multicast Data to host (default) */
+	{ "wl_wmf_ucast_upnp",		V_01				},	/* Disable Converting upnp to ucast (default) */
+	{ "wl_wmf_igmpq_filter",	V_01				},	/* Disable igmp query filter */
+#endif /* TCONFIG_EMF */
+	{ "wl_atf",			V_01				},	// Air Time Fairness support on = 1, off = 0
+	{ "wl_turbo_qam",		V_01				},	// turbo qam on = 1 , off = 0
+	{ "wl_txbf",			V_01				},	// Explicit Beamforming on = 1 , off = 0 (default: on)
+	{ "wl_txbf_bfr_cap",		V_01				},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case (not for Tomato...)
+	{ "wl_txbf_bfe_cap",		V_01				},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case (not for Tomato...)
+	{ "wl_itxbf",			V_01				},	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
+	{ "wl_txbf_imp",		V_01				},	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
+#ifdef TCONFIG_BCMBSD
+	{ "smart_connect_x",		V_01				},	/* 0 = off, 1 = on (all-band), 2 = 5 GHz only! (no support, maybe later) */
+#endif
+#else /* TCONFIG_BCMARM */
+	{ "wl_wmf_bss_enable",		V_01				},	/* Wireless Multicast Forwarding Enable/Disable */
+#endif /* TCONFIG_BCMARM */
 
 // forward-dmz
 	{ "dmz_enable",			V_01				},
@@ -1241,6 +1316,12 @@ static const nvset_t nvset_list[] = {
 
 // admin-buttons
 	{ "sesx_led",			V_RANGE(0, 255)			},	// amber, white, aoss
+#ifdef TCONFIG_BCMARM
+	{ "blink_wl",			V_01				},	// turn blink on/off for wifi
+	{ "btn_led_mode",		V_01				},	// Asus RT-AC68 Turbo Mode
+	{ "stealth_mode",		V_01				},
+	{ "stealth_iled",		V_01				},
+#endif
 	{ "sesx_b0",			V_RANGE(0, 5)			},	// 0-5: toggle wireless, reboot, shutdown, script, usb unmount
 	{ "sesx_b1",			V_RANGE(0, 5)			},	// "
 	{ "sesx_b2",			V_RANGE(0, 5)			},	// "
@@ -1343,21 +1424,37 @@ static const nvset_t nvset_list[] = {
 	{ "usb_uhci",			V_RANGE(-1, 1)			},	// -1 - disabled, 0 - off, 1 - on
 	{ "usb_ohci",			V_RANGE(-1, 1)			},
 	{ "usb_usb2",			V_RANGE(-1, 1)			},
+#ifdef TCONFIG_BCMARM
+	{ "usb_usb3",			V_RANGE(-1, 1)			},
+#endif
 	{ "usb_irq_thresh",		V_RANGE(0, 6)			},
 	{ "usb_storage",		V_01				},
 	{ "usb_printer",		V_01				},
 	{ "usb_printer_bidirect",	V_01				},
+#ifdef TCONFIG_BCMARM
+	{ "usb_fs_ext4",		V_01				},
+#else
 	{ "usb_fs_ext3",		V_01				},
+#endif
 	{ "usb_fs_fat",			V_01				},
+#ifdef TCONFIG_BCMARM
+	{ "usb_fs_exfat",		V_01				},
+#endif
 #ifdef TCONFIG_NTFS
 	{ "usb_fs_ntfs",		V_01				},
+#ifdef TCONFIG_BCMARM
+	{ "usb_ntfs_driver",		V_LENGTH(0, 10)			},
 #endif
+#endif /* TCONFIG_NTFS */
 #ifdef TCONFIG_UPS
 	{ "usb_apcupsd",		V_01				},
 #endif
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			V_01				}, //!Victek
+#ifdef TCONFIG_BCMARM
+	{ "usb_hfs_driver",		V_LENGTH(0, 10)			},
 #endif
+#endif /* TCONFIG_HFS */
 	{ "usb_automount",		V_01				},
 	{ "script_usbhotplug", 		V_TEXT(0, 2048)			},
 	{ "script_usbmount", 		V_TEXT(0, 2048)			},
@@ -1414,6 +1511,9 @@ static const nvset_t nvset_list[] = {
 	{ "smbd_passwd",		V_LENGTH(0, 50)			},
 	{ "smbd_ifnames",		V_LENGTH(0, 50)			},
 	{ "smbd_protocol",		V_RANGE(0, 2)			},
+#ifdef TCONFIG_GROCTRL
+	{ "gro_disable",		V_01				},
+#endif
 #endif
 
 #ifdef TCONFIG_MEDIA_SERVER
@@ -1431,6 +1531,9 @@ static const nvset_t nvset_list[] = {
 
 //	qos
 	{ "qos_enable",			V_01				},
+#ifdef TCONFIG_BCMARM
+	{ "qos_mode",			V_NUM				},
+#endif
 	{ "qos_ack",			V_01				},
 	{ "qos_syn",			V_01				},
 	{ "qos_fin",			V_01				},
@@ -1438,21 +1541,40 @@ static const nvset_t nvset_list[] = {
 	{ "qos_icmp",			V_01				},
 	{ "qos_udp",			V_01				},
 	{ "qos_reset",			V_01				},
-	{ "qos_pfifo",			V_01				},	// !!TB
+#ifdef TCONFIG_BCMARM
+	{ "qos_pfifo",			V_NUM				},
+	{ "qos_classify",		V_01				},
+	{ "qos_cake_prio_mode",		V_NUM				},
+	{ "qos_cake_wash",		V_01				},
+#else
+	{ "qos_pfifo",			V_01				},
+#endif
 	{ "wan_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan_qos_ibw",		V_RANGE(10, 99999999)		},
+#ifdef TCONFIG_BCMARM
+	{ "wan_qos_encap",		V_NUM				},
+#endif
 	{ "wan_qos_overhead",		V_RANGE(-127, 128)		},
 	{ "wan2_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan2_qos_ibw",		V_RANGE(10, 99999999)		},
+#ifdef TCONFIG_BCMARM
+	{ "wan2_qos_encap",		V_NUM				},
+#endif
 	{ "wan2_qos_overhead",		V_RANGE(-127, 128)		},
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan3_qos_ibw",		V_RANGE(10, 99999999)		},
+#ifdef TCONFIG_BCMARM
+	{ "wan3_qos_encap",		V_NUM				},
+#endif
 	{ "wan3_qos_overhead",		V_RANGE(-127, 128)		},
 	{ "wan4_qos_obw",		V_RANGE(10, 99999999)		},
 	{ "wan4_qos_ibw",		V_RANGE(10, 99999999)		},
-	{ "wan4_qos_overhead",		V_RANGE(-127, 128)		},
+#ifdef TCONFIG_BCMARM
+	{ "wan4_qos_encap",		V_NUM				},
 #endif
+	{ "wan4_qos_overhead",		V_RANGE(-127, 128)		},
+#endif /* TCONFIG_MULTIWAN */
 	{ "qos_orules",			V_LENGTH(0, 4096)		},
 	{ "qos_default",		V_RANGE(0, 9)			},
 #ifdef TCONFIG_MULTIWAN
@@ -1787,7 +1909,46 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client2_routing_val",	V_NONE				},
 	{ "vpn_client2_fw",		V_01				},
-#endif // vpn
+#ifdef TCONFIG_BCMARM
+	{ "vpn_client3_poll",		V_RANGE(0, 30)			},
+	{ "vpn_client3_if",		V_TEXT(3, 3)			},	// tap, tun
+	{ "vpn_client3_bridge",		V_01				},
+	{ "vpn_client3_nat",		V_01				},
+	{ "vpn_client3_proto",		V_TEXT(3, 11)			},	// udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client
+	{ "vpn_client3_addr",		V_NONE				},
+	{ "vpn_client3_port",		V_PORT				},
+	{ "vpn_client3_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
+	{ "vpn_client3_firewall",	V_TEXT(0, 6)			},	// auto, custom
+	{ "vpn_client3_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
+	{ "vpn_client3_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_client3_cipher",		V_TEXT(0, 16)			},
+	{ "vpn_client3_ncp_ciphers",	V_TEXT(0, 128)			},
+	{ "vpn_client3_digest",		V_TEXT(0, 15)			},
+	{ "vpn_client3_local",		V_IP				},
+	{ "vpn_client3_remote",		V_IP				},
+	{ "vpn_client3_nm",		V_IP				},
+	{ "vpn_client3_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_client3_hmac",		V_RANGE(-1, 4)			},
+	{ "vpn_client3_adns",		V_RANGE(0, 3)			},
+	{ "vpn_client3_rgw",		V_RANGE(0, 3)			},
+	{ "vpn_client3_gw",		V_TEXT(0, 15)			},
+	{ "vpn_client3_custom",		V_NONE				},
+	{ "vpn_client3_static",		V_NONE				},
+	{ "vpn_client3_ca",		V_NONE				},
+	{ "vpn_client3_crt",		V_NONE				},
+	{ "vpn_client3_key",		V_NONE				},
+	{ "vpn_client3_userauth",	V_01				},
+	{ "vpn_client3_username",	V_TEXT(0,50)			},
+	{ "vpn_client3_password",	V_TEXT(0,70)			},
+	{ "vpn_client3_useronly",	V_01				},
+	{ "vpn_client3_tlsremote",	V_01				},	/* remote-cert-tls server */
+	{ "vpn_client3_tlsvername",	V_RANGE(0, 3)			},	/* verify-x509-name: 0 - disabled, 1 - Common Name, 2 - Common Name Prefix, 3 - Subject */
+	{ "vpn_client3_cn",		V_NONE				},
+	{ "vpn_client3_br",		V_LENGTH(0, 50)			},
+	{ "vpn_client3_routing_val",	V_NONE				},
+	{ "vpn_client3_fw",		V_01				},
+#endif
+#endif /* TCONFIG_OPENVPN */
 
 #ifdef TCONFIG_PPTPD
 // pptp server
@@ -1983,6 +2144,49 @@ static int nv_wl_find(int idx, int unit, int subunit, void *param)
 	}
 }
 
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
+static int nv_wl_bwcap_chanspec(int idx, int unit, int subunit, void *param){
+	char		chan_spec[32];
+	char		*ch,*nbw_cap,*nctrlsb;
+	int 		write = *((int *)param);
+	ch	= webcgi_get(wl_nvname("channel",unit,0));
+	nbw_cap = webcgi_get(wl_nvname("nbw_cap",unit,0));
+	nctrlsb = webcgi_get(wl_nvname("nctrlsb",unit,0));
+	if(!ch && !nbw_cap && !nctrlsb)
+		return 0;
+	if(ch == NULL || !*ch)	ch = nvram_get(wl_nvname("channel",unit,0));
+	if(nbw_cap == NULL || !*nbw_cap)  nbw_cap = nvram_get(wl_nvname("nbw_cap",unit,0));
+	if(nctrlsb == NULL || !*nctrlsb)  nctrlsb = nvram_get(wl_nvname("nctrlsb",unit,0));
+
+	if(!ch || !nbw_cap || !nctrlsb || !*ch || !*nbw_cap || !*nctrlsb)
+		return 1;
+
+	memset(chan_spec,0,sizeof(chan_spec));
+	strncpy(chan_spec,ch,sizeof(chan_spec));
+	switch(atoi(nbw_cap)){
+		case 0:
+			if(write)
+				nvram_set(wl_nvname("bw_cap",unit,0), "1");
+			break;
+		case 1:
+			if(write)
+				nvram_set(wl_nvname("bw_cap",unit,0), "3");
+			if(*ch != '0')
+				*(chan_spec + strlen(chan_spec)) = *nctrlsb;
+			break;
+		case 3:
+			if(write)
+				nvram_set(wl_nvname("bw_cap",unit,0), "7");
+			if(*ch != '0')
+				strcpy(chan_spec + strlen(chan_spec),"/80");
+			break;
+	}
+	if(write)
+		nvram_set(wl_nvname("chanspec", unit, 0), chan_spec);
+	return 0;
+}
+#endif
+
 static int save_variables(int write)
 {
 	const nvset_t *v;
@@ -2017,6 +2221,9 @@ static int save_variables(int write)
 	}
 
 	// special cases
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
+	foreach_wif(0, &write, nv_wl_bwcap_chanspec);
+#endif
 
 	char *p1, *p2;
 	if (((p1 = webcgi_get("set_password_1")) != NULL) && (strcmp(p1, "**********") != 0)) {

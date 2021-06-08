@@ -122,7 +122,7 @@ static int get_wl_clients(int idx, int unit, int subunit, void *param)
 	int mac_list_size;
 	char ifname[16];
 
-	mac_list_size = sizeof(mlist->count) + (MAX_CLIENTS_COUNT * sizeof(struct ether_addr)); /* buffer and length */
+	mac_list_size = sizeof(struct maclist) + (MAX_CLIENTS_COUNT * sizeof(struct ether_addr)); /* buffer and length */
 	if ((mlist = malloc(mac_list_size)) != NULL) {
 		wlif = nvram_safe_get(wl_nvname("ifname", unit, subunit)); /* AB multiSSID */
 		cmd = WLC_GET_ASSOCLIST;
@@ -164,7 +164,7 @@ static int get_wl_clients(int idx, int unit, int subunit, void *param)
 						if (get_wds_ifname(&rssi.ea, ifname))
 							p = ifname;
 					}
-//sti.rx_rate
+
 					web_printf("%c['%s','%s',%d,%d,%d,%u,%d]", *comma, p, ether_etoa(rssi.ea.octet, buf), rssi.val, sti.tx_rate, sti.rx_rate, sti.in, unit);
 					*comma = ',';
 				}
@@ -250,5 +250,19 @@ wl_ifname,wl_mode,wl_radio,wl_nband"
 		}
 		unlink(lease_file);
 	}
-	web_puts("];");
+	web_puts("];\n");
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
+	web_puts("gc_time = ");
+	memset(buf, 0, sizeof(buf));
+	if (f_read_string("/proc/sys/net/ipv4/neigh/default/gc_stale_time", buf, sizeof(buf)) > 0)
+		web_printf("%d", atoi(buf));
+	else
+#ifdef TCONFIG_BCMARM
+		web_puts("65");
+#else
+		web_puts("125");
+#endif
+
+	web_puts(";");
+#endif /* TCONFIG_BCMARM || TCONFIG_MIPSR2 */
 }
