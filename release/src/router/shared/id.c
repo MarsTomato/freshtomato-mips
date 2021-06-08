@@ -670,6 +670,7 @@ int get_model(void)
 		if (hw == HW_BCM5350) return MODEL_WTR54GS;
 		break;
 	case 18:
+	case 20:
 	case 21:
 		switch (hw) {
 		case HW_BCM4706:
