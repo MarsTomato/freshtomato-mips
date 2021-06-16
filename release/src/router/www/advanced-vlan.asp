@@ -133,7 +133,7 @@ switch (nvram['t_model_name']) {
 	case 'Linksys E1000 v2.0':
 	case 'Linksys E1000 v2.1':
 	case 'Linksys E3000':
-/*	case 'Linksys WRT310N': */
+	case 'Linksys WRT310N v2':
 	case 'Linksys WRT320N':
 	case 'Linksys WRT610N v2':
 	case 'Tenda N6':
