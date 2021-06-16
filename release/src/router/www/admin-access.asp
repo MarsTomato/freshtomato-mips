@@ -416,7 +416,11 @@ function init() {
 /* ADVTHEMES-BEGIN */
 					  ['at-dark','Advanced Dark'],['at-red','Advanced Red'],['at-blue','Advanced Blue'],['at-green','Advanced Green'],
 /* ADVTHEMES-END */
-					  ['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], suffix: '&nbsp;<small id="web_css_warn">(requires a modern browser)<\/small>', value: nvram.web_css },
+					  ['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], 
+/* ADVTHEMES-BEGIN */
+					  suffix: '&nbsp;<small id="web_css_warn" style="display:none">(requires a modern browser)<\/small>',
+/* ADVTHEMES-END */
+					  value: nvram.web_css },
 /* ADVTHEMES-BEGIN */
 				{ title: 'Dynamic BW/IPT charts', indent: 2, name: 'f_web_adv_scripts', type: 'checkbox', suffix: '&nbsp;<small>(JS based, supported only by some browsers)<\/small>', value: nvram.web_adv_scripts == 1 },
 /* ADVTHEMES-END */

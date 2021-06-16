@@ -369,6 +369,8 @@ ifneq ($(TCONFIG_ADVTHEMES),y)
 	sed -i $(INSTALLDIR)/www/ipt-24.asp -e "/ADVTHEMES-BEGIN/,/ADVTHEMES-END/d"
 	sed -i $(INSTALLDIR)/www/ipt-realtime.asp -e "/ADVTHEMES-BEGIN/,/ADVTHEMES-END/d"
 	sed -i $(INSTALLDIR)/www/bwm-graph.svg -e "/ADVTHEMES-BEGIN/,/ADVTHEMES-END/d"
+	sed -i $(INSTALLDIR)/www/ipt-graph.svg -e "/ADVTHEMES-BEGIN/,/ADVTHEMES-END/d"
+	sed -i $(INSTALLDIR)/www/qos-graph.svg -e "/ADVTHEMES-BEGIN/,/ADVTHEMES-END/d"
 endif
 
 # Only include Discovery helper if it is required
