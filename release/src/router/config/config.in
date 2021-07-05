@@ -293,3 +293,7 @@ config TCONFIG_OPTIMIZE_SIZE_MORE
 config TCONFIG_BONDING
 	bool "Include bonding module and link aggregation script"
 	default n
+
+config TCONFIG_MDNS
+	bool "MDNS Support"
+	default n
