@@ -632,6 +632,11 @@ const defaults_t defaults[] = {
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	"0"				},
 #endif
+#ifdef TCONFIG_MDNS
+	{ "mdns_enable",		"0"				},
+	{ "mdns_reflector",		"1"				},
+	{ "mdns_debug",			"0"				},
+#endif
 
 /* advanced-firewall */
 	{ "nf_loopback",		"0"				},
@@ -805,7 +810,7 @@ const defaults_t defaults[] = {
 	{ "ttb_css",			"example"			},	// Tomato Themes Base - default theme name
 #ifdef TCONFIG_USB
 	{ "ttb_loc",			""				},	// Tomato Themes Base - default files location
-	{ "ttb_url",			"http://www.tomatothemebase.eu/wp-content/uploads"},	// Tomato Themes Base - default URL
+	{ "ttb_url",			"http://ttb.mooo.com http://ttb.ath.cx http://ttb.ddnsfree.com"},	// Tomato Themes Base - default URL
 #endif
 	{ "web_svg",			"1"				},
 	{ "telnetd_eas",		"1"				},

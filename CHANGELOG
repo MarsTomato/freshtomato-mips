@@ -5,9 +5,10 @@ FreshTomato-MIPS Changelog
 
 
 
-2021.4          2021.06.17
---------------------------
+-2021.4          2021.06.17
+---------------------------
 
+- SDK6 MIPS (for RT-AC branch / router): fix router reboots, when connected to wifi
 - nginx: update to 1.21.0
 - libcurl: update to 7.77.0
 - snmp: update to 5.9.1
