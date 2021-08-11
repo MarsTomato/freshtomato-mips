@@ -22,6 +22,7 @@ void start_bittorrent(void)
 {
 	FILE *fp;
 	char *pb, *pc, *pd, *pe, *pf, *ph, *pi, *pj, *pk, *pl, *pm, *pn, *po, *pp, *pr, *pt, *pu;
+	char *whitelistEnabled;
 
 	/* make sure its really stop */
 	stop_bittorrent();
@@ -44,7 +45,13 @@ void start_bittorrent(void)
 	else if (nvram_match("bt_settings", "custom"))   { pk = nvram_safe_get("bt_settings_custom"); }
 	else                                             { pk = nvram_safe_get("bt_settings"); }
 
-	if (nvram_match("bt_auth", "1"))      { pl = "true"; } else { pl = "false"; }
+	if (nvram_match("bt_auth", "1")) {
+		pl = "true";
+		whitelistEnabled = "false";
+	} else {
+		pl = "false";
+		whitelistEnabled = "true";
+	}
 	if (nvram_match("bt_blocklist", "1")) { pm = "true"; } else { pm = "false"; }
 
 	if      (nvram_match("bt_binary", "internal")) { pn = "/usr/bin"; }
@@ -72,7 +79,10 @@ void start_bittorrent(void)
 	            "\"rpc-enabled\": %s, \n"
 	            "\"rpc-bind-address\": \"0.0.0.0\", \n"
 	            "\"rpc-port\": %s, \n"
-	            "\"rpc-whitelist-enabled\": false, \n"
+	            "\"rpc-whitelist\": \"*\", \n"
+	            "\"rpc-whitelist-enabled\": %s, \n"
+	            "\"rpc-host-whitelist\": \"*\", \n"
+	            "\"rpc-host-whitelist-enabled\": %s, \n"
 	            "\"rpc-username\": \"%s\", \n"
 	            "\"rpc-password\": \"%s\", \n"
 	            "\"download-dir\": \"%s\", \n"
@@ -108,6 +118,8 @@ void start_bittorrent(void)
 	            nvram_safe_get("bt_ul"),
 	            pb,
 	            nvram_safe_get("bt_port_gui"),
+	            whitelistEnabled,
+	            whitelistEnabled,
 	            nvram_safe_get("bt_login"),
 	            nvram_safe_get("bt_password"),
 	            nvram_safe_get("bt_dir"),
@@ -178,7 +190,9 @@ void start_bittorrent(void)
 		            nvram_safe_get("bt_blocklist_url"), pk,
 		            pk);
 
-	fprintf(fp, "EVENT_NOEPOLL=1; export EVENT_NOEPOLL\n"			/* crash fix? */
+	fprintf(fp, "echo 4194304 > /proc/sys/net/core/rmem_max\n"		/* tune buffers */
+	            "echo 2080768 > /proc/sys/net/core/wmem_max\n"
+	            "EVENT_NOEPOLL=1; export EVENT_NOEPOLL\n"			/* crash fix? */
 	            "CURL_CA_BUNDLE=/etc/ssl/cert.pem; export CURL_CA_BUNDLE\n"	/* workaround for missing cacert (in new curl versions) */
 	            "%s/transmission-daemon -g %s/.settings",
 	            pn,
@@ -231,6 +245,8 @@ void stop_bittorrent(void)
 		            "logger \"Transmission daemon forcefully stopped\" \n"
 		            "}\n"
 		            "/usr/bin/btcheck addcru\n"
+		            "echo 1040384 > /proc/sys/net/core/rmem_max\n" /* tune-back buffers */
+		            "echo 1040384 > /proc/sys/net/core/wmem_max\n"
 		            "exit 0\n");
 
 		fclose(fp);

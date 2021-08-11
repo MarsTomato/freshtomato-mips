@@ -921,6 +921,11 @@ div[id$="_users"] .co2 {
 	padding: 0 6px 0 1px;
 }
 
+img[id^="barnoise_"] {
+	-webkit-transform: scaleX(-1);
+	transform: scaleX(-1);
+}
+
 #dev-grid div[id^="media_"] img {
 	padding: 3px 0 0 2px;
 }
@@ -1474,6 +1479,22 @@ div#sptime {
 	background: #ff8888;
 	padding: 0 3px 0 2px;
 	border-radius: 2px;
+}
+
+.progress-wrapper {
+	padding: 0;
+}
+
+.progress-container {
+	width: 270px;
+	height: 2px;
+	border-style: none;
+	background-color: #efefef;
+}
+
+.progress-bar {
+	height: 2px;
+	border-radius: 0;
 }
 
 /* SVG */

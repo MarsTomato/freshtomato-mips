@@ -297,3 +297,7 @@ config TCONFIG_BONDING
 config TCONFIG_MDNS
 	bool "MDNS Support"
 	default n
+
+config TCONFIG_BCMWL6
+	bool "BCM WL 6"
+	default n

@@ -202,12 +202,11 @@ lg.countBridge = function (v) {
 
 lg.countOverlappingNetworks = function (ip) {
 	var data = this.getAllData();
-
 	var total = 0;
 	for (var i = 0; i < data.length; ++i) {
 		var net = getNetworkAddress(data[i][2], data[i][3]);
 		var brd = getBroadcastAddress(net, data[i][3]);
-		total += ((aton(ip) <= aton(brd)) && (aton(ip) >= aton(net))) ? 1 : 0;
+		total += (net != '0.0.0.0' ? (((aton(ip) <= aton(brd)) && (aton(ip) >= aton(net))) ? 1 : 0) : 0);
 	}
 
 	return total;
@@ -1258,6 +1257,8 @@ REMOVE-END */
 			m_mode.options[2].disabled = 0;
 			m_mode.options[3].disabled = 1;
 			m_mode.options[4].disabled = 1;
+/* remove wl securtiy setup restriction and let tomato user decide. no need to force auto WPA/WPA2 */
+/* REMOVE-BEGIN
 			var s_mode = E('_'+sta_wl+'_security_mode');
 			s_mode.options[2].disabled = 1;
 			s_mode.options[3].disabled = 1;
@@ -1268,7 +1269,7 @@ REMOVE-END */
 
 			if (s_mode.options[3].selected || s_mode.options[5].selected)
 				s_mode.options[7].selected = 1;
-
+REMOVE-END */
 			for (i = uidx+1; i <= curr_mwan_num; ++i) {
 				if (E('_wan'+u+'_sta').value == E('_wan'+i+'_sta').value) {
 					ferror.set('_wan'+i+'_sta', 'Wireless Client mode can be set only to one WAN port', quiet || !ok);
@@ -1463,7 +1464,6 @@ function save() {
 
 	var d = lg.getAllData();
 	for (var i = 0; i < d.length; ++i) {
-
 		if (lg.countOverlappingNetworks(d[i][2]) > 1) {
 			var s = 'Cannot proceed: two or more LAN bridges have conflicting IP addresses or overlapping subnets';
 			alert(s);
@@ -1506,8 +1506,8 @@ REMOVE-END */
 
 	var e = E('footer-msg');
 	var t = fixIP(fom['lan_ipaddr'].value);
-	if ((fom['lan_ifname'].value != 'br0') || (fom['lan_ipaddr'].value == '0.0.0.0') || (!t)) {
-		e.innerHTML = 'Bridge br0 must be always defined and have a valid IP address set.';
+	if ((fom['lan_ifname'].value != 'br0') || (!t)) {
+		e.innerHTML = 'Bridge br0 must be always defined.';
 		e.style.display = 'inline-block';
 		setTimeout(
 			function() {

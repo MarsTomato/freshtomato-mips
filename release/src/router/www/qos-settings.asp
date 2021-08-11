@@ -103,7 +103,7 @@ function verifyFields(focused, quiet) {
 	f = E('t_fom').elements;
 	b = !E('_f_qos_enable').checked;
 	for (i = 0; i < f.length; ++i) {
-		if ((f[i].name.substr(0, 1) != '_') && (f[i].type != 'button') && (f[i].name.indexOf('enable') == -1) && (f[i].name.indexOf('ne_v') == -1) && (f[i].name.indexOf('header') == -1) && (f[i].name.indexOf('header') == -1))
+		if ((f[i].name.substr(0, 1) != '_') && (f[i].type != 'button') && (f[i].name.indexOf('enable') == -1) && (f[i].name.indexOf('ne_v') == -1) && (f[i].name.indexOf('header') == -1))
 			f[i].disabled = b;
 	}
 
@@ -343,7 +343,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">QoS Class Names <small><i><a href="javascript:toggleVisibility(cprefix,'classnames');"><span id="sesdiv_classnames_showhide">(Click here to show)</span></a></i></small></div>
+<div class="section-title">QoS Class Names <small><i><a href="javascript:toggleVisibility(cprefix,'classnames');"><span id="sesdiv_classnames_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_classnames" style="display:none">
 	<script>
 		if ((v = nvram.qos_classnames.match(/^(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)$/)) == null)

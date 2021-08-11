@@ -876,8 +876,9 @@ void generate_mdns_config(void)
 	/* set [server] configuration */
 	fprintf(fp, "[Server]\n"
 	            "use-ipv4=yes\n"
-	            "use-ipv6=no\n"
+	            "use-ipv6=%s\n"
 	            "deny-interfaces=%s",
+	            ipv6_enabled() ? "yes" : "no",
 	            nvram_safe_get("wan_ifname"));
 
 	wan2_ifname = nvram_safe_get("wan2_ifname");
@@ -901,13 +902,13 @@ void generate_mdns_config(void)
 	fprintf(fp, "\n[publish]\n"
 	            "publish-hinfo=yes\n"
 	            "publish-a-on-ipv6=no\n"
-	            "publish-aaaa-on-ipv4=no\n");
+	            "publish-aaaa-on-ipv4=%s\n",
+	            ipv6_enabled() ? "yes" : "no");
 
 	/* set [reflector] configuration */
-	if (nvram_get_int("mdns_reflector")) {
-		fprintf(fp, "\n[reflector]\n"
-		            "enable-reflector=yes\n");
-	}
+	fprintf(fp, "\n[reflector]\n");
+	if (nvram_get_int("mdns_reflector"))
+		fprintf(fp, "enable-reflector=yes\n");
 
 	/* set [rlimits] configuration */
 	fprintf(fp, "\n[rlimits]\n"
@@ -1109,6 +1110,8 @@ void dns_to_resolv(void)
 
 void start_httpd(void)
 {
+	int ret;
+
 	if (getpid() != 1) {
 		start_service("httpd");
 		return;
@@ -1131,8 +1134,13 @@ void start_httpd(void)
 	else
 		chdir("/www");
 
-	eval("httpd", (nvram_get_int("http_nocache") ? "-N" : ""));
+	ret = eval("httpd", (nvram_get_int("http_nocache") ? "-N" : ""));
 	chdir("/");
+
+	if (ret)
+		logmsg(LOG_ERR, "starting httpd failed ...");
+	else
+		logmsg(LOG_INFO, "httpd is started");
 }
 
 void stop_httpd(void)
@@ -1142,7 +1150,10 @@ void stop_httpd(void)
 		return;
 	}
 
-	killall_tk_period_wait("httpd", 50);
+	if (pidof("httpd") > 0) {
+		killall_tk_period_wait("httpd", 50);
+		logmsg(LOG_INFO, "httpd is stopped");
+	}
 }
 
 #ifdef TCONFIG_IPV6
@@ -3226,6 +3237,9 @@ void stop_services(void)
 #ifdef TCONFIG_NFS
 	stop_nfs();
 #endif
+#ifdef TCONFIG_MDNS
+	stop_mdns();
+#endif
 #ifdef TCONFIG_USB
 	restart_nas_services(1, 0); /* Samba, FTP and Media Server */
 #endif
@@ -3246,9 +3260,6 @@ void stop_services(void)
 	stop_cifs();
 	stop_httpd();
 	stop_dnsmasq();
-#ifdef TCONFIG_MDNS
-	stop_mdns();
-#endif
 #ifdef TCONFIG_ZEBRA
 	stop_zebra();
 #endif
@@ -3746,10 +3757,10 @@ TOP:
 			stop_pppoerelay();
 #endif
 			stop_httpd();
-			stop_dnsmasq();
 #ifdef TCONFIG_MDNS
 			stop_mdns();
 #endif
+			stop_dnsmasq();
 			stop_nas();
 			stop_wan();
 			stop_arpbind();
@@ -3776,9 +3787,15 @@ TOP:
 		goto CLEAR;
 	}
 
-	if ((strcmp(service, "wireless") == 0) || (strcmp(service, "wl") == 0)) {
+	if ((strcmp(service, "wireless") == 0) || (strcmp(service, "wl") == 0)) { /* for tomato user --> 'service wl start' will restart wl allways (failsafe, even if wl was not stopped!) */
 		if (act_stop) stop_wireless();
 		if (act_start) restart_wireless();
+		goto CLEAR;
+	}
+
+	if (strcmp(service, "wlgui") == 0) { /* for GUI to restart wireless (only stop wl once!) */
+		if (act_stop) stop_wireless();
+		if (act_start) start_wireless();
 		goto CLEAR;
 	}
 

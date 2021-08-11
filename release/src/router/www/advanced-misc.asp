@@ -93,7 +93,7 @@ function save() {
 			null,
 /* CTF-END */
 /* BCMNAT-BEGIN */
-			{ title: 'Broadcom FastNAT (bcm_nat)', name: 'f_bcmnat_disable', type: 'checkbox', value: nvram.bcmnat_disable != '1', suffix: ' <small>disables BW Limiter; using QoS disables this module!<\/small>' },
+			{ title: 'Broadcom FastNAT (bcm_nat)', name: 'f_bcmnat_disable', type: 'checkbox', value: nvram.bcmnat_disable != '1', suffix: ' <small>disables BW Limiter; using QoS or Access Restriction disables this module!<\/small>' },
 /* BCMNAT-END */
 			{ title: 'Enable Jumbo Frames *', name: 'f_jumbo_frame_enable', type: 'checkbox', value: nvram.jumbo_frame_enable != '0', hidden: !et1000 },
 			{ title: 'Jumbo Frame Size *', name: 'jumbo_frame_size', type: 'text', maxlen: 4, size: 6, value: fixInt(nvram.jumbo_frame_size, 1, 9720, 2000),
