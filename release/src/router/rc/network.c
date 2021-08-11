@@ -512,11 +512,10 @@ void stop_lan_wl(void)
 #ifdef CONFIG_BCMWL5
 	int unit, subunit;
 #endif
-
-	eval("ebtables", "-F");
-
 	char tmp[32];
 	char br;
+
+	eval("ebtables", "-F");
 
 	for(br=0 ; br<4 ; br++) {
 		char bridge[2] = "0";
@@ -1329,14 +1328,15 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 {
 	int i;
 	char s[32], f[64];
-	char *ifname;
+	char ifname[16];
+	char *amode, sec[16];
 
 	int *unit_filter = param;
 	if (*unit_filter >= 0 && *unit_filter != unit) return 0;
 
 	if (!nvram_get_int(wl_nvname("radio", unit, 0)) || !wl_client(unit, subunit)) return 0;
 
-	ifname = nvram_safe_get(wl_nvname("ifname", unit, subunit));
+	snprintf(ifname, sizeof(ifname), "%s", nvram_safe_get(wl_nvname("ifname", unit, subunit)));
 
 	/* skip disabled wl vifs */
 	if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.') &&
@@ -1367,8 +1367,11 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 			}
 			else {
 				eval("wl", "-i", ifname, "disassoc");
-#ifdef CONFIG_BCMWL5
-				char *amode, *sec = nvram_safe_get(wl_nvname("akm", unit, subunit));
+
+				if (!strlen(nvram_safe_get(wl_nvname("ssid", unit, subunit))))
+					break;
+
+				snprintf(sec, sizeof(sec), "%s", nvram_safe_get(wl_nvname("akm", unit, subunit)));
 
 				if (strstr(sec, "psk2")) amode = "wpa2psk";
 				else if (strstr(sec, "psk")) amode = "wpapsk";
@@ -1377,11 +1380,8 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 				else if (nvram_get_int(wl_nvname("auth", unit, subunit))) amode = "shared";
 				else amode = "open";
 
-				eval("wl", "-i", ifname, "join", nvram_safe_get(wl_nvname("ssid", unit, subunit)),
-					"imode", "bss", "amode", amode);
-#else
-				eval("wl", "-i", ifname, "join", nvram_safe_get(wl_nvname("ssid", unit, subunit)));
-#endif
+				eval("wl", "-i", ifname, "join", nvram_safe_get(wl_nvname("ssid", unit, subunit)), "imode", "bss", "amode", amode);
+
 				stacheck = STACHECK_DISCONNECT;
 			}
 			sleep(stacheck);

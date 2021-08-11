@@ -585,6 +585,7 @@ define BusyboxOptions
 		sed -i "s/# CONFIG_TIME is not set/CONFIG_TIME=y/g" $(1); \
 		sed -i "s/# CONFIG_GETOPT is not set/CONFIG_GETOPT=y/g" $(1); \
 		sed -i "s/# CONFIG_FEATURE_GETOPT_LONG is not set/CONFIG_FEATURE_GETOPT_LONG=y/g" $(1); \
+		sed -i "s/# CONFIG_DIFF is not set/CONFIG_DIFF=y/g" $(1); \
 	fi; \
 	)
 endef

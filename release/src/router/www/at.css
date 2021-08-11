@@ -747,6 +747,10 @@ img[id*="_off"] {
 	opacity: 0.35;
 }
 
+img[id^="barnoise_"] {
+	margin-right: 8px;
+}
+
 div[id^="vport_"] {
 	width: 55%;
 }
@@ -2295,6 +2299,22 @@ div.tomato-grid.container-div br {
 div#sptime {
 	background: #991111;
 	color: #fff;
+}
+
+.progress-wrapper {
+	padding: 2px 0 2px 0;
+}
+
+.progress-container {
+	width: 310px;
+	height: 6px;
+	border-radius: 3px;
+	background-color: var(--tomato-container-background);
+}
+
+.progress-bar {
+	height: 6px;
+	border-radius: 3px 0 0 3px;
 }
 
 /* SVG */

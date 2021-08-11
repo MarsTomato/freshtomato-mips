@@ -716,7 +716,6 @@ const defaults_t defaults[] = {
 	{ "dmz_enable",			"0"				},
 	{ "dmz_ipaddr",			"0"				},
 	{ "dmz_sip",			""				},
-	{ "dmz_ifname",			"br0"				},
 	{ "dmz_ra",			"1"				},
 
 /* forward-upnp */

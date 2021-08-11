@@ -1183,7 +1183,7 @@ dhcpv6-clean:
 wsdd2: shared
 	$(call patch_files,wsdd2)
 	@$(SEP)
-	@$(MAKE) CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -DTOMATO -I$(TOP)/shared" LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" -C $@
+	@$(MAKE) CFLAGS="-Os -Wall -std=gnu99 $(EXTRACFLAGS) -ffunction-sections -fdata-sections -DTOMATO -I$(TOP)/shared" LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" -C $@
 
 wsdd2-install:
 	install -D wsdd2/wsdd2 $(INSTALLDIR)/wsdd2/usr/sbin/wsdd2
@@ -1878,6 +1878,7 @@ libxml2-clean:
 libpng/stamp-h1:
 	cd libpng && \
 		CFLAGS="-Os -Wall -I$(TOP)/zlib $(EXTRACFLAGS)" \
+		CPPFLAGS="-I$(TOP)/zlib" \
 		LDFLAGS="-L$(TOP)/zlib" \
 		$(CONFIGURE) --prefix=/usr --enable-static --enable-shared
 	@touch $@
@@ -1888,16 +1889,11 @@ libpng: libpng/stamp-h1
 	@$(MAKE) -C libpng DESTDIR=$(TOP)/libpng/staged install
 
 libpng-install:
-	install -D libpng/.libs/libpng.so.3.59.0 $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.59.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng.so.3.59.0
+	install -D libpng/.libs/libpng16.so.16.37.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.37.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.37.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng.so.3.59.0 libpng.so && \
-		ln -sf libpng.so.3.59.0 libpng.so.3
-	install -D libpng/.libs/libpng12.so.0.59.0 $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.59.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng12.so.0.59.0
-	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng12.so.0.59.0 libpng12.so && \
-		ln -sf libpng12.so.0.59.0 libpng12.so.0
+		ln -sf libpng16.so.16.37.0 libpng16.so && \
+		ln -sf libpng16.so.16.37.0 libpng16.so.16
 
 libpng-clean:
 	-@$(MAKE) -C libpng clean
@@ -2876,6 +2872,7 @@ sd-idle-clean:
 	-@$(MAKE) -C sd-idle clean
 
 iperf/stamp-h1:
+	$(call patch_files,iperf)
 	cd iperf && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
 		ac_cv_func_clock_gettime="no" \
@@ -2885,7 +2882,6 @@ iperf/stamp-h1:
 
 iperf: iperf/stamp-h1
 	@$(SEP)
-	$(call patch_files,iperf)
 	$(MAKE) -C iperf
 
 iperf-install:

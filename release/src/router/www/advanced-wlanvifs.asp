@@ -24,6 +24,7 @@
 <script src="tomato.js"></script>
 <script src="md5.js"></script>
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script src="status-data.jsx?_http_id=<% nv(http_id); %>"></script>
 <script src="interfaces.js"></script>
 <script src="wireless.js"></script>
 
@@ -1335,7 +1336,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="advanced-wlanvifs.asp">
 <input type="hidden" name="_nextwait" value="10">
-<input type="hidden" name="_service" value="wireless-restart">
+<input type="hidden" name="_service" value="wlgui-restart">
 <input type="hidden" name="_force_commit" value="1">
 <input type="hidden" name="lan_ifnames" value="">
 <input type="hidden" name="lan1_ifnames" value="">
@@ -1360,13 +1361,13 @@ function init() {
 
 <!-- / / / -->
 
-		<div class="section-title">Wireless Interfaces Details <small><i><a href="javascript:toggleVisibility(cprefix,'details');"><span id="sesdiv_details_showhide">(Click here to show)</span></a></i></small></div>
+		<div class="section-title">Wireless Interfaces Details <small><i><a href="javascript:toggleVisibility(cprefix,'details');"><span id="sesdiv_details_showhide">(Show)</span></a></i></small></div>
 		<div class="section" id="sesdiv_details" style="display:none">
 			<script>
 				for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 					if (wl_sunit(uidx) < 0) {
 						var c = [];
-						c.push({ title: 'Interface', text: wl_display_ifname(uidx) });
+						c.push({ title: 'Interface'+(wlstats[uidx].radio ? '' : '&nbsp; &nbsp;<span style="color:red">Disabled<\/span>'), text: wl_display_ifname(uidx) });
 						c.push({ title: 'Virtual Interfaces', indent: 2, rid: 'wl'+wl_fface(uidx)+'_vifs', text: 'wl'+wl_fface(uidx)+' '+nvram['wl'+wl_fface(uidx)+'_vifs']+' <small>(max '+wl_ifaces[uidx][7]+')<\/small>' });
 						createFieldTable('',c);
 					}
@@ -1376,7 +1377,7 @@ function init() {
 
 <!-- / / / -->
 
-		<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Click here to show)</span></a></i></small></div>
+		<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 		<div class="section" id="sesdiv_notes" style="display:none">
 			<ul>
 				<li><b>Interface</b> - Wireless VIF name.</li>
