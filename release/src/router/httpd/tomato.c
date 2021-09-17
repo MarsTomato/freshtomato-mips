@@ -287,7 +287,6 @@ const struct mime_handler mime_handlers[] = {
 	{ "stats/*.gz",			NULL,					0,	wi_generic,		wo_statsbackup,		1 },
 	{ "stats/restore.cgi",		NULL,					0,	wi_statsrestore,	wo_statsrestore,	1 },
 
-	{ "logs/view.cgi",		NULL,					0,	wi_generic,		wo_viewlog,		1 },
 	{ "logs/*.txt",			NULL,					0,	wi_generic,		wo_syslog,		1 },
 	{ "webmon_**",			NULL,					0,	wi_generic,		wo_syslog,		1 },
 
@@ -374,6 +373,7 @@ const aspapi_t aspapi[] = {
 	{ "ctrate",			asp_ctrate			},
 	{ "ddnsx",			asp_ddnsx			},
 	{ "devlist",			asp_devlist			},
+	{ "showlog",			asp_showsyslog			},
 	{ "webmon",			asp_webmon			},
 	{ "dhcpc_time",			asp_dhcpc_time			},
 	{ "dns",			asp_dns				},
@@ -864,7 +864,7 @@ static const nvset_t nvset_list[] = {
 
 	// wireless
 	{ "wl_radio",			V_01				},
-	{ "wl_mode",			V_LENGTH(2, 3)			},	// ap, sta, wet, wds
+	{ "wl_mode",			V_LENGTH(2, 4)			},	/* ap, sta, wet, wds, psta */
 	{ "wl_net_mode",		V_LENGTH(5, 8)			},	// disabled, mixed, b-only, g-only, bg-mixed, n-only [speedbooster]
 	{ "wl_ssid",			V_LENGTH(1, 32)			},
 	{ "wl_closed",			V_01				},
@@ -1382,6 +1382,7 @@ static const nvset_t nvset_list[] = {
 	{ "log_mark",			V_RANGE(0, 99999)		},
 	{ "log_events",			V_TEXT(0, 32)			},	// "acre,crond,ntp"
 	{ "log_dropdups",		V_01				},	/* drop duplicates? */
+	{ "log_min_level",		V_RANGE(1, 8)			},	/* minimum log level */
 
 // admin-log-webmonitor
 	{ "log_wm",			V_01				},

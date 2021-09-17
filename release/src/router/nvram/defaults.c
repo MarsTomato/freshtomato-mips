@@ -362,12 +362,13 @@ const defaults_t defaults[] = {
 	{ "wl_ssid",			"FreshTomato24"			},	// Service set ID (network name)
 	{ "wl1_ssid",			"FreshTomato50"			},
 	{ "wl_country_code",		""				},	// Country (default obtained from driver)
+	{ "wl_country_rev",		""				},	/* Regrev Code (default obtained from driver) */
 	{ "wl_radio",			"1"				},	// Enable (1) or disable (0) radio
 	{ "wl1_radio",			"1"				},	// Enable (1) or disable (0) radio
 	{ "wl_closed",			"0"				},	// Closed (hidden) network
 	{ "wl_ap_isolate",		"0"				},	// AP isolate mode
 	{ "wl_mode",			"ap"				},	// AP mode (ap|sta|wds)
-	{ "wl_lazywds",			"1"				},	// Enable "lazy" WDS mode (0|1)
+	{ "wl_lazywds",			"0"				},	/* Enable "lazy" WDS mode (0|1) */
 	{ "wl_wds",			""				},	// xx:xx:xx:xx:xx:xx ...
 	{ "wl_wds_timeout",		"1"				},	// WDS link detection interval defualt 1 sec*/
 	{ "wl_wep",			"disabled"			},	// WEP data encryption (enabled|disabled)
@@ -378,6 +379,7 @@ const defaults_t defaults[] = {
 	{ "wl_key3",			""				},	// 5/13 char ASCII or 10/26 char hex
 	{ "wl_key4",			""				},	// 5/13 char ASCII or 10/26 char hex
 	{ "wl_channel",			"6"				},	// Channel number
+	{ "wl_assoc_retry_max",		"3"				},	/* Non-zero limit for association retries */
 	{ "wl1_channel",		"0"				},
 	{ "wl_rate",			"0"				},	// Rate (bps, 0 for auto)
 	{ "wl_mrate",			"0"				},	// Mcast Rate (bps, 0 for auto)
@@ -460,7 +462,7 @@ const defaults_t defaults[] = {
 	{ "wl_nbw",			"40"				},	// BW: 20 / 40 MHz
 	{ "wl_nbw_cap",			"1"				},	// BW: def 20inB and 40inA
 	{ "wl_mimo_preamble",		"mm"				},	// 802.11n Preamble: mm/gf/auto/gfbcm
-	{ "wl_nctrlsb",			"upper"				},	// N-CTRL SB (none/lower/upper)
+	{ "wl_nctrlsb",			"lower"				},	/* N-CTRL SB (none/lower/upper) */
 	{ "wl_nmode_protection",	"off"				},	// 802.11n RTS/CTS protection (off|auto)
 	{ "wl_rxstreams",		"0"				},	// 802.11n Rx Streams, 0 is invalid, WLCONF will change it to a radio appropriate default
 	{ "wl_txstreams",		"0"				},	// 802.11n Tx Streams 0, 0 is invalid, WLCONF will change it to a radio appropriate default
@@ -486,17 +488,27 @@ const defaults_t defaults[] = {
 	{ "wl_ampdu_rr_rtylimit_tid",	"2 2 2 2 2 2 2 2"		},	// Default AMPDU regular rate retry limit per-tid setting
 	{ "wl_amsdu",			"auto"				},	// Default AMSDU setting
 	/* power save */
+#ifdef TCONFIG_BCMWL6
+	{ "wl_bss_opmode_cap_reqd",	"0"				},	/* 0 == no requirements on joining devices */
+#endif
+
 	{ "wl_rxchain_pwrsave_enable",	"0"				},	// Rxchain powersave enable
 	{ "wl_rxchain_pwrsave_quiet_time","1800"			},	// Quiet time for power save
 	{ "wl_rxchain_pwrsave_pps",	"10"				},	// Packets per second threshold for power save
+	{ "wl_rxchain_pwrsave_stas_assoc_check", "1"			},	/* STAs associated before powersave */
 	{ "wl_radio_pwrsave_enable",	"0"				},	// Radio powersave enable
 	{ "wl_radio_pwrsave_quiet_time","1800"				},	// Quiet time for power save
 	{ "wl_radio_pwrsave_pps",	"10"				},	// Packets per second threshold for power save
-	{ "wl_radio_pwrsave_on_time",	"50"				},	// Radio on time for power save
+	{ "wl_radio_pwrsave_level",	"0"				},	/* Radio power save level */
+	{ "wl_radio_pwrsave_stas_assoc_check", "1"			},	/* STAs associated before powersave */
+	{ "acs_mode",			"legacy"			},	/* Legacy mode if ACS is enabled */
+	{ "acs_2g_ch_no_restrict",	"1"				},	/* 0: only pick from channel 1, 6, 11 */
+	{ "acs_no_restrict_align",	"1"				},	/* 0: only aligned chanspec(few) can be picked (non-20Hz) */
 	/* misc */
 	{ "wl_wmf_bss_enable",		"0"				},	// Wireless Multicast Forwarding Enable/Disable
 	{ "wl_rifs_advert",		"auto"				},	// RIFS mode advertisement
-	{ "wl_stbc_tx",			"auto"				},	// Default STBC TX setting
+	{ "wl_stbc_tx",			"auto"				},	/* Default STBC TX setting */
+	{ "wl_stbc_rx", 		"1"				},	/* Default STBC RX setting */
 	{ "wl_mcast_regen_bss_enable",	"1"				},	// MCAST REGEN Enable/Disable
 #endif
 
@@ -590,7 +602,7 @@ const defaults_t defaults[] = {
 #if defined(TCONFIG_NVRAM_32K) || defined(TCONFIG_OPTIMIZE_SIZE_MORE)
 	{ "adblock_blacklist",		""				},
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/iplist.txt<DoH servers>"},
+	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/iplist.txt<DoH servers>"},
 #endif
 	{ "adblock_blacklist_custom",	""				},
 	{ "adblock_whitelist",		""				},
@@ -896,6 +908,7 @@ const defaults_t defaults[] = {
 	{ "log_mark",			"60"				},
 	{ "log_events",			""				},
 	{ "log_dropdups",		"0"				},
+	{ "log_min_level",		"8"				},
 
 /* admin-log-webmonitor */
 	{ "log_wm",			"0"				},

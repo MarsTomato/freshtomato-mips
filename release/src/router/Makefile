@@ -65,6 +65,10 @@ endef
 SEP=`$(eval progress=$(shell echo $$(($(progress)+1))))` \
 printf "\n\033[41;1m   $@ ${progress}$\/${totalSteps} \033[0m\033]2;Building $@ ${progress}$\/${totalSteps}\007\n"
 
+ifeq ($(TCONFIG_BCMWL6),y)
+export CFLAGS += -DTRAFFIC_MGMT
+export CFLAGS += -DTRAFFIC_MGMT_RSSI_POLICY
+endif
 
 ifeq ($(TCONFIG_OPTIMIZE_SIZE),y)
 OPTSIZE_FLAG :=

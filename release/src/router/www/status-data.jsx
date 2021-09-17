@@ -37,8 +37,8 @@ if (typeof(last_wan_proto) == 'undefined')
 else if (last_wan_proto != nvram.wan_proto)
 	reloadPage();
 
-stats.flashsize = sysinfo.flashsize+'MB';
-stats.cpumhz = sysinfo.cpuclk+'MHz';
+stats.flashsize = sysinfo.flashsize+' MB';
+stats.cpumhz = sysinfo.cpuclk+' MHz';
 stats.cputemp = sysinfo.cputemp+'°';
 stats.systemtype = sysinfo.systemtype;
 stats.cfeversion = sysinfo.cfeversion;

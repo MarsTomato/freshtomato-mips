@@ -7,6 +7,10 @@ ifeq ($(TOMATO_EXPERIMENTAL),1)
 export CFLAGS += -DDEBUG_LOGMSG
 endif
 
+ifeq ($(TCONFIG_BCMWL6),y)
+CFLAGS += -DTRAFFIC_MGMT
+endif
+
 LDFLAGS = --gc-sections -fPIC
 
 OBJS = shutils.o wl.o wl_linux.o linux_timer.o defaults.o id.o misc.o \

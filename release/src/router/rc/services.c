@@ -104,6 +104,13 @@ static int is_wet(int idx, int unit, int subunit, void *param)
 	return nvram_match(wl_nvname("mode", unit, subunit), "wet");
 }
 
+#ifdef TCONFIG_BCMWL6
+static int is_psta(int idx, int unit, int subunit, void *param)
+{
+	return nvram_match(wl_nvname("mode", unit, subunit), "psta");
+}
+#endif /* TCONFIG_BCMWL6 */
+
 void start_dnsmasq()
 {
 	FILE *f, *hf;
@@ -144,11 +151,19 @@ void start_dnsmasq()
 
 	stop_dnsmasq();
 
-	/* check wireless bridge after stop_dnsmasq() */
+	/* check wireless ethernet bridge (wet) after stop_dnsmasq() */
 	if (foreach_wif(1, NULL, is_wet)) {
 		logmsg(LOG_WARNING, "Starting dnsmasq is skipped due to the WEB mode enabled");
 		return;
 	}
+	
+#ifdef TCONFIG_BCMWL6
+	/* check media bridge (psta) after stop_dnsmasq() */
+	if (foreach_wif(1, NULL, is_psta)) {
+		logmsg(LOG_WARNING, "Starting dnsmasq is skipped due to the Media Bridge mode enabled");
+		return;
+	}
+#endif /* TCONFIG_BCMWL6 */
 
 	if ((f = fopen(DNSMASQ_CONF, "w")) == NULL) {
 		perror(DNSMASQ_CONF);
@@ -1777,7 +1792,7 @@ void stop_zebra(void)
 
 void start_syslog(void)
 {
-	char *argv[18];
+	char *argv[20];
 	int argc;
 	char *nv;
 	char *b_opt = "";
@@ -1789,6 +1804,7 @@ void start_syslog(void)
 	char *rot_keep = "1";
 	char *log_file_path;
 	char log_default[] = "/var/log/messages";
+	char *log_min_level;
 
 	argv[0] = "syslogd";
 	argc = 1;
@@ -1872,6 +1888,10 @@ void start_syslog(void)
 			argv[argc++] = "-b";
 			argv[argc++] = rot_keep;
 		}
+
+		log_min_level = nvram_safe_get("log_min_level");
+		argv[argc++] = "-l";
+		argv[argc++] = log_min_level;
 	}
 
 	if (argc > 1) {
@@ -2607,7 +2627,7 @@ void enable_gro(int interval)
 }
 #endif
 
-static void start_samba(void)
+void start_samba(void)
 {
 	FILE *fp;
 	DIR *dir = NULL;
@@ -2859,7 +2879,7 @@ static void start_samba(void)
 	}
 }
 
-static void stop_samba(void)
+void stop_samba(void)
 {
 	if (getpid() != 1) {
 		stop_service("smbd");

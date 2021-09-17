@@ -216,6 +216,9 @@ endif
 # Only for BCMWL6 SDK / RT-AC branch
 ifneq ($(CONFIG_BCMWL6),y)
 	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
+	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-wlanvifs.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
+	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
 endif
 
 # Only include SSH stuff when needed
@@ -396,7 +399,16 @@ ifneq ($(TCONFIG_MDNS),y)
 	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/MDNS-BEGIN/,/MDNS-END/d"
 endif
 
-# Clean-up compiler directives
+# Only include the QR Code page if it is compiled in
+ifneq ($(TCONFIG_QRCODE),y)
+	rm -f $(INSTALLDIR)/www/tools-qr.asp
+	rm -f $(INSTALLDIR)/www/html5-qrcode.js
+	rm -f $(INSTALLDIR)/www/qrcode.js
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/QRCODE-BEGIN/,/QRCODE-END/d"
+	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/QRCODE-BEGIN/,/QRCODE-END/d"
+endif
+
+# clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \
 		[ -f $(INSTALLDIR)/www/$$F ] && sed -i $$F \
@@ -446,6 +458,7 @@ endif
 		-e "/SSH-BEGIN/d"	-e "/SSH-END/d" \
 		-e "/DISCOVERY-BEGIN/d"	-e "/DISCOVERY-END/d" \
 		-e "/MDNS-BEGIN/d"	-e "/MDNS-END/d" \
+		-e "/QRCODE-BEGIN/d"	-e "/QRCODE-END/d" \
 		|| true; \
 	done
 

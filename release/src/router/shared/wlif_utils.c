@@ -271,7 +271,8 @@ wl_wlif_is_psta(char *ifname)
 	if (wl_probe(ifname) < 0)
 		return FALSE;
 
-	wl_iovar_getint(ifname, "psta_if", &psta);
+	if (wl_iovar_getint(ifname, "psta_if", &psta) < 0)
+		return FALSE;
 
 	return psta ? TRUE : FALSE;
 }
