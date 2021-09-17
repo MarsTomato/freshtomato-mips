@@ -39,6 +39,7 @@ var updateWWANTimers = [], customStatusTimers = [], show_dhcpc = [], show_codi =
 
 <script>
 var cprefix = 'status_overview';
+var u;
 nphy = features('11n');
 
 var ref = new TomatoRefresh('status-data.jsx?_http_id=<% nv(http_id); %>', '', 5, cprefix+'_refresh');
@@ -68,7 +69,7 @@ foreach_wwan(function(i) {
 /* USB-END */
 
 for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
-	var u = (uidx > 1) ? uidx : '';
+	u = (uidx > 1) ? uidx : '';
 
 	if (nvram['wan'+u+'_status_script'] == 1) {
 		customStatusTimers[uidx - 1] = new TomatoRefresh('/user/cgi-bin/wan'+u+'_status.sh', null, 15, '', 1);
@@ -151,6 +152,7 @@ function wan_disconnect(uidx) {
 }
 
 function onRefToggle() {
+	var u;
 	ref.toggle();
 	if (!ref.running) {
 /* USB-BEGIN */
@@ -160,7 +162,7 @@ function onRefToggle() {
 		}
 /* USB-END */
 		for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
-			var u = (uidx > 1) ? uidx : '';
+			u = (uidx > 1) ? uidx : '';
 			if (nvram['wan'+u+'_status_script'] == 1) {
 				if (customStatusTimers[uidx - 1].running)
 					customStatusTimers[uidx - 1].stop();
@@ -173,7 +175,7 @@ function onRefToggle() {
 			updateWWANTimers[i].toggle();
 /* USB-END */
 		for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
-			var u = (uidx > 1) ? uidx : '';
+			u = (uidx > 1) ? uidx : '';
 			if (nvram['wan'+u+'_status_script'] == 1)
 				customStatusTimers[uidx - 1].toggle();
 		}
@@ -295,7 +297,8 @@ function show() {
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 
-		elem.display('wan'+u+'-title', 'sesdiv_wan'+u, (nvram['wan'+u+'_proto'] != 'disabled'));
+		if (nvram['wan'+u+'_proto'] == 'disabled') /* disabled? */
+			elem.display('wan'+u+'-title', 'sesdiv_wan'+u, (nvram['wan'+u+'_proto'] != 'disabled'));
 
 		c('wan'+u+'ip', stats.wanip[uidx - 1]);
 		c('wan'+u+'netmask', stats.wannetmask[uidx - 1]);
@@ -350,7 +353,8 @@ function show() {
 		}
 		else {
 				/* do not display any virtual interface linked to the chip/frequency that is disabled */
-				elem.display('wl'+wl_fface(uidx)+'-title', 'sesdiv_wl_'+wl_fface(uidx), wlstats[uidx].radio);
+				if (!wlstats[uidx].radio) /* disabled? */
+					elem.display('wl'+wl_fface(uidx)+'-title', 'sesdiv_wl_'+wl_fface(uidx), wlstats[uidx].radio);
 		}
 		c('ifstatus'+uidx, wlstats[uidx].ifstatus || '');
 	}
@@ -481,7 +485,7 @@ function init() {
 	});
 /* USB-END */
 	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
-		var u = (uidx > 1) ? uidx : '';
+		u = (uidx > 1) ? uidx : '';
 		W('<div class="section-title" id="wan'+u+'-title">WAN'+(uidx - 1)+' <small><i><a href="javascript:toggleVisibility(cprefix,\'wan'+u+'\');"><span id="sesdiv_wan'+u+'_showhide">(Hide)<\/span><\/a><\/i><\/small><\/div>');
 		W('<div class="section" id="sesdiv_wan'+u+'">');
 		createFieldTable('', [
@@ -602,6 +606,9 @@ function init() {
 			{ title: 'Channel Width', rid: 'nbw'+uidx, text: wlstats[uidx].nbw, ignore: ((!nphy) || (wl_sunit(uidx) >= 0)) },
 			{ title: 'Interference Level', rid: 'interference'+uidx, text: stats.interference[uidx], ignore: (wl_sunit(uidx) >= 0) },
 			{ title: 'Rate', rid: 'rate'+uidx, text: wlstats[uidx].rate, ignore: (wl_sunit(uidx) >= 0) },
+/* QRCODE-BEGIN */
+			{ title: ' ', rid: 'qr-code'+uidx, text: '<a href="tools-qr.asp?wl='+wl_unit(uidx)+(wl_sunit(uidx) >= 0 ? '.'+wl_sunit(uidx) : '')+'">Show QR code<\/a>' },
+/* QRCODE-END */
 			{ title: 'RSSI', rid: 'rssi'+uidx, text: wlstats[uidx].rssi || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) },
 			{ title: 'Noise', rid: 'noise'+uidx, text: wlstats[uidx].noise || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) },
 			{ title: 'Signal Quality', rid: 'qual'+uidx, text: stats.qual[uidx] || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) }
