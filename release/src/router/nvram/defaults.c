@@ -100,6 +100,7 @@ const defaults_t defaults[] = {
 	{ "wan_status_script",		"0"				},
 #endif
 	{ "wan_ckmtd",			"2"				},
+	{ "wan_ck_pause",		"0"				},	/* skip watchdog for this wan 0|1 */
 
 	{ "wan2_proto",			"dhcp"				},	// [static|dhcp|pppoe|disabled]
 	{ "wan2_ipaddr",		"0.0.0.0"			},	// WAN IP address
@@ -116,6 +117,7 @@ const defaults_t defaults[] = {
 	{ "wan2_status_script",		"0"				},
 #endif
 	{ "wan2_ckmtd",			"2"				},
+	{ "wan2_ck_pause",		"0"				},	/* skip watchdog for this wan 0|1 */
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_proto",			"dhcp"				},	// [static|dhcp|pppoe|disabled]
@@ -133,6 +135,7 @@ const defaults_t defaults[] = {
 	{ "wan3_status_script",		"0"				},
 #endif
 	{ "wan3_ckmtd",			"2"				},
+	{ "wan3_ck_pause",		"0"				},	/* skip watchdog for this wan 0|1 */
 
 	{ "wan4_proto",			"dhcp"				},	// [static|dhcp|pppoe|disabled]
 	{ "wan4_ipaddr",		"0.0.0.0"			},	// WAN IP address
@@ -149,6 +152,7 @@ const defaults_t defaults[] = {
 	{ "wan4_status_script",		"0"				},
 #endif
 	{ "wan4_ckmtd",			"2"				},
+	{ "wan4_ck_pause",		"0"				},	/* skip watchdog for this wan 0|1 */
 #endif /* TCONFIG_MULTIWAN */
 
 #ifdef TCONFIG_DNSSEC
@@ -590,7 +594,7 @@ const defaults_t defaults[] = {
 #if defined(TCONFIG_NVRAM_32K) || defined(TCONFIG_OPTIMIZE_SIZE_MORE)
 	{ "adblock_blacklist",		""				},
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/iplist.txt<DoH servers>"},
+	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/list.txt<DoH servers>"},
 #endif
 	{ "adblock_blacklist_custom",	""				},
 	{ "adblock_whitelist",		""				},
@@ -1387,7 +1391,7 @@ const defaults_t defaults[] = {
 	{ "NC_GatewayMode",		"Open"				},
 	{ "NC_DocumentRoot",		"/tmp/splashd"			},
 	{ "NC_ExcludePorts",		"1863"				},
-	{ "NC_HomePage",		"http://google.com"		},
+	{ "NC_HomePage",		"https://startpage.com"		},
 	{ "NC_ForcedRedirect",		"0"				},
 	{ "NC_IdleTimeout",		"0"				},
 	{ "NC_MaxMissedARP",		"5"				},
