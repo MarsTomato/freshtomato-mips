@@ -404,7 +404,6 @@ void restart_wl(void)
 {
 	char *lan_ifname, *lan_ifnames, *ifname, *p;
 	int unit, subunit;
-	int is_client = 0;
 
 	char tmp[32];
 	char br;
@@ -454,8 +453,6 @@ void restart_wl(void)
 					else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
 						continue;
 
-					is_client |= wl_client(unit, subunit) && nvram_get_int(wl_nvname("radio", unit, 0));
-
 #ifdef CONFIG_BCMWL5
 					memset(prefix, 0, sizeof(prefix));
 					snprintf(prefix, sizeof(prefix), "wl%d_", unit);
@@ -499,9 +496,6 @@ void restart_wl(void)
 
 	killall("wldist", SIGTERM);
 	eval("wldist");
-
-	if (is_client)
-		xstart("radio", "join");
 
 	/* Finally: start blink (traffic "control" of LED) if only one unit (for each wlan) is enabled */
 	if (nvram_get_int("blink_wl")) {
@@ -710,18 +704,17 @@ void start_lan_wl(void)
 
 void stop_wireless(void) {
 
-#ifdef TCONFIG_BCMWL6
 	char prefix[] = "wanXX";
-#endif
 
 #ifdef CONFIG_BCMWL5
 	stop_nas();
 #endif
-#ifdef TCONFIG_BCMWL6
+
 	if (get_sta_wan_prefix(prefix)) { /* wl client will be down */
 		logmsg(LOG_INFO, "wireless client WAN: stopping %s (WL down)", prefix);
 		stop_wan_if(prefix);
 	}
+#ifdef TCONFIG_BCMWL6
 	wl_sta_stop();
 #endif
 	stop_lan_wl();
@@ -733,8 +726,9 @@ void start_wireless(void) {
 
 #ifdef TCONFIG_BCMWL6
 	int ret = 0;
-	char prefix[] = "wanXX";
 #endif
+	char prefix[] = "wanXX";
+
 	//load_wl();
 
 #ifdef TCONFIG_BCMWL6
@@ -748,14 +742,17 @@ void start_wireless(void) {
 #endif
 	restart_wl();
 
+	if (1 &&
 #ifdef TCONFIG_BCMWL6
-	if (ret && get_sta_wan_prefix(prefix)) { /* wl client up again */
+	    ret &&
+#endif
+	    get_sta_wan_prefix(prefix)) { /* wl client up again */
 		logmsg(LOG_INFO, "wireless client WAN: starting %s (WL up)", prefix);
 		start_wan_if(prefix);
 		sleep(5);
 		force_to_dial(prefix);
 	}
-#endif
+
 }
 
 void restart_wireless(void) {
