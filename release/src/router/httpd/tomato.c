@@ -747,8 +747,9 @@ static const nvset_t nvset_list[] = {
 	{ "lan_gateway",		V_IP				},
 	{ "lan_dns",			V_LENGTH(0, 50)			},	// ip ip ip
 
-#ifdef TCONFIG_DNSSEC
+#if defined(TCONFIG_DNSSEC) || defined(TCONFIG_STUBBY)
 	{ "dnssec_enable",		V_01				},
+	{ "dnssec_method",		V_RANGE(0, 2)			},	/* 0=dnsmasq, 1=stubby, 2=server only */
 #endif
 
 #ifdef TCONFIG_DNSCRYPT
@@ -768,7 +769,6 @@ static const nvset_t nvset_list[] = {
 	{ "stubby_priority",		V_RANGE(0, 2)			},	// 0=none, 1=strict-order, 2=no-resolv
 	{ "stubby_port",		V_PORT				},
 	{ "stubby_resolvers",		V_LENGTH(0, 1024)		},
-	{ "stubby_dnssec",		V_RANGE(0, 2)			},	/* 0=dnsmasq, 1=stubby, 2=server only */
 	{ "stubby_force_tls13",		V_01				},	/* 0=TLS1.2, 1=TLS1.3 */
 	{ "stubby_log",			V_RANGE(0, 7)			},
 #endif
@@ -973,7 +973,7 @@ static const nvset_t nvset_list[] = {
 	{ "dns_addget",			V_01				},
 	{ "dns_intcpt",			V_01				},
 	{ "dhcpc_minpkt",		V_01				},
-	{ "dhcpc_custom",		V_TEXT(0, 256)			},
+	{ "dhcpc_custom",		V_LENGTH(0, 256)		},
 	{ "dns_norebind",		V_01				},
 	{ "dns_fwd_local",		V_01				},	/* forward queries for local domain to upstream DNS server */
 	{ "dns_priv_override",		V_01				},	/* override DoH */

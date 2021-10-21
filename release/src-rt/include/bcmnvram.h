@@ -90,7 +90,7 @@ extern int BCMINITFN(nvram_resetgpio_init)(void *sih);
  *		to match or FALSE otherwise
  */
 static INLINE int
-nvram_match(char *name, char *match) {
+nvram_match(const char *name, const char *match) {
 	const char *value = nvram_get(name);
 	return (value && !strcmp(value, match));
 }
@@ -103,7 +103,7 @@ nvram_match(char *name, char *match) {
  *		equal to invmatch or FALSE otherwise
  */
 static INLINE int
-nvram_invmatch(char *name, char *invmatch) {
+nvram_invmatch(const char *name, const char *invmatch) {
 	const char *value = nvram_get(name);
 	return (value && strcmp(value, invmatch));
 }

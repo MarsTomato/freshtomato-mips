@@ -301,6 +301,11 @@ ifneq ($(TCONFIG_STUBBY),y)
 	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/STUBBY-BEGIN/,/STUBBY-END/d"
 endif
 
+# Only include the dnssec/stubby (common part) option if one of them is compiled in
+ifeq ($(TCONFIG_STUBBY)$(TCONFIG_DNSSEC),)
+	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/STORSEC-BEGIN/,/STORSEC-END/d"
+endif
+
 # Only include the Iperf page if it is compiled in
 ifneq ($(TCONFIG_IPERF),y)
 	rm -f $(INSTALLDIR)/www/tools-iperf.asp
@@ -427,6 +432,7 @@ endif
 		-e "/DNSCRYPT-BEGIN/d"	-e "/DNSCRYPT-END/d" \
 		-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d" \
 		-e "/DNSSEC-BEGIN/d"	-e "/DNSSEC-END/d" \
+		-e "/STORSEC-BEGIN/d"	-e "/STORSEC-END/d" \
 		-e "/TOR-BEGIN/d"	-e "/TOR-END/d" \
 		-e "/TINC-BEGIN/d"	-e "/TINC-END/d" \
 		-e "/MULTIWAN-BEGIN/d"	-e "/MULTIWAN-END/d" \
