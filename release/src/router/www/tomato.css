@@ -729,7 +729,13 @@ table.tomato-grid.vpn-status-table {
 #survey-grid .co7,
 #lan-grid,
 #lan-grid .centered,
+#la-grid,
+#tg-grid .centered,
+#bwlg-grid .centered,
 #bs-grid .centered,
+#adblock-grid .centered,
+#th-grid .centered,
+#pbr-grid .centered,
 div[id$="_ccd"] .centered,
 div[id$="_users"] .centered,
 div[id^="table_client"] td.co1,
@@ -1287,10 +1293,6 @@ div[id$="_users"] .co1 {
 	width: 25%;
 }
 
-#la-grid {
-	text-align: center;
-}
-
 #la-grid .co1 {
 	width: 30px;
 }
@@ -1575,6 +1577,38 @@ div#sptime {
 
 #log-refresh-time {
 	padding-left: 12px;
+}
+
+.stats_mwan1 {
+	padding-bottom: 1px;
+}
+
+.stats_mwan2 {
+	padding-top: 1px;
+}
+
+.blinking {
+	-webkit-animation: blinker 1s linear infinite; /* Safari & Chrome */
+	-moz-animation: blinker 1s linear infinite; /* Firefox */
+	-ms-animation: blinker 1s linear infinite; /* Internet Explorer */
+	-o-animation: blinker 1s linear infinite; /* Opera */
+	animation: blinker 1s linear infinite; /* W3C */
+}
+
+@-webkit-keyframes blinker {
+	50% { opacity: 0; }
+}
+@-moz-keyframes blinker {
+	50% { opacity: 0; }
+}
+@-ms-keyframes blinker {
+	50% { opacity: 0; }
+}
+@-o-keyframes blinker {
+	50% { opacity: 0; }
+}
+@keyframes blinker {
+	50% { opacity: 0; }
 }
 
 /* SVG */

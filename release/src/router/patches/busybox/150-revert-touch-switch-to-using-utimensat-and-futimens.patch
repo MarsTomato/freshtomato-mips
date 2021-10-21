@@ -1,0 +1,106 @@
+--- busybox/coreutils/touch.c
++++ busybox/coreutils/touch.c
+@@ -82,11 +82,12 @@
+ 	char *reference_file;
+ 	char *date_str;
+ 	/* timebuf[0] is atime, timebuf[1] is mtime */
+-	struct timespec timebuf[2];
++	struct timeval timebuf[2];
++	timebuf[1].tv_usec = timebuf[0].tv_usec = 0;
+ #else
+ # define reference_file NULL
+ # define date_str       NULL
+-# define timebuf        ((struct timespec*)NULL)
++# define timebuf        ((struct timeval*)NULL)
+ #endif
+ 
+ 	enum {
+@@ -98,6 +99,8 @@
+ 		OPT_a = (1 << 5) * ENABLE_FEATURE_TOUCH_SUSV3,
+ 		OPT_m = (1 << 6) * ENABLE_FEATURE_TOUCH_SUSV3,
+ 	};
++	/* NULL = use current time */
++	const struct timeval *newtime = NULL;
+ #if ENABLE_LONG_OPTS
+ 	static const char touch_longopts[] ALIGN1 =
+ 		/* name, has_arg, val */
+@@ -128,14 +131,16 @@
+ 	);
+ 
+ #if ENABLE_FEATURE_TOUCH_SUSV3
+-	timebuf[0].tv_nsec = timebuf[1].tv_nsec = UTIME_NOW;
+ 	if (opts & OPT_r) {
+ 		struct stat stbuf;
+ 		xstat(reference_file, &stbuf);
+ 		timebuf[0].tv_sec = stbuf.st_atime;
+ 		timebuf[1].tv_sec = stbuf.st_mtime;
+-		timebuf[0].tv_nsec = stbuf.st_atim.tv_nsec;
+-		timebuf[1].tv_nsec = stbuf.st_mtim.tv_nsec;
++		/* Can use .st_mtim.tv_nsec
++		 * (or is it .st_mtimensec?? see date.c)
++		 * to set microseconds too.
++		 */
++		newtime = timebuf;
+ 	}
+ 	if (opts & (OPT_d|OPT_t)) {
+ 		struct tm tm_time;
+@@ -152,21 +157,40 @@
+ 		t = validate_tm_time(date_str, &tm_time);
+ 
+ 		timebuf[1].tv_sec = timebuf[0].tv_sec = t;
+-		timebuf[1].tv_nsec = timebuf[0].tv_nsec = 0;
++		newtime = timebuf;
+ 	}
+-	/* If both -a and -m specified, both times should be set.
+-	 * IOW: set OMIT only if one, not both, of them is given!
+-	 */
+-	if ((opts & (OPT_a|OPT_m)) == OPT_a)
+-		timebuf[1].tv_nsec = UTIME_OMIT;
+-	if ((opts & (OPT_a|OPT_m)) == OPT_m)
+-		timebuf[0].tv_nsec = UTIME_OMIT;
++
++	if ((opts & (OPT_a | OPT_m)) && !newtime) {
++		time(&timebuf[0].tv_sec);
++		timebuf[1].tv_sec = timebuf[0].tv_sec;
++		newtime = timebuf;
+ #endif
+ 
+ 	argv += optind;
+ 	do {
+-		int result = utimensat(AT_FDCWD, *argv, timebuf,
+-				(opts & OPT_h) ? AT_SYMLINK_NOFOLLOW : 0);
++		int result;
++
++		if (opts & (OPT_a | OPT_m)) {
++			/* Save original times */
++			struct stat stbuf;
++			if (stat(*argv, &stbuf) == 0) {
++				/* As we must set both times, we lose original
++				 * file time microseconds.
++				 * Can use .st_mtim.tv_nsec
++				 * (or is it .st_mtimensec?? see date.c)
++				 * to set microseconds too.
++				 * Also, utimensat(2) allows to omit one of the
++				 * times to be set. But it is SUSv4.
++				 */
++				if (!(opts & OPT_a))
++					timebuf[0].tv_sec = stbuf.st_atime;
++				if (!(opts & OPT_m))
++					timebuf[1].tv_sec = stbuf.st_mtime;
++			}
++		}
++
++		result = (utimes)(*argv, newtime);
++
+ 		if (result != 0) {
+ 			if (errno == ENOENT) { /* no such file? */
+ 				if (opts & OPT_c) {
+@@ -177,7 +201,7 @@
+ 				fd = open(*argv, O_RDWR | O_CREAT, 0666);
+ 				if (fd >= 0) {
+ 					if (opts & (OPT_r|OPT_d|OPT_t))
+-						futimens(fd, timebuf);
++						utimes(*argv, newtime);
+ 					xclose(fd);
+ 					continue;
+ 				}

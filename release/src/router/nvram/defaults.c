@@ -155,9 +155,14 @@ const defaults_t defaults[] = {
 	{ "wan4_ck_pause",		"0"				},	/* skip watchdog for this wan 0|1 */
 #endif /* TCONFIG_MULTIWAN */
 
-#ifdef TCONFIG_DNSSEC
+#if defined(TCONFIG_DNSSEC) || defined(TCONFIG_STUBBY)
 	{ "dnssec_enable",		"0"				},
+#ifdef TCONFIG_STUBBY
+	{ "dnssec_method",		"1"				},	/* 0=dnsmasq, 1=stubby, 2=server only */
+#else
+	{ "dnssec_method",		"0"				},	/* 0=dnsmasq, 1=stubby, 2=server only */
 #endif
+#endif /* TCONFIG_DNSSEC || TCONFIG_STUBBY */
 #ifdef TCONFIG_DNSCRYPT
 	{ "dnscrypt_proxy",		"0"				},
 	{ "dnscrypt_priority",		"2"				},	// 0=none, 1=strict-order, 2=no-resolv
@@ -175,7 +180,6 @@ const defaults_t defaults[] = {
 	{ "stubby_priority",		"2"				},	/* 0=none, 1=strict-order, 2=no-resolv */
 	{ "stubby_port",		"5453"				},	/* local port */
 	{ "stubby_resolvers",		"<1.1.1.1>>cloudflare-dns.com><1.0.0.1>>cloudflare-dns.com>"},	/* default DoT resolvers */
-	{ "stubby_dnssec",		"0"				},	/* DNSSEC */
 	{ "stubby_force_tls13",		"0"				},	/* TLS version */
 	{ "stubby_log",			"4"				},	/* log level */
 #endif

@@ -467,7 +467,7 @@ void start_dnsmasq()
 
 	/* NTP server */
 	if (nvram_get_int("ntpd_enable"))
-		fprintf(f, "dhcp-option=42,%s\n", "0.0.0.0");
+		fprintf(f, "dhcp-option-force=42,%s\n", "0.0.0.0");
 
 	if (nvram_get_int("dnsmasq_debug"))
 		fprintf(f, "log-queries\n");
@@ -479,10 +479,10 @@ void start_dnsmasq()
 	if ((nvram_get_int("adblock_enable")) && (f_exists("/etc/dnsmasq.adblock")))
 		fprintf(f, "conf-file=/etc/dnsmasq.adblock\n");
 
-#ifdef TCONFIG_DNSSEC
+#if defined(TCONFIG_DNSSEC) || defined(TCONFIG_STUBBY)
 	if (nvram_get_int("dnssec_enable")) {
 #ifdef TCONFIG_STUBBY
-		if ((!nvram_get_int("stubby_proxy")) || (nvram_match("stubby_dnssec", "0"))) {
+		if ((!nvram_get_int("stubby_proxy")) || (nvram_match("dnssec_method", "0"))) {
 #endif
 			fprintf(f, "conf-file=/etc/trust-anchors.conf\n"
 			           "dnssec\n");
@@ -496,7 +496,7 @@ void start_dnsmasq()
 			fprintf(f, "proxy-dnssec\n");
 #endif
 	}
-#endif /* TCONFIG_DNSSEC */
+#endif /* TCONFIG_DNSSEC || TCONFIG_STUBBY */
 
 #ifdef TCONFIG_DNSCRYPT
 	if (nvram_get_int("dnscrypt_proxy")) {
@@ -768,7 +768,7 @@ void start_stubby(void)
 	}
 
 	ntp_ready = nvram_get_int("ntp_ready");
-	dnssec = (nvram_get_int("dnssec_enable") && nvram_match("stubby_dnssec", "1"));
+	dnssec = (nvram_get_int("dnssec_enable") && nvram_match("dnssec_method", "1"));
 
 	/* basic & privacy settings */
 	fprintf(fp, "appdata_dir: \"/var/lib/misc\"\n"
@@ -2113,7 +2113,9 @@ void start_ntpd(void)
 {
 	FILE *f;
 	char *servers, *ptr;
-	int servers_len = 0, ntp_updates_int = 0, ret;
+	int servers_len = 0, ntp_updates_int = 0, index = 2, ret;
+	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL, NULL, NULL }; /* -d6 -q -S /sbin/ntpd_synced -l */
+	pid_t pid;
 
 	if (getpid() != 1) {
 		start_service("ntpd");
@@ -2134,7 +2136,7 @@ void start_ntpd(void)
 	 * therefore, the nvram variable contains a string of 3 NTP servers - This code separates them and passes them to
 	 * ntpd as separate parameters. this code should continue to work if GUI is changed to only store 1 value in the NVRAM var
 	 */
-	if (ntp_updates_int >= 0) {
+	if (ntp_updates_int >= 0) { /* -1 = never */
 		servers_len = strlen(nvram_safe_get("ntp_server"));
 
 		/* allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
@@ -2163,17 +2165,24 @@ void start_ntpd(void)
 
 		free(servers);
 
-		if (ntp_updates_int == 0) /* only at startup, then quit */
-			eval("/usr/sbin/ntpd", "-q", "-t");
-		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
-			if (nvram_get_int("ntpd_enable"))
-				ret = eval("/usr/sbin/ntpd", "-l", "-t", "-S", "/sbin/ntpd_synced", nvram_contains_word("log_events", "ntp") ? "-d6" : NULL);
-			else
-				ret = eval("/usr/sbin/ntpd", "-t", "-S", "/sbin/ntpd_synced", nvram_contains_word("log_events", "ntp") ? "-d6" : NULL);
+		if (nvram_contains_word("log_events", "ntp")) /* add verbose (doesn't work right now) */
+			ntpd_argv[index++] = "-d6";
 
-			if (!ret)
-				logmsg(LOG_INFO, "ntpd is started");
+		if (ntp_updates_int == 0) /* only at startup, then quit */
+			ntpd_argv[index++] = "-q";
+		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
+			ntpd_argv[index++] = "-S";
+			ntpd_argv[index++] = "/sbin/ntpd_synced";
+
+			if (nvram_get_int("ntpd_enable")) /* enable local NTP server */
+				ntpd_argv[index++] = "-l";
 		}
+
+		ret = _eval(ntpd_argv, NULL, 0, &pid);
+		if (ret)
+			logmsg(LOG_ERR, "starting ntpd failed ...");
+		else
+			logmsg(LOG_INFO, "ntpd is started");
 	}
 }
 
