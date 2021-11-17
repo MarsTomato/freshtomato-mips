@@ -3,6 +3,12 @@
 export PATH=/opt/sbin:/opt/bin:$PATH
 unset LD_LIBRARY_PATH
 unset LD_PRELOAD
+# STUBBYNO-BEGIN
+WGET="/usr/bin/wget --no-check-certificate"
+# STUBBYNO-END
+# STUBBY-BEGIN
+WGET="/usr/bin/wget"
+# STUBBY-END
 
 URL=http://pkg.entware.net/binaries/mipsel/installer
 
@@ -22,7 +28,7 @@ dl () {
   # $2 - place to store
   # $3 - 'x' if should be executable
   echo -n "Downloading $2... "
-  wget --no-check-certificate -q $1 -O $2
+  $WGET -q $1 -O $2
   if [ $? -eq 0 ] ; then
     echo "success!"
   else
