@@ -13,6 +13,12 @@ LOCK="/tmp/ttb.lock"
 DIR="/www/ext"
 LOGS="logger -t TTB[$PID]"
 URL_ORIG="http://ttb.mooo.com http://ttb.ath.cx http://ttb.ddnsfree.com"
+# STUBBYNO-BEGIN
+WGET="/usr/bin/wget --no-check-certificate"
+# STUBBYNO-END
+# STUBBY-BEGIN
+WGET="/usr/bin/wget"
+# STUBBY-END
 
 ttbshuf() {
 	awk 'BEGIN {srand(); OFMT="%.17f"} {print rand(), $0}' "$@" | sort -k1,3n | cut -d ' ' -f2-;
@@ -38,7 +44,7 @@ ttbshuf() {
 			rm $DIR/*.css $DIR/*.zip $DIR/*.png $DIR/*.gif $DIR/*.jpg >/dev/null 2>&1
 			echo $URL_ORIG | tr ' ' '\n' | ttbshuf | tr ' ' '\n' | sed 's/\/$//' |
 			while read l; do
-				wget -U "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/88.0" -T 10 -t 1 $l/$TTB.zip -O $DIR/$TTB.zip >/dev/null 2>&1 && echo $l && break
+				$WGET -U "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/88.0" -T 10 -t 1 $l/$TTB.zip -O $DIR/$TTB.zip >/dev/null 2>&1 && echo $l && break
 			done
 			sleep 1
 

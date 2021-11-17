@@ -3,6 +3,12 @@
 
 REPOSITORY=http://ipkg.nslu2-linux.org/feeds/optware/oleg/cross/stable
 TMP=/tmp
+# STUBBYNO-BEGIN
+WGET="/usr/bin/wget --no-check-certificate"
+# STUBBYNO-END
+# STUBBY-BEGIN
+WGET="/usr/bin/wget"
+# STUBBY-END
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/opt/bin:/opt/sbin
 unset LD_PRELOAD
@@ -64,7 +70,7 @@ _install_package()
 {
     PACKAGE=$1
     echo "Installing package ${PACKAGE} ..."
-    wget -O ${TMP}/${PACKAGE} ${REPOSITORY}/${PACKAGE}
+    $WGET -O ${TMP}/${PACKAGE} ${REPOSITORY}/${PACKAGE}
     cd  ${TMP} 
     tar xzf ${TMP}/${PACKAGE} 
     tar xzf ${TMP}/control.tar.gz

@@ -283,15 +283,15 @@ function save() {
 	fom.sshd_pass.value = fom._f_sshd_pass.checked ? 1 : 0;
 	fom.sshd_remote.value = fom._f_sshd_remote.checked ? 1 : 0;
 	fom.sshd_motd.value = fom._f_sshd_motd.checked ? 1 : 0;
-/* OPTSIZE-BEGIN */
+/* SIZEOPTMORE-BEGIN */
 	fom.sshd_forwarding.value = fom._f_sshd_forwarding.checked ? 1 : 0;
-/* OPTSIZE-END */
+/* SIZEOPTMORE-END */
 
 	/* do not restart sshd if no changes in its configuration */
 	if ((fom.sshd_pass.value == nvram.sshd_pass) && (fom.sshd_remote.value == nvram.sshd_remote) && (fom.sshd_motd.value == nvram.sshd_motd) &&
-/* OPTSIZE-BEGIN */
+/* SIZEOPTMORE-BEGIN */
 	    (fom.sshd_forwarding.value == nvram.sshd_forwarding) &&
-/* OPTSIZE-END */
+/* SIZEOPTMORE-END */
 	    (fom._set_password_1.value == "**********") && (fom._sshd_rport.value == nvram.sshd_rport) && (fom._sshd_port.value == nvram.sshd_port) && (fom._sshd_authkeys.value == nvram.sshd_authkeys)) {
 		fom._service.value = 'adminnosshd-restart';
 	}
@@ -367,9 +367,9 @@ function init() {
 <input type="hidden" name="sshd_motd">
 <input type="hidden" name="ne_shlimit">
 <input type="hidden" name="rmgt_sip">
-<!-- OPTSIZE-BEGIN -->
+<!-- SIZEOPTMORE-BEGIN -->
 <input type="hidden" name="sshd_forwarding">
-<!-- OPTSIZE-END -->
+<!-- SIZEOPTMORE-END -->
 <input type="hidden" name="web_mx">
 
 <!-- / / / -->
@@ -456,9 +456,9 @@ function init() {
 			{ title: 'Extended MOTD', name: 'f_sshd_motd', type: 'checkbox', value: nvram.sshd_motd == 1 },
 			{ title: 'Remote Access', name: 'f_sshd_remote', type: 'checkbox', value: nvram.sshd_remote == 1 },
 				{ title: 'Remote Port', indent: 2, name: 'sshd_rport', type: 'text', maxlen: 5, size: 7, value: nvram.sshd_rport },
-/* OPTSIZE-BEGIN */
+/* SIZEOPTMORE-BEGIN */
 			{ title: 'Remote Forwarding', name: 'f_sshd_forwarding', type: 'checkbox', value: nvram.sshd_forwarding == 1 },
-/* OPTSIZE-END */
+/* SIZEOPTMORE-END */
 			{ title: 'Port', name: 'sshd_port', type: 'text', maxlen: 5, size: 7, value: nvram.sshd_port },
 			{ title: 'Allow Password Login', name: 'f_sshd_pass', type: 'checkbox', value: nvram.sshd_pass == 1 },
 			{ title: 'Authorized Keys', name: 'sshd_authkeys', type: 'textarea', value: nvram.sshd_authkeys }

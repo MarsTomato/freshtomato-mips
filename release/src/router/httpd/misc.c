@@ -926,7 +926,7 @@ void asp_statfs(int argc, char **argv)
 
 	/* used for /cifs/, /jffs/... if it returns squashfs type, assume it's not mounted */
 	if ((statfs(argv[0], &sf) != 0) || (sf.f_type == 0x73717368)
-#ifdef TCONFIG_BCMARM
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_BLINK)
 	    || (sf.f_type == 0x71736873)
 #endif
 	) {
@@ -1096,6 +1096,37 @@ void asp_stubby_presets(int argc, char **argv)
 		}
 		web_puts("]");
 		lsep = ",";
+	}
+
+	fclose(fp);
+}
+#endif
+
+#ifdef TCONFIG_DNSCRYPT
+void asp_dnscrypt_presets(int argc, char **argv)
+{
+	FILE *fp;
+
+	char comma;
+	char line[512];
+	char *name1, *dnssec, *logs, *a, *b, *c, *d, *e, *f;
+
+	comma = ' ';
+
+	if (!(fp = fopen("/etc/dnscrypt-resolvers-alt.csv", "r"))) { /* try alternative (ex. newly downloaded) resolvers file first */
+		if (!(fp = fopen("/etc/dnscrypt-resolvers.csv", "r")))
+			return;
+	}
+
+	fgets(line, sizeof(line), fp); /* header */
+	while (fgets(line, sizeof(line), fp) != NULL) {
+		name1 = dnssec = logs = NULL;
+
+		if (((vstrsep(line, ",", &name1, &a, &b, &c, &d, &e, &f, &dnssec, &logs)) < 9) || (!*name1) || (!*dnssec) || (!*logs))
+			continue;
+
+		web_printf("%c['%s','%s (DNSSEC:%s NOLOGS:%s)']", comma, name1, name1, dnssec, logs);
+		comma = ',';
 	}
 
 	fclose(fp);

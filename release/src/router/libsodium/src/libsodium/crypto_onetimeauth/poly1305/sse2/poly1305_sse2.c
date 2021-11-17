@@ -6,7 +6,6 @@
 #include "crypto_verify_16.h"
 #include "poly1305_sse2.h"
 #include "private/common.h"
-#include "private/sse2_64_32.h"
 #include "utils.h"
 
 #if defined(HAVE_TI_MODE) && defined(HAVE_EMMINTRIN_H)
@@ -16,18 +15,13 @@
 # endif
 
 # include <emmintrin.h>
+# include "private/sse2_64_32.h"
 
 typedef __m128i xmmi;
 
-# if defined(__SIZEOF_INT128__)
-typedef unsigned __int128 uint128_t;
-# else
-typedef unsigned uint128_t __attribute__((mode(TI)));
-# endif
-
 # if defined(_MSC_VER)
 #  define POLY1305_NOINLINE __declspec(noinline)
-# elif defined(__GNUC__)
+# elif defined(__clang__) || defined(__GNUC__)
 #  define POLY1305_NOINLINE __attribute__((noinline))
 # else
 #  define POLY1305_NOINLINE

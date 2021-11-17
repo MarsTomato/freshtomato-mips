@@ -435,6 +435,9 @@ const aspapi_t aspapi[] = {
 #ifdef TCONFIG_STUBBY
 	{ "stubby_presets",		asp_stubby_presets		},
 #endif
+#ifdef TCONFIG_DNSCRYPT
+	{ "dnscrypt_presets",		asp_dnscrypt_presets		},
+#endif
 	{ NULL,				NULL				}
 };
 
@@ -869,7 +872,11 @@ static const nvset_t nvset_list[] = {
 
 	// wireless
 	{ "wl_radio",			V_01				},
-	{ "wl_mode",			V_LENGTH(2, 3)			},	// ap, sta, wet, wds
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
+	{ "wl_mode",			V_LENGTH(2, 4)			},	/* ap, sta, wet, wds, psta */
+#else
+	{ "wl_mode",			V_LENGTH(2, 3)			},	/* ap, sta, wet, wds */
+#endif
 	{ "wl_net_mode",		V_LENGTH(5, 8)			},	// disabled, mixed, b-only, g-only, bg-mixed, n-only [speedbooster]
 	{ "wl_ssid",			V_LENGTH(1, 32)			},
 	{ "wl_closed",			V_01				},
@@ -900,7 +907,9 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wep",			V_LENGTH(1, 32)			},	//  off, on, restricted,tkip,aes,tkip+aes
 	{ "wl_akm",			V_LENGTH(0, 32)			},	//  wpa, wpa2, psk, psk2, wpa wpa2, psk psk2, ""
 	{ "wl_auth_mode",		V_LENGTH(4, 6)			},	//  none, radius
-
+#ifdef TCONFIG_BCMARM
+	{ "wl_mfp",			V_RANGE(0, 2)			},	/* Protected Management Frames: 0 - Disable, 1 - Capable, 2 - Required */
+#endif
 	{ "wl_nmode",			V_NONE				},
 	{ "wl_nband",			V_RANGE(0, 2)			},	// 2 - 2.4GHz, 1 - 5GHz, 0 - Auto
 	{ "wl_nreqd",			V_NONE				},
@@ -1463,6 +1472,11 @@ static const nvset_t nvset_list[] = {
 	{ "usb_fs_hfs",			V_01				}, //!Victek
 #ifdef TCONFIG_BCMARM
 	{ "usb_hfs_driver",		V_LENGTH(0, 10)			},
+#endif
+#ifdef TCONFIG_ZFS
+	{ "usb_fs_zfs",			V_01				},
+	{ "usb_fs_zfs_automount",	V_01				},
+	{ "zfs_mount_script",		V_TEXT(0, 2048)			},
 #endif
 #endif /* TCONFIG_HFS */
 	{ "usb_automount",		V_01				},

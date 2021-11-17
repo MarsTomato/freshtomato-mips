@@ -42,6 +42,9 @@ function save() {
 /* CTF-BEGIN */
 	    (fom.ctf_disable.value != nvram.ctf_disable) ||
 /* CTF-END */
+/* BCMNAT-BEGIN */
+	    (fom.bcmnat_disable.value != nvram.bcmnat_disable) ||
+/* BCMNAT-END */
 	    (fom.jumbo_frame_enable.value != nvram.jumbo_frame_enable) ||
 	    (fom.jumbo_frame_size.value != nvram.jumbo_frame_size)) {
 		fom._reboot.value = '1';

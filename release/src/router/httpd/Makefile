@@ -3,6 +3,12 @@ include ../common.mak
 CFLAGS = -Os -Wall $(EXTRACFLAGS) -Wsign-compare
 CFLAGS += -I$(SRCBASE) -I$(SRCBASE)/include -I. -I$(TOP)/shared
 
+ifeq ($(TCONFIG_BCMARM),y)
+CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include
+CFLAGS += -I$(SRCBASE)/common/include
+LIBS += -lgcc_s
+endif
+
 ifeq ($(TOMATO_EXPERIMENTAL),1)
 export CFLAGS += -DDEBUG_LOGMSG
 endif
@@ -27,13 +33,16 @@ ifeq ($(TCONFIG_OPENVPN),y)
 OBJS += openvpn.o
 endif
 
-LIBS = -L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared
+LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
 
 ifneq ($(TCONFIG_HTTPS),)
 LIBS += -L$(TOP)/mssl -lmssl
 ifeq ($(TCONFIG_OPENSSL11),y)
 CFLAGS += -I$(TOP)/openssl-1.1/include
 LIBS += -L$(TOP)/openssl-1.1 -lssl -lcrypto
+ifeq ($(TCONFIG_BCMARM),y)
+LIBS += -lpthread
+endif
 else
 CFLAGS += -I$(TOP)/openssl/include
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
@@ -53,10 +62,10 @@ all: httpd
 httpd: $(OBJS)
 	@echo " [httpd] CC $@"
 	@$(CC) -o $@ $(OBJS) $(LIBS)
-
+ifneq ($(TCONFIG_BCMARM),y)
 	$(SIZECHECK)
 	$(CPTMP)
-
+endif
 
 install:
 	@echo " [httpd] Installing to $(INSTALLDIR)"
@@ -68,7 +77,10 @@ clean:
 	rm -f httpd *.o .*.depend
 
 size: httpd
+ifneq ($(TCONFIG_BCMARM),y)
 	mipsel-uclibc-nm --print-size --size-sort httpd
+endif
+	@true
 
 %.o: %.c .%.depend
 	@echo " [httpd] CC $@"
