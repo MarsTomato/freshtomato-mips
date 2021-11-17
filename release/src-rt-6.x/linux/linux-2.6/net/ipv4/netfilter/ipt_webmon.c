@@ -183,10 +183,13 @@ void add_queue_node(uint32_t src_ip, char* value, queue* full_queue, string_map*
 
 void add_queue_node_last(uint32_t src_ip, char* value, time_t sec, queue* full_queue, string_map* queue_index, char* queue_index_key, uint32_t max_queue_length )
 {
+	queue_node *new_node;
+	char* dyn_value;
+
 	if( full_queue->length >= max_queue_length ) return;
 
-	queue_node *new_node = (queue_node*)kzalloc(sizeof(queue_node), GFP_ATOMIC);
-	char* dyn_value = kernel_strdup(value);
+	new_node = (queue_node*)kzalloc(sizeof(queue_node), GFP_ATOMIC);
+	dyn_value = kernel_strdup(value);
 
 	if(new_node == NULL || dyn_value == NULL)
 	{
@@ -279,17 +282,20 @@ char *strnistr(const char *s, const char *find, size_t slen)
  */
 int within_edit_distance(char *s1, char *s2, int max_edit)
 {
+	int edit1, edit2;
+	char *s1sp, *s2sp, *s1ep, *s2ep;
+
 	if(s1 == NULL || s2 == NULL)
 	{
 		return 0;
 	}
 
-	int edit1 = strlen(s1);
-	int edit2 = strlen(s2);
-	char* s1sp = s1;
-	char* s2sp = s2;
-	char* s1ep = s1 + (edit1-1);
-	char* s2ep = s2 + (edit2-1);
+	edit1 = strlen(s1);
+	edit2 = strlen(s2);
+	s1sp = s1;
+	s2sp = s2;
+	s1ep = s1 + (edit1-1);
+	s2ep = s2 + (edit2-1);
 	while(*s1sp != '\0' && *s2sp != '\0' && *s1sp == *s2sp)
 	{
 		s1sp++;
@@ -575,9 +581,11 @@ static void webmon_proc_stop(struct seq_file *seq, void *v)
 
 static int webmon_proc_domain_show(struct seq_file *s, void *v)
 {
+	queue_node* next_node;
+
 	spin_lock_bh(&webmon_lock);
 
-	queue_node* next_node = recent_domains->first;
+	next_node = recent_domains->first;
 	while(next_node != NULL)
 	{
 		seq_printf(s, "%ld\t"STRIP"\t%s\n", (unsigned long)(next_node->time).tv_sec, NIPQUAD(next_node->src_ip), next_node->value);
@@ -590,9 +598,11 @@ static int webmon_proc_domain_show(struct seq_file *s, void *v)
 
 static int webmon_proc_search_show(struct seq_file *s, void *v)
 {
+	queue_node* next_node;
+
 	spin_lock_bh(&webmon_lock);
 
-	queue_node* next_node = recent_searches->first;
+	next_node = recent_searches->first;
 	while(next_node != NULL)
 	{
 		seq_printf(s, "%ld\t"STRIP"\t%s\n", (unsigned long)(next_node->time).tv_sec, NIPQUAD(next_node->src_ip), next_node->value);
@@ -1244,6 +1254,7 @@ static int __init init(void)
 
 
 	#ifdef CONFIG_PROC_FS
+	{
 		struct proc_dir_entry *proc_webmon_recent_domains  = create_proc_entry("webmon_recent_domains", 0, NULL);
 		struct proc_dir_entry *proc_webmon_recent_searches = create_proc_entry("webmon_recent_searches", 0, NULL);
 		if(proc_webmon_recent_domains)
@@ -1254,6 +1265,7 @@ static int __init init(void)
 		{
 			proc_webmon_recent_searches->proc_fops = &webmon_proc_search_fops;
 		}
+	}
 	#endif
 	
 	if (nf_register_sockopt(&ipt_webmon_sockopts) < 0)

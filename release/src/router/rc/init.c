@@ -784,19 +784,15 @@ static void check_bootnv(void)
 		}
 		break;
 	case MODEL_F9K1102:
-		dirty |= check_nv("vlan1hwname", "et0");
-		dirty |= check_nv("vlan2hwname", "et0");
-		dirty |= check_nv("sb/1/ledbh1", "11");
-		dirty |= check_nv("sb/1/ledbh2", "11");
-		if (invalid_mac(nvram_safe_get("et0macaddr"))
-				&& get_mac_from_mt0(0x20023) == 0) {
-			dirty |= 1;
+		if (nvram_match("sb/1/macaddr", nvram_safe_get("et0macaddr"))) {
 			strcpy(mac, nvram_safe_get("et0macaddr"));
 			inc_mac(mac, 2);
 			dirty |= check_nv("sb/1/macaddr", mac);
+			inc_mac(mac, 1);
+			dirty |= check_nv("wl0_hwaddr", mac);
 #ifdef TCONFIG_USBAP
 			inc_mac(mac, 1);
-			dirty |= check_nv("pci/1/1/macaddr", mac);
+			dirty |= check_nv("wl1_hwaddr", mac);
 			dirty |= check_nv("0:macaddr", mac);
 #endif
 		}
@@ -2946,10 +2942,11 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("gpio7", "ses_button");
-			nvram_set("reset_gpio", "3");
+			nvram_set("vlan1hwname", "et0");
+			nvram_set("vlan2hwname", "et0");
 			nvram_set("wan_ifnameX", "vlan1");
 			nvram_set("wandevs", "vlan1");
+			nvram_set("wan_ifname", "vlan1");
 			nvram_set("wl0_ifname", "eth1");
 #ifdef TCONFIG_USBAP
 			nvram_set("ehciirqt", "3");
@@ -2959,12 +2956,14 @@ static int init_nvram(void)
 			nvram_set("qtdc0_sz", "5");
 			nvram_set("qtdc1_ep", "18");
 			nvram_set("qtdc1_sz", "10");
+			nvram_set("br0_ifnames", "vlan2 eth1 eth2");
 			nvram_set("lan_ifnames", "vlan2 eth1 eth2");
 			nvram_set("landevs", "vlan2 wl0 wl1");
 			nvram_set("wl1_ifname", "eth2");
-#else
-			nvram_set("lan_ifnames", "vlan2 eth1");
-			nvram_set("landevs", "vlan2 wl0");
+			nvram_set("wl1_channel", "36");
+			nvram_set("wl1_nbw","40");
+			nvram_set("wl1_nbw_cap", "1");
+			nvram_set("wl1_nctrlsb", "lower");
 #endif
 		}
 		break;

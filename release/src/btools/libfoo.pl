@@ -166,7 +166,7 @@ sub fixDyn
 #	fixDynDep("transmission-remote", "libiconv.so.2.6.1");
 	fixDynDep("radvd", "libdaemon.so.0.5.0");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
-	fixDynDep("dnscrypt-proxy", "libsodium.so.23.0.0");
+	fixDynDep("dnscrypt-proxy", "libsodium.so.23.3.0");
 	fixDynDep("tincd", "liblzo2.so.2.0.0");
 	fixDynDep("openvpn", "liblzo2.so.2.0.0");
 	fixDynDep("usb_modeswitch", "libusb-1.0.so");
@@ -184,6 +184,7 @@ sub fixDyn
 	fixDynDep("minidlna", "libid3tag.so.0");
 	fixDynDep("minidlna", "libexif.so.12");
 	fixDynDep("minidlna", "libFLAC.so.8");
+	fixDynDep("minidlna", "libsqlite3.so.0.8.6");
 	fixDynDep("libjpeg.so", "libc.so.0");
 	fixDynDep("libavcodec.so.52", "libpthread.so.0");
 
@@ -605,7 +606,7 @@ else {
 genSO("${root}/usr/lib/libzebra.so", "${router}/zebra/lib/libzebra.a");
 genSO("${root}/usr/lib/libz.so.1", "${router}/zlib/libz.a");
 genSO("${root}/usr/lib/libjpeg.so", "${router}/jpeg/libjpeg.a");
-#genSO("${root}/usr/lib/libsqlite3.so.0.8.6", "${router}/sqlite/.libs/libsqlite3.a");
+genSO("${root}/usr/lib/libsqlite3.so.0.8.6", "${router}/sqlite/.libs/libsqlite3.a");
 genSO("${root}/usr/lib/libvorbis.so.0", "${router}/libvorbis/lib/.libs/libvorbis.a", "", "-L${router}/libogg/src/.libs");
 genSO("${root}/usr/lib/libid3tag.so.0", "${router}/libid3tag/.libs/libid3tag.a", "", "-L${router}/zlib");
 genSO("${root}/usr/lib/libexif.so.12", "${router}/libexif/libexif/.libs/libexif.a");
@@ -629,7 +630,7 @@ genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a"
 genSO("${root}/usr/lib/libdaemon.so.0.5.0", "${router}/libdaemon/libdaemon/.libs/libdaemon.a");
 genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libiconv.a");
 genSO("${root}/usr/lib/libnfnetlink.so.0.2.0", "${router}/libnfnetlink/src/.libs/libnfnetlink.a");
-genSO("${root}/usr/lib/libsodium.so.23.0.0", "${router}/libsodium/src/libsodium/.libs/libsodium.a");
+genSO("${root}/usr/lib/libsodium.so.23.3.0", "${router}/libsodium/src/libsodium/.libs/libsodium.a");
 genSO("${root}/usr/lib/libpng16.so.16.37.0", "${router}/libpng/.libs/libpng16.a", "", "-L${router}/zlib");
 genSO("${root}/usr/lib/libxml2.so.2.9.12", "${router}/libxml2/.libs/libxml2.a", "", "-L${router}/zlib");
 genSO("${root}/usr/lib/libpcre.so.1.2.12", "${router}/pcre/.libs/libpcre.a");
