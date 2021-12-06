@@ -1066,7 +1066,6 @@ void start_lan(void)
 	char tmp[32];
 	char tmp2[32];
 	char br;
-	int vlan0tag;
 	int vid;
 	int vid_map;
 	char *iftmp;
@@ -1094,7 +1093,6 @@ void start_lan(void)
 #ifdef TCONFIG_IPV6
 	enable_ipv6(ipv6_enabled());  /* tell Kernel to disable/enable IPv6 for most interfaces */
 #endif
-	vlan0tag = nvram_get_int("vlan0tag");
 
 	for(br=0 ; br<4 ; br++) {
 		char bridge[2] = "0";
@@ -1167,7 +1165,7 @@ void start_lan(void)
 						if (sscanf(ifname, "vlan%d", &vid) == 1) {
 							snprintf(tmp, sizeof(tmp), "vlan%dvid", vid);
 							vid_map = nvram_get_int(tmp);
-							if ((vid_map < 1) || (vid_map > 4094)) vid_map = vlan0tag | vid;
+							if ((vid_map < 1) || (vid_map > 4094)) vid_map = vid;
 							snprintf(tmp, sizeof(tmp), "vlan%d", vid_map);
 							ifname = tmp;
 						}
@@ -1326,10 +1324,8 @@ void stop_lan(void)
 	char *lan_ifnames, *p, *ifname;
 	char tmp[32];
 	char br;
-	int vlan0tag, vid, vid_map;
+	int vid, vid_map;
 	char *iftmp;
-
-	vlan0tag = nvram_get_int("vlan0tag");
 
 	ifconfig("lo", 0, NULL, NULL); /* Bring down loopback interface */
 
@@ -1370,7 +1366,7 @@ void stop_lan(void)
 						if (sscanf(ifname, "vlan%d", &vid) == 1) {
 							snprintf(tmp, sizeof(tmp), "vlan%dvid", vid);
 							vid_map = nvram_get_int(tmp);
-							if ((vid_map < 1) || (vid_map > 4094)) vid_map = vlan0tag | vid;
+							if ((vid_map < 1) || (vid_map > 4094)) vid_map = vid;
 							snprintf(tmp, sizeof(tmp), "vlan%d", vid_map);
 							ifname = tmp;
 						}

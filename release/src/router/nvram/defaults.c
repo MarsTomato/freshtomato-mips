@@ -1468,7 +1468,7 @@ const defaults_t defaults[] = {
 	{ "mysql_query_cache_size",	"16"				},	// MB
 	{ "mysql_read_rnd_buffer_size",	"256"				},	// KB
 	{ "mysql_net_buffer_length",	"2"				},	// K
-	{ "mysql_max_connections",	"1000"				},
+	{ "mysql_max_connections",	"100"				},
 #endif
 
 #ifdef TCONFIG_TOR

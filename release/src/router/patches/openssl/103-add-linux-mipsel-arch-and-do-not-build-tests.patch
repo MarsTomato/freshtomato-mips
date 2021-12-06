@@ -1,5 +1,5 @@
---- openssl/Configure	2018-12-10 16:28:41.281521157 +0100
-+++ openssl/Configure	2018-12-10 16:14:06.000000000 +0100
+--- openssl/Configure
++++ openssl/Configure
 @@ -469,6 +469,7 @@ my %table=(
  "linux-alpha+bwx-gcc","gcc:-O3 -DL_ENDIAN::-D_REENTRANT::-ldl:SIXTY_FOUR_BIT_LONG RC4_CHAR RC4_CHUNK DES_RISC1 DES_UNROLL:${alpha_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
  "linux-alpha-ccc","ccc:-fast -readonly_strings -DL_ENDIAN::-D_REENTRANT:::SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_PTR DES_RISC1 DES_UNROLL:${alpha_asm}",
@@ -8,8 +8,8 @@
  
  # Android: linux-* but without pointers to headers and libs.
  "android","gcc:-mandroid -I\$(ANDROID_DEV)/include -B\$(ANDROID_DEV)/lib -O3 -fomit-frame-pointer -Wall::-D_REENTRANT::-ldl:BN_LLONG RC4_CHAR RC4_CHUNK DES_INT DES_UNROLL BF_PTR:${no_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
---- openssl/Makefile	2017-01-26 14:22:37.000000000 +0100
-+++ openssl/Makefile	2018-05-14 00:49:03.274178922 +0200
+--- openssl/Makefile
++++ openssl/Makefile
 @@ -275,8 +275,7 @@ reflect:
  	@[ -n "$(THIS)" ] && $(CLEARENV) && $(MAKE) $(THIS) -e $(BUILDENV)
  
@@ -20,8 +20,8 @@
  
  build_libs: build_libcrypto build_libssl openssl.pc
  
---- openssl/Makefile.org	2017-01-26 14:22:03.000000000 +0100
-+++ openssl/Makefile.org	2018-05-14 00:49:03.274178922 +0200
+--- openssl/Makefile.org
++++ openssl/Makefile.org
 @@ -137,7 +137,7 @@ FIPSCANLIB=
  
  BASEADDR=
@@ -80,8 +80,8 @@
  
  install_sw:
  	@$(PERL) $(TOP)/util/mkdir-p.pl $(INSTALL_PREFIX)$(INSTALLTOP)/bin \
---- openssl/Makefile.shared	2017-01-26 14:22:03.000000000 +0100
-+++ openssl/Makefile.shared	2018-05-14 00:49:03.274178922 +0200
+--- openssl/Makefile.shared
++++ openssl/Makefile.shared
 @@ -95,7 +95,6 @@ LINK_APP=	\
      LDCMD="$${LDCMD:-$(CC)}"; LDFLAGS="$${LDFLAGS:-$(CFLAGS)}"; \
      LIBPATH=`for x in $$LIBDEPS; do echo $$x; done | sed -e 's/^ *-L//;t' -e d | uniq`; \
