@@ -1,0 +1,12 @@
+--- php5/ext/standard/php_crypt_r.c
++++ php5/ext/standard/php_crypt_r.c
+@@ -42,6 +42,9 @@
+ # include <Wincrypt.h>
+ #endif
+ 
++/* In Tomato, Toolchain provide that file (atomic.h), but the wrong one */
++#undef HAVE_ATOMIC_H
++
+ #ifdef HAVE_ATOMIC_H /* Solaris 10 defines atomic API within */
+ # include <atomic.h>
+ #else

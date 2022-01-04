@@ -956,6 +956,7 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 	pdesc_t *pdesc;
 	int pdescsz;
 	uint16 vid;
+	uint16 vid_map, vid0;
 	uint8 arl_entry[8] = { 0 }, arl_entry1[8] = { 0 };
 
 	/* Enable management interface access */
@@ -1028,6 +1029,9 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 		pdesc = pdesc97;
 		pdescsz = sizeof(pdesc97) / sizeof(pdesc_t);
 	}
+
+	/* Case 1 (align to ARM): FreshTomato mips RT-N Gigabit Ethernet */
+	if ((robo->devid == DEVID53115) || (robo->devid == DEVID53125)) {
 
 	/* setup each vlan. max. 16 vlans. */
 	/* force vlan id to be equal to vlan number */
@@ -1135,7 +1139,8 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 #else
 #define	FL	FLAG_UNTAG
 #endif /* _CFE_ */
-			if (!pdesc[pid].cpu || strchr(port, FL)) {
+			if ((!pdesc[pid].cpu && !strchr(port, FLAG_TAGGED)) ||
+			    strchr(port, FL)) {
 				val16 = ((0 << 13) |		/* priority - always 0 */
 				         vid);			/* vlan id */
 #ifdef VID_MAP_DBG
@@ -1281,6 +1286,262 @@ vlan_setup:
 			                     sizeof(val8));
 		}
 	}
+	/* Case 2 (keep old way): FreshTomato mips RT-N Fast Ethernet */
+	} else {
+
+#define VLAN_NUMVLANS_old	16
+#define VLAN_MAXVID_old		15
+
+	vid0 = getintvar(robo->vars, "vlan0tag"); /* will returns 0 if not found (AND not visible at GUI) */
+#ifdef VID_MAP_DBG
+	printk(KERN_EMERG "bcmrobo: vlan0tag/vid0=%d\n", vid0);
+#endif
+
+	/* setup each vlan. max. 16 vlans. */
+	/* force vlan id to be equal to vlan number */
+	for (vid = 0; vid < VLAN_NUMVLANS_old; vid ++) {
+		char vlanports[] = "vlanXXXXports";
+		char port[] = "XXXX", *ports, *next, *cur, *nvvid;
+		char vlanvid[] = "vlanXXXXvid";
+		uint32 untag = 0;
+		uint32 member = 0;
+		int pid, len;
+
+		/* no members if VLAN id is out of limitation */
+		if (vid > VLAN_MAXVID_old)
+			goto vlan_setup_old;
+
+		/* vlan ID mapping */
+		vid_map = vid0 | vid;
+		sprintf(vlanvid, "vlan%dvid", vid);
+		nvvid = getvar(robo->vars, vlanvid);
+
+		if (nvvid != NULL) {
+			vid_map = bcm_atoi(nvvid);
+			if ((vid_map < 1) || (vid_map > 4094)) vid_map = vid0 | vid;
+		}
+
+		/* get vlan member ports from nvram */
+		sprintf(vlanports, "vlan%dports", vid);
+		ports = getvar(robo->vars, vlanports);
+
+#ifdef VID_MAP_DBG
+		printk(KERN_EMERG "bcmrobo: VLAN %d mapped to VID %d, ports='%s', %s='%s'\n",
+			vid, vid_map, (ports != NULL)? ports: "(unset)",
+			vlanvid, (nvvid != NULL)? nvvid: "(unset)" );
+#endif
+
+		/* In 539x vid == 0 us invalid?? */
+		if ((robo->devid != DEVID5325) && (robo->devid != DEVID5397) && (vid == 0)) {
+			if (ports)
+				ET_ERROR(("VID 0 is set in nvram, Ignoring\n"));
+			continue;
+		}
+
+		/* Gemtek: to distinguish switch 5397 and 5395 */
+		if ((robo->devid == DEVID5395) && (vid == 1)) {
+			sprintf(vlanports, "vlan0ports");
+			ports = getvar(robo->vars, vlanports);
+			if (!ports || (*ports == 0) || !strcmp(ports, " ")) {
+				ET_ERROR(("BCM5395: already booted, use internal fixup\n"));
+				sprintf(vlanports, "vlan1ports");
+				ports = getvar(robo->vars, vlanports);
+			}
+			else {
+				ET_ERROR(("Configure vlan1 (%s) instead of vlan0 for BCM5395\n", ports));
+			}
+		}
+
+		/* disable this vlan if not defined */
+		if (!ports)
+			goto vlan_setup_old;
+
+		/*
+		 * setup each port in the vlan. cpu port needs special handing
+		 * (with or without output tagging) to support linux/pmon/cfe.
+		 */
+		for (cur = ports; cur; cur = next) {
+			/* tokenize the port list */
+			while (*cur == ' ')
+				cur ++;
+			next = bcmstrstr(cur, " ");
+			len = next ? next - cur : strlen(cur);
+			if (!len)
+				break;
+			if (len > sizeof(port) - 1)
+				len = sizeof(port) - 1;
+			strncpy(port, cur, len);
+			port[len] = 0;
+
+			/* make sure port # is within the range */
+			pid = bcm_atoi(port);
+			if (pid >= pdescsz) {
+				ET_ERROR(("robo_config_vlan: port %d in vlan%dports is out "
+				          "of range[0-%d]\n", pid, vid, pdescsz));
+				continue;
+			}
+
+			/* build VLAN registers values */
+#ifndef _CFE_
+			if ((!pdesc[pid].cpu && !strchr(port, FLAG_TAGGED)) ||
+			    (pdesc[pid].cpu && strchr(port, FLAG_UNTAG)))
+#endif
+				untag |= pdesc[pid].untag;
+
+			member |= pdesc[pid].member;
+
+			/* set port tag - applies to untagged ingress frames */
+			/* Default Port Tag Register (Page 0x34, Address 0x10-0x1D) */
+#ifdef _CFE_
+#define FL	FLAG_LAN
+#else
+#define FL	FLAG_UNTAG
+#endif /* _CFE_ */
+			if ((!pdesc[pid].cpu && !strchr(port, FLAG_TAGGED)) ||
+			    strchr(port, FL)) {
+				val16 = ((0 << 13) |	/* priority - always 0 */
+				         vid_map);	/* vlan id */
+#ifdef VID_MAP_DBG
+				printk( KERN_EMERG "bcmrobo(map A) ->%d/%d\n", vid_map, pid);
+#endif
+				robo->ops->write_reg(robo, PAGE_VLAN, pdesc[pid].ptagr,
+				                     &val16, sizeof(val16));
+			}
+		}
+
+		/* Add static ARL entries */
+		if (robo->devid == DEVID5325) {
+			val8 = vid;
+			robo->ops->write_reg(robo, PAGE_VTBL, REG_VTBL_VID_E0,
+			                     &val8, sizeof(val8));
+			robo->ops->write_reg(robo, PAGE_VTBL, REG_VTBL_VINDX,
+			                     &val8, sizeof(val8));
+
+			/* Write the entry */
+			val8 = 0x80;
+			robo->ops->write_reg(robo, PAGE_VTBL, REG_VTBL_CTRL,
+			                     &val8, sizeof(val8));
+			/* Wait for write to complete */
+			SPINWAIT((robo->ops->read_reg(robo, PAGE_VTBL, REG_VTBL_CTRL,
+			         &val8, sizeof(val8)), ((val8 & 0x80) != 0)),
+			         100 /* usec */);
+		} else {
+			/* Set the VLAN Id in VLAN ID Index Register */
+			val8 = vid;
+			robo->ops->write_reg(robo, PAGE_VTBL, REG_VTBL_VINDX,
+			                     &val8, sizeof(val8));
+
+			/* Set the MAC addr and VLAN Id in ARL Table MAC/VID Entry 0
+			 * Register.
+			 */
+			arl_entry[6] = (vid_map & 0xff);
+			arl_entry[7] = (vid_map >> 8);
+#ifdef VID_MAP_DBG
+			printk( KERN_EMERG "bcmrobo(map B) ->%d (%d/%d)\n",
+				vid_map, arl_entry[6], arl_entry[7] );
+#endif
+			robo->ops->write_reg(robo, PAGE_VTBL, REG_VTBL_ARL_E0,
+			                     arl_entry, sizeof(arl_entry));
+
+			/* Set the Static bit , Valid bit and Port ID fields in
+			 * ARL Table Data Entry 0 Register
+			 */
+			if ((robo->devid == DEVID53115) || (robo->devid == DEVID53125)) {
+				val32 = 0x18008;
+				robo->ops->write_reg(robo, PAGE_VTBL, REG_VTBL_DAT_E0,
+				                     &val32, sizeof(val32));
+			} else {
+				val16 = 0xc008;
+				robo->ops->write_reg(robo, PAGE_VTBL, REG_VTBL_DAT_E0,
+				                     &val16, sizeof(val16));
+			}
+
+			/* Clear the ARL_R/W bit and set the START/DONE bit in
+			 * the ARL Read/Write Control Register.
+			 */
+			val8 = 0x80;
+			robo->ops->write_reg(robo, PAGE_VTBL, REG_VTBL_CTRL,
+			                     &val8, sizeof(val8));
+			/* Wait for write to complete */
+			SPINWAIT((robo->ops->read_reg(robo, PAGE_VTBL, REG_VTBL_CTRL,
+			         &val8, sizeof(val8)), ((val8 & 0x80) != 0)),
+			         100 /* usec */);
+		}
+
+vlan_setup_old:
+		/* setup VLAN ID and VLAN memberships */
+
+		val32 = (untag |			/* untag enable */
+		         member);			/* vlan members */
+		if (robo->sih->chip == BCM5365_CHIP_ID) {
+			/* VLAN Write Register (Page 0x34, Address 0x0A) */
+			val32 = ((1 << 14) |	/* valid write */
+				 (untag << 1) |	/* untag enable */
+				 member);		/* vlan members */
+			robo->ops->write_reg(robo, PAGE_VLAN, REG_VLAN_WRITE_5365, &val32,
+			                     sizeof(val32));
+			/* VLAN Table Access Register (Page 0x34, Address 0x08) */
+			val16 = ((1 << 13) | 	/* start command */
+				 (1 << 12) |	/* write state */
+				 vid_map);	/* vlan id */
+			robo->ops->write_reg(robo, PAGE_VLAN, REG_VLAN_ACCESS_5365, &val16,
+			                     sizeof(val16));
+		} else if (robo->devid == DEVID5325) {
+			if (robo->corerev < 3) {
+				val32 |= ((1 << 20) |		/* valid write */
+				          ((vid0 >> 4) << 12));	/* vlan id bit[11:4] */
+			} else {
+				val32 |= ((1 << 24) |		/* valid write */
+				          (vid_map << 12));	/* vlan id bit[11:4] */
+			}
+			ET_MSG(("bcm_robo_config_vlan: programming REG_VLAN_WRITE %08x\n", val32));
+
+			/* VLAN Write Register (Page 0x34, Address 0x08-0x0B) */
+			robo->ops->write_reg(robo, PAGE_VLAN, REG_VLAN_WRITE, &val32,
+			                     sizeof(val32));
+			/* VLAN Table Access Register (Page 0x34, Address 0x06-0x07) */
+			val16 = ((1 << 13) |	/* start command */
+			         (1 << 12) |	/* write state */
+			         vid_map);	/* vlan id */
+			robo->ops->write_reg(robo, PAGE_VLAN, REG_VLAN_ACCESS, &val16,
+			                     sizeof(val16));
+#ifdef VID_MAP_DBG
+			printk( KERN_EMERG "bcmrobo(map C/DEVID5325) ->%d\n", vid_map );
+#endif
+		} else {
+			uint8 vtble, vtbli, vtbla;
+
+			if ((robo->devid == DEVID5395) ||
+				(robo->devid == DEVID53115) ||
+				(robo->devid == DEVID53125)) {
+				vtble = REG_VTBL_ENTRY_5395;
+				vtbli = REG_VTBL_INDX_5395;
+				vtbla = REG_VTBL_ACCESS_5395;
+			} else {
+				vtble = REG_VTBL_ENTRY;
+				vtbli = REG_VTBL_INDX;
+				vtbla = REG_VTBL_ACCESS;
+			}
+
+			/* VLAN Table Entry Register (Page 0x05, Address 0x63-0x66/0x83-0x86) */
+			robo->ops->write_reg(robo, PAGE_VTBL, vtble, &val32,
+			                     sizeof(val32));
+			/* VLAN Table Address Index Reg (Page 0x05, Address 0x61-0x62/0x81-0x82) */
+			val16 = vid_map;        /* vlan id */
+#ifdef VID_MAP_DBG
+			printk( KERN_EMERG "bcmrobo(map C) ->%d\n", vid_map );
+#endif
+			robo->ops->write_reg(robo, PAGE_VTBL, vtbli, &val16,
+			                     sizeof(val16));
+
+			/* VLAN Table Access Register (Page 0x34, Address 0x60/0x80) */
+			val8 = ((1 << 7) |	/* start command */
+			        0);		/* write */
+			robo->ops->write_reg(robo, PAGE_VTBL, vtbla, &val8,
+			                     sizeof(val8));
+		}
+	}
+	} /* END: FreshTomato mips RT-N - distinguish Gigabit Ethernet and Fast Ethernet */
 
 	if (robo->devid == DEVID5325) {
 		/* setup priority mapping - applies to tagged ingress frames */

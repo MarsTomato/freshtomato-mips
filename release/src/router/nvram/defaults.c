@@ -1439,6 +1439,7 @@ const defaults_t defaults[] = {
 	{"nginx_user",			"root"				},	// user/group
 	{"nginx_override",		"0"				},	// additional lines for php.ini
 	{"nginx_overridefile",		"/path/to/nginx.conf"		},	// user/group
+	{"nginx_h5aisupport",		"0"				},	/* enable h5ai support */
 
 /* bwq518 - MySQL */
 	{ "mysql_enable",		"0"				},
