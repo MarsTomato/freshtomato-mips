@@ -1627,6 +1627,24 @@ int init_main(int argc, char *argv[])
 	nvram_set("debug_ddns", "1");
 #endif
 
+#ifdef CONFIG_BCMWL5
+	/* disable QoS and BWL when CTF is ON */
+	if (nvram_invmatch("ctf_disable", "1")) {
+		if (nvram_get_int("qos_enable"))
+			nvram_set("qos_enable", "0");
+		if (nvram_get_int("bwl_enable"))
+			nvram_set("bwl_enable", "0");
+	}
+#endif
+
+#ifdef TCONFIG_BCMNAT
+	/* disable BWL when bcm_nat is ON */
+	if (nvram_invmatch("bcmnat_disable", "1")) {
+		if (nvram_get_int("bwl_enable"))
+			nvram_set("bwl_enable", "0");
+	}
+#endif
+
 	/* reset ntp status */
 	nvram_set("ntp_ready", "0");
 
