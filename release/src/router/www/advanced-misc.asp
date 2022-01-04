@@ -47,10 +47,13 @@ function save() {
 /* BCMNAT-END */
 	    (fom.jumbo_frame_enable.value != nvram.jumbo_frame_enable) ||
 	    (fom.jumbo_frame_size.value != nvram.jumbo_frame_size)) {
-		fom._reboot.value = '1';
+		if (!confirm("Router must be rebooted to apply changes. Reboot now?"))
+			return;
+
+		fom._reboot.value = 1;
 		form.submit(fom, 0);
 	}
-	else {
+	else { /* continue without reboot */
 		form.submit(fom, 1);
 	}
 }
