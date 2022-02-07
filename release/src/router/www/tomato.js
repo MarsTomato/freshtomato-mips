@@ -2659,7 +2659,7 @@ function navi() {
 		null,
 		['About',			'about.asp'],
 		['Reboot...',			'javascript:reboot()'],
-		['Shutdown...',			'javascript:shutdown()'],
+		['Halt...',			'javascript:halt()'],
 		['Logout',			'javascript:logout()']
 	];
 	var name, base;
@@ -2724,17 +2724,8 @@ function navi() {
 }
 
 function createFieldTable(flags, desc) {
-	var common;
-	var i, n;
-	var name;
-	var id;
-	var fields;
-	var f;
-	var a;
+	var common, i, n, name, id, fields, placeholder, f, a, buf2, id1, tr;
 	var buf = [];
-	var buf2;
-	var id1;
-	var tr;
 
 	if (flags.indexOf('noopen') == -1) buf.push('<table class="fields">');
 	for (var desci = 0; desci < desc.length; ++desci) {
@@ -2748,17 +2739,16 @@ function createFieldTable(flags, desc) {
 		if (v.ignore) continue;
 
 		buf.push('<tr');
-		if (v.rid) buf.push(' id="' + v.rid + '"');
+		if (v.rid) buf.push(' id="'+v.rid+'"');
 		if (v.hidden) buf.push(' style="display:none"');
 		buf.push('>');
 
 		if (v.text) {
-			if (v.title) {
-				buf.push('<td class="title indent' + (v.indent || 1) + '">' + v.title + '</td><td class="content">' + v.text + '</td></tr>');
-			}
-			else {
-				buf.push('<td colspan="2">' + v.text + '</td></tr>');
-			}
+			if (v.title)
+				buf.push('<td class="title indent'+(v.indent || 1)+'">'+v.title+'</td><td class="content">'+v.text+'</td></tr>');
+			else
+				buf.push('<td colspan="2">'+v.text+'</td></tr>');
+
 			continue;
 		}
 
@@ -2776,22 +2766,23 @@ function createFieldTable(flags, desc) {
 			if (f.prefix) buf2.push(f.prefix);
 
 			if ((f.type == 'radio') && (!f.id))
-				id = '_' + f.name + '_' + i;
+				id = '_'+f.name+'_'+i;
 			else
-				id = (f.id ? f.id : ('_' + f.name));
+				id = (f.id ? f.id : ('_'+f.name));
 
 			if (id1 == '') id1 = id;
 
-			common = ' onchange="verifyFields(this, 1)" id="' + id + '"';
-			if (f.attrib) common += ' ' + f.attrib;
-			name = f.name ? (' name="' + f.name + '"') : '';
+			common = ' onchange="verifyFields(this, 1)" id="'+id+'"';
+			if (f.attrib) common += ' '+f.attrib;
+			name = f.name ? (' name="'+f.name+'"') : '';
+			placeholder = f.placeholder ? (' placeholder="'+f.placeholder+'"') : '';
 
 			switch (f.type) {
 				case 'checkbox':
-					buf2.push('<input type="checkbox"' + name + (f.value ? ' checked="checked"' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
+					buf2.push('<input type="checkbox"'+name+(f.value ? ' checked="checked"' : '')+' onclick="verifyFields(this, 1)"'+common+'>');
 				break;
 				case 'radio':
-					buf2.push('<input type="radio"' + name + (f.value ? ' checked="checked"' : '') + ' onclick="verifyFields(this, 1)"' + common + '>');
+					buf2.push('<input type="radio"'+name+(f.value ? ' checked="checked"' : '')+' onclick="verifyFields(this, 1)"'+common+'>');
 				break;
 				case 'password':
 					if (f.peekaboo) {
@@ -2805,26 +2796,26 @@ function createFieldTable(flags, desc) {
 					}
 					if (f.type == 'password') {
 						common += ' autocomplete="off"';
-						if (f.peekaboo) common += ' onfocus=\'peekaboo("' + id + '",1)\'';
+						if (f.peekaboo) common += ' onfocus=\'peekaboo("'+id+'",1)\'';
 					}
 					/* drop */
 				case 'text':
-					buf2.push('<input type="' + f.type + '"' + name + ' value="' + escapeHTML(UT(f.value)) + '" maxlength=' + f.maxlen + (f.size ? (' size=' + f.size) : '') + common + '>');
+					buf2.push('<input type="'+f.type+'"'+name+placeholder+' value="'+escapeHTML(UT(f.value))+'" maxlength='+f.maxlen+(f.size ? (' size='+f.size) : '')+common+'>');
 				break;
 				case 'clear':
 					s += '';
 				break;
 				case 'select':
-					buf2.push('<select' + name + common + '>');
+					buf2.push('<select'+name+common+'>');
 					for (i = 0; i < f.options.length; ++i) {
 						a = f.options[i];
 						if (a.length == 1) a.push(a[0]);
-						buf2.push('<option value="' + a[0] + '"' + ((a[0] == f.value) ? ' selected="selected"' : '') + '>' + a[1] + '</option>');
+						buf2.push('<option value="'+a[0]+'"'+((a[0] == f.value) ? ' selected="selected"' : '')+'>'+a[1]+'</option>');
 					}
 					buf2.push('</select>');
 				break;
 				case 'textarea':
-					buf2.push('<textarea' + name + common + (f.wrap ? (' style="white-space:' + f.wrap + ';overflow-wrap:normal;overflow-x:scroll"') : '') + '>' + escapeHTML(UT(f.value)) + '</textarea>');
+					buf2.push('<textarea'+name+common+placeholder+(f.wrap ? (' style="white-space:'+f.wrap+';overflow-wrap:normal;overflow-x:scroll"') : '')+'>'+escapeHTML(UT(f.value))+'</textarea>');
 				break;
 				default:
 					if (f.custom) buf2.push(f.custom);
@@ -2834,11 +2825,11 @@ function createFieldTable(flags, desc) {
 		}
 		buf2.push('</td>');
 
-		buf.push('<td class="title indent' + (v.indent ? v.indent : 1) + '">');
+		buf.push('<td class="title indent'+(v.indent ? v.indent : 1)+'">');
 		if (id1 != '')
-			buf.push('<label' + ((id && id != '_undefined' ) ? ' for="' + id + '"' : '') + '>' + (v.title ? v.title : '&nbsp;') + '</label></td>');
+			buf.push('<label'+((id && id != '_undefined' ) ? ' for="'+id+'"' : '')+'>'+(v.title ? v.title : '&nbsp;')+'</label></td>');
 		else
-			buf.push(+ v.title + '</td>');
+			buf.push(+v.title+'</td>');
 
 		buf.push(buf2.join(''));
 		buf.push('</tr>');
@@ -2894,9 +2885,9 @@ function reboot() {
 	if (confirm("Reboot?")) form.submitHidden('tomato.cgi', { _reboot: 1, _commit: 0, _nvset: 0 });
 }
 
-function shutdown() {
-	if (!confirm("Shutdown?")) return;
-	if (confirm("Are you really sure you want to Shutdown??\nThis will require a manual power cycle to boot again.")) form.submitHidden('shutdown.cgi', { });
+function halt() {
+	if (!confirm("Halt?")) return;
+	if (confirm("Are you really sure you want to halt the router??\nThis will require a manual power cycle to boot again.")) form.submitHidden('shutdown.cgi', { });
 }
 
 function logout() {
@@ -2942,6 +2933,18 @@ function displayOUI(i) {
 
 	alert(cmdresult);
 	cmdresult = '';
+}
+
+function wikiLink() {
+	const url = "https://wiki.freshtomato.org/doku.php"
+	var page = myName();
+	if (page)
+		page = page.replace(/\.asp$/, "");
+	else
+		page = 'status-overview';
+
+	var res = '<a href=\"'+url+'/'+page+'\" target=\"_blank\" rel=\"noopener noreferrer\">Wiki</a>';
+	document.write(res);
 }
 
 // -----------------------------------------------------------------------------

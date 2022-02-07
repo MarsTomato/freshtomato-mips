@@ -32,6 +32,13 @@ function clearCache() {
 	alert('Done!');
 }
 
+function flushDNS() {
+	var c = '/usr/bin/killall -HUP dnsmasq';
+	var cmd = new XmlHttp();
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(c.replace(/\r/g, '')));
+	alert('Done!');
+}
+
 function verifyFields(focused, quiet) {
 	return 1;
 }
@@ -93,7 +100,7 @@ function init() {
 </td></tr>
 <tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
-<div id="ident"><% ident(); %></div>
+<div id="ident"><% ident(); %> | <script>wikiLink();</script></div>
 
 <!-- / / / -->
 
@@ -137,11 +144,12 @@ function init() {
 
 	<br><br>
 
-	&raquo; <a href="clearcookies.asp?_http_id=<% nv(http_id); %>">Clear Cookies</a><br>
-	&raquo; <a href="javascript:clearCache()">Clear Cache</a><br>
-	&raquo; <a href="javascript:nvramCommit()">NVRAM Commit</a><br>
+	&raquo; <a href="clearcookies.asp?_http_id=<% nv(http_id); %>">Clear browser cookies</a><br>
+	&raquo; <a href="javascript:clearCache()">Clear browser cache</a><br>
+	&raquo; <a href="javascript:flushDNS()">Flush DNS (dnsmasq) cache</a><br>
+	&raquo; <a href="javascript:nvramCommit()">Commit NVRAM now</a><br>
 	&raquo; <a href="javascript:reboot()">Reboot</a><br>
-	&raquo; <a href="javascript:shutdown()">Shutdown</a><br>
+	&raquo; <a href="javascript:halt()">Halt</a><br>
 
 	<br><br>
 

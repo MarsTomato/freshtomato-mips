@@ -245,6 +245,10 @@ config TCONFIG_UFSD
 	bool "Paragon NTFS driver for Asus routers"
 	default n
 
+config TCONFIG_ROAM
+	bool "WL roaming assistant (RSSI)"
+	default n
+
 config TCONFIG_DNSSEC
 	bool "DNSSEC"
 	default n

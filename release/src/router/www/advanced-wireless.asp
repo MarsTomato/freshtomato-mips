@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_nband,wl_wmf_bss_enable"); %>
+//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_nband,wl_wmf_bss_enable,wl_user_rssi"); %>
 
 //	<% wlcountries(); %>
 
@@ -43,7 +43,9 @@ function verifyFields(focused, quiet) {
 			if (!v_range('_wl'+u+'_country_rev', quiet, 0, 999)) return 0;
 /* BCMWL6-END */
 			if ((E('_wl'+u+'_txpwr').value != 0) && !v_range(E('_wl'+u+'_txpwr'), quiet, 5, hp ? 251 : 400)) return 0;
-
+/* ROAM-BEGIN */
+			if ((E('_wl'+u+'_user_rssi').value != 0) && !v_range(E('_wl'+u+'_user_rssi'), quiet, -90, -45)) return 0;
+/* ROAM-END */
 			var b = E('_wl'+u+'_wme').value == 'off';
 			E('_wl'+u+'_wme_no_ack').disabled = b;
 			E('_wl'+u+'_wme_apsd').disabled = b;
@@ -147,7 +149,7 @@ function init() {
 </td></tr>
 <tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
-<div id="ident"><% ident(); %></div>
+<div id="ident"><% ident(); %> | <script>wikiLink();</script></div>
 
 <!-- / / / -->
 
@@ -212,6 +214,10 @@ function init() {
 				{ title: 'Distance / ACK Timing', name: 'f_wl'+u+'_distance', type: 'text', maxlen: 5, size: 7,
 					suffix: ' <small>meters<\/small>&nbsp;&nbsp;<small>(range: 0 - 99999; 0 = use default)<\/small>',
 						value: (nvram['wl'+u+'_distance'] == '') ? '0' : nvram['wl'+u+'_distance'] },
+/* ROAM-BEGIN */
+				{ title: 'Roaming Assistant', name: 'wl'+u+'_user_rssi', type: 'text', maxlen: 3, size: 5,
+					suffix: ' <small>(range: -90 ~ -45 (RSSI-Value); default: 0 (disabled))<\/small>', value: nvram['wl'+u+'_user_rssi'] },
+/* ROAM-END */
 				{ title: 'DTIM Interval', name: 'wl'+u+'_dtim', type: 'text', maxlen: 3, size: 5,
 					suffix: ' <small>(range: 1 - 255; default: 1)<\/small>', value: nvram['wl'+u+'_dtim'] },
 				{ title: 'Fragmentation Threshold', name: 'wl'+u+'_frag', type: 'text', maxlen: 4, size: 6,
@@ -289,6 +295,9 @@ function init() {
 		<li>Country code AND rev define the possible channel list, power and other regulations</li>
 		<li>Leave default values if you are not sure what you are doing!</li>
 		<li>Info: initial country rev depends on bootloader/cfe default value</li>
+<!-- ROAM-BEGIN -->
+		<li>Roaming Assistant: Do not enable wireless bandsteering (BSD) at the same time!</li>
+<!-- ROAM-END -->
 	</ul>
 </div>
 

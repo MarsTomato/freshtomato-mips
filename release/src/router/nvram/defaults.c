@@ -495,6 +495,12 @@ const defaults_t defaults[] = {
 	{ "wl_ampdu_rtylimit_tid",	"5 5 5 5 5 5 5 5"		},	// Default AMPDU retry limit per-tid setting
 	{ "wl_ampdu_rr_rtylimit_tid",	"2 2 2 2 2 2 2 2"		},	// Default AMPDU regular rate retry limit per-tid setting
 	{ "wl_amsdu",			"auto"				},	// Default AMSDU setting
+#ifdef TCONFIG_ROAM
+	{ "wl_user_rssi",		"0"				},	/* roaming assistant: disabled by default, GUI setting range: -90 ~ -45 */
+#ifdef TCONFIG_BCMARM
+	{ "rast_idlrt",			"2"				},	/* roaming assistant: idle rate (Kbps) - default: 2 */
+#endif
+#endif
 	/* power save */
 #ifdef TCONFIG_BCMWL6
 	{ "wl_bss_opmode_cap_reqd",	"0"				},	// 0 = no requirements on joining devices
@@ -617,6 +623,8 @@ const defaults_t defaults[] = {
 #endif
 	{ "adblock_blacklist_custom",	""				},
 	{ "adblock_whitelist",		""				},
+	{ "adblock_limit",		""				},
+	{ "adblock_path",		""				},
 
 /* advanced-mac */
 	{ "wan_mac",			""				},
@@ -685,8 +693,8 @@ const defaults_t defaults[] = {
 	{ "ne_syncookies",		"0"				},	// tcp_syncookies
 	{ "DSCP_fix_enable",		"1"				},	// Comacst DSCP fix
 	{ "ne_snat",			"0"				},	// use SNAT instead of MASQUERADE
-	{ "dhcp_pass",			"1"				},	// allow DHCP responses
-	{ "ne_shlimit",			"1,3,60"			},	//shibby - enable limit connection attempts for sshd
+	{ "wan_dhcp_pass",		"0"				},	/* allow DHCP responses */
+	{ "fw_blackhole",		"1"				},	/* MTU black hole detection */
 
 /* advanced-routing */
 	{ "routes_static",		""				},
@@ -849,6 +857,7 @@ const defaults_t defaults[] = {
 	{ "sshd_ecdsakey",		""				},
 	{ "sshd_forwarding",		"1"				},
 	{ "rmgt_sip",			""				},	// remote management: source ip address
+	{ "ne_shlimit",			"1,3,60"			},	/* enable limit connection attempts for sshd */
 
 	{ "http_id",			""				},
 	{ "web_mx",			"status,bwm"			},
@@ -885,6 +894,7 @@ const defaults_t defaults[] = {
 	{ "sesx_script",
 		"[ $1 -ge 20 ] && telnetd -p 233 -l /bin/sh\n"
 	},
+#ifndef TCONFIG_BCMARM
 #if defined(TCONFIG_NVRAM_32K) || defined(TCONFIG_OPTIMIZE_SIZE)
 	{ "script_brau",		""				},
 #else
@@ -903,6 +913,7 @@ const defaults_t defaults[] = {
 		"fi\n"
 	},
 #endif
+#endif /* !TCONFIG_BCMARM */
 
 /* admin-log */
 	{ "log_remote",			"0"				},

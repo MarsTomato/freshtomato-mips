@@ -87,9 +87,6 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 extern int init_main(int argc, char *argv[]);
 extern int reboothalt_main(int argc, char *argv[]);
 extern int console_main(int argc, char *argv[]);
-#ifdef TCONFIG_BCMARM
-extern void restore_defaults_module(char *prefix);
-#endif
 
 /* interface.c */
 extern int _ifconfig(const char *name, int flags, const char *addr, const char *netmask, const char *dstaddr, int mtu);
@@ -595,5 +592,12 @@ extern void stop_mysql();
 /* tomatoanon.c */
 extern void start_tomatoanon();
 extern void stop_tomatoanon();
+
+/* roamast.c */
+#ifdef TCONFIG_ROAM
+extern void start_roamast(void);
+extern void stop_roamast(void);
+extern int roam_assistant_main(int argc, char *argv[]);
+#endif
 
 #endif /* __RC_H__ */

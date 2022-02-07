@@ -109,6 +109,7 @@ void start_usb(void)
 		set_gpio(GPIO_00, T_HIGH);
 	}
 	else if ((model == MODEL_EA6350v1) ||
+		 (model == MODEL_EA6350v2) ||
 		 (model == MODEL_EA6400) ||
 		 (model == MODEL_EA6700) ||
 		 (model == MODEL_EA6900) ||
@@ -256,6 +257,11 @@ void start_usb(void)
 #ifdef TCONFIG_TUXERA_HFS
 			if (nvram_get_int("usb_fs_hfs") && nvram_match("usb_hfs_driver", "tuxera"))
 				modprobe("thfsplus");
+#endif
+
+#ifdef TCONFIG_ZFS
+			if (nvram_get_int("usb_fs_zfs"))
+				modprobe("zfs");
 #endif
 
 #ifdef TCONFIG_MICROSD
@@ -413,6 +419,9 @@ void remove_usb_storage_module(void)
 #ifdef TCONFIG_TUXERA_HFS
 	modprobe_r("thfsplus");
 #endif
+#ifdef TCONFIG_ZFS
+	modprobe_r("zfs");
+#endif
 
 	modprobe_r("fuse");
 	sleep(1);
@@ -545,6 +554,7 @@ void stop_usb(void)
 		 (model == MODEL_XR300) )
 		set_gpio(GPIO_00, T_LOW);
 	else if ((model == MODEL_EA6350v1) ||
+		 (model == MODEL_EA6350v2) ||
 		 (model == MODEL_EA6400) ||
 		 (model == MODEL_EA6700) ||
 		 (model == MODEL_EA6900) ||
@@ -1078,6 +1088,7 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_R6400v2:
 		case MODEL_R6700v1:
 		case MODEL_R6700v3:
+		case MODEL_R6900:
 		case MODEL_R7000:
 		case MODEL_XR300:
 #ifdef TCONFIG_BCM7

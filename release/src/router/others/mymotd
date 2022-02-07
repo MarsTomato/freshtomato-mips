@@ -138,7 +138,7 @@
 			[ "$(NV wl2_nband)" == 2 ] && BAND="2.4GHz" || BAND="5GHz"
 			[ "$(NV wl2_radio)" == 1 ] && /bin/echo " WL2 : $BAND @ $(NV wl2_ssid) @ channel: $(NV wl2_country)$CH @ $(NV wl2_hwaddr)"
 		}
-
+# BCMARMNO-BEGIN
 		STHMD_ISENABLED=$(/usr/sbin/cru l | /bin/grep "perm_on" | /usr/bin/wc -l)
 		STHMD_SCHON=$(/usr/sbin/cru l | /bin/grep "stealthsheduleon" | /usr/bin/awk '{ print $2" "$1 }')
 		STHMD_SCHOFF=$(/usr/sbin/cru l | /bin/grep "stealthsheduleoff" | /usr/bin/awk '{ print $2" "$1 }')
@@ -149,7 +149,7 @@
 			[ $STHMD_ISENABLED -gt 0 ] && /bin/echo " Detected the presence of stealthMode which is now active"
 			[ $STHMD_SCHONC -gt 1 -a $STHMD_SCHOFFC -gt 1 ] && /bin/echo -e "  stealthMode Scheduled mode is currently active and is\n       set for sunset at $( /bin/echo $STHMD_SCHON | /usr/bin/awk '{$1=sprintf("%02d", $1);$2=sprintf("%02d", $2); print $1":"$2 }' ) and sunrise at $( /bin/echo $STHMD_SCHOFF | /usr/bin/awk '{$1=sprintf("%02d", $1);$2=sprintf("%02d", $2); print $1":"$2 }' )"
 		}
-
+# BCMARMNO-END
 		/bin/echo -e "\033[1;34m ======================================================== \033[0m"
 		/bin/echo ""
 	}
