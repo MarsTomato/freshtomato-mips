@@ -324,8 +324,8 @@ sub fixDyn
 	fixDynDep("badblocks", "libcom_err.so.2.1");
 
 # avahi (pedro)
-	fixDynDep("avahi-daemon", "libavahi-core.so.7.0.2");
-	fixDynDep("avahi-daemon", "libavahi-common.so.3.5.3");
+	fixDynDep("avahi-daemon", "libavahi-core.so.7.1.0");
+	fixDynDep("avahi-daemon", "libavahi-common.so.3.5.4");
 	fixDynDep("avahi-daemon", "libexpat.so.1.6.2");
 	fixDynDep("avahi-daemon", "libdaemon.so.0.5.0");
 }

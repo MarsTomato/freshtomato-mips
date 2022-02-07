@@ -202,6 +202,10 @@ config TCONFIG_BCMNAT
 	bool "Broadcom FastNAT (bcm_nat)"
 	default n
 
+config TCONFIG_ROAM
+	bool "WL roaming assistant (RSSI)"
+	default n
+
 config TCONFIG_DNSSEC
 	bool "DNSSEC"
 	default n

@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable"); %>
+//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_user_rssi"); %>
 
 //	<% wlcountries(); %>
 
@@ -37,7 +37,9 @@ function verifyFields(focused, quiet) {
 			if (!v_range('_wl'+u+'_frag', quiet, 256, 2346)) return 0;
 			if (!v_range('_wl'+u+'_rts', quiet, 0, 2347)) return 0;
 			if ((E('_wl'+u+'_txpwr').value != 0) && !v_range(E('_wl'+u+'_txpwr'), quiet, 5, hp ? 251 : 400)) return 0;
-
+/* ROAM-BEGIN */
+			if ((E('_wl'+u+'_user_rssi').value != 0) && !v_range(E('_wl'+u+'_user_rssi'), quiet, -90, -45)) return 0;
+/* ROAM-END */
 			var b = E('_wl'+u+'_wme').value == 'off';
 			E('_wl'+u+'_wme_no_ack').disabled = b;
 			E('_wl'+u+'_wme_apsd').disabled = b;
@@ -107,7 +109,7 @@ function save() {
 </td></tr>
 <tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
-<div id="ident"><% ident(); %></div>
+<div id="ident"><% ident(); %> | <script>wikiLink();</script></div>
 
 <!-- / / / -->
 
@@ -155,6 +157,10 @@ function save() {
 				{ title: 'Distance / ACK Timing', name: 'f_wl'+u+'_distance', type: 'text', maxlen: 5, size: 7,
 					suffix: ' <small>meters<\/small>&nbsp;&nbsp;<small>(range: 0 - 99999; 0 = use default)<\/small>',
 						value: (nvram['wl'+u+'_distance'] == '') ? '0' : nvram['wl'+u+'_distance'] },
+/* ROAM-BEGIN */
+				{ title: 'Roaming Assistant', name: 'wl'+u+'_user_rssi', type: 'text', maxlen: 3, size: 5,
+					suffix: ' <small>(range: -90 ~ -45 (RSSI-Value); default: 0 (disabled))<\/small>', value: nvram['wl'+u+'_user_rssi'] },
+/* ROAM-END */
 				{ title: 'DTIM Interval', name: 'wl'+u+'_dtim', type: 'text', maxlen: 3, size: 5,
 					suffix: ' <small>(range: 1 - 255; default: 1)<\/small>', value: nvram['wl'+u+'_dtim'] },
 				{ title: 'Fragmentation Threshold', name: 'wl'+u+'_frag', type: 'text', maxlen: 4, size: 6,

@@ -157,7 +157,7 @@ static inline char * strcat_r(const char *s1, const char *s2, char *buf)
 /* Return NUL instead of NULL if undefined */
 #define safe_getenv(s) (getenv(s) ? : "")
 
-
+extern void dbg(const char * format, ...);
 extern void cprintf(const char *format, ...);
 
 

@@ -795,7 +795,7 @@
      {
 --- dnsmasq/src/forward.c
 +++ dnsmasq/src/forward.c
-@@ -41,7 +41,9 @@
+@@ -44,7 +44,9 @@
  #elif defined(IP_SENDSRCADDR)
      char control[CMSG_SPACE(sizeof(struct in_addr))];
  #endif
@@ -805,7 +805,7 @@
    } control_u;
    
    iov[0].iov_base = packet;
-@@ -82,6 +84,7 @@
+@@ -85,6 +87,7 @@
  #endif
  	}
        else
@@ -813,7 +813,7 @@
  	{
  	  struct in6_pktinfo p;
  	  p.ipi6_ifindex = iface; /* Need iface for IPv6 to handle link-local addrs */
-@@ -92,6 +95,9 @@
+@@ -95,6 +98,9 @@
  	  cmptr->cmsg_type = daemon->v6pktinfo;
  	  cmptr->cmsg_level = IPPROTO_IPV6;
  	}
@@ -823,7 +823,7 @@
      }
    
    while (retry_send(sendmsg(fd, &msg, 0)));
-@@ -123,8 +129,10 @@
+@@ -126,8 +132,10 @@
  {
    if (addr->sa.sa_family == AF_INET)
      log_query(flags | F_IPV4, name, (union all_addr *)&addr->in.sin_addr, arg);
@@ -834,7 +834,7 @@
  }
  
  static void server_send(struct server *server, int fd,
-@@ -942,8 +950,10 @@
+@@ -973,8 +981,10 @@
    daemon->srv_save = NULL;
  
    /* Determine the address of the server replying  so that we can mark that as good */
@@ -845,7 +845,7 @@
    
    header = (struct dns_header *)daemon->packet;
  
-@@ -1278,7 +1288,9 @@
+@@ -1309,7 +1319,9 @@
    struct cmsghdr *cmptr;
    union {
      struct cmsghdr align; /* this ensures alignment */
@@ -855,7 +855,7 @@
  #if defined(HAVE_LINUX_NETWORK)
      char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
  #elif defined(IP_RECVDSTADDR) && defined(HAVE_SOLARIS_NETWORK)
-@@ -1342,6 +1354,7 @@
+@@ -1373,6 +1385,7 @@
        if (source_addr.in.sin_port == 0)
  	return;
      }
@@ -863,7 +863,7 @@
    else
      {
        /* Source-port == 0 is an error, we can't send back to that. */
-@@ -1349,12 +1362,14 @@
+@@ -1380,12 +1393,14 @@
  	return;
        source_addr.in6.sin6_flowinfo = 0;
      }
@@ -878,7 +878,7 @@
        if (family == AF_INET6) 
  	{
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -1363,6 +1378,7 @@
+@@ -1394,6 +1409,7 @@
  	      break;
  	}
        else
@@ -886,7 +886,7 @@
  	{
  	  struct in_addr netmask;
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -1431,6 +1447,7 @@
+@@ -1462,6 +1478,7 @@
  	}
  #endif
        
@@ -894,7 +894,7 @@
        if (family == AF_INET6)
  	{
  	  for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-@@ -1446,6 +1463,7 @@
+@@ -1477,6 +1494,7 @@
  		if_index = p.p->ipi6_ifindex;
  	      }
  	}
@@ -902,7 +902,7 @@
        
        /* enforce available interface configuration */
        
-@@ -1873,9 +1891,11 @@
+@@ -1907,9 +1925,11 @@
      {
        union all_addr local;
  		      
@@ -914,7 +914,7 @@
  	local.addr4 = local_addr->in.sin_addr;
        
        have_mark = get_incoming_mark(&peer_addr, &local, 1, &mark);
-@@ -1887,6 +1907,7 @@
+@@ -1921,6 +1941,7 @@
      {
        struct addrlist *addr;
  
@@ -922,7 +922,7 @@
        if (peer_addr.sa.sa_family == AF_INET6) 
  	{
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -1895,6 +1916,7 @@
+@@ -1929,6 +1950,7 @@
  	      break;
  	}
        else
