@@ -1,6 +1,6 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -Wsign-compare
+CFLAGS	= -Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -Wsign-compare -I$(TOP)/shared
 LIBS =
 LDFLAGS	= -ffunction-sections -fdata-sections -Wl,--gc-sections
 
@@ -21,6 +21,10 @@ ifneq ($(TCONFIG_BCMARM),y)
 LIBS += -lpthread
 endif
 OBJ = mssl.o
+
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+export CFLAGS += -DDEBUG_LOGMSG
+endif
 
 all: libmssl.so libmssl.a
 

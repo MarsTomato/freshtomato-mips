@@ -44,6 +44,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/version.h>
 #include <linux/errno.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -54,21 +55,28 @@
 #include <linux/usb.h>
 #include <linux/workqueue.h>
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,34))
+#define usb_alloc_coherent       usb_buffer_alloc
+#define usb_free_coherent        usb_buffer_free
+#define cancel_delayed_work_sync cancel_rearming_delayed_work
+#endif
+
 #define USB_VENDOR_APPLE        0x05ac
 #define USB_PRODUCT_IPHONE      0x1290
 #define USB_PRODUCT_IPHONE_3G   0x1292
 #define USB_PRODUCT_IPHONE_3GS  0x1294
 #define USB_PRODUCT_IPHONE_4	0x1297
-#define USB_PRODUCT_IPAD 0x129a
+#define USB_PRODUCT_IPAD 	0x129a
 #define USB_PRODUCT_IPHONE_4_VZW 0x129c
 #define USB_PRODUCT_IPHONE_4S	0x12a0
+#define USB_PRODUCT_IPHONE_5	0x12a8
 
 #define IPHETH_USBINTF_CLASS    255
 #define IPHETH_USBINTF_SUBCLASS 253
 #define IPHETH_USBINTF_PROTO    1
 
-#define IPHETH_BUF_SIZE         1516
-#define IPHETH_IP_ALIGN		2	/* padding at front of URB */
+#define IPHETH_BUF_SIZE         1514
+#define IPHETH_IP_ALIGN         2       /* padding at front of URB */
 #define IPHETH_TX_TIMEOUT       (5 * HZ)
 
 #define IPHETH_INTFNUM          2
@@ -113,6 +121,10 @@ static struct usb_device_id ipheth_table[] = {
 		USB_VENDOR_APPLE, USB_PRODUCT_IPHONE_4S,
 		IPHETH_USBINTF_CLASS, IPHETH_USBINTF_SUBCLASS,
 		IPHETH_USBINTF_PROTO) },
+	{ USB_DEVICE_AND_INTERFACE_INFO(
+		USB_VENDOR_APPLE, USB_PRODUCT_IPHONE_5,
+		IPHETH_USBINTF_CLASS, IPHETH_USBINTF_SUBCLASS,
+		IPHETH_USBINTF_PROTO) },
 	{ }
 };
 MODULE_DEVICE_TABLE(usb, ipheth_table);
@@ -121,6 +133,7 @@ struct ipheth_device {
 	struct usb_device *udev;
 	struct usb_interface *intf;
 	struct net_device *net;
+	struct net_device_stats stats;
 	struct sk_buff *tx_skb;
 	struct urb *tx_urb;
 	struct urb *rx_urb;
@@ -130,8 +143,6 @@ struct ipheth_device {
 	u8 bulk_in;
 	u8 bulk_out;
 	struct delayed_work carrier_work;
-
-	struct net_device_stats stats;
 };
 
 static int ipheth_rx_submit(struct ipheth_device *dev, gfp_t mem_flags);
@@ -151,14 +162,14 @@ static int ipheth_alloc_urbs(struct ipheth_device *iphone)
 	if (rx_urb == NULL)
 		goto free_tx_urb;
 
-	tx_buf = usb_buffer_alloc(iphone->udev,
+	tx_buf = usb_alloc_coherent(iphone->udev,
 				  IPHETH_BUF_SIZE,
 				  GFP_KERNEL,
 				  &tx_urb->transfer_dma);
 	if (tx_buf == NULL)
 		goto free_rx_urb;
 
-	rx_buf = usb_buffer_alloc(iphone->udev,
+	rx_buf = usb_alloc_coherent(iphone->udev,
 				  IPHETH_BUF_SIZE,
 				  GFP_KERNEL,
 				  &rx_urb->transfer_dma);
@@ -173,7 +184,7 @@ static int ipheth_alloc_urbs(struct ipheth_device *iphone)
 	return 0;
 
 free_tx_buf:
-	usb_buffer_free(iphone->udev, IPHETH_BUF_SIZE, tx_buf,
+	usb_free_coherent(iphone->udev, IPHETH_BUF_SIZE, tx_buf,
 			tx_urb->transfer_dma);
 free_rx_urb:
 	usb_free_urb(rx_urb);
@@ -185,9 +196,9 @@ error_nomem:
 
 static void ipheth_free_urbs(struct ipheth_device *iphone)
 {
-	usb_buffer_free(iphone->udev, IPHETH_BUF_SIZE, iphone->rx_buf,
+	usb_free_coherent(iphone->udev, IPHETH_BUF_SIZE, iphone->rx_buf,
 			iphone->rx_urb->transfer_dma);
-	usb_buffer_free(iphone->udev, IPHETH_BUF_SIZE, iphone->tx_buf,
+	usb_free_coherent(iphone->udev, IPHETH_BUF_SIZE, iphone->tx_buf,
 			iphone->tx_urb->transfer_dma);
 	usb_free_urb(iphone->rx_urb);
 	usb_free_urb(iphone->tx_urb);
@@ -220,7 +231,7 @@ static void ipheth_rcvbulk_callback(struct urb *urb)
 	case 0:
 		break;
 	default:
-		err("%s: urb status: %d", __func__, urb->status);
+		err("%s: urb status: %d", __func__, status);
 		return;
 	}
 
@@ -252,16 +263,17 @@ static void ipheth_rcvbulk_callback(struct urb *urb)
 static void ipheth_sndbulk_callback(struct urb *urb)
 {
 	struct ipheth_device *dev;
+	int status = urb->status;
 
 	dev = urb->context;
 	if (dev == NULL)
 		return;
 
-	if (urb->status != 0 &&
-	    urb->status != -ENOENT &&
-	    urb->status != -ECONNRESET &&
-	    urb->status != -ESHUTDOWN)
-		err("%s: urb status: %d", __func__, urb->status);
+	if (status != 0 &&
+	    status != -ENOENT &&
+	    status != -ECONNRESET &&
+	    status != -ESHUTDOWN)
+		err("%s: urb status: %d", __func__, status);
 
 	dev_kfree_skb_irq(dev->tx_skb);
 	netif_wake_queue(dev->net);
@@ -356,6 +368,8 @@ static int ipheth_open(struct net_device *net)
 	int retval = 0;
 
 	usb_set_interface(udev, IPHETH_INTFNUM, IPHETH_ALT_INTFNUM);
+	usb_clear_halt(udev, usb_rcvbulkpipe(udev, dev->bulk_in));
+	usb_clear_halt(udev, usb_sndbulkpipe(udev, dev->bulk_out));
 
 	retval = ipheth_carrier_set(dev);
 	if (retval)
@@ -374,7 +388,7 @@ static int ipheth_close(struct net_device *net)
 {
 	struct ipheth_device *dev = netdev_priv(net);
 
-	cancel_rearming_delayed_work(&dev->carrier_work);
+	cancel_delayed_work_sync(&dev->carrier_work);
 	netif_stop_queue(net);
 	return 0;
 }
@@ -387,7 +401,7 @@ static int ipheth_tx(struct sk_buff *skb, struct net_device *net)
 
 	/* Paranoid */
 	if (skb->len > IPHETH_BUF_SIZE) {
-		WARN(1, "%s: skb too large: %d bytes", __func__, skb->len);
+		err("%s: skb too large: %d bytes", __func__, skb->len);
 		dev->stats.tx_dropped++;
 		dev_kfree_skb_irq(skb);
 		return NETDEV_TX_OK;
@@ -442,10 +456,19 @@ static u32 ipheth_ethtool_op_get_link(struct net_device *net)
 	return netif_carrier_ok(dev->net);
 }
 
-static const struct ethtool_ops ops = {
+static struct ethtool_ops ops = {
 	.get_link = ipheth_ethtool_op_get_link
 };
 
+#ifdef HAVE_NET_DEVICE_OPS
+static const struct net_device_ops ipheth_netdev_ops = {
+	.ndo_open = &ipheth_open,
+	.ndo_stop = &ipheth_close,
+	.ndo_start_xmit = &ipheth_tx,
+	.ndo_tx_timeout = &ipheth_tx_timeout,
+	.ndo_get_stats = &ipheth_stats,
+};
+#endif
 
 static int ipheth_probe(struct usb_interface *intf,
 			const struct usb_device_id *id)
@@ -462,11 +485,15 @@ static int ipheth_probe(struct usb_interface *intf,
 	if (!netdev)
 		return -ENOMEM;
 
-	netdev->open = ipheth_open;
-	netdev->stop = ipheth_close;
-	netdev->hard_start_xmit = ipheth_tx;
-	netdev->tx_timeout = ipheth_tx_timeout;
-	netdev->get_stats = ipheth_stats;
+#ifdef HAVE_NET_DEVICE_OPS
+	netdev->netdev_ops = &ipheth_netdev_ops;
+#else /* CONFIG_COMPAT_NET_DEV_OPS */
+	netdev->open = &ipheth_open;
+	netdev->stop = &ipheth_close;
+	netdev->hard_start_xmit = &ipheth_tx;
+	netdev->tx_timeout = &ipheth_tx_timeout;
+	netdev->get_stats = &ipheth_stats;
+#endif
 	netdev->watchdog_timeo = IPHETH_TX_TIMEOUT;
 	strcpy(netdev->name, "eth%d");
 
