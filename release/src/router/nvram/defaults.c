@@ -650,7 +650,6 @@ const defaults_t defaults[] = {
 	{ "dhcpd_lmax",			""				},
 	{ "dns_addget",			"0"				},
 	{ "dns_intcpt",			"0"				},
-	{ "dhcpc_minpkt",		"1"				},
 	{ "dhcpc_custom",		""				},
 	{ "dns_norebind",		"1"				},
 	{ "dns_fwd_local",		"0"				},
@@ -962,6 +961,7 @@ const defaults_t defaults[] = {
 /* admin-jffs2 */
 	{ "jffs2_on",			"0"				},
 	{ "jffs2_exec",			""				},
+	{ "jffs2_auto_unmount",		"0"				},	/* automatically unmount JFFS2 during FW upgrade */
 
 /* admin-tomatoanon */
 	{ "tomatoanon_enable",		"-1"				},

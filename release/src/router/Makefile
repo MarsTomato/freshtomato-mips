@@ -2351,11 +2351,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.9.12 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.12
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.12
+	install -D libxml2/.libs/libxml2.so.2.9.13 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.13
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.13
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.9.12 libxml2.so.2 && \
-		ln -sf libxml2.so.2.9.12 libxml2.so
+		ln -sf libxml2.so.2.9.13 libxml2.so.2 && \
+		ln -sf libxml2.so.2.9.13 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -2620,7 +2620,7 @@ mysql/target/Makefile:
 			-DWITH_FEDERATED_STORAGE_ENGINE=FALSE \
 			-DWITH_NDBCLUSTER_STORAGE_ENGINE=FALSE \
 			-DCURSES_INCLUDE_PATH="$(TOP)/libncurses/staged/usr/include" \
-			-DCURSES_NCURSES_LIBRARY="$(TOP)/libncurses/staged/usr/lib/libncurses.so" \
+			-DCURSES_LIBRARY="$(TOP)/libncurses/staged/usr/lib/libncurses.so" \
 			-DWITH_ZLIB=system \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \

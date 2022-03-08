@@ -397,7 +397,7 @@ function verifyFields(focused, quiet) {
 	var ok = 1;
 	var a, b, c, d, e;
 	var u, n, uidx, wan_uidx;
-	var wmode, sm2;
+	var wmode, sm2, sta_wl;
 	var curr_mwan_num = E('_mwan_num').value;
 	var wanproto = [];
 
@@ -728,6 +728,7 @@ function verifyFields(focused, quiet) {
 			vis['_f_wan'+u+'_dns_2'] = 0;
 			vis['_wan'+u+'_dns_auto'] = 0;
 			E('_wan'+u+'_sta').value = '';
+			vis['_wan'+u+'_sta'] = 0;
 		break;
 		case 'dhcp':
 			vis['_wan'+u+'_l2tp_server_ip'] = 0;
@@ -783,6 +784,7 @@ function verifyFields(focused, quiet) {
 			vis['_wan'+u+'_modem_band'] = 0;
 			vis['_wan'+u+'_modem_roam'] = 0;
 			vis['_f_wan'+u+'_ppp_mlppp'] = 0;
+			E('_wan'+u+'_sta').value = '';
 			vis['_wan'+u+'_sta'] = 0;
 		break;
 		case 'lte':
@@ -802,6 +804,7 @@ function verifyFields(focused, quiet) {
 			vis['_wan'+u+'_modem_dev'] = 0;
 			vis['_wan'+u+'_modem_init'] = 0;
 			vis['_f_wan'+u+'_ppp_mlppp'] = 0;
+			E('_wan'+u+'_sta').value = '';
 			vis['_wan'+u+'_sta'] = 0;
 		break;
 /* USB-END */
@@ -911,13 +914,37 @@ function verifyFields(focused, quiet) {
 			u = wl_unit(uidx);
 			wmode = E('_f_wl'+u+'_mode').value;
 
-			if (!E('_f_wl'+u+'_radio').checked) {
+			if (!E('_f_wl'+u+'_radio').checked) { /* WL is disabled */
 				for (a in wl_vis[uidx]) {
 					wl_vis[uidx][a] = 2;
 				}
 				wl_vis[uidx]._f_wl_radio = 1;
 				wl_vis[uidx]._wl_nbw_cap = nphy || acphy ? 2 : 0;
 				wl_vis[uidx]._f_wl_nband = (bands[uidx].length > 1) ? 2 : 0;
+
+				for (c = 1; c <= curr_mwan_num; ++c) { /* on every WAN */
+					d = (c > 1) ? c : '';
+					sta_wl = E('_wan'+d+'_sta');
+
+					if (sta_wl.value == 'wl'+u) /* 'sta' is set, so change to 'disabled' */
+						sta_wl.value = '';
+
+					for (e = 0; e < sta_wl.options.length; ++e) {
+						if (sta_wl.options[e].value == 'wl'+u)
+							sta_wl.options[e].disabled = 1; /* and disable 'sta' option */
+					}
+				}
+			}
+			else { /* WL is enabled */
+				for (c = 1; c <= curr_mwan_num; ++c) {
+					d = (c > 1) ? c : '';
+					var sta_wl = E('_wan'+d+'_sta');
+
+					for (e = 0; e < sta_wl.options.length; ++e) {
+						if (sta_wl.options[e].value == 'wl'+u)
+							sta_wl.options[e].disabled = 0; /* so enable 'sta' option */
+					}
+				}
 			}
 
 			switch (wmode) {
@@ -1270,57 +1297,49 @@ REMOVE-END */
 			if (typeof(wl_mode_last[u]) == 'undefined')
 				wl_mode_last[u] = E('_f_wl'+u+'_mode').value;
 
-			E('_f_wl'+u+'_mode').options[0].disabled = 0;
-			E('_f_wl'+u+'_mode').options[1].disabled = 0;
-			E('_f_wl'+u+'_mode').options[2].disabled = 1;
-			E('_f_wl'+u+'_mode').options[3].disabled = 0;
-			E('_f_wl'+u+'_mode').options[4].disabled = 0;
-			E('_wl'+u+'_security_mode').options[2].disabled = 0;
-			E('_wl'+u+'_security_mode').options[3].disabled = 0;
-			E('_wl'+u+'_security_mode').options[4].disabled = 0;
-			E('_wl'+u+'_security_mode').options[5].disabled = 0;
+			wmode = E('_f_wl'+u+'_mode');
+			wmode.options[0].disabled = 0;
+			wmode.options[1].disabled = 0;
+			wmode.options[2].disabled = 1;
+			wmode.options[3].disabled = 0;
+			wmode.options[4].disabled = 0;
+/* BCMWL6-BEGIN */
+			wmode.options[5].disabled = 0;
+/* BCMWL6-END */
 		}
 	}
 
-	for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
-		u = (uidx > 1) ? uidx : '';
-		var sta_wl = E('_wan'+u+'_sta').value;
-		if (sta_wl != '') {
-			var m_mode = E('_f_'+sta_wl+'_mode');
-			m_mode.value = 'sta';
-			m_mode.options[0].disabled = 1;
-			m_mode.options[1].disabled = 1;
-			m_mode.options[2].disabled = 0;
-			m_mode.options[3].disabled = 1;
-			m_mode.options[4].disabled = 1;
-/* remove wl securtiy setup restriction and let tomato user decide. no need to force auto WPA/WPA2 */
-/* REMOVE-BEGIN
-			var s_mode = E('_'+sta_wl+'_security_mode');
-			s_mode.options[2].disabled = 1;
-			s_mode.options[3].disabled = 1;
-			s_mode.options[4].disabled = 1;
-			s_mode.options[5].disabled = 1;
-			if (s_mode.options[2].selected || s_mode.options[4].selected)
-				s_mode.options[6].selected = 1;
+	/* first reset all previous 'sta' modes on every WL */
+	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+		if (wl_sunit(uidx) < 0) {
+			u = wl_unit(uidx);
 
-			if (s_mode.options[3].selected || s_mode.options[5].selected)
-				s_mode.options[7].selected = 1;
-REMOVE-END */
-			for (i = uidx+1; i <= curr_mwan_num; ++i) {
-				if (E('_wan'+u+'_sta').value == E('_wan'+i+'_sta').value) {
-					ferror.set('_wan'+i+'_sta', 'Wireless Client mode can be set only to one WAN port', quiet || !ok);
-					ok = 0;
-				}
+			if (E('_f_wl'+u+'_mode').value == 'sta') {
+				if (wl_mode_last[u] != 'sta') /* only if last mode (on loading the page) is not 'sta'! */
+					E('_f_wl'+u+'_mode').value = wl_mode_last[u];
+				else /* reset to the most popular 'ap' mode */
+					E('_f_wl'+u+'_mode').value = 'ap';
 			}
 		}
-		else if (wl_ifaces.length > 0) {
-			for (i = 0; i < wl_ifaces.length; ++i) {
-				if (wl_sunit(i) < 0) {
-					u = wl_unit(i);
-					if (E('_f_wl'+u+'_mode').value == 'sta')
-						E('_f_wl'+u+'_mode').value = wl_mode_last[u];
-				}
-			}
+	}
+
+	/* then apply new ones (if any) */
+	for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
+		u = (uidx > 1) ? uidx : '';
+		sta_wl = E('_wan'+u+'_sta').value;
+
+		/* sta_wl: wl0, wl1, wl2 */
+		if (sta_wl != '') {
+			wmode = E('_f_'+sta_wl+'_mode');
+			wmode.value = 'sta';
+			wmode.options[0].disabled = 1;
+			wmode.options[1].disabled = 1;
+			wmode.options[2].disabled = 0;
+			wmode.options[3].disabled = 1;
+			wmode.options[4].disabled = 1;
+/* BCMWL6-BEGIN */
+			wmode.options[5].disabled = 1;
+/* BCMWL6-END */
 		}
 	}
 
@@ -1334,7 +1353,7 @@ REMOVE-END */
 		u = (uidx > 1) ? uidx : '';
 		var lte3g = E('_wan'+u+'_proto').value;
 		if (lte3g == 'lte' || lte3g == 'ppp3g') {
-			for (i = uidx+1; i <= curr_mwan_num; ++i) {
+			for (i = uidx + 1; i <= curr_mwan_num; ++i) {
 				if ((E('_wan'+i+'_proto').value == 'lte') || (E('_wan'+i+'_proto').value == 'ppp3g')) {
 					ferror.set('_wan'+i+'_proto', '3G or LTE mode can be set only to one WAN port', quiet || !ok);
 					ok = 0;
