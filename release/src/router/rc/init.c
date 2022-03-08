@@ -1193,6 +1193,215 @@ static void check_bootnv(void)
 
 #else /* !CONFIG_BCMWL6A */
 
+	case MODEL_EA6350v2:
+		if (!nvram_match("boardnum","20150309")) { /* cfe changes/deletes nv variables after changing country setup! */
+			const char *wlmac;
+			char buf[32] = {0};
+
+			nvram_set("boardnum","20150309");
+
+			/* check wl0 mac address */
+			wlmac = nvram_get("0:macaddr");
+			if ((wlmac == NULL) || (wlmac && !strlen(wlmac))) {
+				strlcpy(buf, nvram_safe_get("wl0_hwaddr"), sizeof(buf));
+				if (strlen(buf)) {
+					nvram_set("0:macaddr", buf);
+				}
+				else { /* bring back FT default mac setup */
+					strlcpy(buf, nvram_safe_get("et0macaddr"), sizeof(buf));
+					inc_mac(buf, +2);
+					nvram_set("0:macaddr", buf);
+				}
+			}
+
+			/* check wl1 mac address */
+			wlmac = nvram_get("1:macaddr");
+			if ((wlmac == NULL) || (wlmac && !strlen(wlmac))) {
+				strlcpy(buf, nvram_safe_get("wl1_hwaddr"), sizeof(buf));
+				if (strlen(buf)) {
+					nvram_set("1:macaddr", buf);
+				}
+				else { /* bring back FT default mac setup */
+					strlcpy(buf, nvram_safe_get("et0macaddr"), sizeof(buf));
+					inc_mac(buf, +6);
+					nvram_set("1:macaddr", buf);
+				}
+			}
+
+			/* use EA6350v2 USA version default values; EU version default values almost the same! */
+			struct nvram_tuple ea6350v2_pci_1_1_params[] = {
+				{ "aa2g", "3", 0 },
+				{ "ag0", "0", 0 },
+				{ "ag1", "0", 0 },
+				{ "ag2", "0", 0 },
+				{ "antswctl2g", "0", 0 },
+				{ "antswitch", "0", 0 },
+				{ "boardflags2", "0x00001000", 0 },
+				{ "boardflags", "0x80001200", 0 },
+				{ "bw40po", "0x0", 0 },
+				{ "bwduppo", "0x0", 0 },
+				{ "cck2gpo", "0x0000", 0 },
+				//{ "ccode", "Q2", 0 },
+				{ "cddpo", "0x0", 0 },
+				{ "devid", "0x43a9", 0 },
+				{ "elna2g", "2", 0 },
+				{ "extpagain2g", "3", 0 },
+				{ "ledbh0", "11", 0 },
+				{ "ledbh1", "11", 0 },
+				{ "ledbh2", "11", 0 },
+				{ "ledbh3", "11", 0 },
+				{ "leddc", "0xffff", 0 },
+				//{ "macaddr", "48:F8:B3:EB:1A:62", 0 },
+				{ "maxp2ga0", "0x68", 0 },
+				{ "maxp2ga1", "0x68", 0 },
+				{ "mcs2gpo0", "0x4444", 0 },
+				{ "mcs2gpo1", "0x4444", 0 },
+				{ "mcs2gpo2", "0x4444", 0 },
+				{ "mcs2gpo3", "0x4444", 0 },
+				{ "mcs2gpo4", "0x6666", 0 },
+				{ "mcs2gpo5", "0x6666", 0 },
+				{ "mcs2gpo6", "0x6666", 0 },
+				{ "mcs2gpo7", "0x6666", 0 },
+				{ "ofdm2gpo", "0x44444444", 0 },
+				{ "pa2gw0a0", "0xFE7C", 0 },
+				{ "pa2gw0a1", "0xFE69", 0 },
+				{ "pa2gw1a0", "0x19E9", 0 },
+				{ "pa2gw1a1", "0x17F9", 0 },
+				{ "pa2gw2a0", "0xFA2E", 0 },
+				{ "pa2gw2a1", "0xFA82", 0 },
+				{ "pdetrange2g", "3", 0 },
+				{ "phycal_tempdelta", "0", 0 },
+				//{ "regrev", "118", 0 },
+				{ "rxchain", "3", 0 },
+				{ "sromrev", "8", 0 },
+				{ "stbcpo", "0x0", 0 },
+				{ "tempoffset", "0", 0 },
+				{ "temps_hysteresis", "5", 0 },
+				{ "temps_period", "5", 0 },
+				{ "tempthresh", "120", 0 },
+				{ "triso2g", "4", 0 },
+				{ "tssipos2g", "1", 0 },
+				{ "txchain", "3", 0 },
+				{ "venid", "0x14e4", 0 },
+				{ "xtalfreq", "20000", 0 },
+				{ 0, 0, 0 }
+			};
+
+			/* use EA6350v2 USA version default values; EU version default values almost the same! */
+			struct nvram_tuple ea6350v2_pci_2_1_params[] = {
+				{ "aa5g", "3", 0 },
+				{ "aga0", "0", 0 },
+				{ "aga1", "0", 0 },
+				{ "antswitch", "0", 0 },
+				{ "boardflags2", "0x00200002", 0 },
+				{ "boardflags3", "0x00000000", 0 },
+				{ "boardflags", "0x30000000", 0 },
+				//{ "ccode", "Q2", 0 },
+				{ "devid", "0x43B3", 0 },
+				{ "dot11agduphrpo", "0x0000", 0 },
+				{ "dot11agduplrpo", "0x0000", 0 },
+				{ "epagain5g", "0", 0 },
+				{ "femctrl", "3", 0 },
+				{ "gainctrlsph", "0", 0 },
+				{ "ledbh0", "11", 0 },
+				{ "ledbh1", "11", 0 },
+				{ "ledbh2", "11", 0 },
+				{ "ledbh3", "11", 0 },
+				{ "leddc", "0xFFFF", 0 },
+				//{ "macaddr", "48:F8:B3:EB:1A:63", 0 },
+				{ "maxp5ga0", "0x4C,0x4C,0x4C,0x56", 0 },
+				{ "maxp5ga1", "0x4C,0x4C,0x4C,0x56", 0 },
+				{ "mcsbw205ghpo", "0xA8642000", 0 },
+				{ "mcsbw205glpo", "0x00000000", 0 },
+				{ "mcsbw205gmpo", "0xA8642000", 0 },
+				{ "mcsbw405ghpo", "0xA8642000", 0 },
+				{ "mcsbw405glpo", "0x00000000", 0 },
+				{ "mcsbw405gmpo", "0xA8642000", 0 },
+				{ "mcsbw805ghpo", "0xA8642000", 0 },
+				{ "mcsbw805glpo", "0x00000000", 0 },
+				{ "mcsbw805gmpo", "0xA8642000", 0 },
+				{ "mcslr5ghpo", "0x0000", 0 },
+				{ "mcslr5glpo", "0x0000", 0 },
+				{ "mcslr5gmpo", "0x0000", 0 },
+				{ "pa5ga0", "0xff1f,0x19f7,0xfccd,0xff22,0x1d35,0xfc73,0xff1d,0x1c6b,0xfc85,0xff1c,0x1932,0xfce2", 0 },
+				{ "pa5ga1", "0xff22,0x1a5b,0xfcc4,0xff22,0x1b65,0xfca7,0xff22,0x1b3e,0xfcaa,0xff1e,0x196f,0xfcde", 0 },
+				{ "papdcap5g", "0", 0 },
+				{ "parefldovoltage", "35", 0 },
+				{ "pdgain5g", "4", 0 },
+				{ "pdoffset40ma0", "0x0000", 0 },
+				{ "pdoffset40ma1", "0x0000", 0 },
+				{ "pdoffset80ma0", "0x0000", 0 },
+				{ "pdoffset80ma1", "0x0000", 0 },
+				{ "phycal_tempdelta", "0", 0 },
+				//{ "regrev", "118", 0 },
+				{ "rxchain", "3", 0 },
+				{ "rxgains5gelnagaina0", "1", 0 },
+				{ "rxgains5gelnagaina1", "1", 0 },
+				{ "rxgains5gelnagaina2", "1", 0 },
+				{ "rxgains5ghelnagaina0", "2", 0 },
+				{ "rxgains5ghelnagaina1", "2", 0 },
+				{ "rxgains5ghelnagaina2", "3", 0 },
+				{ "rxgains5ghtrelnabypa0", "1", 0 },
+				{ "rxgains5ghtrelnabypa1", "1", 0 },
+				{ "rxgains5ghtrelnabypa2", "1", 0 },
+				{ "rxgains5ghtrisoa0", "5", 0 },
+				{ "rxgains5ghtrisoa1", "4", 0 },
+				{ "rxgains5ghtrisoa2", "4", 0 },
+				{ "rxgains5gmelnagaina0", "2", 0 },
+				{ "rxgains5gmelnagaina1", "2", 0 },
+				{ "rxgains5gmelnagaina2", "3", 0 },
+				{ "rxgains5gmtrelnabypa0", "1", 0 },
+				{ "rxgains5gmtrelnabypa1", "1", 0 },
+				{ "rxgains5gmtrelnabypa2", "1", 0 },
+				{ "rxgains5gmtrisoa0", "5", 0 },
+				{ "rxgains5gmtrisoa1", "4", 0 },
+				{ "rxgains5gmtrisoa2", "4", 0 },
+				{ "rxgains5gtrelnabypa0", "1", 0 },
+				{ "rxgains5gtrelnabypa1", "1", 0 },
+				{ "rxgains5gtrelnabypa2", "1", 0 },
+				{ "rxgains5gtrisoa0", "7", 0 },
+				{ "rxgains5gtrisoa1", "6", 0 },
+				{ "rxgains5gtrisoa2", "5", 0 },
+				{ "sb20in40hrpo", "0x0000", 0 },
+				{ "sb20in40lrpo", "0x0000", 0 },
+				{ "sb20in80and160hr5ghpo", "0x0000", 0 },
+				{ "sb20in80and160hr5glpo", "0x0000", 0 },
+				{ "sb20in80and160hr5gmpo", "0x0000", 0 },
+				{ "sb20in80and160lr5ghpo", "0x0000", 0 },
+				{ "sb20in80and160lr5glpo", "0x0000", 0 },
+				{ "sb20in80and160lr5gmpo", "0x0000", 0 },
+				{ "sb40and80hr5ghpo", "0x0000", 0 },
+				{ "sb40and80hr5glpo", "0x0000", 0 },
+				{ "sb40and80hr5gmpo", "0x0000", 0 },
+				{ "sb40and80lr5ghpo", "0x0000", 0 },
+				{ "sb40and80lr5glpo", "0x0000", 0 },
+				{ "sb40and80lr5gmpo", "0x0000", 0 },
+				{ "sromrev", "11", 0 },
+				{ "subband5gver", "4", 0 },
+				{ "tempoffset", "0", 0 },
+				{ "temps_hysteresis", "5", 0 },
+				{ "temps_period", "5", 0 },
+				{ "tempthresh", "120", 0 },
+				{ "tssiposslope5g", "1", 0 },
+				{ "tworangetssi5g", "0", 0 },
+				{ "txchain", "3", 0 },
+				{ "venid", "0x14E4", 0 },
+				{ "xtalfreq", "40000", 0 },
+				{ 0, 0, 0 }
+			};
+
+			/* remove nvram left overs / cfe changed values */
+			nvram_unset("1:pa5g0");
+			nvram_unset("1:pa5g1");
+			nvram_unset("1:rxgains5gelnagain0");
+			nvram_unset("1:rxgains5gelnagain1");
+			nvram_unset("1:rxgains5gelnagain2");
+
+			/* bring back devinfo default values */
+			set_defaults(ea6350v2_pci_1_1_params, "0:%s");
+			set_defaults(ea6350v2_pci_2_1_params, "1:%s");
+		}
+		break;
 	case MODEL_R6400v2:
 	case MODEL_R6700v3:
 	case MODEL_XR300:
@@ -8668,187 +8877,8 @@ static int init_nvram(void)
 			nvram_set("0:ccode", "SG");
 			nvram_set("1:ccode", "SG");
 
-			/* 2.4 GHz module defaults */
-			nvram_set("devpath0", "pci/2/1");
-			nvram_set("0:aa2g", "3");
-			nvram_set("0:ag0", "2");
-			nvram_set("0:ag1", "2");
-			nvram_set("0:antswctl2g", "0");
-			nvram_set("0:antswitch", "0");
-			nvram_set("0:boardflags", "0x80001000");
-			nvram_set("0:boardflags2", "0x00000800");
-			nvram_set("0:boardrev", "0x1301");
-			nvram_set("0:bw40po", "0");
-			nvram_set("0:bwduppo", "0");
-			nvram_set("0:bxa2g", "0");
-			nvram_set("0:cck2gpo", "0x8880");
-			nvram_set("0:cddpo", "0");
-			nvram_set("0:devid", "0x43A9");
-			nvram_set("0:elna2g", "2");
-			nvram_set("0:extpagain2g", "3");
-			nvram_set("0:freqoffset_corr", "0");
-			nvram_set("0:hw_iqcal_en", "0");
-			nvram_set("0:iqcal_swp_dis", "0");
-			nvram_set("0:itt2ga1", "32");
-			nvram_set("0:ledbh0", "255");
-			nvram_set("0:ledbh1", "255");
-			nvram_set("0:ledbh2", "255");
-			nvram_set("0:ledbh3", "131");
-			nvram_set("0:ledbh12", "7");
-			nvram_set("0:leddc", "65535");
-			nvram_set("0:maxp2ga0", "0x2072");
-			nvram_set("0:maxp2ga1", "0x2072");
-			nvram_set("0:mcs2gpo0", "0x8888");
-			nvram_set("0:mcs2gpo1", "0x8888");
-			nvram_set("0:mcs2gpo2", "0x8888");
-			nvram_set("0:mcs2gpo3", "0xDDB8");
-			nvram_set("0:mcs2gpo4", "0x8888");
-			nvram_set("0:mcs2gpo5", "0xA988");
-			nvram_set("0:mcs2gpo6", "0x8888");
-			nvram_set("0:mcs2gpo7", "0xDDC8");
-			nvram_set("0:measpower1", "0");
-			nvram_set("0:measpower2", "0");
-			nvram_set("0:measpower", "0");
-			nvram_set("0:ofdm2gpo", "0xAA888888");
-			nvram_set("0:opo", "68");
-			nvram_set("0:pa2gw0a0", "0xFE77");
-			nvram_set("0:pa2gw0a1", "0xFE76");
-			nvram_set("0:pa2gw1a0", "0x1C37");
-			nvram_set("0:pa2gw1a1", "0x1C5C");
-			nvram_set("0:pa2gw2a0", "0xF95D");
-			nvram_set("0:pa2gw2a1", "0xF94F");
-			nvram_set("0:pcieingress_war", "15");
-			nvram_set("0:pdetrange2g", "3");
-			nvram_set("0:phycal_tempdelta", "0");
-			nvram_set("0:rawtempsense", "0");
-			nvram_set("0:rssisav2g", "0");
-			nvram_set("0:rssismc2g", "0");
-			nvram_set("0:rssismf2g", "0");
-			nvram_set("0:rxchain", "3");
-			nvram_set("0:rxpo2g", "0");
-			nvram_set("0:sromrev", "8");
-			nvram_set("0:stbcpo", "0");
-			nvram_set("0:tempcorrx", "0");
-			nvram_set("0:tempoffset", "0");
-			nvram_set("0:temps_hysteresis", "0");
-			nvram_set("0:temps_period", "0");
-			nvram_set("0:tempsense_option", "0");
-			nvram_set("0:tempsense_slope", "0");
-			nvram_set("0:tempthresh", "120");
-			nvram_set("0:triso2g", "4");
-			nvram_set("0:tssipos2g", "1");
-			nvram_set("0:txchain", "3");
-
-			/* 5 GHz module defaults */
-			nvram_set("devpath1", "pci/1/1");
-			nvram_set("1:aa5g", "7");
-			nvram_set("1:aga0", "01");
-			nvram_set("1:aga1", "01");
-			nvram_set("1:aga2", "133");
-			nvram_set("1:antswitch", "0");
-			nvram_set("1:boardflags", "0x30000000");
-			nvram_set("1:boardflags2", "0x00300002");
-			nvram_set("1:boardflags3", "0x00000000");
-			nvram_set("1:boardvendor", "0x14E4");
-			nvram_set("1:devid", "0x43B3");
-			nvram_set("1:dot11agduphrpo", "0");
-			nvram_set("1:dot11agduplrpo", "0");
-			nvram_set("1:epagain5g", "0");
-			nvram_set("1:femctrl", "3");
-			nvram_set("1:gainctrlsph", "0");
-			nvram_set("1:ledbh10", "7");
-			nvram_set("1:maxp5ga0", "0x5E,0x5E,0x5E,0x5E");
-			nvram_set("1:maxp5ga1", "0x5E,0x5E,0x5E,0x5E");
-			nvram_set("1:maxp5ga2", "0x5E,0x5E,0x5E,0x5E");
-			nvram_set("1:mcsbw1605ghpo", "0");
-			nvram_set("1:mcsbw1605glpo", "0");
-			nvram_set("1:mcsbw1605gmpo", "0");
-			nvram_set("1:mcsbw205ghpo", "0x55540000");
-			nvram_set("1:mcsbw205glpo", "0x88642222");
-			nvram_set("1:mcsbw205gmpo", "0x88642222");
-			nvram_set("1:mcsbw405ghpo", "0x85542000");
-			nvram_set("1:mcsbw405glpo", "0xA8842222");
-			nvram_set("1:mcsbw405gmpo", "0xA8842222");
-			nvram_set("1:mcsbw805ghpo", "0x85542000");
-			nvram_set("1:mcsbw805glpo", "0xAA842222");
-			nvram_set("1:mcsbw805gmpo", "0xAA842222");
-			nvram_set("1:mcslr5ghpo", "0");
-			nvram_set("1:mcslr5glpo", "0");
-			nvram_set("1:mcslr5gmpo", "0");
-			nvram_set("1:measpower1", "0x7F");
-			nvram_set("1:measpower2", "0x7F");
-			nvram_set("1:measpower", "0x7F");
-			nvram_set("1:pa5ga0", "0xFF90,0x1E37,0xFCB8,0xFF38,0x189B,0xFD00,0xFF33,0x1A66,0xFCC4,0xFF2F,0x1748,0xFD21");
-			nvram_set("1:pa5ga1", "0xFF1B,0x18A2,0xFCB6,0xFF34,0x183F,0xFD12,0xFF37,0x1AA1,0xFCC0,0xFF2F,0x1889,0xFCFB");
-			nvram_set("1:pa5ga2", "0xFF1D,0x1653,0xFD33,0xFF38,0x1A2A,0xFCCE,0xFF35,0x1A93,0xFCC1,0xFF3A,0x1ABD,0xFCC0");
-			nvram_set("1:papdcap5g", "0");
-			nvram_set("1:pcieingress_war", "15");
-			nvram_set("1:pdgain5g", "4");
-			nvram_set("1:pdoffset40ma0", "0x1111");
-			nvram_set("1:pdoffset40ma1", "0x1111");
-			nvram_set("1:pdoffset40ma2", "0x1111");
-			nvram_set("1:pdoffset80ma0", "0");
-			nvram_set("1:pdoffset80ma1", "0");
-			nvram_set("1:pdoffset80ma2", "0");
-			nvram_set("1:phycal_tempdelta", "255");
-			nvram_set("1:rawtempsense", "0x1FF");
-			nvram_set("1:rxchain", "7");
-			nvram_set("1:rxgains5gelnagaina0", "1");
-			nvram_set("1:rxgains5gelnagaina1", "1");
-			nvram_set("1:rxgains5gelnagaina2", "1");
-			nvram_set("1:rxgains5ghelnagaina0", "2");
-			nvram_set("1:rxgains5ghelnagaina1", "2");
-			nvram_set("1:rxgains5ghelnagaina2", "3");
-			nvram_set("1:rxgains5ghtrelnabypa0", "1");
-			nvram_set("1:rxgains5ghtrelnabypa1", "1");
-			nvram_set("1:rxgains5ghtrelnabypa2", "1");
-			nvram_set("1:rxgains5ghtrisoa0", "5");
-			nvram_set("1:rxgains5ghtrisoa1", "4");
-			nvram_set("1:rxgains5ghtrisoa2", "4");
-			nvram_set("1:rxgains5gmelnagaina0", "2");
-			nvram_set("1:rxgains5gmelnagaina1", "2");
-			nvram_set("1:rxgains5gmelnagaina2", "3");
-			nvram_set("1:rxgains5gmtrelnabypa0", "1");
-			nvram_set("1:rxgains5gmtrelnabypa1", "1");
-			nvram_set("1:rxgains5gmtrelnabypa2", "1");
-			nvram_set("1:rxgains5gmtrisoa0", "5");
-			nvram_set("1:rxgains5gmtrisoa1", "4");
-			nvram_set("1:rxgains5gmtrisoa2", "4");
-			nvram_set("1:rxgains5gtrelnabypa0", "1");
-			nvram_set("1:rxgains5gtrelnabypa1", "1");
-			nvram_set("1:rxgains5gtrelnabypa2", "1");
-			nvram_set("1:rxgains5gtrisoa0", "7");
-			nvram_set("1:rxgains5gtrisoa1", "6");
-			nvram_set("1:rxgains5gtrisoa2", "5");
-			nvram_set("1:sar5g", "15");
-			nvram_set("1:sb20in40hrpo", "0");
-			nvram_set("1:sb20in40lrpo", "0");
-			nvram_set("1:sb20in80and160hr5ghpo", "0");
-			nvram_set("1:sb20in80and160hr5glpo", "0");
-			nvram_set("1:sb20in80and160hr5gmpo", "0");
-			nvram_set("1:sb20in80and160lr5ghpo", "0");
-			nvram_set("1:sb20in80and160lr5glpo", "0");
-			nvram_set("1:sb20in80and160lr5gmpo", "0");
-			nvram_set("1:sb40and80hr5ghpo", "0");
-			nvram_set("1:sb40and80hr5glpo", "0");
-			nvram_set("1:sb40and80hr5gmpo", "0");
-			nvram_set("1:sb40and80lr5ghpo", "0");
-			nvram_set("1:sb40and80lr5glpo", "0");
-			nvram_set("1:sb40and80lr5gmpo", "0");
-			nvram_set("1:sromrev", "11");
-			nvram_set("1:subband5gver", "4");
-			nvram_set("1:tempcorrx", "0x3F");
-			nvram_set("1:tempoffset", "255");
-			nvram_set("1:temps_hysteresis", "15");
-			nvram_set("1:temps_period", "15");
-			nvram_set("1:tempsense_option", "3");
-			nvram_set("1:tempsense_slope", "255");
-			nvram_set("1:tempthresh", "255");
-			nvram_set("1:tssiposslope5g", "1");
-			nvram_set("1:tworangetssi5g", "0");
-			nvram_set("1:txchain", "7");
-			nvram_set("1:venid", "0x14E4");
-			nvram_set("1:xtalfreq", "0x40000");
+			/* 2.4 GHz and 5 GHz defaults */
+			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
 		}
 		break;
 #ifdef TCONFIG_BCM7

@@ -991,7 +991,6 @@ static const nvset_t nvset_list[] = {
 	{ "dhcpd_gwmode",		V_NUM				},
 	{ "dns_addget",			V_01				},
 	{ "dns_intcpt",			V_01				},
-	{ "dhcpc_minpkt",		V_01				},
 	{ "dhcpc_custom",		V_LENGTH(0, 256)		},
 	{ "dns_norebind",		V_01				},
 	{ "dns_fwd_local",		V_01				},	/* forward queries for local domain to upstream DNS server */
@@ -1438,6 +1437,7 @@ static const nvset_t nvset_list[] = {
 	{ "jffs2_on",			V_01				},
 	{ "jffs2_exec",			V_LENGTH(0, 64)			},
 	{ "jffs2_format",		V_01				},
+	{ "jffs2_auto_unmount",		V_01				},	/* automatically unmount JFFS2 during FW upgrade */
 
 #ifdef TCONFIG_SDHC
 // admin-sdhc
