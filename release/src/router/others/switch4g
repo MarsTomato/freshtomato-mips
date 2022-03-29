@@ -42,7 +42,7 @@ connect() {
 	SPEED=$(NV "$PREFIX"_modem_speed)
 	BAND=$(NV "$PREFIX"_modem_band)
 	ROAMING=$(NV "$PREFIX"_modem_roam)
-	IFA=$(NV "$PREFIX"_modem_if)
+	IFA=$(NV "$PREFIX"_ifname)
 	local TTY DEVALL SYSCFGEX CGPADDR TXTLOG MODESPEED MODEROAM MODEBAND CONNECTED=0 COUNT=1 DONE=0 i
 	local SPEEDTXT ROAMTXT BANDTXT RESSPEED RSPEEDTXT RESROAM RROAMTXT RESBAND RBANDTXT
 
@@ -150,7 +150,7 @@ connect() {
 
 				$LOGS "4G MODEM - $TXTLOG (device $i)"
 
-				[ "$SPEED" != "$RESSPEED" ] ||  [ "$ROAMING" != "$RESROAM" ] || ([ "$SPEED" == "03" ] && [ "$BAND" != "$RESBAND" ]) && {
+				[ "$SPEED" != "$RESSPEED" ] || [ "$ROAMING" != "$RESROAM" ] || ([ "$SPEED" == "03" ] && [ "$BAND" != "$RESBAND" ]) && {
 					MODE="AT^SYSCFGEX=\"$MODESPEED\",3fffffff,$MODEROAM,4,$MODEBAND,," gcom -d "$i" -s /etc/gcom/setverbose.gcom
 					sleep 3
 				}
@@ -164,8 +164,10 @@ connect() {
 				[ "$(echo "$CGPADDR" | grep "+CGPADDR:" | wc -l)" -eq 1 ] && {
 					$LOGS "4G MODEM - connected (device $i) ..."
 					CONNECTED=1
-					nvram set "$PREFIX"_modem_dev="$i"
-					nvram commit
+					[ "$(NV "$PREFIX"_modem_dev)" != "$i" ] && {
+						nvram set "$PREFIX"_modem_dev="$i"
+						nvram commit
+					}
 					break
 				} || {
 					$LOGS "4G MODEM - connection failed (device $i) [$COUNT] ..."
@@ -498,10 +500,9 @@ searchWAN() {
 	[ "$FOUND" -eq 1 ] && {
 		findType	# MODULE --> MTYPE
 
-		nvram set "$PREFIX"_modem_if="$WAN"
+		nvram set "$PREFIX"_ifname="$WAN"
 		nvram set "$PREFIX"_modem_type="$MTYPE"
 		$LOGS "4G MODEM WAN ($MTYPE) found - using $MODULE module and $WAN as WAN"
-		nvram set "$PREFIX"_iface="$WAN"
 	} || {
 		[ "$(NV mwan_cktime)" -gt 0 ] && {
 			watchdog add
@@ -722,7 +723,7 @@ uqmiCall() {
 
 	# wait for another uqmi process to exit...
 	while [ "$COUNT" -lt 5 ]; do
-		[ "$(ps | grep uqmi | grep "$DEVNR" | grep -v "grep" | wc -l)" -eq 0 ] && {
+		[ "$(ps | grep [u]qmi | grep "$DEVNR" | wc -l)" -eq 0 ] && {
 			[ "$IS_ITCONN" -eq 1 ] && {
 				uqmi -s -d "$DEVNR" $COMMAND \
 					${APN:+--apn "$APN"} \

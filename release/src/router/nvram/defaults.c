@@ -84,6 +84,8 @@ const defaults_t defaults[] = {
 	/* WAN H/W parameters */
 	{ "wan_hwname",			""				},	// WAN driver name (e.g. et1)
 	{ "wan_hwaddr",			""				},	// WAN interface MAC address
+	{ "wan_iface",			""				},
+	{ "wan_ifname",			""				},
 	{ "wan_ifnameX",		NULL				},	// real wan if; see wan.c:start_wan
 
 	/* WAN TCP/IP parameters */
@@ -102,7 +104,7 @@ const defaults_t defaults[] = {
 	{ "wan_ckmtd",			"2"				},
 	{ "wan_ck_pause",		"0"				},	/* skip watchdog for this wan 0|1 */
 
-	{ "wan2_proto",			"dhcp"				},	// [static|dhcp|pppoe|disabled]
+	{ "wan2_proto",			"disabled"			},	// [static|dhcp|pppoe|disabled]
 	{ "wan2_ipaddr",		"0.0.0.0"			},	// WAN IP address
 	{ "wan2_netmask",		"0.0.0.0"			},	// WAN netmask
 	{ "wan2_gateway",		"0.0.0.0"			},	// WAN gateway
@@ -111,6 +113,8 @@ const defaults_t defaults[] = {
 	{ "wan2_weight",		"1"				},
 	{ "wan2_hwname",		""				},	// WAN driver name (e.g. et1)
 	{ "wan2_hwaddr",		""				},	// WAN interface MAC address
+	{ "wan2_iface",			""				},
+	{ "wan2_ifname",		""				},
 	{ "wan2_ifnameX",		NULL				},	// real wan if; see wan.c:start_wan
 #ifdef TCONFIG_USB
 	{ "wan2_hilink_ip",		"0.0.0.0"			},
@@ -120,7 +124,7 @@ const defaults_t defaults[] = {
 	{ "wan2_ck_pause",		"0"				},	/* skip watchdog for this wan 0|1 */
 
 #ifdef TCONFIG_MULTIWAN
-	{ "wan3_proto",			"dhcp"				},	// [static|dhcp|pppoe|disabled]
+	{ "wan3_proto",			"disabled"			},	// [static|dhcp|pppoe|disabled]
 	{ "wan3_ipaddr",		"0.0.0.0"			},	// WAN IP address
 	{ "wan3_netmask",		"0.0.0.0"			},	// WAN netmask
 	{ "wan3_gateway",		"0.0.0.0"			},	// WAN gateway
@@ -129,6 +133,8 @@ const defaults_t defaults[] = {
 	{ "wan3_weight",		"1"				},
 	{ "wan3_hwname",		""				},	// WAN driver name (e.g. et1)
 	{ "wan3_hwaddr",		""				},	// WAN interface MAC address
+	{ "wan3_iface",			""				},
+	{ "wan3_ifname",		""				},
 	{ "wan3_ifnameX",		NULL				},	// real wan if; see wan.c:start_wan
 #ifdef TCONFIG_USB
 	{ "wan3_hilink_ip",		"0.0.0.0"			},
@@ -137,7 +143,7 @@ const defaults_t defaults[] = {
 	{ "wan3_ckmtd",			"2"				},
 	{ "wan3_ck_pause",		"0"				},	/* skip watchdog for this wan 0|1 */
 
-	{ "wan4_proto",			"dhcp"				},	// [static|dhcp|pppoe|disabled]
+	{ "wan4_proto",			"disabled"			},	// [static|dhcp|pppoe|disabled]
 	{ "wan4_ipaddr",		"0.0.0.0"			},	// WAN IP address
 	{ "wan4_netmask",		"0.0.0.0"			},	// WAN netmask
 	{ "wan4_gateway",		"0.0.0.0"			},	// WAN gateway
@@ -146,6 +152,8 @@ const defaults_t defaults[] = {
 	{ "wan4_weight",		"1"				},
 	{ "wan4_hwname",		""				},	// WAN driver name (e.g. et1)
 	{ "wan4_hwaddr",		""				},	// WAN interface MAC address
+	{ "wan4_iface",			""				},
+	{ "wan4_ifname",		""				},
 	{ "wan4_ifnameX",		NULL				},	// real wan if; see wan.c:start_wan
 #ifdef TCONFIG_USB
 	{ "wan4_hilink_ip",		"0.0.0.0"			},
@@ -231,7 +239,6 @@ const defaults_t defaults[] = {
 	{ "wan_modem_speed",		"00"				},
 	{ "wan_modem_band",		"7FFFFFFFFFFFFFFF"		},
 	{ "wan_modem_roam",		"2"				},
-	{ "wan_modem_if",		""				},
 	{ "wan_modem_type",		""				},
 
 	{ "wan2_modem_pin",		""				},
@@ -241,7 +248,6 @@ const defaults_t defaults[] = {
 	{ "wan2_modem_speed",		"00"				},
 	{ "wan2_modem_band",		"7FFFFFFFFFFFFFFF"		},
 	{ "wan2_modem_roam",		"2"				},
-	{ "wan2_modem_if",		""				},
 	{ "wan2_modem_type",		""				},
 
 #ifdef TCONFIG_MULTIWAN
@@ -252,7 +258,6 @@ const defaults_t defaults[] = {
 	{ "wan3_modem_speed",		"00"				},
 	{ "wan3_modem_band",		"7FFFFFFFFFFFFFFF"		},
 	{ "wan3_modem_roam",		"2"				},
-	{ "wan3_modem_if",		""				},
 	{ "wan3_modem_type",		""				},
 
 	{ "wan4_modem_pin",		""				},
@@ -262,7 +267,6 @@ const defaults_t defaults[] = {
 	{ "wan4_modem_speed",		"00"				},
 	{ "wan4_modem_band",		"7FFFFFFFFFFFFFFF"		},
 	{ "wan4_modem_roam",		"2"				},
-	{ "wan4_modem_if",		""				},
 	{ "wan4_modem_type",		""				},
 #endif
 #endif

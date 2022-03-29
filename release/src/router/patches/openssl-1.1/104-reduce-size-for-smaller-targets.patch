@@ -20,7 +20,7 @@
           split(/\s+/, $target{apps_aux_src}) );
 --- openssl-1.1/apps/openssl.c
 +++ openssl-1.1/apps/openssl.c
-@@ -315,9 +315,11 @@ static void list_missing_help(void)
+@@ -313,9 +313,11 @@ static void list_missing_help(void)
                  if (o->helpstr == NULL)
                      BIO_printf(bio_out, "%s %s\n", fp->name, o->name);
              }
@@ -32,7 +32,7 @@
          }
      }
  }
-@@ -556,11 +558,14 @@ static int do_cmd(LHASH_OF(FUNCTION) *pr
+@@ -554,11 +556,14 @@ static int do_cmd(LHASH_OF(FUNCTION) *pr
      f.name = argv[0];
      fp = lh_FUNCTION_retrieve(prog, &f);
      if (fp == NULL) {

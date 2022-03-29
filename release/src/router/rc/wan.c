@@ -50,8 +50,6 @@
 #define LOGMSG_NVDEBUG	"wan_debug"
 
 
-extern int g_upgrade;
-
 static int config_pppd(int wan_proto, int num, char *prefix)
 {
 	FILE *fp;
@@ -220,7 +218,8 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 			nvram_set(strcat_r(prefix, "_gateway", tmp), "");
 
 		/* Detect 3G Modem */
-		xstart("switch3g", prefix);
+		if (!nvram_get_int("g_upgrade") && !nvram_get_int("g_reboot"))
+			xstart("switch3g", prefix);
 		break;
 #endif
 	case WP_L2TP:
@@ -930,11 +929,11 @@ void start_wan_if(char *prefix)
 			stop_dhcpc(prefix);
 			start_dhcpc(prefix);
 		}
-		else if (!strcmp(prefix,"wan"))  start_pppoe(PPPOEWAN, prefix);
-		else if (!strcmp(prefix,"wan2")) start_pppoe(PPPOEWAN2, prefix);
+		else if (!strcmp(prefix, "wan"))  start_pppoe(PPPOEWAN, prefix);
+		else if (!strcmp(prefix, "wan2")) start_pppoe(PPPOEWAN2, prefix);
 #ifdef TCONFIG_MULTIWAN
-		else if (!strcmp(prefix,"wan3")) start_pppoe(PPPOEWAN3, prefix);
-		else if (!strcmp(prefix,"wan4")) start_pppoe(PPPOEWAN4, prefix);
+		else if (!strcmp(prefix, "wan3")) start_pppoe(PPPOEWAN3, prefix);
+		else if (!strcmp(prefix, "wan4")) start_pppoe(PPPOEWAN4, prefix);
 #endif
 		break;
 	case WP_DHCP:
@@ -943,7 +942,7 @@ void start_wan_if(char *prefix)
 	case WP_PPTP:
 		if (wan_proto == WP_LTE) {
 			/* Prepare LTE modem */
-			if (!g_upgrade)
+			if (!nvram_get_int("g_upgrade") && !nvram_get_int("g_reboot"))
 				xstart("switch4g", prefix);
 		}
 		else if (using_dhcpc(prefix)) {
@@ -997,8 +996,8 @@ void start_wan(void)
 	int wan_unit;
 	char prefix[] = "wanXX";
 
-	mwan_num = atoi(nvram_safe_get("mwan_num"));
-	if (mwan_num < 1 || mwan_num > MWAN_MAX)
+	mwan_num = nvram_get_int("mwan_num");
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
 		mwan_num = 1;
 
 	logmsg(LOG_INFO, "MultiWAN: MWAN is %d (max %d)", mwan_num, MWAN_MAX);
@@ -1006,16 +1005,22 @@ void start_wan(void)
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, prefix);
 		start_wan_if(prefix);
+		logmsg(LOG_DEBUG, "*** MultiWAN: %s: (unit: %d), prefix = %s", __FUNCTION__, wan_unit, prefix);
 	}
 
 	start_firewall();
 	set_host_domain_name();
 
-	killall_tk_period_wait("mwanroute", 50);
-	xstart("mwanroute");
+	/* only start mwanroute if it's not already up! */
+	if (pidof("mwanroute") < 0) {
+		logmsg(LOG_DEBUG, "*** %s: mwanroute not found, launch process", __FUNCTION__);
+		xstart("mwanroute");
+	}
 
-	if (nvram_get_int("mwan_cktime") > 0)
+	if (nvram_get_int("mwan_cktime") > 0) {
+		logmsg(LOG_DEBUG, "*** %s: adding watchdog job", __FUNCTION__);
 		xstart("watchdog", "add");
+	}
 
 	led(LED_DIAG, LED_OFF);
 	led(LED_DMZ, nvram_match("dmz_enable", "1"));
@@ -1117,7 +1122,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	sysinfo(&si);
 
 	mwan_num = nvram_get_int("mwan_num");
-	if (mwan_num < 1 || mwan_num > MWAN_MAX)
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
 		mwan_num = 1;
 
 	memset(wantime_file, 0, 64);
@@ -1331,10 +1336,13 @@ void stop_wan_if(char *prefix)
 
 	wan_proto = get_wanx_proto(prefix);
 
+	if (wan_proto == WP_PPP3G)
+		killall_tk_period_wait("switch3g", 50); /* Kill switch3g script if running */
+
 	if (wan_proto == WP_LTE) {
 		killall_tk_period_wait("switch4g", 50); /* Kill switch4g script if running */
 		xstart("switch4g", prefix, "disconnect");
-		if (!g_upgrade)
+		if (!nvram_get_int("g_upgrade"))
 			sleep(3); /* Wait a litle for disconnect */
 	}
 
@@ -1373,6 +1381,11 @@ void stop_wan_if(char *prefix)
 
 void stop_wan(void)
 {
+	logmsg(LOG_DEBUG, "*** IN: %s", __FUNCTION__);
+
+	logmsg(LOG_DEBUG, "*** %s: removing watchdog job", __FUNCTION__);
+	xstart("watchdog", "del");
+
 #ifdef TCONFIG_TINC
 	stop_tinc();
 #endif
@@ -1399,5 +1412,5 @@ void stop_wan(void)
 	stop_wan_if("wan4");
 #endif
 
-	xstart("watchdog", "del");
+	logmsg(LOG_DEBUG, "*** OUT: %s", __FUNCTION__);
 }
