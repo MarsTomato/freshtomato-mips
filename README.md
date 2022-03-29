@@ -76,37 +76,27 @@ For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12
     $ sudo apt-get install linux-headers-$(uname -r)
     ```
   
-9. Remove libicu-dev if it's installed, it stopped PHP compilation:
-    ```sh
-    $ sudo apt-get remove libicu-dev
-    ```
-  
-10. Remove uuid-dev if it's installed, it stopped miniupnpd compilation:
-    ```sh
-    $ sudo apt-get remove uuid-dev
-    ```
-  
-11. Install i386 elf1 packages:
+9. Install i386 elf1 packages:
     ```sh
     $ sudo dpkg --add-architecture i386
     $ sudo apt-get update
     $ sudo apt-get install libelf1:i386 libelf-dev:i386
     ```
   
-12. Clone/download repository:
+10. Clone/download repository:
     ```sh
     $ git clone https://bitbucket.org/pedro311/freshtomato-mips.git
     ```
   
-13. Reboot system
+11. Reboot system
   
-14. Add your email address to git config:
+12. Add your email address to git config:
     ```sh
     $ cd freshtomato-mips
     $ git config --global user.email "[email-address]"
     ```
   
-15. Add your username to git config:
+13. Add your username to git config:
     ```sh
     $ cd freshtomato-mips
     $ git config --global user.name [name]
