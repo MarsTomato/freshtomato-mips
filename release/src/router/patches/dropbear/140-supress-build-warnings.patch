@@ -1,6 +1,6 @@
 --- dropbear/configure.ac
 +++ dropbear/configure.ac
-@@ -99,22 +99,6 @@ if test "$hardenbuild" -eq 1; then
+@@ -103,22 +103,6 @@ if test "$hardenbuild" -eq 1; then
  			[AC_MSG_NOTICE([Not setting $TESTFLAGS]); LDFLAGS="$OLDLDFLAGS" ]
  			)
  	fi # non-static
@@ -31,6 +31,6 @@
  CFLAGS += -I$(srcdir) -I../libtomcrypt/src/headers/ -I$(srcdir)/../libtomcrypt/src/headers/ -I../ -I$(srcdir)/../
 -CFLAGS += -Wno-deprecated
 +#CFLAGS += -Wno-deprecated
+ CFLAGS += $(CPPFLAGS)
  
  V = 1
- 
