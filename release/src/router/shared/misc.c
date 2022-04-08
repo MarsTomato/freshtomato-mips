@@ -346,6 +346,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    (model == MODEL_WNR3500LV2) ||
 	    (model == MODEL_WNDR4000) ||
 	    (model == MODEL_WNDR3400) ||
+	    (model == MODEL_F9K1102) ||
 	    (model == MODEL_E900) ||
 	    (model == MODEL_E1500) ||
 	    (model == MODEL_E1550) ||

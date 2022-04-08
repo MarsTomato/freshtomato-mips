@@ -231,6 +231,7 @@ int do_led(int which, int mode)
 	static int wndr3400v2[]	= {  17,   14,   255,  255,  255,   22,  255,   20,     18}; /* Note: 12 = Reset button, 23 = WPS button */
 	static int wndr3400v3[]	= { -17,   14,   255,  255,  255,  -22,  255,  -20,    -18}; /* Note: 12 = Reset button, 23 = WPS button */
 	static int f7d[]	= { 255,  255,   255,  255,   12,   13,  255,   14,    255};
+	static int f9k[]	= { 255,    1,     0,  255,  255,  255,  255,  255,    255};
 	static int wrt160nv3[]	= { 255,    1,     4,    2,  255,  255,  255,  255,    255};
 	static int e900[]	= { 255,   -6,     8,  255,  255,  255,  255,  255,    255};
 	static int e1000v2[]	= { 255,   -6,     8,    7,  255,  255,  255,  255,    255};
@@ -468,6 +469,15 @@ int do_led(int which, int mode)
 			c = (mode) ? -10 : 11;
 		} else
 			b = f7d[which];
+		break;
+	case MODEL_F9K1102:
+		if (which == LED_AOSS) {
+			b = 5; /* color orange gpio 5 (active LOW) */
+			c = 4; /* color blue gpio 4 (active LOW) */
+		}
+		else {
+			b = f9k[which];
+		}
 		break;
 	case MODEL_E1000v2:
 		b = e1000v2[which];

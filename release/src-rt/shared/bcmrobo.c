@@ -19,10 +19,12 @@
  */
 
 
+#include <bcm_cfg.h>
 #include <typedefs.h>
 #include <osl.h>
 #include <bcmutils.h>
 #include <siutils.h>
+#include <sbchipc.h>
 #include <hndsoc.h>
 #include <bcmutils.h>
 #include <bcmendian.h>
@@ -582,6 +584,9 @@ bcm_robo_attach(si_t *sih, void *h, char *vars, miird_f miird, miiwr_f miiwr)
 {
 	robo_info_t *robo;
 	uint32 reset, idx;
+	char *boardnum = nvram_get("boardnum");
+	char *boardrev = nvram_get("boardrev");
+	char *boardtype = nvram_get("boardtype");
 #ifndef	_CFE_
 	char *et1port, *et1phyaddr;
 	int mdcport = 0, phyaddr = 0, lan_portenable = 0;
@@ -739,20 +744,37 @@ bcm_robo_attach(si_t *sih, void *h, char *vars, miird_f miird, miiwr_f miiwr)
 		mii_wreg(robo, PAGE_CTRL, REG_CTRL_SRST, &srst_ctrl, sizeof(uint8));
 	}
 
+	/* Belkin F9K1102 v1/v3 special case */
+	if (boardnum != NULL &&
+	    boardtype != NULL &&
+	    boardrev != NULL &&
+	    !strcmp(boardnum, "2040") &&
+	    !strcmp(boardtype, "0x0550") &&
+	    !strcmp(boardrev, "0x1200")) {
+		/* nothing to do here --> skip enable switch leds! (see belkin src) */
+		printk(KERN_EMERG "bcmrobo: Belkin F9K1102 v1/v3 special case - skip enable switch leds!\n");
+	}
+	else { /* default */
 	/* Enable switch leds */
 	if (sih->chip == BCM5356_CHIP_ID) {
-		si_pmu_chipcontrol(sih, 2, (1 << 25), (1 << 25));
+		if (PMUCTL_ENAB(sih)) {
+			si_pmu_chipcontrol(sih, 2, (1 << 25), (1 << 25));
+			/* also enable fast MII clocks */
+			si_pmu_chipcontrol(sih, 0, (1 << 1), (1 << 1));
+		}
 	} else if ((sih->chip == BCM5357_CHIP_ID) || (sih->chip == BCM53572_CHIP_ID)) {
 		uint32 led_gpios = 0;
-		char *var;
+		const char *var;
 
-		if ((sih->chippkg != BCM47186_PKG_ID) && (sih->chippkg != BCM47188_PKG_ID))
+		if (((sih->chip == BCM5357_CHIP_ID) && (sih->chippkg != BCM47186_PKG_ID)) ||
+		    ((sih->chip == BCM53572_CHIP_ID) && (sih->chippkg != BCM47188_PKG_ID)))
 			led_gpios = 0x1f;
 		var = getvar(vars, "et_swleds");
 		if (var)
 			led_gpios = bcm_strtoul(var, NULL, 0);
-		if (led_gpios)
+		if (PMUCTL_ENAB(sih) && led_gpios)
 			si_pmu_chipcontrol(sih, 2, (0x3ff << 8), (led_gpios << 8));
+	}
 	}
 
 #ifndef	_CFE_
