@@ -50,6 +50,10 @@ ND = "K26"
 RT_SUFFIX="_RT-N5x"
 endif
 
+#Asus firmware version in the TRX header (prevents downgrading to an incompatible firmware at AsusWRT)
+FORCE_SN = 386
+FORCE_EN = 40000
+
 PPTPD ?= "n"
 
 KERN_SIZE_OPT ?= y
@@ -179,7 +183,7 @@ ifneq ($(ASUS_TRX),0)
 	ctools/lzma_4k e ctools/piggy  ctools/vmlinuz-lzma
 	ctools/mksquashfs router/mipsel-uclibc/target ctools/target.squashfs -noappend -all-root
 	ctools/trx -o image/linux-lzma.trx ctools/vmlinuz-lzma ctools/target.squashfs
-	ctools/trx_asus -i image/linux-lzma.trx -r $(BUILD_NAME),$(KERNEL_VER).$(FS_VER),image/freshtomato-$(ASUS_TRX)$(RT_SUFFIX)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r $(ASUS_TRX),3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-$(ASUS_TRX)$(RT_SUFFIX)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	@rm -f image/linux-lzma.trx
 	@echo ""
    endif #WNDR4500V2
@@ -354,6 +358,7 @@ ifeq ($(WNDR),y)
 	@rm -f image/freshtomato-$(ND)$(current_BUILD_USB)$(if $(filter $(NVRAM_SIZE),0),,-NVRAM$(NVRAM_SIZE)K)$(RT_SUFFIX)-$(mips_rev)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	@rm -f fpkg.log
 else
+ ifeq ($(ASUS_TRX),0)
 	# Create generic TRX image
 	@echo "Creating Generic TRX Firmware"
 	@btools/fpkg -i lzma-loader/loader.gz -i $(LINUXDIR)/arch/mips/brcm-boards/bcm947xx/compressed/vmlinuz -a 1024 -i router/mipsel-uclibc/target.image \
@@ -366,6 +371,7 @@ else
 	@echo `cat router/shared/tomato_version` " ready"
 	@echo "-----------------"
 	@echo "\033[41;1m   FreshTomato build done! \033[0m\033]2;FreshTomato build done!\007"
+ endif
 endif
 endif
 

@@ -1,0 +1,11 @@
+--- wsdd2/wsdd2.c
++++ wsdd2/wsdd2.c
+@@ -386,7 +386,7 @@
+ 		break;
+ 	}
+ 
+-	ep->sock = socket(ep->family, ep->type | SOCK_CLOEXEC, ep->protocol);
++	ep->sock = socket(ep->family, ep->type, ep->protocol);
+ 	if (ep->sock < 0) {
+ 		ep->errstr = __FUNCTION__ ": Can't open socket";
+ 		ep->_errno = errno;

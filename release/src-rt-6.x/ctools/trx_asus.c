@@ -107,12 +107,8 @@ void load_image(const char *fname)
 
 void finalize_trx(void)
 {
-	uint32_t len;
-
 	if (trx_final) return;
 	trx_final = 1;
-
-	len = trx->length;
 
 	trx->magic = TRX_MAGIC;
 	trx->flag_version = trx_version << 16;
@@ -133,7 +129,14 @@ typedef struct {
 	version_t fs;
 	char 	  productid[MAX_STRING];
 	version_t hw[MAX_VER*2];
+#ifdef BCMWL6
+	uint16_t  sn;
+	uint16_t  en;
+	uint8_t   key;
+	char	  pad[27];
+#else
 	char	  pad[32];
+#endif
 } TAIL;
 
 /* usage:
@@ -147,6 +150,12 @@ int create_asus(const char *optarg)
 	char *next, *pid, *ver, *fname, *p;
 	TAIL asus_tail;
 	uint32_t v1, v2, v3, v4;
+#ifdef BCMWL6
+	char *sn, *en;
+	char tmp[10];
+	uint8_t rand;
+	uint32_t offset;
+#endif
 
 	memset(&asus_tail, 0, sizeof(TAIL));
 
@@ -165,6 +174,49 @@ int create_asus(const char *optarg)
 	asus_tail.kernel.minor = (uint8_t)v2;
 	asus_tail.fs.major = (uint8_t)v3;
 	asus_tail.fs.minor = (uint8_t)v4;
+
+#ifdef BCMWL6
+	sn = strsep(&next, ",");
+	if(!sn) return 0;
+
+	en = strsep(&next, ",");
+	if(!en) return 0;
+
+	sscanf(sn, "%d", &v1);
+	asus_tail.sn = (uint16_t)v1;
+	printf("\n");
+	printf("Asus TRX-Header SERIALNO = %d\n", asus_tail.sn);
+
+	sscanf(en, "%d-%s", &v1, tmp);
+	asus_tail.en = (uint16_t)v1;
+	printf("Asus TRX-Header EXTENDNO = %d\n", asus_tail.en);
+
+	/* length > 16 + 2357 * 4 = 9444 */
+	if (trx->length > sizeof(*trx) - sizeof(trx->offsets) + 2357 * sizeof(trx->offsets[0]))
+		offset = 2357;
+	else
+		offset = 0;
+
+	rand = trx->offsets[offset];
+
+	if (trx->length > sizeof(*trx) - sizeof(trx->offsets) + 2357000 * sizeof(trx->offsets[0]))
+		/* length > 16 + 2357000 * 4 = 9428020 */
+		offset = 2357000;
+	else if (trx->length > sizeof(*trx) - sizeof(trx->offsets) + 2357 * sizeof(trx->offsets[0]))
+		/* length > 16 + 2357 * 4 = 9444 */
+		offset = (trx->length - (sizeof(*trx) - sizeof(trx->offsets))) / 4 - 2357 ;
+	else
+		offset = 0;
+
+	asus_tail.key = trx->offsets[offset];
+
+	if (asus_tail.key == 0x0)
+		asus_tail.key = 0xfd + rand % 3;
+	else
+		asus_tail.key = 0xff - asus_tail.key + rand;
+
+	printf("Asus TRX-Header KEY = 0x%02x\n", asus_tail.key);
+#endif
 
 	fname = strsep(&next, ",");
 	if(!fname) return 0;
@@ -190,7 +242,6 @@ int create_asus(const char *optarg)
 int main(int argc, char **argv)
 {
 	int o;
-	unsigned l;
 
 	printf("\n");
 	
@@ -215,7 +266,6 @@ int main(int argc, char **argv)
 	}
 
 	finalize_trx();
-	l = trx->length - trx_header_size();
 	printf("\nTRX Image:\n");
 	printf(" Total Size .... : %u (%.1f KB) (%.1f MB)\n", trx->length, trx->length / 1024.0, trx->length / 1024.0 / 1024.0);
 	printf(" CRC-32 ........ : %8X\n", trx->crc32);
