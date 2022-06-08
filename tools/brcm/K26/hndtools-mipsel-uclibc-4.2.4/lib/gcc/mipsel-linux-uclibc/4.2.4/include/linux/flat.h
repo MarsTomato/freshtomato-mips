@@ -2,7 +2,7 @@
 
     It has been auto-edited by fixincludes from:
 
-	"/opt/brcm/hndtools-mipsel-uclibc-4.2.4/mipsel-linux-uclibc/sys-include/linux/flat.h"
+	"/home/pedro/freshtomato-mips/tools/brcm/hndtools-mipsel-uclibc-4.2.4/mipsel-linux-uclibc/sys-include/linux/flat.h"
 
     This had to be done to correct non-standard usages in the
     original, manufacturer supplied header file.  */

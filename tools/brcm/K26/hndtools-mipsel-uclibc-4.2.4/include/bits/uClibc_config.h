@@ -7,7 +7,7 @@
 #define __UCLIBC_SUBLEVEL__ 30
 /* Automatically generated make config: don't edit */
 /* Version: 0.9.30.1 */
-/* Tue Jun 18 18:47:25 2013 */
+/* Wed Jun  8 00:48:14 2022 */
 #undef __TARGET_alpha__
 #undef __TARGET_arm__
 #undef __TARGET_avr32__
@@ -61,7 +61,7 @@
 #define __UCLIBC_HAS_FPU__ 1
 #define __DO_C99_MATH__ 1
 #undef __UCLIBC_HAS_FENV__
-#define __KERNEL_HEADERS__ "/home/shibby/openwrt/tomato.toolchain/t/build_dir/toolchain-mipsel_gcc4.2.4/linux/include"
+#define __KERNEL_HEADERS__ "/home/pedro/freshtomato-mips/toolchain/build_dir/toolchain-mipsel_gcc4.2.4/linux/include"
 #define __HAVE_DOT_CONFIG__ 1
 
 /* General Library Settings */
@@ -138,6 +138,10 @@
 #define __UCLIBC_USE_NETLINK__ 1
 #define __UCLIBC_SUPPORT_AI_ADDRCONFIG__ 1
 #define __UCLIBC_HAS_BSD_RES_CLOSE__ 1
+#undef __UCLIBC_DNSRAND_MODE_URANDOM__
+#undef __UCLIBC_DNSRAND_MODE_CLOCK__
+#define __UCLIBC_DNSRAND_MODE_PRNGPLUS__ 1
+#undef __UCLIBC_DNSRAND_MODE_SIMPLECOUNTER__
 
 /* String and Stdio Support */
 #define __UCLIBC_HAS_STRING_GENERIC_OPT__ 1

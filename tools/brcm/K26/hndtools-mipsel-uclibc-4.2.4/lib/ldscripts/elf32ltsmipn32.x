@@ -3,7 +3,7 @@ OUTPUT_FORMAT("elf32-ntradlittlemips", "elf32-ntradbigmips",
 	      "elf32-ntradlittlemips")
 OUTPUT_ARCH(mips)
 ENTRY(__start)
-SEARCH_DIR("/opt/brcm/hndtools-mipsel-uclibc-4.2.4/mipsel-linux-uclibc/lib32"); SEARCH_DIR("=/usr/local/lib32"); SEARCH_DIR("=/lib32"); SEARCH_DIR("=/usr/lib32"); SEARCH_DIR("=/usr/local/lib"); SEARCH_DIR("=/lib"); SEARCH_DIR("=/usr/lib");
+SEARCH_DIR("/home/pedro/freshtomato-mips/toolchain/../tools/brcm/hndtools-mipsel-uclibc-4.2.4/mipsel-linux-uclibc/lib32"); SEARCH_DIR("=/usr/local/lib32"); SEARCH_DIR("=/lib32"); SEARCH_DIR("=/usr/lib32"); SEARCH_DIR("=/usr/local/lib"); SEARCH_DIR("=/lib"); SEARCH_DIR("=/usr/lib");
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */

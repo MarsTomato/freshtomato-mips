@@ -985,6 +985,7 @@ const defaults_t defaults[] = {
 #endif
 #ifdef TCONFIG_UPS
 	{ "usb_apcupsd",		"0"				},
+	{ "usb_apcupsd_custom",		"0"				},	/* 1 - use custom config file /etc/apcupsd.conf */
 #endif
 	{ "usb_automount",		"1"				},
 #if 0

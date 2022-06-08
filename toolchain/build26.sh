@@ -1,3 +1,5 @@
+#! /bin/sh
+
 #########################################################################
 #                         Toolchain Build Script                        #
 #########################################################################
@@ -6,11 +8,12 @@ GCCVER=4.2.4
 
 ROOTDIR=$PWD
 TARGETDIR=hndtools-mipsel-uclibc-${GCCVER}
-DESTDIR=/opt/brcm/${TARGETDIR}
+DESTDIR=../tools/brcm/${TARGETDIR}
 
 make -C ../release/src-rt prepk
 
-cd /opt/brcm
+cd ../tools/brcm
+
 mkdir -p K26
 rm -rf K26/hndtools-mipsel-uclibc-${GCCVER}
 cd $ROOTDIR
@@ -24,7 +27,7 @@ ln -nsf mipsel-linux-uclibc-gcc-${GCCVER} mipsel-linux-uclibc-gcc
 ln -nsf mipsel-linux-uclibc-gcc-${GCCVER} mipsel-linux-gcc-${GCCVER}
 ln -nsf mipsel-linux-uclibc-gcc-${GCCVER} mipsel-uclibc-gcc-${GCCVER}
 
-cd /opt/brcm
+cd ../..
 rm -f hndtools-mipsel-linux
 rm -f hndtools-mipsel-uclibc
 

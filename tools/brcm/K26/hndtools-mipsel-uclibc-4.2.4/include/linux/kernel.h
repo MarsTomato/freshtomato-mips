@@ -174,9 +174,8 @@ asmlinkage int printk(const char * fmt, ...)
 static inline int vprintk(const char *s, va_list args)
 	__attribute__ ((format (printf, 1, 0)));
 static inline int vprintk(const char *s, va_list args) { return 0; }
-static inline int printk(const char *s, ...)
+asmlinkage int printk(const char * fmt, ...)
 	__attribute__ ((format (printf, 1, 2)));
-static inline int printk(const char *s, ...) { return 0; }
 
 /* No effect, but we still get type checking even in the !PRINTK case: */
 #define printk_once(x...) printk(x)
@@ -397,6 +396,12 @@ static inline int __attribute__ ((format (printf, 1, 2))) pr_debug(const char * 
 	typeof(val) __max = (max);		\
 	__val = __val < __min ? __min: __val;	\
 	__val > __max ? __max: __val; })
+
+/*
+ * swap - swap value of @a and @b
+ */
+#define swap(a, b) \
+	do { typeof(a) __tmp = (a); (a) = (b); (b) = __tmp; } while (0)
 
 
 /**

@@ -29,4 +29,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='/opt/brcm/hndtools-mipsel-uclibc-4.2.4/mipsel-linux-uclibc/lib'
+libdir='/home/pedro/freshtomato-mips/toolchain/../tools/brcm/hndtools-mipsel-uclibc-4.2.4/mipsel-linux-uclibc/lib'

@@ -54,7 +54,7 @@ if [ x$1 != x ] ; then
   prefix=$1
   shift
 else
-  prefix=/opt/brcm/hndtools-mipsel-uclibc-4.2.4
+  prefix=/home/pedro/freshtomato-mips/toolchain/../tools/brcm/hndtools-mipsel-uclibc-4.2.4
 fi
 
 # Allow for alternate isysroot in which to find headers
