@@ -29,10 +29,6 @@
 #include <proto/802.1d.h>
 #include <shared.h>
 
-#ifndef BCM4331_CHIP_ID
-#define BCM4331_CHIP_ID	0x4331	/* 4331 chipcommon chipid */
-#endif
-
 /* phy types */
 #define	PHY_TYPE_A		0
 #define	PHY_TYPE_B		1
@@ -42,6 +38,7 @@
 #define PHY_TYPE_SSN		6
 #define	PHY_TYPE_HT		7
 #define	PHY_TYPE_LCN		8
+#define	PHY_TYPE_AC		11
 #define	PHY_TYPE_NULL		0xf
 
 /* how many times to attempt to bring up a virtual i/f when
@@ -84,6 +81,10 @@
 	if ((ret = wl_iovar_set(ifname, iovar, param, paramlen)))			\
 		fprintf(stderr, "%s:%d:(%s): setting iovar \"%s\" failed, err = %d\n",	\
 		        __FUNCTION__, __LINE__, ifname, iovar, ret);
+#define WL_IOVAR_GET(ifname, iovar, param, paramlen)					\
+	if ((ret = wl_iovar_get(ifname, iovar, param, paramlen)))			\
+		fprintf(stderr, "%s:%d:(%s): getting iovar \"%s\" failed, err = %d\n",	\
+		        __FUNCTION__, __LINE__, ifname, iovar, ret);
 #define WL_IOVAR_SETINT(ifname, iovar, val)							\
 	if ((ret = wl_iovar_setint(ifname, iovar, val)))					\
 		fprintf(stderr, "%s:%d:(%s): setting iovar \"%s\" to 0x%x failed, err = %d\n",	\
@@ -115,6 +116,8 @@
 #define WL_SETINT(name, cmd, val)			(ret = wlconf_setint(name, cmd, val))
 #define WL_GETINT(name, cmd, pval)			(ret = wlconf_getint(name, cmd, pval))
 #define WL_IOVAR_SET(ifname, iovar, param, paramlen)	(ret = wl_iovar_set(ifname, iovar, \
+							param, paramlen))
+#define WL_IOVAR_GET(ifname, iovar, param, paramlen)	(ret = wl_iovar_get(ifname, iovar, \
 							param, paramlen))
 #define WL_IOVAR_SETINT(ifname, iovar, val)		(ret = wl_iovar_setint(ifname, iovar, val))
 #define WL_IOVAR_GETINT(ifname, iovar, val)		(ret = wl_iovar_getint(ifname, iovar, val))
@@ -672,6 +675,7 @@ wlconf_auto_chanspec(char *name)
 				 (phy) == PHY_TYPE_G ? "g" : \
 				 (phy) == PHY_TYPE_SSN ? "s" : \
 				 (phy) == PHY_TYPE_HT ? "h" : \
+				 (phy) == PHY_TYPE_AC ? "v" : \
 				 (phy) == PHY_TYPE_LCN ? "c" : "n")
 #define WLCONF_STR2PHYTYPE(ch)	((ch) == 'a' ? PHY_TYPE_A : \
 				 (ch) == 'b' ? PHY_TYPE_B : \
@@ -679,13 +683,14 @@ wlconf_auto_chanspec(char *name)
 				 (ch) == 'g' ? PHY_TYPE_G : \
 				 (ch) == 's' ? PHY_TYPE_SSN : \
 				 (ch) == 'h' ? PHY_TYPE_HT : \
+				 (ch) == 'v' ? PHY_TYPE_AC : \
 				 (ch) == 'c' ? PHY_TYPE_LCN : PHY_TYPE_N)
 
-#define WLCONF_PHYTYPE_11N(phy) ((phy) == PHY_TYPE_N 	|| (phy) == PHY_TYPE_SSN || \
-				 (phy) == PHY_TYPE_LCN 	|| (phy) == PHY_TYPE_HT)
-
-
 #define PREFIX_LEN 32			/* buffer size for wlXXX_ prefix */
+
+#define WLCONF_PHYTYPE_11N(phy) ((phy) == PHY_TYPE_N 	|| (phy) == PHY_TYPE_SSN || \
+				 (phy) == PHY_TYPE_LCN 	|| (phy) == PHY_TYPE_HT || \
+				 (phy) == PHY_TYPE_AC)
 
 struct bsscfg_info {
 	int idx;			/* bsscfg index */
@@ -1109,6 +1114,8 @@ wlconf_set_wet_tunnel_vndr_ie(char *name, int bsscfg_idx, uchar *oui, uchar *dat
 
 #define VIFNAME_LEN 16
 
+#define AMPDU_DENSITY_8USEC 6
+
 /* configure the specified wireless interface */
 int
 wlconf(char *name)
@@ -1118,11 +1125,12 @@ wlconf(char *name)
 	int error_bg, error_a;
 	struct bsscfg_list *bclist = NULL;
 	struct bsscfg_info *bsscfg = NULL;
-	char tmp[100], prefix[PREFIX_LEN];
+	char tmp[100], tmp2[100], prefix[PREFIX_LEN];
 	char var[80], *next, *str, *addr = NULL;
 	/* Pay attention to buffer length requirements when using this */
 	char buf[WLC_IOCTL_SMLEN*2]  __attribute__ ((aligned(4)));
 	char *country;
+	char *country_rev;
 	wlc_rev_info_t rev;
 	channel_info_t ci;
 	struct maclist *maclist;
@@ -1132,8 +1140,8 @@ wlconf(char *name)
 	unsigned int i;
 	char eaddr[32];
 	int ap, apsta, wds, sta = 0, wet = 0, mac_spoof = 0, wmf = 0;
-	int radio_pwrsave = 0, rxchain_pwrsave = 0;
-	char country_code[4];
+	int rxchain_pwrsave = 0, radio_pwrsave = 0;
+	wl_country_t country_spec = {{0}, 0, {0}};
 	char *ba;
 #ifdef BCMWPA2
 	char *preauth;
@@ -1179,6 +1187,10 @@ wlconf(char *name)
 	/* clean up tmp */
 	memset(tmp, 0, sizeof(tmp));
 
+	/* Check interface (fail silently for non-wl interfaces) */
+	if ((ret = wl_probe(name)))
+		return ret;
+
 	/* because of ifdefs in wl driver,  when we don't have AP capabilities we
 	 * can't use the same iovars to configure the wl.
 	 * so we use "wl_ap_build" to help us know how to configure the driver
@@ -1202,10 +1214,6 @@ wlconf(char *name)
 		else if (!strcmp(cap, "radio_pwrsave"))
 			radio_pwrsave = 1;
 	}
-
-	/* Check interface (fail silently for non-wl interfaces) */
-	if ((ret = wl_probe(name)))
-		return ret;
 
 	/* Get MAC address */
 	(void) wl_hwaddr(name, (uchar *)buf);
@@ -1514,17 +1522,29 @@ wlconf(char *name)
 	/* Set up the country code */
 	(void) strcat_r(prefix, "country_code", tmp);
 	country = nvram_get(tmp);
-	if (country && country[0] != '\0') {
-		strncpy(country_code, country, sizeof(country_code));
-		WL_IOCTL(name, WLC_SET_COUNTRY, country_code, strlen(country_code) + 1);
+	(void) strcat_r(prefix, "country_rev", tmp2);
+	country_rev = nvram_get(tmp2);
+	if ((country && country[0] != '\0') && (country_rev && country_rev[0] != '\0')) {
+		/* Initialize the wl country parameter */
+		strncpy(country_spec.country_abbrev, country, WLC_CNTRY_BUF_SZ-1);
+		country_spec.country_abbrev[WLC_CNTRY_BUF_SZ-1] = '\0';
+		strncpy(country_spec.ccode, country, WLC_CNTRY_BUF_SZ-1);
+		country_spec.ccode[WLC_CNTRY_BUF_SZ-1] = '\0';
+		country_spec.rev = atoi(country_rev);
+
+		WL_IOVAR_SET(name, "country", &country_spec, sizeof(country_spec));
 	} else {
 		/* Get the default country code if undefined */
-		WL_IOCTL(name, WLC_GET_COUNTRY, country_code, sizeof(country_code));
+		wl_iovar_get(name, "country", &country_spec, sizeof(country_spec));
 
 		/* Add the new NVRAM variable */
-		nvram_set("wl_country_code", country_code);
+		nvram_set("wl_country_code", country_spec.ccode);
 		(void) strcat_r(prefix, "country_code", tmp);
-		nvram_set(tmp, country_code);
+		nvram_set(tmp, country_spec.ccode);
+		snprintf(buf, sizeof(buf), "%d", country_spec.rev);
+		nvram_set("wl_country_rev", buf);
+		(void) strcat_r(prefix, "country_rev", tmp);
+		nvram_set(tmp, buf);
 	}
 
 	/* Change LED Duty Cycle */
@@ -1585,6 +1605,18 @@ wlconf(char *name)
 	/* Store the resolved bandtype */
 	bandtype = val;
 
+	/* Check errors again (will cover 5Ghz-only cards) */
+	if (ret) {
+		int list[3];
+
+		/* default band to the first band in band list */
+		wl_ioctl(name, WLC_GET_BANDLIST, list, sizeof(list));
+		WL_SETINT(name, WLC_SET_BAND, list[1]);
+
+		/* Read it back, and set bandtype accordingly */
+		WL_GETINT(name, WLC_GET_BAND, &bandtype);
+	}
+
 	/* Get current core revision */
 	WL_IOCTL(name, WLC_GET_REVINFO, &rev, sizeof(rev));
 	snprintf(buf, sizeof(buf), "%d", rev.corerev);
@@ -1606,6 +1638,12 @@ wlconf(char *name)
 		WL_IOVAR_SETINT(name, "mimo_preamble", pam_mode);
 	}
 
+	/* Making default ampdu_density to 8usec in order to improve throughput
+	 * of very small packet sizes (64, 88, 128,..).
+	 */
+	if (rev.chipnum == BCM43217_CHIP_ID)
+		WL_IOVAR_SETINT(name, "ampdu_rx_density", AMPDU_DENSITY_8USEC);
+
 	if ((rev.chipnum == BCM5357_CHIP_ID) || (rev.chipnum == BCM53572_CHIP_ID)) {
 		val = atoi(nvram_safe_get("coma_sleep"));
 		if (val > 0) {
@@ -1620,7 +1658,6 @@ wlconf(char *name)
 
 	/* Get current phy type */
 	WL_IOCTL(name, WLC_GET_PHYTYPE, &phytype, sizeof(phytype));
-	printf("%s: PHYTYPE: %d\n", __FUNCTION__, phytype);
 	snprintf(buf, sizeof(buf), "%s", WLCONF_PHYTYPE2STR(phytype));
 	nvram_set(strcat_r(prefix, "phytype", tmp), buf);
 
@@ -2028,7 +2065,7 @@ wlconf(char *name)
 	WL_IOVAR_SETINT(name, "plc", val);
 
 	/* Set STBC tx and rx mode */
-	if (phytype == PHY_TYPE_N || phytype == PHY_TYPE_HT) {
+	if (phytype == PHY_TYPE_N || phytype == PHY_TYPE_HT || phytype == PHY_TYPE_AC) {
 		char *nvram_str = nvram_safe_get(strcat_r(prefix, "stbc_tx", tmp));
 
 		if (!strcmp(nvram_str, "auto")) {
@@ -2382,7 +2419,7 @@ wlconf_start(char *name)
 	struct maclist *maclist;
 	struct ether_addr *ea;
 	struct bsscfg_list *bclist = NULL;
-	struct bsscfg_info *bsscfg;
+	struct bsscfg_info *bsscfg = NULL;
 	wlc_ssid_t ssid;
 	char cap[WLC_IOCTL_SMLEN], caps[WLC_IOCTL_SMLEN];
 	char var[80], tmp[100], prefix[PREFIX_LEN], *str, *next;

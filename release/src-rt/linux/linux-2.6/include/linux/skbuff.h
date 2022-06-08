@@ -251,7 +251,14 @@ struct sk_buff {
 	struct sk_buff		*prev;
 
 	struct sock		*sk;
+#ifdef PKTC
+	unsigned char           pktc_cb[8];
+#endif
+#if defined(HNDCTF) && defined(PKTC)
+	ktime_t			ctf_tstamp;     /* This field is used by Broadcom CTF driver! */
+#else
 	ktime_t			tstamp;
+#endif
 	struct net_device	*dev;
 	int			iif;
 	/* 4 byte hole on 64 bit*/
@@ -270,10 +277,10 @@ struct sk_buff {
 	unsigned int		len,
 				data_len;
 #ifdef HNDCTF
-	unsigned int		ctf_mac_len;	/* This field is used by Broadcom CTF driver! */
+        unsigned int            ctf_mac_len;    /* This field is used by Broadcom CTF driver! */
 #else
-	__u16			mac_len,
-				hdr_len;
+        __u16                   mac_len,
+                                hdr_len;
 #endif
 	union {
 		__wsum		csum;
@@ -300,13 +307,13 @@ struct sk_buff {
 	sk_buff_data_t		transport_header;
 	sk_buff_data_t		network_header;
 	sk_buff_data_t		mac_header;
-	/* These elements must be at the end, see alloc_skb() for details.  */
 	sk_buff_data_t		tail;
 	sk_buff_data_t		end;
 	unsigned char		*head,
 				*data;
 	unsigned int		truesize;
 	atomic_t		users;
+	unsigned char		wl_idx;
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
 	struct nf_conntrack	*nfct;
 	struct sk_buff		*nfct_reasm;
@@ -314,17 +321,20 @@ struct sk_buff {
 	__u32			nfcache;
 #endif
 #ifdef HNDCTF
-	__u16			mac_len,
-				hdr_len;
+#ifdef PKTC
+	ktime_t			tstamp;
+#endif
+        __u16                   mac_len,
+                                hdr_len;
 #endif
 #ifdef CONFIG_BRIDGE_NETFILTER
 	struct nf_bridge_info	*nf_bridge;
 #endif
 #ifdef CONFIG_NET_SCHED
 	__u16			tc_index;	/* traffic control index */
-#ifdef CONFIG_NET_CLS_ACT
+//#ifdef CONFIG_NET_CLS_ACT
 	__u16			tc_verd;	/* traffic control verdict */
-#endif
+//#endif
 #endif
 #ifdef CONFIG_NET_DMA
 	dma_cookie_t		dma_cookie;
@@ -334,7 +344,7 @@ struct sk_buff {
 #endif
 	__u16			vlan_tci;
 #if defined(CONFIG_IMQ) || defined(CONFIG_IMQ_MODULE)
-	__u8			imq_flags;
+	unsigned char		imq_flags;
 	struct nf_info		*nf_info;
 #endif
 };

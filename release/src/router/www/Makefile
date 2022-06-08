@@ -224,9 +224,13 @@ ifeq ($(CONFIG_BCMWL6),y)
 endif
 endif
 
+# Only for RT-N+ (enable SDK6 country code + rev selection also for newer SDK5 wl driver 5.100.x and up)
+ifneq ($(TCONFIG_BLINK),y)
+	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
+endif
+
 # Only for BCMWL6 SDK / RT-AC branch
 ifneq ($(CONFIG_BCMWL6),y)
-	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-wlanvifs.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
 	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"

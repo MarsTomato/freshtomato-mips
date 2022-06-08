@@ -198,6 +198,7 @@
 #define	BCM4319_CHIP_ID		0x4319		/* 4319 chip id */
 #define	BCM4320_CHIP_ID		0x4320		/* 4320 chipcommon chipid */
 #define	BCM4321_CHIP_ID		0x4321		/* 4321 chipcommon chipid */
+#define	BCM43217_CHIP_ID	43217		/* 43217 chip id (OTP chipid) */
 #define	BCM4322_CHIP_ID		0x4322		/* 4322 chipcommon chipid */
 #define	BCM43221_CHIP_ID	43221		/* 43221 chipcommon chipid (OTP chipid) */
 #define	BCM43222_CHIP_ID	43222		/* 43222 chipcommon chipid */
@@ -217,6 +218,8 @@
 #define	BCM43421_CHIP_ID	43421		/* 43224 chipcommon chipid (OTP, RBBU) */
 #define	BCM43428_CHIP_ID	43428		/* 43228 chipcommon chipid (OTP, RBBU) */
 #define	BCM43431_CHIP_ID	43431		/* 4331  chipcommon chipid (OTP, RBBU) */
+#define	BCM43460_CHIP_ID	43460		/* 4360  chipcommon chipid (OTP, RBBU) */
+#define	BCM47452_CHIP_ID	47452		/* 53573 chipcommon chipid (OTP, RBBU) */
 #define	BCM4325_CHIP_ID		0x4325		/* 4325 chip id */
 #define	BCM4328_CHIP_ID		0x4328		/* 4328 chip id */
 #define	BCM4329_CHIP_ID		0x4329		/* 4329 chipcommon chipid */
@@ -225,6 +228,12 @@
 #define BCM43362_CHIP_ID	43362		/* 43362 chipcommon chipid */
 #define BCM4330_CHIP_ID		0x4330		/* 4330 chipcommon chipid */
 #define BCM6362_CHIP_ID		0x6362		/* 6362 chipcommon chipid */
+#define	BCM4314_CHIP_ID		0x4314		/* 4314 chipcommon chipid */
+#define	BCM43142_CHIP_ID	43142		/* 43142 chipcommon chipid */
+#define	BCM43143_CHIP_ID	43143		/* 43143 chipcommon chipid */
+#define	BCM4324_CHIP_ID		0x4324		/* 4324 chipcommon chipid */
+#define	BCM43242_CHIP_ID	43242		/* 43242 chipcommon chipid */
+#define	BCM43243_CHIP_ID	43243		/* 43243 chipcommon chipid */
 #define BCM4334_CHIP_ID		0x4334		/* 4334 chipcommon chipid */
 #define BCM4334_D11N_ID         0x4380          /* 4334 802.11n dualband device */
 #define BCM4334_D11N2G_ID       0x4381          /* 4334 802.11n 2.4G device */

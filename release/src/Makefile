@@ -883,13 +883,16 @@ define extrawlConfig
 	@( \
 	if [ "$(USBAP)" = "y" ]; then \
 		cp -f $(SRCBASE)/wl/linux/100/wl_apsta.o $(SRCBASE)/wl/linux/wl_apsta.o ; \
+		cp -f $(SRCBASE)/wl/linux/100/wl_high.o $(SRCBASE)/wl/linux/wl_high.o ; \
 		cp -f $(SRCBASE)/include/100/epivers.h $(SRCBASE)/include/epivers.h ; \
 	else \
 		if [ "$(CONFIG_BCMWL6)" = "y" ]; then \
 			cp -f $(SRCBASE)/../src-rt/wl/linux/110/wl_apsta.o $(SRCBASE)/../src-rt/wl/linux/wl_apsta.o ; \
+			cp -f $(SRCBASE)/../src-rt/wl/linux/110/wl_high.o $(SRCBASE)/../src-rt/wl/linux/wl_high.o ; \
 			cp -f $(SRCBASE)/../src-rt/include/110/epivers.h $(SRCBASE)/../src-rt/include/epivers.h ; \
 		else \
 			cp -f $(SRCBASE)/wl/linux/110/wl_apsta.o $(SRCBASE)/wl/linux/wl_apsta.o ; \
+			cp -f $(SRCBASE)/wl/linux/110/wl_high.o $(SRCBASE)/wl/linux/wl_high.o ; \
 			cp -f $(SRCBASE)/include/110/epivers.h $(SRCBASE)/include/epivers.h ; \
 		fi; \
 	fi; \
@@ -1280,19 +1283,16 @@ wndr64-vpn:
 
 ## Builds with 5Ghz USB Radio (wl_high module - USBAP=y) ##
 rtn53:
-	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" NO_USBAPP=y USBAP=y BBEXTRAS=y ROAM=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y OPENVPN=y PPTPD=y STUBBY=y NOCAT=y BCMNAT=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="RT-N53"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" NO_USBAPP=y USBAP=y BBEXTRAS=y ROAM=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y OPENVPN=y PPTPD=y STUBBY=y NOCAT=y NVRAM_SIZE=32 ADVTHEMES=y OPENSSL11=y SNMP=y BUILD_DESC="RT-N53"
 
 e2500:
-	@$(MAKE) bin MIPS32=r2 B=E USB="USB" NO_USBAPP=y USBAP=y BBEXTRAS=y ROAM=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y OPENVPN=y PPTPD=y STUBBY=y NOCAT=y NVRAM_SIZE=32 LINKSYS_E2500=y BCMNAT=y ADVTHEMES=y OPENSSL11=y SNMP=y BUILD_DESC="Custom"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" NO_USBAPP=y USBAP=y BBEXTRAS=y ROAM=y EBTABLES=y NO_LIBOPT=y IPV6SUPP=y OPENVPN=y PPTPD=y STUBBY=y NOCAT=y NVRAM_SIZE=32 ADVTHEMES=y OPENSSL11=y SNMP=y LINKSYS_E2500=y BUILD_DESC="Custom"
 
 e3200:
 	@$(MAKE) o MIPS32=r2 USBAP=y NVRAM_SIZE=32 LINKSYS_E3200=y ROAM=y
 
 wndr3400v2:
-	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" USBEXTRAS=y USBAP=y NO_ZEBRA=y ROAM=y NO_HTTPS=y BBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y NVRAM_SIZE=64 WNDR=y NO_XXTP=y BCMNAT=y ADVTHEMES=y BUILD_DESC="MiniIPv6"
-
-wndr3400v2-vpn:
-	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" USBEXTRAS=y USBAP=y NO_ZEBRA=y ROAM=y BBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y OPENVPN=y PPTPD=y STUBBY=y NO_SAMBA=y NVRAM_SIZE=64 WNDR=y BCMNAT=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="$(VPN)"
+	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" USBEXTRAS=y USBAP=y NO_ZEBRA=y ROAM=y BBEXTRAS=y EBTABLES=y NO_CIFS=y IPV6SUPP=y NTFS=y OPENVPN=y PPTPD=y STUBBY=y NO_SAMBA=y NVRAM_SIZE=32 WNDR=y ADVTHEMES=y KEYGEN=y OPENSSL11=y BUILD_DESC="$(VPN)"
 
 n6:
 	@$(MAKE) bin MIPS32=r2 B=E MULTIWAN=y USB="USB" NO_USBAPP=y USBAP=y BBEXTRAS=y EBTABLES=y IPV6SUPP=y STUBBY=y DNSSEC=y NOCAT=y BCMNAT=y OPENVPN=y PPTPD=y ADVTHEMES=y OPENSSL11=y BUILD_DESC="TendaN6"
@@ -1491,7 +1491,6 @@ help:
 	@echo "n6             Tenda N6"
 	@echo "n60            Tenda N60 w/o minidlna"
 	@echo "wndr3400v2     Netgear WNDR3400v2/v3 miniIPv6 w/o minidlna"
-	@echo "wndr3400v2-vpn Netgear WNDR3400v2/v3 VPN w/o Samba"
 	@echo ""
 	@echo "       Netgear WNDR3400/3700v3/4000"
 	@echo "wndr64         Netgear WNDR3400/3700v3/4000 miniIPv6 w/o miniDLNA"

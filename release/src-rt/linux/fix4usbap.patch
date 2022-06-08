@@ -1,5 +1,18 @@
+diff --git a/release/src-rt/linux/linux-2.6/Makefile b/release/src-rt/linux/linux-2.6/Makefile
+index 30accc817e..5b571fc20c 100644
+--- a/release/src-rt/linux/linux-2.6/Makefile
++++ b/release/src-rt/linux/linux-2.6/Makefile
+@@ -542,7 +542,7 @@ CFLAGS	+= $(call cc-option,-fno-strict-overflow)
+ CFLAGS	+= $(call cc-option,-fno-dwarf2-cfi-asm)
+ 
+ ifneq ($(CONFIG_BCM_CTF),)
+-CFLAGS += -DHNDCTF -DCTFPOOL -DCTFMAP
++CFLAGS += -DHNDCTF -DCTFPOOL -DCTFMAP -DPKTC
+ ifneq ($(CONFIG_WL_USBAP),)
+ CFLAGS += -DCTFPOOL_SPINLOCK
+ endif
 diff --git a/release/src-rt/linux/linux-2.6/drivers/usb/core/driver.c b/release/src-rt/linux/linux-2.6/drivers/usb/core/driver.c
-index b3107df..8eadb22 100644
+index 7097ae88bc..c3d5089fd3 100644
 --- a/release/src-rt/linux/linux-2.6/drivers/usb/core/driver.c
 +++ b/release/src-rt/linux/linux-2.6/drivers/usb/core/driver.c
 @@ -426,14 +426,15 @@ int usb_match_one_id(struct usb_interface *interface,
@@ -32,7 +45,7 @@ index b3107df..8eadb22 100644
  }
  EXPORT_SYMBOL_GPL(usb_match_one_id);
 diff --git a/release/src-rt/linux/linux-2.6/drivers/usb/core/message.c b/release/src-rt/linux/linux-2.6/drivers/usb/core/message.c
-index 02e7ca4..0f9df72 100644
+index 02e7ca4624..0f9df72a10 100644
 --- a/release/src-rt/linux/linux-2.6/drivers/usb/core/message.c
 +++ b/release/src-rt/linux/linux-2.6/drivers/usb/core/message.c
 @@ -1447,7 +1447,7 @@ static int usb_if_uevent(struct device *dev, char **envp, int num_envp,
@@ -55,7 +68,7 @@ index 02e7ca4..0f9df72 100644
  
  	envp[i] = NULL;
 diff --git a/release/src-rt/linux/linux-2.6/drivers/usb/core/sysfs.c b/release/src-rt/linux/linux-2.6/drivers/usb/core/sysfs.c
-index 5a15a9a..895c9ad 100644
+index 5a15a9a4fb..895c9ad2f3 100644
 --- a/release/src-rt/linux/linux-2.6/drivers/usb/core/sysfs.c
 +++ b/release/src-rt/linux/linux-2.6/drivers/usb/core/sysfs.c
 @@ -715,7 +715,7 @@ static ssize_t show_modalias(struct device *dev,
@@ -78,7 +91,7 @@ index 5a15a9a..895c9ad 100644
  static DEVICE_ATTR(modalias, S_IRUGO, show_modalias, NULL);
  
 diff --git a/release/src-rt/linux/linux-2.6/include/linux/mod_devicetable.h b/release/src-rt/linux/linux-2.6/include/linux/mod_devicetable.h
-index af04a55..971ffc2 100644
+index af04a555b5..971ffc2d44 100644
 --- a/release/src-rt/linux/linux-2.6/include/linux/mod_devicetable.h
 +++ b/release/src-rt/linux/linux-2.6/include/linux/mod_devicetable.h
 @@ -78,6 +78,9 @@ struct ieee1394_device_id {
@@ -122,8 +135,90 @@ index af04a55..971ffc2 100644
  #else
  	kernel_ulong_t data;
  #endif
+diff --git a/release/src-rt/linux/linux-2.6/include/linux/skbuff.h b/release/src-rt/linux/linux-2.6/include/linux/skbuff.h
+index 48cf652500..a7de348e10 100644
+--- a/release/src-rt/linux/linux-2.6/include/linux/skbuff.h
++++ b/release/src-rt/linux/linux-2.6/include/linux/skbuff.h
+@@ -251,7 +251,14 @@ struct sk_buff {
+ 	struct sk_buff		*prev;
+ 
+ 	struct sock		*sk;
++#ifdef PKTC
++	unsigned char           pktc_cb[8];
++#endif
++#if defined(HNDCTF) && defined(PKTC)
++	ktime_t			ctf_tstamp;     /* This field is used by Broadcom CTF driver! */
++#else
+ 	ktime_t			tstamp;
++#endif
+ 	struct net_device	*dev;
+ 	int			iif;
+ 	/* 4 byte hole on 64 bit*/
+@@ -270,10 +277,10 @@ struct sk_buff {
+ 	unsigned int		len,
+ 				data_len;
+ #ifdef HNDCTF
+-	unsigned int		ctf_mac_len;	/* This field is used by Broadcom CTF driver! */
++        unsigned int            ctf_mac_len;    /* This field is used by Broadcom CTF driver! */
+ #else
+-	__u16			mac_len,
+-				hdr_len;
++        __u16                   mac_len,
++                                hdr_len;
+ #endif
+ 	union {
+ 		__wsum		csum;
+@@ -300,13 +307,13 @@ struct sk_buff {
+ 	sk_buff_data_t		transport_header;
+ 	sk_buff_data_t		network_header;
+ 	sk_buff_data_t		mac_header;
+-	/* These elements must be at the end, see alloc_skb() for details.  */
+ 	sk_buff_data_t		tail;
+ 	sk_buff_data_t		end;
+ 	unsigned char		*head,
+ 				*data;
+ 	unsigned int		truesize;
+ 	atomic_t		users;
++	unsigned char		wl_idx;
+ #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
+ 	struct nf_conntrack	*nfct;
+ 	struct sk_buff		*nfct_reasm;
+@@ -314,17 +321,20 @@ struct sk_buff {
+ 	__u32			nfcache;
+ #endif
+ #ifdef HNDCTF
+-	__u16			mac_len,
+-				hdr_len;
++#ifdef PKTC
++	ktime_t			tstamp;
++#endif
++        __u16                   mac_len,
++                                hdr_len;
+ #endif
+ #ifdef CONFIG_BRIDGE_NETFILTER
+ 	struct nf_bridge_info	*nf_bridge;
+ #endif
+ #ifdef CONFIG_NET_SCHED
+ 	__u16			tc_index;	/* traffic control index */
+-#ifdef CONFIG_NET_CLS_ACT
++//#ifdef CONFIG_NET_CLS_ACT
+ 	__u16			tc_verd;	/* traffic control verdict */
+-#endif
++//#endif
+ #endif
+ #ifdef CONFIG_NET_DMA
+ 	dma_cookie_t		dma_cookie;
+@@ -334,7 +344,7 @@ struct sk_buff {
+ #endif
+ 	__u16			vlan_tci;
+ #if defined(CONFIG_IMQ) || defined(CONFIG_IMQ_MODULE)
+-	__u8			imq_flags;
++	unsigned char		imq_flags;
+ 	struct nf_info		*nf_info;
+ #endif
+ };
 diff --git a/release/src-rt/linux/linux-2.6/scripts/mod/file2alias.c b/release/src-rt/linux/linux-2.6/scripts/mod/file2alias.c
-index 40d1f2e..541a756 100644
+index 40d1f2eef0..541a756ac9 100644
 --- a/release/src-rt/linux/linux-2.6/scripts/mod/file2alias.c
 +++ b/release/src-rt/linux/linux-2.6/scripts/mod/file2alias.c
 @@ -69,7 +69,7 @@ static void device_id_size_check(const char *modname, const char *device_id,

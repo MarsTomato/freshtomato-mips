@@ -114,7 +114,7 @@ For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12
 .  
 **WARNING**
   
-To compile n6, n60, rtn53, e2500, e3200, wndr3400v2, wndr3400v2-vpn and f9k targets (RT-N), before compilation you have to revert patch to the kernel:  
+To compile n6, n60, rtn53, e2500, e3200, wndr3400v2 and f9k targets (RT-N), before compilation you have to revert patch to the kernel:  
 ```sh
 $ cd release/src-rt/linux
 $ patch -R -p4 < fix4usbap.patch

@@ -62,6 +62,7 @@ export libgcc_cv_fixed_point=no
 
 GCC_CONFIGURE:= \
 	SHELL="$(BASH)" \
+	MAKEINFO=missing \
 	$(PKG_BUILD_DIR)/configure \
 		--prefix=$(TOOLCHAIN_DIR) \
 		--build=$(GNU_HOST_NAME) \

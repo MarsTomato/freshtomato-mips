@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_nband,wl_wmf_bss_enable,wl_user_rssi"); %>
+//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,pci/1/1/ccode,pci/2/1/ccode,sb/1/ccode,wl_country_rev,0:regrev,1:regrev,pci/1/1/regrev,pci/2/1/regrev,sb/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_nband,wl_wmf_bss_enable,wl_user_rssi"); %>
 
 //	<% wlcountries(); %>
 
@@ -69,6 +69,7 @@ function save() {
 			var u = wl_unit(uidx);
 /* BCMWL6-BEGIN */
 			var u_pci = (u+1);
+			var u_sb = (u+1);
 /* BCMWL6-END */
 			var c_code = E('_wl'+u+'_country_code').value;
 /* BCMWL6-BEGIN */
@@ -86,17 +87,38 @@ function save() {
 			if (nvram['wl'+u+'_country_rev'] != c_rev)
 				router_reboot = 1;
 
-			if (nvram[+u+':ccode']) /* check short version */
-				E('_'+u+':ccode').value = c_code;
-			
-			if (nvram['pci/'+u_pci+'/1/ccode']) /* check long version */
-				E('_pci/'+u_pci+'/1/ccode').value = c_code;
+			if (nvram['sb/1/ccode'] && nvram['sb/1/regrev']) { /* check SDK5 / sb (Southbridge) first */
+				if (u_sb == 1) {
+					E('_sb/'+u_sb+'/ccode').value = c_code;
+					E('_sb/'+u_sb+'/regrev').value = c_rev;
+				}
+				else if (u_sb == 2) { /* second interface PCI */
+					if (nvram['0:ccode']) /* check short version */
+						E('_0:ccode').value = c_code;
+    
+					if (nvram['pci/1/1/ccode']) /* check long version */
+						E('_pci/1/1/ccode').value = c_code;
 
-			if (nvram[+u+':regrev'])
-				E('_'+u+':regrev').value = c_rev;
+					if (nvram['0:regrev'])
+						E('_0:regrev').value = c_rev;
 
-			if (nvram['pci/'+u_pci+'/1/regrev'])
-				E('_pci/'+u_pci+'/1/regrev').value = c_rev;
+					if (nvram['pci/1/1/regrev'])
+						E('_pci/1/1/regrev').value = c_rev;
+				}
+			}
+			else { /* SDK6 and PCI */
+				if (nvram[+u+':ccode']) /* check short version */
+					E('_'+u+':ccode').value = c_code;
+    
+				if (nvram['pci/'+u_pci+'/1/ccode']) /* check long version */
+					E('_pci/'+u_pci+'/1/ccode').value = c_code;
+
+				if (nvram[+u+':regrev'])
+					E('_'+u+':regrev').value = c_rev;
+
+				if (nvram['pci/'+u_pci+'/1/regrev'])
+					E('_pci/'+u_pci+'/1/regrev').value = c_rev;
+			}
 /* BCMWL6-END */
 			E('_wl'+u+'_nmode_protection').value = E('_wl'+u+'_gmode_protection').value;
 		}
@@ -166,10 +188,15 @@ function init() {
 			var u = wl_unit(uidx);
 /* BCMWL6-BEGIN */
 			var u_pci = (u+1);
+			var u_sb = (u+1);
 /* BCMWL6-END */
 
 			W('<input type="hidden" id="_wl'+u+'_distance" name="wl'+u+'_distance">');
 /* BCMWL6-BEGIN */
+			if (nvram['sb/'+u_sb+'/ccode'])
+				W('<input type="hidden" id="_sb/'+u_sb+'/ccode" name="sb/'+u_sb+'/ccode">');
+			if (nvram['sb/'+u_sb+'/regrev'])
+				W('<input type="hidden" id="_sb/'+u_sb+'/regrev" name="sb/'+u_sb+'/regrev">');
 			if (nvram[+u+':ccode'])
 				W('<input type="hidden" id="_'+u+':ccode" name="'+u+':ccode">');
 			if (nvram['pci/'+u_pci+'/1/ccode'])
@@ -282,11 +309,13 @@ function init() {
 <div class="section" id="sesdiv_notes" style="display:none">
 	<i>Country / Region and Country Rev EXAMPLES:</i><br>
 	<ul>
+		<li><b>EU / 4</b> - Country: EU (Europe) AND Country Rev: 4</li>
 		<li><b>EU / 13</b> - Country: EU (Europe) AND Country Rev: 13</li>
-		<li><b>DE / 0</b> - Country: DE (Germany) AND Country Rev: 0</li>
-		<li><b>US / 0</b> - Country: US (USA) AND Country Rev: 0</li>
+		<li><b>PL / 2</b> - Country: PL (Poland) AND Country Rev: 2</li>
+		<li><b>DE / 3</b> - Country: DE (Germany) AND Country Rev: 3</li>
+		<li><b>US / 10</b> - Country: US (USA) AND Country Rev: 10</li>
 		<li><b>CN / 1</b> - Country: CN (China) AND Country Rev: 1</li>
-		<li><b>TW / 13</b> - Country: TW (Taiwan) AND Country Rev: 13</li>
+		<li><b>TW / 4</b> - Country: TW (Taiwan) AND Country Rev: 4</li>
 	</ul>
 
 	<i>Further Notes:</i><br>

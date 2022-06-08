@@ -55,7 +55,6 @@
 # define __LONG_LONG_PAIR(HI, LO) HI, LO
 #endif
 
-
 #ifdef __USE_BSD
 /* Conversion interfaces.  */
 # include <byteswap.h>

@@ -17,7 +17,7 @@
 
 <script>
 
-//	<% nvram("usb_enable,usb_uhci,usb_ohci,usb_usb2,usb_mmc,usb_storage,usb_printer,usb_printer_bidirect,usb_automount,usb_fs_ext3,usb_fs_fat,usb_fs_ntfs,usb_fs_hfs,script_usbmount,script_usbumount,script_usbhotplug,idle_enable,usb_3g,usb_apcupsd"); %>
+//	<% nvram("usb_enable,usb_uhci,usb_ohci,usb_usb2,usb_mmc,usb_storage,usb_printer,usb_printer_bidirect,usb_automount,usb_fs_ext3,usb_fs_fat,usb_fs_ntfs,usb_fs_hfs,script_usbmount,script_usbumount,script_usbhotplug,idle_enable,usb_3g,usb_apcupsd,usb_apcupsd_custom"); %>
 
 //	<% usbdevices(); %>
 
@@ -237,6 +237,7 @@ function verifyFields(focused, quiet) {
 	E('_f_usb_3g').disabled = b;
 /* UPS-BEGIN */
 	E('_f_usb_apcupsd').disabled = b;
+	E('_f_usb_apcupsd_custom').disabled = b || !E('_f_usb_apcupsd').checked;
 /* UPS-END */
 /* NTFS-BEGIN */
 	E('_f_ntfs').disabled = b || a;
@@ -289,6 +290,7 @@ function save() {
 	fom.usb_3g.value = E('_f_usb_3g').checked ? 1 : 0;
 /* UPS-BEGIN */
 	fom.usb_apcupsd.value = E('_f_usb_apcupsd').checked ? 1 : 0;
+	fom.usb_apcupsd_custom.value = E('_f_usb_apcupsd_custom').checked ? 1 : 0;
 /* UPS-END */
 
 	form.submit(fom, 1);
@@ -339,6 +341,7 @@ function submit_complete() {
 <input type="hidden" name="usb_3g">
 <!-- UPS-BEGIN -->
 <input type="hidden" name="usb_apcupsd">
+<input type="hidden" name="usb_apcupsd_custom">
 <!-- UPS-END -->
 
 <!-- / / / -->
@@ -348,33 +351,38 @@ function submit_complete() {
 	<script>
 		createFieldTable('', [
 			{ title: 'Core USB Support', name: 'f_usb', type: 'checkbox', value: nvram.usb_enable == 1 },
-			{ title: 'USB 2.0 Support', indent: 2, name: 'f_usb2', type: 'checkbox', value: nvram.usb_usb2 == 1 },
-			{ title: 'USB 1.1 Support', indent: 2, multi: [
-				{ suffix: '&nbsp; OHCI &nbsp;&nbsp;&nbsp;', name: 'f_ohci', type: 'checkbox', value: nvram.usb_ohci == 1 },
-				{ suffix: '&nbsp; UHCI &nbsp;',	name: 'f_uhci', type: 'checkbox', value: nvram.usb_uhci == 1 }
-			] },
+				{ title: 'USB 2.0 Support', indent: 2, name: 'f_usb2', type: 'checkbox', value: nvram.usb_usb2 == 1 },
+				{ title: 'USB 1.1 Support', indent: 2, multi: [
+					{ suffix: '&nbsp; OHCI &nbsp;&nbsp;&nbsp;', name: 'f_ohci', type: 'checkbox', value: nvram.usb_ohci == 1 },
+					{ suffix: '&nbsp; UHCI &nbsp;',	name: 'f_uhci', type: 'checkbox', value: nvram.usb_uhci == 1 }
+				] },
 			null,
 			{ title: 'USB Printer Support', name: 'f_print', type: 'checkbox', value: nvram.usb_printer == 1 },
-			{ title: 'Bidirectional copying', indent: 2, name: 'f_bprint', type: 'checkbox', value: nvram.usb_printer_bidirect == 1 },
+				{ title: 'Bidirectional copying', indent: 2, name: 'f_bprint', type: 'checkbox', value: nvram.usb_printer_bidirect == 1 },
 			null,
 			{ title: 'USB Storage Support', name: 'f_storage', type: 'checkbox', value: nvram.usb_storage == 1 },
-			{ title: 'File Systems Support', indent: 2, multi: [
-				{ suffix: '&nbsp; Ext2 / Ext3 &nbsp;&nbsp;&nbsp;', name: 'f_ext3', type: 'checkbox', value: nvram.usb_fs_ext3 == 1 },
+				{ title: 'File Systems Support', indent: 2, multi: [
+					{ suffix: '&nbsp; Ext2 / Ext3 &nbsp;&nbsp;&nbsp;', name: 'f_ext3', type: 'checkbox', value: nvram.usb_fs_ext3 == 1 },
 /* NTFS-BEGIN */
-				{ suffix: '&nbsp; NTFS &nbsp;&nbsp;&nbsp;', name: 'f_ntfs', type: 'checkbox', value: nvram.usb_fs_ntfs == 1 },
+					{ suffix: '&nbsp; NTFS &nbsp;&nbsp;&nbsp;', name: 'f_ntfs', type: 'checkbox', value: nvram.usb_fs_ntfs == 1 },
 /* NTFS-END */
-				{ suffix: '&nbsp; FAT &nbsp;', name: 'f_fat', type: 'checkbox', value: nvram.usb_fs_fat == 1 }
+					{ suffix: '&nbsp; FAT &nbsp;', name: 'f_fat', type: 'checkbox', value: nvram.usb_fs_fat == 1 }
 /* HFS-BEGIN */
-				,{ suffix: '&nbsp; HFS / HFS+ &nbsp;', name: 'f_hfs', type: 'checkbox', value: nvram.usb_fs_hfs == 1 }
+					,{ suffix: '&nbsp; HFS / HFS+ &nbsp;', name: 'f_hfs', type: 'checkbox', value: nvram.usb_fs_hfs == 1 }
 /* HFS-END */
+<<<<<<< HEAD
 			] },
 /* MICROSD-BEGIN */
 			{ title: 'SD/MMC Card Support', indent: 2, name: 'f_mmc', type: 'checkbox', value: nvram.usb_mmc == 1 },
 /* MICROSD-END */
 			{ title: 'Automount', indent: 2, name: 'f_automount', type: 'checkbox',
+=======
+				] },
+				{ title: 'Automount', indent: 2, name: 'f_automount', type: 'checkbox',
+>>>>>>> mips-master
 					suffix: '&nbsp; <small>Automatically mount all partitions to sub-directories in <i>/mnt<\/i>.<\/small>', value: nvram.usb_automount == 1 },
-			{ title: 'Run after mounting', indent: 2, name: 'script_usbmount', type: 'textarea', value: nvram.script_usbmount },
-			{ title: 'Run before unmounting', indent: 2, name: 'script_usbumount', type: 'textarea', value: nvram.script_usbumount },
+				{ title: 'Run after mounting', indent: 2, name: 'script_usbmount', type: 'textarea', value: nvram.script_usbmount },
+				{ title: 'Run before unmounting', indent: 2, name: 'script_usbumount', type: 'textarea', value: nvram.script_usbumount },
 			null,
 			{ title: 'HDD Spindown', name: 'f_idle_enable', type: 'checkbox',
 				suffix: '&nbsp; <small>Spin down each HDD when idle. No need to use with flash drive.<\/small>', value: nvram.idle_enable == 1 },
@@ -383,6 +391,8 @@ function submit_complete() {
 /* UPS-BEGIN */
 			{ title: 'Run APCUPSD Deamon', name: 'f_usb_apcupsd', type: 'checkbox',
 				suffix: '&nbsp; <small>Required by UPS Monitor (APC Uninterruptible Power Supply)<\/small>', value: nvram.usb_apcupsd == 1 },
+				{ title: 'Custom Config File', indent: 2, name: 'f_usb_apcupsd_custom', type: 'checkbox',
+					suffix: '&nbsp; <small>(located /etc/apcupsd.conf)<\/small>', value: nvram.usb_apcupsd_custom == 1 },
 /* UPS-END */
 			{ title: 'Hotplug script<br><small>(called when any USB device is attached or removed)<\/small>', name: 'script_usbhotplug', type: 'textarea', value: nvram.script_usbhotplug },
 			null,

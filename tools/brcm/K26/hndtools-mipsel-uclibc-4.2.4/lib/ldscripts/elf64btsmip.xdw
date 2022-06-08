@@ -3,7 +3,7 @@ OUTPUT_FORMAT("elf64-tradbigmips", "elf64-tradbigmips",
 	      "elf64-tradlittlemips")
 OUTPUT_ARCH(mips)
 ENTRY(__start)
-SEARCH_DIR("/opt/brcm/hndtools-mipsel-uclibc-4.2.4/mipsel-linux-uclibc/lib64"); SEARCH_DIR("=/usr/local/lib64"); SEARCH_DIR("=/lib64"); SEARCH_DIR("=/usr/lib64"); SEARCH_DIR("=/usr/local/lib"); SEARCH_DIR("=/lib"); SEARCH_DIR("=/usr/lib");
+SEARCH_DIR("/home/pedro/freshtomato-mips/toolchain/../tools/brcm/hndtools-mipsel-uclibc-4.2.4/mipsel-linux-uclibc/lib64"); SEARCH_DIR("=/usr/local/lib64"); SEARCH_DIR("=/lib64"); SEARCH_DIR("=/usr/lib64"); SEARCH_DIR("=/usr/local/lib"); SEARCH_DIR("=/lib"); SEARCH_DIR("=/usr/lib");
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */

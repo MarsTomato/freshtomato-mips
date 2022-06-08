@@ -129,7 +129,7 @@ typedef void (*wlc_channel_mapfn_t)(void *context, uint8 *a, uint8 *b);
  * + CLMv 4.5.6 3x3 changes(An6-3 for Cisco E1200/E1550)
  * + CLMv 4.4.4 3x3 changes(Create EU/13 (locales 3r-5, 3rn-4)
  * + CLMv 4.5.3 3x3 changes(Create IL/4 (locale 13-3) for Juniper AX411)
- * 
+ *
  */
 
 /*
@@ -224,6 +224,14 @@ static const chanvec_t restricted_low_hi = {
 	{0x00, 0x00, 0x00, 0x00, 0x10, 0x11, 0x01, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x20, 0x22, 0x22, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00}
+};
+
+/* Channels 36 - 48 */
+static const chanvec_t restricted_low = {
+	{0x00, 0x00, 0x00, 0x00, 0x10, 0x11, 0x01, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00}
 };
 
@@ -407,6 +415,7 @@ static const rcinfo_t rcinfo_jp_40 = {
 #define  LOCALE_RESTRICTED_LOW_HI	  7
 #define  LOCALE_RESTRICTED_12_13_14	  8
 #define  LOCALE_RESTRICTED_52_ABOVE	  9
+#define  LOCALE_RESTRICTED_LOW        		10
 
 #define  IS_CCODE_REV(cm, cntry, rev)	(!strncmp(cm->ccode, cntry, WLC_CNTRY_BUF_SZ) && \
 					 (cm->regrev == (rev)))
@@ -432,7 +441,8 @@ static const chanvec_t * g_table_restricted_chan[] =
 	&chanvec_all_5G, 		/* restricted_set_11d_5G */
 	&restricted_low_hi,
 	&restricted_set_12_13_14,
-	&restricted_set_52_above
+	&restricted_set_52_above,
+	&restricted_low
 };
 
 static const chanvec_t locale_2g_01_11 = {
@@ -583,7 +593,7 @@ static const locale_info_t locale_a = {	/* locale a. channel 1 - 11 */
 	LOCALE_RADAR_SET_NONE,
 	LOCALE_RESTRICTED_NONE,
 #if 1 /* ASUS modify */
-	{QDB(17.5), QDB(20), QDB(17.5),
+	{QDB(17.5), QDB(19), QDB(17.5),
 	QDB(15.5), QDB(18), /* 16.5 dBm */ 62},
 #else
 	{QDB(19), QDB(19), QDB(19),
@@ -642,6 +652,18 @@ static const locale_info_t locale_a_6 = {	/* locale a_6. channel 1 - 11 */
 	{30, 30, 30, 0},
 	WLC_PEAK_CONDUCTED
 };
+
+
+static const locale_info_t locale_a_12 = {	/* locale a_12. channel 1 - 11 */
+	LOCALE_CHAN_01_11,
+	LOCALE_RADAR_SET_NONE,
+	LOCALE_RESTRICTED_NONE,
+	{ /* 17.5 dBm */ 70, 70, 70,
+	QDB(10), QDB(17), QDB(10)},
+	{30, 30, 30, 0},
+	WLC_PEAK_CONDUCTED
+};
+
 
 static const locale_info_t locale_a1 = {	/* locale a. channel 1 - 11 */
 	LOCALE_CHAN_01_11,
@@ -823,6 +845,16 @@ static const locale_info_t locale_a6_8 = {	/* locale a6_8. channel 1 - 11 */
 	WLC_PEAK_CONDUCTED
 };
 
+static const locale_info_t locale_a6_19 = {	/* locale a6_19. channel 1 - 11 */
+	LOCALE_CHAN_01_11,
+	LOCALE_RADAR_SET_NONE,
+	LOCALE_RESTRICTED_NONE,
+	{ QDB(17), QDB(16), QDB(15),
+	QDB(15), QDB(19), QDB(14)},
+	{30, 30, 30, 0},
+	WLC_PEAK_CONDUCTED
+};
+
 static const locale_info_t locale_a7 = {	/* locale a7 channel 1 - 11 */
 	LOCALE_CHAN_01_11,
 	LOCALE_RADAR_SET_NONE,
@@ -886,6 +918,25 @@ static const locale_info_t locale_a10_3 = {
 	WLC_PEAK_CONDUCTED
 };
 
+static const locale_info_t locale_a10_6 = {
+	LOCALE_CHAN_01_11,
+	LOCALE_RADAR_SET_NONE,
+	LOCALE_RESTRICTED_NONE,
+	{ /* 21.5 */ 86, 86, 86,
+	/* 15.5 */ 62, QDB(16), QDB(13)},
+	{30, 30, 30, 0},
+	WLC_PEAK_CONDUCTED
+};
+
+static const locale_info_t locale_a10_7 = {
+	LOCALE_CHAN_01_11,
+	LOCALE_RADAR_SET_NONE,
+	LOCALE_RESTRICTED_NONE,
+	{ QDB(15), QDB(15), QDB(15),
+	/* 14.5 */ 58, QDB(15), QDB(12)},
+	{30, 30, 30, 0},
+	WLC_PEAK_CONDUCTED
+};
 static const locale_info_t locale_a11 = {
 	LOCALE_CHAN_01_11,
 	LOCALE_RADAR_SET_NONE,
@@ -1001,8 +1052,8 @@ static const locale_info_t locale_b_5 = {	/* locale b_5. channel 1 - 13 */
 	LOCALE_CHAN_01_11 | LOCALE_CHAN_12_13,
 	LOCALE_RADAR_SET_NONE,
 	LOCALE_RESTRICTED_NONE,
-	{QDB(19), QDB(19), QDB(19),
-	 QDB(19), QDB(19), QDB(19)},
+	{QDB(17.5), QDB(17.5), QDB(17.5),
+	 QDB(13.5), QDB(13.5), QDB(13.5)},
 	{20, 20, 20, 0},
 	WLC_PEAK_CONDUCTED
 };
@@ -1284,6 +1335,16 @@ static const locale_info_t locale_g = {	/* locale g. channel 1 - 13 */
 	WLC_EIRP
 };
 
+static const locale_info_t locale_g_2 = {	/* locale g_2. channel 1 - 13 */
+	LOCALE_CHAN_01_11 | LOCALE_CHAN_12_13,
+	LOCALE_RADAR_SET_NONE,
+	LOCALE_RESTRICTED_NONE,
+	{ /* 21.5 */ 86, 86, 86,
+	  QDB(20), /* 21.5 */ 86, QDB(20)},
+	{23, 23, 23, 0},
+	WLC_PEAK_CONDUCTED
+};
+
 static const locale_info_t locale_h = {	/* locale h. channel 1 - 13 */
 	LOCALE_CHAN_01_11 | LOCALE_CHAN_12_13,
 	LOCALE_RADAR_SET_NONE,
@@ -1447,6 +1508,15 @@ static const locale_info_t locale_2 = {	/* locale 2. channel 36 - 48, 52 - 64, 1
 	WLC_PEAK_CONDUCTED | WLC_DFS_FCC
 };
 
+static const locale_info_t locale_2a = {	/* locale 2a. channel 36 - 48, 149 - 161 */
+	LOCALE_SET_5G_LOW1 | LOCALE_SET_5G_HIGH2,
+	LOCALE_RADAR_SET_1,
+	LOCALE_RESTRICTED_LOW,
+	{ /* 11.5 */ 46, 0, 0, 0, 46},
+	{23, 0, 0, 0, 30},
+	WLC_PEAK_CONDUCTED
+};
+
 static const locale_info_t locale_3 = {	/* locale 3. channel 36 - 48, 52 - 64, 100 - 140 */
 	LOCALE_CHAN_36_64 | LOCALE_CHAN_100_140,
 	LOCALE_RADAR_SET_1,
@@ -1589,7 +1659,7 @@ static const locale_info_t locale_3r_4 = {
 /* locale 3r_5. channel 36 - 48, 52 - 64, 100 - 116, 132 - 140 */
 static const locale_info_t locale_3r_5 = {
 	LOCALE_CHAN_36_64 | LOCALE_SET_5G_MID1 | LOCALE_SET_5G_HIGH1,
-	LOCALE_RADAR_SET_NONE,
+	LOCALE_RADAR_SET_1,
 	LOCALE_RESTRICTED_NONE,
 	{ QDB(21), QDB(21), QDB(21), QDB(28), 0},
 	{23, 23, 23, 30, 0},
@@ -1694,6 +1764,16 @@ static const locale_info_t locale_6a = {
 	WLC_PEAK_CONDUCTED | WLC_DFS_FCC
 };
 
+/* locale 6b. channel 36 - 48, 52 - 64, 100 - 140, 149 - 165 */
+static const locale_info_t locale_6b = {
+	LOCALE_CHAN_36_64 | LOCALE_CHAN_100_140 | LOCALE_CHAN_149_165,
+	LOCALE_RADAR_SET_1,
+	LOCALE_RESTRICTED_NONE,
+	{QDB(21), QDB(21), QDB(21), QDB(21), QDB(21)},
+	{23, 23, 23, 24, 30},
+	WLC_EIRP | WLC_DFS_EU
+};
+
 static const locale_info_t locale_7 = {	/* locale 7. 149 - 165 */
 	LOCALE_CHAN_149_165,
 	LOCALE_RADAR_SET_NONE,
@@ -1730,7 +1810,7 @@ static const locale_info_t locale_8 = {		/* locale 8. channel 56 - 64, 149 - 165
 	{0, 0, 0, 0, 30},
 	WLC_PEAK_CONDUCTED
 #else
-	LOCALE_SET_5G_LOW3 | LOCALE_CHAN_149_165,
+		LOCALE_SET_5G_LOW3 | LOCALE_CHAN_149_165,
 	LOCALE_RADAR_SET_1,
 	LOCALE_RESTRICTED_NONE,
 	{0, QDB(17), QDB(17), 0, QDB(17)},
@@ -1780,6 +1860,15 @@ static const locale_info_t locale_9 = {		/* locale 9. channel 149 - 161 */
 	WLC_EIRP
 };
 
+static const locale_info_t locale_9e = {		/* locale 9e. channel 149 - 161 */
+	LOCALE_SET_5G_HIGH2,
+	LOCALE_RADAR_SET_NONE,
+	LOCALE_RESTRICTED_NONE,
+	{0, 0, 0, 0, QDB(25)},
+	{0, 0, 0, 0, 27},
+	WLC_EIRP
+};
+
 static const locale_info_t locale_9h = {		/* locale 9h. channel 149 - 161 */
 	LOCALE_SET_5G_HIGH2,
 	LOCALE_RADAR_SET_NONE,
@@ -1793,8 +1882,8 @@ static const locale_info_t locale_10 = {	/* locale 10. channel 36 - 48, 149 - 16
 	LOCALE_SET_5G_LOW1 | LOCALE_CHAN_149_165,
 	LOCALE_RADAR_SET_NONE,
 	LOCALE_RESTRICTED_NONE,
-	 {QDB(19), 0, 0, 0, QDB(19)},
-	 {20, 0, 0, 0, 20},
+	 {QDB(21), 0, 0, 0, QDB(21)},
+	 {23, 0, 0, 0, 23},
 	 WLC_EIRP
 };
 
@@ -1959,6 +2048,15 @@ static const locale_info_t locale_16a = { /* locale 16a. channel 36 - 48, 52 - 6
 	WLC_PEAK_CONDUCTED | WLC_DFS_EU
 };
 
+static const locale_info_t locale_16a_1 = { /* locale 16a. channel 36 - 48, 52 - 64, 149 - 161 */
+	LOCALE_CHAN_36_64 | LOCALE_SET_5G_HIGH2,
+	LOCALE_RADAR_SET_1,
+	LOCALE_RESTRICTED_NONE,
+	{ QDB(21), QDB(21), QDB(21), 0, QDB(21)},
+	{23, 23, 23, 0, 23},
+	WLC_EIRP | WLC_DFS_EU
+};
+
 static const locale_info_t locale_17 = {	/* locale 17. channel 36 - 48, 52 - 64, 149 - 165 */
 	LOCALE_CHAN_36_64 | LOCALE_CHAN_149_165,
 	LOCALE_RADAR_SET_1,
@@ -1981,7 +2079,7 @@ static const locale_info_t locale_18 = {	/* locale 18. channel 36 - 48 */
 	LOCALE_SET_5G_LOW1,
 	LOCALE_RADAR_SET_NONE,
 	LOCALE_RESTRICTED_NONE,
-	{QDB(21), 0, 0, 0, 0},
+	{QDB(16), 0, 0, 0, 0},
 	{23, 0, 0, 0, 0},
 	WLC_EIRP
 };
@@ -2228,7 +2326,7 @@ static const locale_info_t locale_27b = {	/* locale 27b. channel 36 - 48, 149 - 
 	LOCALE_RADAR_SET_NONE,
 	LOCALE_RESTRICTED_NONE,
 #if 1 /* ASUS modify */
-	{QDB(17.5), 0, 0, 0, QDB(17.5)},
+	{QDB(9.5), 0, 0, 0, QDB(15.5)},
 #else
 	{QDB(14), 0, 0, 0, QDB(23)},
 #endif
@@ -2253,6 +2351,17 @@ static const locale_info_t locale_27e = {       /* locale 27e. channel 36 - 48, 
 	{17, 0, 0, 0, 30},
 	WLC_PEAK_CONDUCTED
 };
+
+
+static const locale_info_t locale_27_4 = {
+	LOCALE_SET_5G_LOW1 | LOCALE_SET_5G_HIGH2,
+	LOCALE_RADAR_SET_1,
+	LOCALE_RESTRICTED_NONE,
+	{ QDB(11), 0, 0, 0, QDB(11)},
+	{ 17, 0, 0, 0, 30},
+	WLC_PEAK_CONDUCTED | WLC_DFS_FCC
+};
+
 
 static const locale_info_t locale_28 = {	/* locale 28. channel 36 - 48 */
 	LOCALE_SET_5G_LOW1,
@@ -2366,6 +2475,26 @@ static const locale_info_t locale_31 = {	/* locale 31. channel 36 - 48, 149 - 16
 	{QDB(14), 0, 0, 0, QDB(15)},
 	{17, 0, 0, 0, 20},
 	WLC_PEAK_CONDUCTED
+};
+
+static const locale_info_t locale_32 = {
+	/* locale 32. channel 36 - 48, 52 - 64, 100 - 116, 132 - 140, 149 - 165 */
+	LOCALE_CHAN_36_64 | LOCALE_SET_5G_MID1 | LOCALE_SET_5G_HIGH1 | LOCALE_CHAN_149_165,
+	LOCALE_RADAR_SET_1,
+	LOCALE_RESTRICTED_NONE,
+	{QDB(21), QDB(19), QDB(19), QDB(19), QDB(19)},
+	{23, 20, 20, 20, 20},
+	WLC_EIRP | WLC_DFS_EU
+};
+
+static const locale_info_t locale_33 = {
+	/* locale 33. channel 36 - 48, 52 - 64, 100 - 116, 132 - 140,  149 - 165 */
+	LOCALE_CHAN_36_64 | LOCALE_SET_5G_MID1 | LOCALE_SET_5G_HIGH1 | LOCALE_CHAN_149_165,
+	LOCALE_RADAR_SET_1,
+	LOCALE_RESTRICTED_NONE,
+	{QDB(21), QDB(21), QDB(21), QDB(21), QDB(21)},
+	{23, 23, 23, 23, 23},
+	WLC_EIRP | WLC_DFS_EU
 };
 
 #ifdef BCMDBG
@@ -2503,7 +2632,11 @@ static const locale_info_t locale_11d_5G = {
 #define LOCALE_2G_IDX_a6_8		72
 #define LOCALE_2G_IDX_a4_4		73
 #define LOCALE_2G_IDX_a20		74
-
+#define LOCALE_2G_IDX_a10_6		75
+#define LOCALE_2G_IDX_g_2		76
+#define LOCALE_2G_IDX_a6_19		77
+#define LOCALE_2G_IDX_a10_7		78
+#define LOCALE_2G_IDX_a_12		79
 
 static const locale_info_t * g_locale_2g_table[]=
 {
@@ -2585,8 +2718,12 @@ static const locale_info_t * g_locale_2g_table[]=
 	&locale_a4_2,
 	&locale_a6_8,
 	&locale_a4_4,
-	&locale_a20
-
+	&locale_a20,
+	&locale_a10_6,
+	&locale_g_2,
+	&locale_a6_19,
+	&locale_a10_7,
+	&locale_a_12
 };
 
 #define LOCALE_5G_IDX_1		0
@@ -2692,6 +2829,13 @@ static const locale_info_t * g_locale_2g_table[]=
 #define LOCALE_5G_IDX_29d_1	98
 #define LOCALE_5G_IDX_29b_3	99
 #define LOCALE_5G_IDX_3_1	100 /* CLM v4.6.6 */
+#define LOCALE_5G_IDX_6b	101 /* CLM v6.2 */
+#define LOCALE_5G_IDX_16a_1	102
+#define LOCALE_5G_IDX_27_4	103
+#define LOCALE_5G_IDX_2a	104
+#define LOCALE_5G_IDX_32	105
+#define LOCALE_5G_IDX_33	106
+#define LOCALE_5G_IDX_9e	107
 
 #ifdef BAND5G
 static const locale_info_t * g_locale_5g_table[]=
@@ -2804,8 +2948,14 @@ static const locale_info_t * g_locale_5g_table[]=
 	&locale_13_3,
 	&locale_29d_1,
 	&locale_29b_3,
-	&locale_3_1 /* CLM v4.6.6 */
-
+	&locale_3_1, /* CLM v4.6.6 */
+	&locale_6b,
+	&locale_16a_1,
+	&locale_27_4,
+	&locale_2a,
+	&locale_32,
+	&locale_33,
+	&locale_9e
 };
 #endif /* #ifdef BAND5G */
 
@@ -2966,8 +3116,8 @@ static const locale_mimo_info_t locale_an2 = {
 	{QDB(15.5), /* 16.5 dBm = 66 qdBm */ 72, 72, 72, 72,
 	 72, 72, 72, 72, 72,
 	 /* 14.5 dBm */ 62, 0, 0},
-	{0, 0, QDB(13.5), /* 14.5 dBm */ 70, 70,
-	 70, 70, /* 12.5 dBm */ 70, 54, 0,
+	{0, 0, QDB(13.5), /* 14.5 dBm */ 66, 66,
+	 66, 66, /* 12.5 dBm */ 66, 54, 0,
 #else
 	{QDB(15), /* 16.5 dBm = 66 qdBm */ 66, 66, 66, 66,
 	 66, 66, 66, 66, 66,
@@ -3025,6 +3175,37 @@ static const locale_mimo_info_t locale_an2_5 = {
 	QDB(14), 0, 0},
 	{0, 0, /* 9.5 */ 38, /* 15.5 */ 62, 62,
 	62, 62, 62, /* 12.5 */ 50, 0,
+	0, 0, 0},
+	0
+};
+
+
+static const locale_mimo_info_t locale_an2_10 = {
+	{QDB(10), QDB(15), QDB(15), QDB(15), QDB(15),
+	QDB(15), QDB(15), QDB(15), QDB(15), QDB(15),
+	QDB(10), 0, 0},
+	{0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+	0, 0, 0},
+	WLC_NO_40MHZ
+};
+
+static const locale_mimo_info_t locale_an2_22 = {
+	{QDB(14), QDB(16), QDB(16), QDB(16), QDB(16),
+	QDB(16), QDB(16), QDB(16), QDB(16), QDB(16),
+	QDB(14), 0, 0},
+	{0, 0, QDB(13), QDB(13), QDB(13),
+	QDB(13), QDB(13), QDB(13), QDB(13), 0,
+	0, 0, 0},
+	0
+};
+
+static const locale_mimo_info_t locale_an2_24 = {
+	{QDB(14), QDB(14), QDB(14), QDB(14), QDB(14),
+	QDB(14), QDB(14), QDB(14), QDB(14), QDB(14),
+	/* 9.5 */ 38, 0, 0},
+	{0, 0, QDB(14), QDB(13), QDB(13),
+	/* 11.5 */ 46, 46,46,QDB(9), 0,
 	0, 0, 0},
 	0
 };
@@ -3141,6 +3322,16 @@ static const locale_mimo_info_t locale_an7_8 = {
 	0
 };
 
+static const locale_mimo_info_t locale_an7_20 = {
+	{ QDB(13), QDB(16), QDB(17), QDB(17), QDB(17),
+	QDB(17), QDB(17), QDB(17), QDB(15), QDB(16),
+	QDB(13), 0, 0},
+	{0, 0, QDB(12), QDB(12), QDB(14),
+	QDB(14), QDB(14), QDB(11), QDB(11), 0,
+	0, 0, 0},
+	0
+};
+
 static const locale_mimo_info_t locale_an8_t1 = {
 	{QDB(14), QDB(16), QDB(19), QDB(19), QDB(19),
 	QDB(19), QDB(19), QDB(19), QDB(19), QDB(14),
@@ -3206,7 +3397,7 @@ static const locale_mimo_info_t locale_a1_3n = {
 	{QDB(17), QDB(20), /* 22.5 dBm */ 90, 90, 90,
 	90, 90, 90, 90, QDB(20),
 	QDB(17), 0, 0},
-	{0, 0, QDB(16), QDB(19), /* 22.5 dBm */ 90, 
+	{0, 0, QDB(16), QDB(19), /* 22.5 dBm */ 90,
 	90, 90, QDB(19), QDB(16), 0,
 	0, 0, 0},
 	0
@@ -3219,7 +3410,7 @@ static const locale_mimo_info_t locale_b2_3n = {
 	{0, 0, 57, 57, 57,
 	57, 57, 57, 57, 57,
 	57, 0, 0},
-	0
+	WLC_EIRP
 };
 
 /* CLM v3.7.2 has separate power targets for SISO/CDD.
@@ -3246,12 +3437,12 @@ static const locale_mimo_info_t locale_bn_1 = {
 };
 
 static const locale_mimo_info_t locale_bn_2 = {
-	{QDB(16), QDB(16), QDB(16), QDB(16), QDB(16),
-	QDB(16), QDB(16), QDB(16), QDB(16), QDB(16),
-	QDB(16), QDB(16), QDB(16)},
+	{QDB(13.5), QDB(13.5), QDB(13.5), QDB(13.5), QDB(13.5),
+	QDB(13.5), QDB(13.5), QDB(13.5), QDB(13.5), QDB(13.5),
+	QDB(13.5), QDB(13.5), QDB(13.5)},
 	{0, 0, QDB(16), QDB(16), QDB(16),
-	QDB(16), QDB(16), QDB(16), QDB(16), QDB(16),
-	QDB(16), 0, 0},
+	QDB(13.5), QDB(13.5), QDB(13.5), QDB(13.5), QDB(13.5),
+	QDB(13.5), 0, 0},
 	0
 };
 
@@ -3285,6 +3476,16 @@ static const locale_mimo_info_t locale_bn_5 = {
 	0
 };
 
+static const locale_mimo_info_t locale_bn_6 = {
+	{QDB(11), QDB(11), QDB(11), QDB(11), QDB(11),
+	QDB(11), QDB(11), QDB(11), QDB(11), QDB(11),
+	QDB(11), QDB(11), QDB(11)},
+	{0, 0, QDB(12), QDB(12), QDB(12),
+	QDB(12), QDB(12), QDB(12), QDB(12), QDB(12),
+	QDB(12), 0, 0},
+	0
+};
+
 static const locale_mimo_info_t locale_bn_10 = {
 	{ /* 11.5 dBm */ 46, 46, 46, 46, 46,
 	46, 46, 46, 46, 46,
@@ -3308,8 +3509,8 @@ static const locale_mimo_info_t locale_bn_10_3n = {
 static const locale_mimo_info_t locale_bn_9 = {
 	{ /* 13.5 dBm */ 54, 54, 54, 54, 54, 54,
 	  /* 13.5 dBm */ 54, 54, 54, 54, 54, 54, 54},
-	{0, 0, /* 13.5 dBm */ 54, 54, 54, 
-	/* 13.5 dBm */ 54, 54, 54, 54, 54, 54, 
+	{0, 0, /* 13.5 dBm */ 54, 54, 54,
+	/* 13.5 dBm */ 54, 54, 54, 54, 54, 54,
 	0, 0},
 	0
 };
@@ -3376,6 +3577,14 @@ static const locale_mimo_info_t locale_bn2_6 = {
 	0
 };
 
+static const locale_mimo_info_t locale_bn2_7 = {
+	{ QDB(13), QDB(13), QDB(13), QDB(13), QDB(13), QDB(13),
+	QDB(13), QDB(13), QDB(13), QDB(13), QDB(13), QDB(13), QDB(13)},
+	{ 0, 0, 46 /* 11.5 */, QDB(13), QDB(13), QDB(13), QDB(13), QDB(13), 
+	QDB(13), QDB(13), QDB(13), 0, 0},
+	0
+}; 
+
 /* CLM v4.1.3 has separate SISO/CDD power targets and per-MCS limits.
  * Express CDD limits here and fixup SISO in wlc_channel_reg_limits().
  */
@@ -3418,6 +3627,15 @@ static const locale_mimo_info_t locale_bn5_1 = {
 	WLC_NO_40MHZ
 };
 
+/* CLM v5.6.5
+ * CDD limits here, fixup SISO power targets in wlc_channel_reg_limits().
+ */
+static const locale_mimo_info_t locale_bn5_2 = {
+	{ /* 15.5 */ 62, 62, 62, 62, 62,
+	62, 62, 62, 62, 62, 62, 62, 62},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+	WLC_NO_40MHZ
+};
 /* CLM v3.7.2 has separate SISO/CDD power targets and per-MCS limits.
  * Express CDD limits here and fixup in wlc_channel_reg_limits().
 */
@@ -3507,6 +3725,26 @@ static const locale_mimo_info_t locale_gn = {
 	{QDB(16), QDB(16), QDB(16), QDB(16), QDB(16),
 	QDB(16), QDB(16), QDB(16), QDB(16), QDB(16),
 	QDB(16), QDB(16), QDB(16)},
+	0
+};
+
+static const locale_mimo_info_t locale_gn2 = {
+	{QDB(20), QDB(20), QDB(20), QDB(20), QDB(20),
+	QDB(20), QDB(20), QDB(20), QDB(20), QDB(20),
+	QDB(20), QDB(20), QDB(20)},
+	{0, 0, QDB(20), QDB(20), QDB(20),
+	QDB(20), QDB(20), QDB(20), QDB(20), QDB(20),
+	0, 0, 0},
+	WLC_EIRP
+};
+
+static const locale_mimo_info_t locale_gn4 = {
+	{QDB(18), QDB(18), QDB(18), QDB(18), QDB(18),
+	QDB(18), QDB(18), QDB(18), QDB(18), QDB(18),
+	QDB(18), QDB(18), QDB(18)},
+	{0, 0, /* 16.5 */ 66, QDB(18), QDB(18),
+	QDB(18), QDB(18), QDB(18), QDB(18), QDB(18),
+	/* 17.5 */ 70, 0, 0},
 	0
 };
 
@@ -3661,7 +3899,15 @@ static const locale_mimo_info_t locale_kn5 = {
 #define LOCALE_MIMO_IDX_a1_3n			73
 #define LOCALE_MIMO_IDX_an2_21			74
 #define LOCALE_MIMO_IDX_b2_3n			75
-
+#define LOCALE_MIMO_IDX_an2_22			76
+#define LOCALE_MIMO_IDX_gn4			77
+#define LOCALE_MIMO_IDX_an7_20			78
+#define LOCALE_MIMO_IDX_an2_24			79
+#define LOCALE_MIMO_IDX_gn2			80
+#define LOCALE_MIMO_IDX_an2_10			81
+#define LOCALE_MIMO_IDX_bn5_2			82
+#define LOCALE_MIMO_IDX_bn2_7			83
+#define LOCALE_MIMO_IDX_bn_6			84
 
 static const locale_mimo_info_t * g_mimo_2g_table[]=
 {
@@ -3740,8 +3986,16 @@ static const locale_mimo_info_t * g_mimo_2g_table[]=
 	&locale_an6_7,
 	&locale_a1_3n,
 	&locale_an2_21,
-	&locale_b2_3n
-
+	&locale_b2_3n,
+	&locale_an2_22,
+	&locale_gn4,
+	&locale_an7_20,
+	&locale_an2_24,
+	&locale_gn2,
+	&locale_an2_10,
+	&locale_bn5_2,
+	&locale_bn2_7,
+	&locale_bn_6
 };
 
 /*
@@ -3760,6 +4014,12 @@ static const locale_mimo_info_t locale_1an = {
 	0
 };
 
+static const locale_mimo_info_t locale_2an = {
+	{ 46, 0, 0, 0, 46},
+	{ 0, 0, 0, 0, 0},
+	WLC_NO_40MHZ
+};
+
 /* CLM 4.2.3 CDD only. per MCS power limit is fixed up in wlc_channel_reg_limits(). */
 static const locale_mimo_info_t locale_1cn = {
 	{ /* 6.5 */ 26, QDB(13), QDB(13), 0, QDB(17)},
@@ -3776,7 +4036,13 @@ static const locale_mimo_info_t locale_2n = {
 static const locale_mimo_info_t locale_3_3n = {
 	{ QDB(16), QDB(16), QDB(16), QDB(16), 0},
 	{ QDB(18), QDB(18), QDB(18), QDB(18), 0},
-	0
+	WLC_EIRP
+};
+
+static const locale_mimo_info_t locale_9e_3n = {
+	{ QDB(0), QDB(0), QDB(0), QDB(0), QDB(20)},
+	{ QDB(0), QDB(0), QDB(0), QDB(0), QDB(20)},
+	WLC_EIRP
 };
 
 static const locale_mimo_info_t locale_3n = {
@@ -3961,6 +4227,12 @@ static const locale_mimo_info_t locale_6an_1 = {
 	0
 };
 
+static const locale_mimo_info_t locale_6bn = {
+	{QDB(18), QDB(18), QDB(18), QDB(18), QDB(18)},
+	{QDB(20), QDB(20), QDB(20), QDB(20), QDB(20)},
+	WLC_EIRP
+};
+
 static const locale_mimo_info_t locale_7n = {
 	{0, 0, 0, 0, QDB(15)},
 	{0, 0, 0, 0, QDB(15)},
@@ -4026,6 +4298,12 @@ static const locale_mimo_info_t locale_9n = {
 	WLC_NO_40MHZ
 };
 
+static const locale_mimo_info_t locale_9en = {
+	{0, 0, 0, 0, QDB(22)},
+	{0, 0, 0, 0, QDB(22)},
+	WLC_EIRP
+};
+
 static const locale_mimo_info_t locale_9hn = {
 	{0, 0, 0, 0, QDB(23)},
 	{0, 0, 0, 0, QDB(23)},
@@ -4038,6 +4316,12 @@ static const locale_mimo_info_t locale_10n = {
 	0
 };
 
+static const locale_mimo_info_t locale_10en = {
+	{QDB(18), 0, 0, 0, QDB(18)},
+	{QDB(20), 0, 0, 0, QDB(20)},
+	WLC_EIRP
+};
+
 static const locale_mimo_info_t locale_11n = {
 	{ /* 12.5 dBm */ 50, 50, 50, QDB(15), QDB(15)},
 	{QDB(14), QDB(15), QDB(15), QDB(15), QDB(15)},
@@ -4047,6 +4331,12 @@ static const locale_mimo_info_t locale_11n = {
 static const locale_mimo_info_t locale_11ln = {
 	{QDB(11), QDB(9), QDB(9), /* 10.5 dBm */ 42, QDB(15)},
 	{QDB(13), /* 12.5 dBm */ 50, 50, /* 13.5 dBm */ 54, QDB(15)},
+	0
+};
+
+static const locale_mimo_info_t locale_11ln_1 = {
+	{QDB(9), 50 /* 12.5 */, 50 /* 12.5 */, QDB(13), QDB(13)},
+	{42 /* 10.5 */, 42, 42, QDB(13), QDB(13)},
 	0
 };
 
@@ -4126,6 +4416,12 @@ static const locale_mimo_info_t locale_16an = {
 	0
 };
 
+static const locale_mimo_info_t locale_16an_1 = {
+	{ QDB(18), QDB(18), QDB(18), 0, QDB(18)},
+	{ QDB(18), QDB(18), QDB(18), 0, QDB(18)},
+	WLC_EIRP
+};
+
 static const locale_mimo_info_t locale_17n = {
 	{ /* 12.5 dBm */ 50, 50, 50, 0, 50},
 	{QDB(14), QDB(14), QDB(14), 0, QDB(14)},
@@ -4165,8 +4461,8 @@ static const locale_mimo_info_t locale_18bn = {
 
 static const locale_mimo_info_t locale_18rn = {
 #if 1 /* ASUS modify */
-	{ /* 12.5 dBm */ QDB(17.5), 0, 0, 0, 0},
-	{QDB(17.5), 0, 0, 0, 0},
+	{ /* 12.5 dBm */ QDB(15.5), 0, 0, 0, 0},
+	{QDB(16), 0, 0, 0, 0},
 #else
 	{ /* 12.5 dBm */ 50, 0, 0, 0, 0},
 	{QDB(14), 0, 0, 0, 0},
@@ -4180,8 +4476,7 @@ static const locale_mimo_info_t locale_18ln = {
 	0
 };
 
-/* CLM v3.0 has separate power targets in the channel 100-140 range.
- * Use ch 100-102 here, and fixup channels 104-140 in wlc_channel_reg_limits().
+/* CLM v6.2.3 
  */
 static const locale_mimo_info_t locale_19n = {
 	{QDB(10), QDB(16), QDB(14), /* 16.5 dBm */ 66, QDB(17)},
@@ -4402,8 +4697,8 @@ static const locale_mimo_info_t locale_27n = {
 
 static const locale_mimo_info_t locale_27bn = {
 #if 1 /* ASUS modify */
-	{QDB(17.5), 0, 0, 0, QDB(17.5)},
-	{QDB(17.5), 0, 0, 0, /* 23.5 dBm */ 70},
+	{QDB(11), 0, 0, 0, QDB(15.5)},
+	{QDB(9), 0, 0, 0, /* 23.5 dBm */ QDB(15.5)},
 #else
 	{QDB(10), 0, 0, 0, QDB(20)},
 	{QDB(12), 0, 0, 0, /* 23.5 dBm */ 94},
@@ -4436,6 +4731,18 @@ static const locale_mimo_info_t locale_29n = {
 	{QDB(10), QDB(15), QDB(15), QDB(15), QDB(15)},
 	{QDB(12), QDB(16), QDB(16), QDB(16), QDB(16)},
 	0
+};
+
+static const locale_mimo_info_t locale_32n = {
+	{QDB(18), QDB(16), QDB(16), QDB(16), QDB(16)},
+	{QDB(20), QDB(18), QDB(18), QDB(18), QDB(18)},
+	WLC_EIRP
+};
+
+static const locale_mimo_info_t locale_33n = {
+	{QDB(18), QDB(18), QDB(18), QDB(18), QDB(18)},
+	{QDB(20), QDB(20), QDB(20), QDB(20), QDB(20)},
+	WLC_EIRP
 };
 
 static const locale_mimo_info_t locale_29_3n = {
@@ -4511,6 +4818,11 @@ static const locale_mimo_info_t locale_31n = {
 	0
 };
 
+static const locale_mimo_info_t locale_27n_5 = {
+	{QDB(11), 0, 0, 0, QDB(11)},
+	{0, 0, 0, 0, 0},
+	0
+};
 
 #define LOCALE_MIMO_IDX_1n			0
 #define LOCALE_MIMO_IDX_1an			1
@@ -4625,6 +4937,16 @@ static const locale_mimo_info_t locale_31n = {
 #define LOCALE_MIMO_IDX_3n_1			109 /* CLM v4.6.6 */
 #define LOCALE_MIMO_IDX_3en				110
 #define LOCALE_MIMO_IDX_3_3n			111
+#define LOCALE_MIMO_IDX_10en			112
+#define LOCALE_MIMO_IDX_6bn			113
+#define LOCALE_MIMO_IDX_16an_1			114
+#define LOCALE_MIMO_IDX_27n_5			115
+#define LOCALE_MIMO_IDX_2an			116
+#define LOCALE_MIMO_IDX_11ln_1			117
+#define LOCALE_MIMO_IDX_32n			118
+#define LOCALE_MIMO_IDX_33n			119
+#define LOCALE_MIMO_IDX_9en			120
+#define LOCALE_MIMO_IDX_9e_3n			121
 
 
 /* 11ln-2 and 11ln-3 should be the same 11n locale, the difference in */
@@ -4744,7 +5066,17 @@ static const locale_mimo_info_t * g_mimo_5g_table[]=
 	&locale_29_3n,
 	&locale_3n_1, /* CLM v4.6.6 */
 	&locale_3en,
-	&locale_3_3n
+	&locale_3_3n,
+	&locale_10en,
+	&locale_6bn,
+	&locale_16an_1,
+	&locale_27n_5,
+	&locale_2an,
+	&locale_11ln_1,
+	&locale_32n,
+	&locale_33n,
+	&locale_9en,
+	&locale_9e_3n
 };
 
 #endif /* WL11N */
@@ -4999,7 +5331,7 @@ static const struct {
 	{"SE",	LOCALES(b,  3,  bn,  3n)},	/* Sweden */
 	{"CH",	LOCALES(b,  3,  bn,  3n)},	/* Switzerland */
 	{"SY",	LOCALES(f, 12,  fn, 15n)},	/* Syrian Arab Republic */
-	{"TW",	LOCALES(a,  8, an1_t1,  8n)},	/* Taiwan, Province Of China */
+	{"TW",	LOCALES(a,  8, an1_t1,  8n)},	/* Taiwan, Republic Of China */
 	{"TJ",	LOCALES(b, 15,  fn, 15n)},	/* Tajikistan */
 	{"TZ",	LOCALES(b, 12,  fn, 15n)},	/* Tanzania, United Republic Of */
 	{"TH",	LOCALES(b,  6,  bn,  6n)},	/* Thailand */
@@ -5078,6 +5410,7 @@ const struct {
 	{"BG",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Bulgaria */
 	{"BY",  1, LOCALES(b,  3l_1,  fn, 15n)},      /* Belarus */
 	{"BR",	1, LOCALES(b,  6a,  bn1_1,  6an)},	/* Brazil */
+	{"BR",	5, LOCALES(a10_7, 15,  an2_24, 15n)},	/* Brazil  Mitrastar BCM63168 */
 	{"CA",  2, LOCALES(a,   29, an1_t2, 29n)},	/* Canada */
 	{"CA",  3, LOCALES(a,  29a, an1_t2, 29an)},	/* Canada */
 	{"CA",  4, LOCALES(a,  29c, an1_t2, 29cn)},	/* Canada */
@@ -5131,6 +5464,7 @@ const struct {
 	{"IS",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Iceland */
 	{"IN",  1, LOCALES(b, 5,  fn, 15n)},	/* India */
 	{"ID",	2, LOCALES(b, 9h,  bn1_1, 9hn)},	/* Indonesia */
+	{"ID",	5, LOCALES(b, 9e,  bn7, 9en)},	/* Indonesia */
 	{"IE",  1, LOCALES(b, 3c,  bn, 3cn)},	/* Ireland */
 	{"IE",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Ireland */
 	{"IL",	2, LOCALES(b, 13_1,  bn1_1, 13n_1)},	/* Israel */
@@ -5174,17 +5508,20 @@ const struct {
 	{"LU",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Luxembourg */
 	{"MV",	1, LOCALES(b, 17a,  bn1_1, 17an)},	/* Maldives */
 	{"MY",  1, LOCALES(b, 5,  fn, 15n)},	/* Malaysia */
+	{"MY",  5, LOCALES(g, 21, gn2, 21n)},	/* Malaysia */
 	{"MT",  1, LOCALES(b, 3c,  bn, 3cn)},	/* Malta */
 	{"MT",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Malta */
 	{"MX",  1, LOCALES(b,  2,  bn,  2n)},	/* Mexico */
 	{"MX",  2, LOCALES(b,  1c,  bn1_1,  1cn)},	/* Mexico */
 	{"MA",  1, LOCALES(b,  3,  en, 26n)},	/* Morocco */
 	{"NP",  1, LOCALES(b,  16,  fn, 15n)},	/* Nepal */
+	{"NP",  4, LOCALES(g,  10,  gn2, 10en)},	/* Nepal */
 	{"NL",  1, LOCALES(b, 3c,  bn, 3cn)},	/* Netherlands */
 	{"NL",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Netherlands */
 	{"NO",  1, LOCALES(b, 3c,  bn, 3cn)},	/* Norway */
 	{"NO",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Norway */
 	{"NZ",  1, LOCALES(a_6, 6a_1,  an6_6, 6an_1)},	/* New Zeland - Cisco AP3500i */
+	{"NZ",  6, LOCALES(b, 16a_1,  bn7, 16an_1)},	/* New Zeland - Cisco AP3500i */
 	{"PY",  1, LOCALES(b,  6,  bn,  6n)},   /* Paraguay */
 	{"PK",	1, LOCALES(b,  7,  bn1_1,  7n)},	/* Pakistan */
 	{"PA",	1, LOCALES(g,  1c,  gn,  1cn)},	/* Panama */
@@ -5196,6 +5533,8 @@ const struct {
 	{"PT",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Portugal */
 	{"PR",	2, LOCALES(a3_1, 19l_2, an1_t5, 19ln_4)},	/* Pueto Rico */
 	{"Q1",	17, LOCALES(a20, 15, an2_21, 15n)},	/* United States */
+	{"Q1",	20, LOCALES(a10_6, 15, an2_22, 15n)},	/* United States */
+	{"Q1",	23, LOCALES(a6_19, 15, an7_20, 15n)},	/* United States */
 	{"Q2",	2, LOCALES(a4, 27b, an5, 27bn)},	/* United States (No DFS) */
 	{"Q2",  3, LOCALES(a4, 27c, an5, 27cn)},        /* United States (No DFS) */
 	{"Q2",  4, LOCALES(a4_2, 27e, an6_4, 27en)},    /* United States (No DFS) */
@@ -5205,10 +5544,13 @@ const struct {
 	{"RU",  2, LOCALES(b, 19,  fn, 15n)},   /* Russian Federation */
 	{"RU",  3, LOCALES(b, 19l_2,  dn, 4n)},   /* Russian Federation */
 	{"RU",  4, LOCALES(b_11, 2,  kn5, 2n)},   /* Russian Federation */
+	{"RU",  13, LOCALES(b, 32,  bn7, 32n)},   /* Russian Federation */
+	{"SA",	1, LOCALES(b, 16,  bn_6, 16n)},	        /* Saudi Arabia */
 	{"SA",	2, LOCALES(b, 15,  bn1_1, 15n)},	/* Saudi Arabia */
 	{"SG",	1, LOCALES(b_2, 15,  bn_2, 15n)},	/* Singapore */
 	{"SG",	2, LOCALES(b, 5,  fn, 15n)},	/* Singapore */
 	{"SG",	3, LOCALES(k_4, 5l_2,  kn5, 5ln_2)},	/* Singapore */
+	{"SG",	7, LOCALES(g_2, 15,  gn4, 15n)},	/* Singapore */
 	{"SK",  1, LOCALES(b, 3c,  bn, 3cn)},	/* Slovakia */
 	{"SK",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Slovakia */
 	{"SI",  1, LOCALES(b, 3c,  bn, 3cn)},	/* Slovenia */
@@ -5221,18 +5563,20 @@ const struct {
 	{"CH",  1, LOCALES(b, 3c,  bn, 3cn)},	/* Switzerland */
 	{"CH",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Switzerland */
 	{"CH",  9, LOCALES(b_1, 15,  bn_1, 15n)},	/* Switzerland */
-	{"TW",  2, LOCALES(a, 8a, an1_t1, 8an)},	/* Taiwan, Province Of China */
-	{"TW",  3, LOCALES(a, 8a, an1_t1, 8bn)},	/* Taiwan, Province Of China */
-	{"TW",  4, LOCALES(a3_1, 8b, an1_t5, 8cn)},	/* Taiwan, Province Of China */
-	{"TW",  5, LOCALES(a_6, 8a_1, an6_6, 8an_1)},	/* Taiwan, Province Of China */
+	{"TW",  2, LOCALES(a, 8a, an1_t1, 8an)},	/* Taiwan, Republic Of China */
+	{"TW",  3, LOCALES(a, 8a, an1_t1, 8bn)},	/* Taiwan, Republic Of China */
+	{"TW",  4, LOCALES(a3_1, 8b, an1_t5, 8cn)},	/* Taiwan, Republic Of China */
+	{"TW",  5, LOCALES(a_6, 8a_1, an6_6, 8an_1)},	/* Taiwan, Republic Of China */
 	{"TH",	2, LOCALES(b,  6a,  bn1_1,  6an)},	/* Thailand */
 	{"TR",	3, LOCALES(b, 13_1,  bn1_1, 13n_1)},	/* Turkey */
 	{"TR",  4, LOCALES(b, 3, bn7, 3tn)},	/* Turkey (For Airties) */
 	{"UA",  1, LOCALES(b, 13,  fn, 15n)},	/* Ukraine */
 	{"UA",  2, LOCALES(b,  5,  en,  5n)},   /* Ukraine */
 	{"UA",  3, LOCALES(b,  5,  bn1_1,  5n)},   /* Ukraine */
+	{"UA",  8, LOCALES(b,  33,  bn7,  33n)},   /* Ukraine */
 	{"AE",  1, LOCALES(b,  3,  bn,  3n)},	/* United Arab Emirates */
 	{"AE",  3, LOCALES(b,  3l_1,  bn1_1,  3ln_1)},	/* United Arab Emirates */
+	{"AE",  6, LOCALES(b,  3,  bn7,  3en)},	/* United Arab Emirates */
 	{"GB",  1, LOCALES(b, 3c,  bn, 3cn)},	/* United Kingdom */
 	{"GB",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* United Kingdom */
 	{"GB",  6, LOCALES(b, 3,  bn7, 3en)},	/* United Kingdom */
@@ -5285,6 +5629,7 @@ const struct {
 	{"US", 56, LOCALES(a_6, 29d_2, an6_6,  29dn_2)},     /* United States */
 	{"US", 61, LOCALES(a3_1, 19l_2, an1_t5, 19ln_2)},    /* United States */
 	{"US", 63, LOCALES(a6_8, 15, an7_8,  15n)},     /* United States */
+	{"US", 69, LOCALES(a_12, 27_4, an2_10,  27n_5)},     /* United States */
 	{"US", 72, LOCALES(a3_1, 19l_2, an6_4,  19ln_2)},     /* United States */
 	{"US", 73, LOCALES(a4_4, 29b_3, an6_7,  29bn_3)},     /* United States */
 	{"VE",	1, LOCALES(g,  5,  gn,  5n)},	/* Venezuela */
@@ -5321,12 +5666,16 @@ const struct {
 	{"XX",	3, LOCALES(b5_4, 15,  fn, 15n)}, /* Worldwide (passive Ch12-14) */
 	{"XZ",  1, LOCALES(b2_4, 11_1, bn2_5, 11n_1)}, /* Worldwide (passive Ch12-14), passive 5G */
 	{"XZ",  2, LOCALES(b5_3, 11_2, fn, 15n)}, /* Worldwide (passive Ch12-14), passive 5G */
+	{"XZ",  3, LOCALES(b2_5, 11_3, bn2_7, 11ln_1)},
+	/* Worldwide (passive Ch12-14), passive 5G */
 	{"XY",  1, LOCALES(b_3, 15, bn2_2, 15n)}, /* Worldwide (passive Ch12-14), passive 5G */
 	{"XY",  2, LOCALES(b_4, 15, bn2_6, 15n)}, /* Worldwide (passive Ch12-14), passive 5G */
+	{"XY",  3, LOCALES(b2, 2a, bn5_2, 2an)}, /* Worldwide (passive Ch12-14), passive 5G */
 	{"XU",  1, LOCALES(b_6, 3c, bn_3, 3cn)}, /* European locale, 1dBi antenna in 2.4GHz */
 	{"XU",  2, LOCALES(b_7, 3c, bn_4, 3cn)}, /* European locale, 2dBi antenna in 2.4GHz */
 	{"XU",  3, LOCALES(b_8, 3c, bn_5, 3cn)}, /* European locale, 3dBi antenna in 2.4GHz */
 	{"XV",  1, LOCALES(b2_6, 11_3, bn2_8, 11ln_2)}, /* WW Safe Mode Locale */
+	{"XT",  1, LOCALES(b2_2, 19, bn2_3, 19n)}, /* For BCM94319SDB  */
 	{"XT",  4, LOCALES(b2_5, 15, bn2_4, 15n)}, /* For BCM94319SDB  */
 	{"XT",  5, LOCALES(b2_5, 15, bn2_4, 15n)}, /* For BCM94319SDHMB  */
 	{"ww",  5, LOCALES(a_2, 15, an_2, 15n)}, /* For BCM94319USBWLN4L (HP Bellatrix) */
@@ -6674,6 +7023,27 @@ wlc_set_country_common(wlc_cm_info_t *wlc_cm,
 	return;
 }
 
+#if defined(AP) && defined(RADAR)
+extern bool
+wlc_is_european_weather_radar_channel(struct wlc_info *wlc, chanspec_t chanspec)
+{
+	const locale_info_t * li;
+
+	li = wlc_get_locale_5g(wlc->cmi->country->locale_5G);
+
+	if (li && ISDFS_EU(li->flags)) {
+		return ((CHSPEC_CHANNEL(chanspec) == 120) ||
+			(CHSPEC_CHANNEL(chanspec) == 124) ||
+			(CHSPEC_CHANNEL(chanspec) == 128) ||
+			(chanspec == CH40MHZ_CHSPEC(118,WL_CHANSPEC_CTL_SB_LOWER)) || /* 118l */
+			(chanspec == CH40MHZ_CHSPEC(118,WL_CHANSPEC_CTL_SB_UPPER)) || /* 118u */
+			(chanspec == CH40MHZ_CHSPEC(126,WL_CHANSPEC_CTL_SB_LOWER)) || /* 126l */
+			(chanspec == CH40MHZ_CHSPEC(126,WL_CHANSPEC_CTL_SB_UPPER)));  /* 126u */
+	}
+	return FALSE;
+}
+#endif /* defined(AP) && defined(RADAR) */
+
 /* Lookup a country info structure from a null terminated country code
  * The lookup is case sensitive.
  */
@@ -7416,10 +7786,7 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 	}
 
 	/* Some EIRP locales also have a conducted CCK or OFDM limit. */
-	if (li == &locale_g) {
-		conducted_max = QDB(22);
-		conducted_ofdm_max = 82; /* 20.5 dBm */
-	} else if (li == &locale_h || li == &locale_i) {
+	if (li == &locale_h || li == &locale_i) {
 		conducted_max = QDB(22);
 		conducted_ofdm_max = QDB(22);
 	} else {
@@ -7475,6 +7842,11 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 				maxpwr = QDB(12);
 			if (chan == 10)
 				maxpwr = QDB(15);
+		} else if (li == &locale_a6_19) {
+			if (chan == 2)
+				maxpwr = QDB(17);
+			else if (chan == 10)
+				maxpwr = QDB(15);
 		}
 
 		maxpwr = maxpwr - delta;
@@ -7504,9 +7876,16 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 		} else if (li == &locale_b2) {
 			if (chan == 11)
 				maxpwr = 70;  /* 17.5 dBm */
-		} else if (li == &locale_b2_1 || li == &locale_b2_2) {
+			if (chan == 14)
+				maxpwr = 0;
+		} else if (li == &locale_b2_1) {
 			if (chan == 11)
 				maxpwr = QDB(16);
+		} else if (li == &locale_b2_2) {
+			if (chan == 11)
+				maxpwr = QDB(16);
+			if (chan == 14)
+				maxpwr = 0;
 		} else if (li == &locale_b2_3 || li == &locale_b2_5) {
 			if (chan == 13)
 				maxpwr = 46 /* 11.5 dBm */;
@@ -7572,6 +7951,11 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 				maxpwr = QDB(16);
 			else if (chan == 9)
 				maxpwr = QDB(12);
+		} else if (li == &locale_a6_19) {
+			if (chan == 2 || chan == 10)
+				maxpwr = QDB(16);
+			else if (chan == 3 || chan == 9)
+				maxpwr = QDB(17);
 		}
 	} else {
 		maxpwr = li->maxpwr[CHANNEL_POWER_IDX_5G(chan)];
@@ -7650,7 +8034,16 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 			if (chan >= 132 && chan <= 140) {
 				maxpwr = 54;  /* 13.5 dBm */
 			}
+		} else if (li == &locale_32) {
+			if (chan >= 100 && chan < 132) {
+				maxpwr = 0;
+			}
+		} else if (li == &locale_33) {
+			if (chan > 132 && chan <= 140) {
+				maxpwr = 0;
+			}
 		}
+
 #endif /* BAND5G */
 	}
 
@@ -7753,6 +8146,13 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 		li_mimo == &locale_19hn ||
 		li_mimo == &locale_19ln ||
 		li_mimo == &locale_19rn) {
+
+		if (li_mimo == &locale_19n) {
+			if (chan == 60)
+				maxpwr40 = QDB(12);
+			if (chan == 165)
+				maxpwr40 = 0;
+		}
 		/* Fixup 100-102, 104-140 channel split */
 		if (chan >= 104 && chan <= 140) {
 			if (li_mimo == &locale_19bn ||
@@ -7765,7 +8165,14 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 			if (li_mimo == &locale_19an ||
 				li_mimo == &locale_19ln)
 				maxpwr40 = QDB(17);
-			else
+			else if (li_mimo == &locale_19n) {
+				if (chan == 104)
+					maxpwr40 = 62; /* 15.5 dBm */
+				else if (chan == 140)
+					maxpwr40 = 0;
+				else
+					maxpwr40 = 74; /* 18.5 dBm */
+			} else
 				maxpwr40 = 74; /* 18.5 dBm */
 		}
 	}
@@ -7965,6 +8372,41 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 		}
 	}
 
+	if (li_mimo == &locale_11ln_1) {
+		if (chan == 140 || chan == 165)
+			maxpwr40 = 0;
+	}
+
+	if (li_mimo == &locale_32n) {
+		if (chan >= 100 && chan <= 148) {
+			maxpwr20 = 0;
+			if (chan >= 132 && chan <= 140) {
+				maxpwr20 = QDB(16);
+			}
+		}
+		if (chan >= 100 && chan <= 165) {
+			maxpwr40 = 0;
+			if ((chan == 134) || (chan >= 151 && chan <= 159)) {
+				maxpwr40 = QDB(18);
+			}
+		}
+	}
+
+	if (li_mimo == &locale_33n) {
+		if (chan >= 100 && chan <= 132) {
+			maxpwr20 = QDB(18);
+		}
+		if (chan > 132 && chan <= 140) {
+			maxpwr20 = 0;
+		}
+		if (chan >= 100 && chan <= 165) {
+			maxpwr40 = 0;
+			if ((chan >= 102 && chan <= 126) || (chan >= 151 && chan <= 159)) {
+				maxpwr40 = QDB(20);
+			}
+		}
+	}
+
 	maxpwr20 = maxpwr20 - delta;
 	maxpwr20 = MAX(maxpwr20, 0);
 	maxpwr40 = maxpwr40 - delta;
@@ -8000,6 +8442,12 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 		txpwr->u40.n.cdd[i] = (uint8)maxpwr40;
 	}
 
+	/* Fill in the MCS 8-15 SDM rates */
+	for (i = 0; i < WL_NUM_RATES_MCS_1STREAM; i++) {
+		txpwr->u20.n.sdm[i] = (uint8)maxpwr20;
+		txpwr->u40.n.sdm[i] = (uint8)maxpwr40;
+	}
+
 	/* These locales have SISO expressed in the table and override CDD later */
 	if (li_mimo == &locale_an1_t1 ||
 	    li_mimo == &locale_an1_t2 ||
@@ -8017,20 +8465,32 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 	    li_mimo == &locale_bn_9 ||
 	    li_mimo == &locale_an_2 ||
 	    li_mimo == &locale_an7_8 ||
-	    li_mimo == &locale_kn5) {
+	    li_mimo == &locale_kn5 ||
+	    li_mimo == &locale_an2_22 ||
+	    li_mimo == &locale_an2_10 ||
+	    li_mimo == &locale_bn5_2 ||
+	    li_mimo == &locale_bn2_7) {
 
+
+		if (li_mimo == &locale_an2_10) {
+			if ((chan >= 2 && chan <= 10)) {
+				maxpwr20 = QDB(17);
+				maxpwr40 = 0;
+			}
+		}
 		if (li_mimo == &locale_bn2_3) {
 			maxpwr20 = QDB(16);
-			maxpwr40 = 0;
-
-			if (chan == 3) {
-				maxpwr40 = QDB(15);
-			} else if (chan >= 4 && chan <= 8) {
-				maxpwr40 = QDB(16);
-			} else if (chan == 9) {
-				maxpwr40 = QDB(14);
-			} else if (chan == 12 || chan == 13) {
+			if (chan == 12 || chan == 13) {
 				maxpwr20 = QDB(11);
+			} else if (chan == 14) {
+				maxpwr20 = 0;
+			}
+		}
+		if (li_mimo == &locale_bn2_7) {
+			if (chan == 13) {
+				maxpwr20 = 46; /* 11.5 */ 
+			} else {
+				maxpwr20 = QDB(16);
 			}
 		}
 
@@ -8047,6 +8507,16 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 			} else if (chan == 12 || chan == 13) {
 				maxpwr20 = QDB(11);
 			}
+		}
+
+		if (li_mimo == &locale_bn5_2) {
+			if (chan == 1 || chan == 11) {
+				maxpwr20 = /* 16.5 */ 66;
+			} else if (chan == 14) {
+				maxpwr20 = 0;
+			} else
+				maxpwr20 = /* 17.5 */ 70;
+			maxpwr40 = 0;
 		}
 
 		if (li_mimo == &locale_bn_9 ||
@@ -8107,6 +8577,14 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 				maxpwr20 = QDB(17);
 		}
 
+		if (li_mimo == &locale_an2_22) {
+
+			if (chan == 1)
+				maxpwr20 = 62; /* 15.5 dBm */
+			if (chan == 11)
+				maxpwr20 = QDB(13);
+		}
+
 		for (i = 0; i < WL_NUM_RATES_MCS_1STREAM; i++) {
 			txpwr->u20.n.siso[i] = (uint8)maxpwr20;
 			txpwr->u40.n.siso[i] = (uint8)maxpwr40;
@@ -8124,11 +8602,20 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 		txpwr->u40.n.stbc[i] = 0;
 	}
 
-	/* Fill in the MCS 8-15 SDM rates */
-	for (i = 0; i < WL_NUM_RATES_MCS_1STREAM; i++) {
-		txpwr->u20.n.sdm[i] = (uint8)maxpwr20;
-		txpwr->u40.n.sdm[i] = (uint8)maxpwr40;
+
+	if (li_mimo == &locale_an2_24) {
+		if (chan == 1)
+			maxpwr20 = 58; /* 14.5 dBm */
+		else if (chan > 1 && chan <= 10)
+			maxpwr20 = QDB(15);
+		if (chan == 11)
+			maxpwr20 = QDB(12);
+		for (i = 0; i < WL_NUM_RATES_MCS_1STREAM; i++) {
+			txpwr->u20.n.siso[i] = (uint8)maxpwr20;
+			txpwr->u40.n.siso[i] = (uint8)maxpwr40;
+		}
 	}
+
 
 	/* Fill in MCS32 */
 	txpwr->mcs32 = (uint8)maxpwr40;
@@ -8136,6 +8623,32 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 	/* Now override the N enable limits for those locales where
 	 * the defaults are not correct.
 	 */
+	if (li_mimo == &locale_gn2 ||
+		li_mimo == &locale_bn7) {
+
+		if (li_mimo == &locale_gn2) {
+			maxpwr20 = QDB(23);
+			if (chan > 2 && chan < 11)
+				maxpwr40 = QDB(20);
+		}
+
+		if (li_mimo == &locale_bn7) {
+			maxpwr20 = QDB(19);
+			if (chan >= 3 && chan <= 11) {
+				maxpwr40 = QDB(19);
+			}
+		}
+
+		maxpwr20 = maxpwr20 - delta;
+		maxpwr20 = MAX(maxpwr20, 0);
+		maxpwr40 = maxpwr40 - delta;
+		maxpwr40 = MAX(maxpwr40, 0);
+
+		for (i = 0; i < WL_NUM_RATES_MCS_1STREAM; i++) {
+			txpwr->u20.n.siso[i] = (uint8)maxpwr20;
+			txpwr->u40.n.siso[i] = (uint8)maxpwr40;
+		}
+	}
 
 	if (li_mimo == &locale_an1_t1 ||
 	    li_mimo == &locale_an1_t2 ||
@@ -8472,7 +8985,8 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 		}
 	}
 
-	if (li_mimo == &locale_19n_1 ||
+	if (li_mimo == &locale_19n ||
+	    li_mimo == &locale_19n_1 ||
 	    li_mimo == &locale_19n_2 ||
 	    li_mimo == &locale_3jn_4 ||
 	    li_mimo == &locale_3rn_3 ||
@@ -8483,12 +8997,23 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 	    li_mimo == &locale_13n_2 ||
 	    li_mimo == &locale_25hn ||
 	    li_mimo == &locale_29dn_2 ||
-		li_mimo == &locale_3en ||
-		li_mimo == &locale_bn7 ||
-	    li_mimo == &locale_2n) {
+	    li_mimo == &locale_3en ||
+	    li_mimo == &locale_2n ||
+	    li_mimo == &locale_11ln_1) {
 		/* Fixup SISO */
 
-		if (li_mimo == &locale_19n_1) {
+		if (li_mimo == &locale_19n) {
+			if ((chan >= 36 && chan <= 48) || chan == 64)
+				maxpwr20 = QDB(14);
+			else if ((chan >= 52 && chan <= 60) || chan == 100 ||
+				(chan >= 149 && chan <= 165)) {
+				maxpwr20 = QDB(17);
+				if (chan == 60)
+					maxpwr40 = QDB(12);
+			}
+			else if (chan == 104)
+				maxpwr40 = 62; /* 15.5 */
+		} else if (li_mimo == &locale_19n_1) {
 			maxpwr20 = 0;
 			maxpwr40 = 0;
 
@@ -8647,17 +9172,116 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 		} else if (li_mimo == &locale_3en) {
 			if (chan >= 36 && chan <= 140) {
 				maxpwr20 = QDB(21);
+				maxpwr40 = 82;   /* 20.5 */
+			}
+		} else if (li_mimo == &locale_11ln_1) {
+			if (chan >= 36 && chan <= 48) {
+				maxpwr20 = QDB(14);
+			} else if (chan >= 52 && chan <= 64) {
+				maxpwr20 = 58; /* 14.5 */
+			} else if (chan >= 100 && chan <= 140) {
+				maxpwr20 = QDB(15);
+			} else if (chan >= 149 && chan <= 165) {
+				maxpwr20 = 70; /* 17.5 */
+			}
+		}
+
+		for (i = 0; i < WL_NUM_RATES_MCS_1STREAM; i++) {
+			txpwr->u20.n.siso[i] = (uint8)maxpwr20;
+			txpwr->u40.n.siso[i] = (uint8)maxpwr40;
+		}
+	}
+
+	if (li_mimo == &locale_6bn ||
+		li_mimo == &locale_16an_1 ||
+		li_mimo == &locale_21n ||
+		li_mimo == &locale_32n ||
+		li_mimo == &locale_33n ||
+		li_mimo == &locale_9en ||
+		li_mimo == &locale_bn_6 ||
+		li_mimo == &locale_10en) {
+
+		if (li_mimo == &locale_6bn) {
+			maxpwr20 = QDB(21);
+			maxpwr40 = QDB(20);
+		}
+
+		if (li_mimo == &locale_16an_1) {
+			if ((chan >= 36 && chan <= 64) ||
+				(chan >= 149 && chan <= 161)) {
+				maxpwr20 = QDB(21);
+				maxpwr40 = 82; /* 20.5 dBm */
+			}
+		}
+
+		if (li_mimo == &locale_21n) {
+			if (chan >= 52 && chan <= 64) {
+				maxpwr20 = QDB(15);
+			}
+			if (chan >= 149 && chan <= 165) {
+				maxpwr20 = QDB(17);
+			}
+		}
+
+		if (li_mimo == &locale_32n) {
+			maxpwr20 = 0;
+			if (chan >= 36 && chan <= 48) {
+				maxpwr20 = QDB(21);
+			}
+			if ((chan >= 52 && chan <= 64) ||
+				(chan >= 132 && chan <= 140) ||
+				(chan >= 149 && chan <= 165)) {
+				maxpwr20 = QDB(19);
+			}
+			maxpwr40 = 0;
+			if (chan >= 38 && chan <= 46) {
+				maxpwr20 = QDB(20);
+			}
+			if ((chan >= 54 && chan <= 62) ||
+				(chan == 134) ||
+				(chan >= 151 && chan <= 159)) {
+				maxpwr20 = QDB(18);
+			}
+
+		}
+
+		if (li_mimo == &locale_33n) {
+			maxpwr20 = 0;
+			if ((chan >= 36 && chan <= 64) ||
+				(chan >= 100 && chan <= 132) ||
+				(chan >= 149 && chan <= 165)) {
+				maxpwr20 = QDB(21);
+			}
+			maxpwr40 = 0;
+			if ((chan >= 38 && chan <= 62) ||
+				(chan >= 102 && chan <= 126) ||
+				(chan >= 151 && chan <= 159)) {
 				maxpwr40 = QDB(20);
 			}
 		}
 
-		if (li_mimo == &locale_bn7) {
-			maxpwr20 = QDB(19);
-			maxpwr40 = 0;
-			if (chan >= 3 && chan <= 11) {
-				maxpwr40 = QDB(16);
+		if (li_mimo == &locale_9en) {
+			maxpwr20 = QDB(25);
+			maxpwr40 = QDB(22);
+		}
+
+		if (li_mimo == &locale_bn_6) {
+			maxpwr20 = QDB(14);
+			maxpwr40 = QDB(14);
+		}
+
+		if (li_mimo == &locale_10en) {
+			if ((chan >= 36 && chan <= 48) ||
+				(chan >= 149 && chan <= 165)) {
+				maxpwr20 = QDB(21);
+				maxpwr40 = 82; /* 20.5 */;
 			}
 		}
+
+		maxpwr20 = maxpwr20 - delta;
+		maxpwr20 = MAX(maxpwr20, 0);
+		maxpwr40 = maxpwr40 - delta;
+		maxpwr40 = MAX(maxpwr40, 0);
 
 		for (i = 0; i < WL_NUM_RATES_MCS_1STREAM; i++) {
 			txpwr->u20.n.siso[i] = (uint8)maxpwr20;
@@ -8943,6 +9567,14 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 			li_mimo = BAND_5G(band->bandtype) ?
 				wlc_get_mimo_5g(LOCALE_MIMO_IDX_3_3n) :
 				wlc_get_mimo_2g(LOCALE_MIMO_IDX_b2_3n);
+		} else if (IS_CCODE_REV(wlc_cm, "AE", 6)) {
+			li_mimo = BAND_5G(band->bandtype) ?
+				wlc_get_mimo_5g(LOCALE_MIMO_IDX_3_3n) :
+				wlc_get_mimo_2g(LOCALE_MIMO_IDX_b2_3n);
+		} else if (IS_CCODE_REV(wlc_cm, "ID", 5)) {
+			li_mimo = BAND_5G(band->bandtype) ?
+				wlc_get_mimo_5g(LOCALE_MIMO_IDX_9e_3n) :
+				wlc_get_mimo_2g(LOCALE_MIMO_IDX_b2_3n);
 		}
 
 
@@ -9052,7 +9684,7 @@ wlc_channel_reg_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec, txppr_t *txpw
 			if (li_mimo == &locale_29_3n) {
 				if ((chan >= 100) && (chan <= 102)) {
 					maxpwr20 = QDB(15);
-					maxpwr40 = 42; /* 10.5 dBm */ 
+					maxpwr40 = 42; /* 10.5 dBm */
 				} else if ((chan >= 104) && (chan <= 140)) {
 					maxpwr20 = 62; /* 15.5dbm */
 					maxpwr40 = QDB(18);
@@ -10349,7 +10981,7 @@ wlc_channel_map_uint8_vec_binary(wlc_channel_mapfn_t fn, void* context, uint len
  * If the band is 2G, DSSS/CCK rates will be included.
  * If the bandwidth is 20MHz, only 20MHz targets are included.
  * If the bandwidth is 40MHz, both 40MHz and 20in40 targets are included.
- */ 
+ */
 static void
 wlc_channel_map_txppr_binary(wlc_channel_mapfn_t fn, void* context, uint bandtype, uint bw,
 	txppr_t *a, txppr_t *b)
@@ -10539,8 +11171,8 @@ wlc_channel_srom_limits(wlc_cm_info_t *wlc_cm, chanspec_t chanspec,
 	}
 }
 
-/* Set a per-chain power limit for the given band 
- * Per-chain offsets will be used to make sure the max target power does not exceed 
+/* Set a per-chain power limit for the given band
+ * Per-chain offsets will be used to make sure the max target power does not exceed
  * the per-chain power limit
  */
 int
@@ -10611,7 +11243,7 @@ wlc_channel_update_txchain_offsets(wlc_cm_info_t *wlc_cm, txppr_t *txpwr)
 
 		/* find the max power target for this channel and impose
 		 * a txpwr delta per chain to meet the specified chain limits
-		 * Bound the delta by the tx power margin  
+		 * Bound the delta by the tx power margin
 		 */
 
 		/* get the srom min powers */
