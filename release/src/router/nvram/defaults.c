@@ -619,16 +619,18 @@ const defaults_t defaults[] = {
 	{ "fw_nat_tuning",		"0"				},	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
 /* advanced-adblock */
+#ifdef TCONFIG_HTTPS
 	{ "adblock_enable",		"0"				},
 #if defined(TCONFIG_NVRAM_32K) || defined(TCONFIG_OPTIMIZE_SIZE_MORE)
 	{ "adblock_blacklist",		""				},
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/list.txt<DoH servers>"},
+	{ "adblock_blacklist",		"1<https://winhelp2002.mvps.org/hosts.txt<>1<https://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts<Steven Black list>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<https://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<https://sysctl.org/cameleon/hosts<>0<https://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/list.txt<DoH servers>"},
 #endif
 	{ "adblock_blacklist_custom",	""				},
 	{ "adblock_whitelist",		""				},
 	{ "adblock_limit",		""				},
 	{ "adblock_path",		""				},
+#endif /* TCONFIG_HTTPS */
 
 /* advanced-mac */
 	{ "wan_mac",			""				},

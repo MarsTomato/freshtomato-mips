@@ -453,7 +453,7 @@ static int __init setup_adapter(int card_base, int type, int n)
 	int scc_base = card_base + hw[type].scc_offset;
 	char *chipnames[] = CHIPNAMES;
 
-	/* Initialize what is necessary for write_scc and write_scc_data */
+	/* Allocate memory */
 	info = kzalloc(sizeof(struct scc_info), GFP_KERNEL | GFP_DMA);
 	if (!info) {
 		printk(KERN_ERR "dmascc: "

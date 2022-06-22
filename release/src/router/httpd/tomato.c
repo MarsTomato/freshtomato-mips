@@ -1056,12 +1056,14 @@ static const nvset_t nvset_list[] = {
 #endif
 
 /* advanced-adblock */
+#ifdef TCONFIG_HTTPS
 	{ "adblock_enable",		V_01				},
 	{ "adblock_blacklist",		V_LENGTH(0, 4096)		},
 	{ "adblock_blacklist_custom",	V_LENGTH(0, 4096)		},
 	{ "adblock_whitelist",		V_LENGTH(0, 4096)		},
 	{ "adblock_limit",		V_LENGTH(0, 32)			},
 	{ "adblock_path",		V_LENGTH(0, 64)			},
+#endif
 
 // advanced-misc
 #ifdef TCONFIG_BCMARM
@@ -1230,6 +1232,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wme_no_ack",		V_ONOFF				},	// off, on
 	{ "wl_wme_apsd",		V_ONOFF				},	// off, on
 	{ "wl_maxassoc",		V_RANGE(0, 255)			},
+	{ "wl_bss_maxassoc",		V_RANGE(0, 255)			},
 	{ "wl_distance",		V_LENGTH(0, 5)			},	// "", 1-99999
 	{ "wlx_hpamp",			V_01				},
 	{ "wlx_hperx",			V_01				},
@@ -1484,6 +1487,9 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_BCMARM
 	{ "usb_usb3",			V_RANGE(-1, 1)			},
 #endif
+#ifdef TCONFIG_MICROSD
+	{ "usb_mmc",			V_RANGE(-1, 1)			},
+#endif
 	{ "usb_irq_thresh",		V_RANGE(0, 6)			},
 	{ "usb_storage",		V_01				},
 	{ "usb_printer",		V_01				},
@@ -1524,7 +1530,7 @@ static const nvset_t nvset_list[] = {
 	{ "script_usbumount", 		V_TEXT(0, 2048)			},
 	{ "idle_enable",		V_01				},
 	{ "usb_3g",			V_01				},
-#endif
+#endif /* TCONFIG_USB */
 
 // nas-ftp - !!TB
 #ifdef TCONFIG_FTP

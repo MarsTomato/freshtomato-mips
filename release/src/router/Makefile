@@ -813,10 +813,8 @@ endif
 	$(if $(NEED_EX_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/qmi_wwan.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(NEED_EX_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/ftdi_sio.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(NEED_EX_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/pl2303.*o $(PLATFORMDIR)/extras/ || true
-ifneq ($(CONFIG_BCMWL6)$(TCONFIG_BLINK),)
 	$(if $(NEED_SD_MODULES),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/mmc/*.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(NEED_SD_MODULES),@ls,@rm -rf) $(TARGETDIR)/lib/modules/*/kernel/drivers/mmc || true
-endif
 
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/ch341.*o $(PLATFORMDIR)/extras/ || true
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/usbip*.*o $(PLATFORMDIR)/extras/ || true
@@ -2023,6 +2021,7 @@ libexif-clean:
 	@rm -f libexif/stamp-h1
 
 zlib/stamp-h1:
+	$(call patch_files,zlib)
 	cd zlib && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPLAGS="-Os -Wall -fPIC -ffunction-sections -fdata-sections" \
@@ -2048,6 +2047,7 @@ zlib-clean:
 	-@$(MAKE) -C zlib clean
 	@rm -f zlib/stamp-h1 zlib/Makefile zlib/zconf.h zlib/zlib.pc
 	@rm -rf zlib/staged
+	$(call unpatch_files,zlib)
 
 libid3tag/stamp-h1:
 	$(call patch_files,libid3tag)

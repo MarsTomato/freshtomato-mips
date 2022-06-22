@@ -1,6 +1,6 @@
 --- nettle/configure
 +++ nettle/configure
-@@ -6084,10 +6084,10 @@ fi
+@@ -6127,10 +6127,10 @@ fi
  $as_echo "$nettle_cv_c_builtin_bswap64" >&6; }
  
  

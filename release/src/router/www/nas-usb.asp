@@ -370,16 +370,11 @@ function submit_complete() {
 /* HFS-BEGIN */
 					,{ suffix: '&nbsp; HFS / HFS+ &nbsp;', name: 'f_hfs', type: 'checkbox', value: nvram.usb_fs_hfs == 1 }
 /* HFS-END */
-<<<<<<< HEAD
-			] },
-/* MICROSD-BEGIN */
-			{ title: 'SD/MMC Card Support', indent: 2, name: 'f_mmc', type: 'checkbox', value: nvram.usb_mmc == 1 },
-/* MICROSD-END */
-			{ title: 'Automount', indent: 2, name: 'f_automount', type: 'checkbox',
-=======
 				] },
+/* MICROSD-BEGIN */
+				{ title: 'SD/MMC Card Support', indent: 2, name: 'f_mmc', type: 'checkbox', value: nvram.usb_mmc == 1 },
+/* MICROSD-END */
 				{ title: 'Automount', indent: 2, name: 'f_automount', type: 'checkbox',
->>>>>>> mips-master
 					suffix: '&nbsp; <small>Automatically mount all partitions to sub-directories in <i>/mnt<\/i>.<\/small>', value: nvram.usb_automount == 1 },
 				{ title: 'Run after mounting', indent: 2, name: 'script_usbmount', type: 'textarea', value: nvram.script_usbmount },
 				{ title: 'Run before unmounting', indent: 2, name: 'script_usbumount', type: 'textarea', value: nvram.script_usbumount },
