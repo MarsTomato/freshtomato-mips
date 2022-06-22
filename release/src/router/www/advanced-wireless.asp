@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_user_rssi"); %>
+//	<% nvram("wl_security_mode,wl_afterburner,wl_antdiv,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_txant,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wl_bss_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_wmf_bss_enable,wl_user_rssi"); %>
 
 //	<% wlcountries(); %>
 
@@ -71,6 +71,9 @@ function save() {
 				router_reboot = 1;
 
 			E('_wl'+u+'_nmode_protection').value = E('_wl'+u+'_gmode_protection').value;
+
+			/* Set bss_maxassoc same as global */
+			E('_wl'+u+'_bss_maxassoc').value = E('_wl'+u+'_maxassoc').value; /* keep it easy and sync value to global max clients */
 		}
 	}
 
@@ -127,6 +130,7 @@ function save() {
 
 			W('<input type="hidden" id="_wl'+u+'_distance" name="wl'+u+'_distance">');
 			W('<input type="hidden" id="_wl'+u+'_nmode_protection" name="wl'+u+'_nmode_protection">');
+			W('<input type="hidden" id="_wl'+u+'_bss_maxassoc" name="wl'+u+'_bss_maxassoc">');
 
 /* / / / */
 

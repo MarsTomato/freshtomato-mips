@@ -822,10 +822,9 @@ static int veth_init_connection(u8 rlp)
 	     || ! HvLpConfig_doLpsCommunicateOnVirtualLan(this_lp, rlp) )
 		return 0;
 
-	cnx = kmalloc(sizeof(*cnx), GFP_KERNEL);
+	cnx = kzalloc(sizeof(*cnx), GFP_KERNEL);
 	if (! cnx)
 		return -ENOMEM;
-	memset(cnx, 0, sizeof(*cnx));
 
 	cnx->remote_lp = rlp;
 	spin_lock_init(&cnx->lock);

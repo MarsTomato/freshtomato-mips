@@ -411,7 +411,7 @@ const defaults_t defaults[] = {
 	{ "wl_btc_mode",		"0"				},	// !!TB - BT Coexistence Mode
 	{ "wl_sta_retry_time",		"5"				},	// !!TB - Seconds between association attempts (0 to disable retries)
 	{ "wl_mitigation",		"0"				},	// Non-AC Interference Mitigation Mode (0|1|2|3|4)
-#ifdef TCONFIG_BCMWL6
+#ifdef TCONFIG_BCMARM
 	{ "wl_mitigation_ac",		"0"				},	// AC Interference Mitigation Mode (bit mask (3 bits), values from 0 to 7); 0 == disabled
 #endif
 	{ "wl_passphrase",		""				},	// Passphrase
@@ -504,6 +504,13 @@ const defaults_t defaults[] = {
 #endif
 #endif
 	/* power save */
+#ifdef TCONFIG_BCMWL6
+	{ "wl_bss_opmode_cap_reqd",	"0"				},	// 0 = no requirements on joining devices
+										// 1 = client must advertise ERP / 11g cap. to be able to join
+										// 2 = client must advertise HT / 11n cap. to be able to join
+										// 3 = client must advertise VHT / 11ac cap. to be able to join
+#endif
+
 	{ "wl_rxchain_pwrsave_enable",	"0"				},	// Rxchain powersave enable
 	{ "wl_rxchain_pwrsave_quiet_time","1800"			},	// Quiet time for power save
 	{ "wl_rxchain_pwrsave_pps",	"10"				},	// Packets per second threshold for power save
@@ -514,7 +521,7 @@ const defaults_t defaults[] = {
 	/* misc */
 	{ "wl_wmf_bss_enable",		"0"				},	// Wireless Multicast Forwarding Enable/Disable
 	{ "wl_rifs_advert",		"auto"				},	// RIFS mode advertisement
-	{ "wl_stbc_tx",			"auto"				},	// Default STBC TX setting
+	{ "wl_stbc_tx",			"auto"				},	/* Default STBC TX setting */
 	{ "wl_mcast_regen_bss_enable",	"1"				},	// MCAST REGEN Enable/Disable
 #endif
 
@@ -604,16 +611,18 @@ const defaults_t defaults[] = {
 	{ "fw_nat_tuning",		"0"				},	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
 /* advanced-adblock */
+#ifdef TCONFIG_HTTPS
 	{ "adblock_enable",		"0"				},
 #if defined(TCONFIG_NVRAM_32K) || defined(TCONFIG_OPTIMIZE_SIZE_MORE)
 	{ "adblock_blacklist",		""				},
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/list.txt<DoH servers>"},
+	{ "adblock_blacklist",		"1<https://winhelp2002.mvps.org/hosts.txt<>1<https://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts<Steven Black list>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<https://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<https://sysctl.org/cameleon/hosts<>0<https://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/list.txt<DoH servers>"},
 #endif
 	{ "adblock_blacklist_custom",	""				},
 	{ "adblock_whitelist",		""				},
 	{ "adblock_limit",		""				},
 	{ "adblock_path",		""				},
+#endif /* TCONFIG_HTTPS */
 
 /* advanced-mac */
 	{ "wan_mac",			""				},

@@ -903,12 +903,11 @@ static int dscc4_found1(struct pci_dev *pdev, void __iomem *ioaddr)
 			goto err_free_dev;
 	}
 
-	ppriv = kmalloc(sizeof(*ppriv), GFP_KERNEL);
+	ppriv = kzalloc(sizeof(*ppriv), GFP_KERNEL);
 	if (!ppriv) {
 		printk(KERN_ERR "%s: can't allocate private data\n", DRV_NAME);
 		goto err_free_dev;
 	}
-	memset(ppriv, 0, sizeof(struct dscc4_pci_priv));
 
 	ppriv->root = root;
 	spin_lock_init(&ppriv->lock);

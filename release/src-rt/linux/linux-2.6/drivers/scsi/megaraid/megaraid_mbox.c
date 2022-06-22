@@ -454,7 +454,7 @@ megaraid_probe_one(struct pci_dev *pdev, const struct pci_device_id *id)
 	pci_set_master(pdev);
 
 	// Allocate the per driver initialization structure
-	adapter = kmalloc(sizeof(adapter_t), GFP_KERNEL);
+	adapter = kzalloc(sizeof(adapter_t), GFP_KERNEL);
 
 	if (adapter == NULL) {
 		con_log(CL_ANN, (KERN_WARNING
@@ -462,7 +462,6 @@ megaraid_probe_one(struct pci_dev *pdev, const struct pci_device_id *id)
 
 		goto out_probe_one;
 	}
-	memset(adapter, 0, sizeof(adapter_t));
 
 
 	// set up PCI related soft state and other pre-known parameters
@@ -746,10 +745,9 @@ megaraid_init_mbox(adapter_t *adapter)
 	 * Allocate and initialize the init data structure for mailbox
 	 * controllers
 	 */
-	raid_dev = kmalloc(sizeof(mraid_device_t), GFP_KERNEL);
+	raid_dev = kzalloc(sizeof(mraid_device_t), GFP_KERNEL);
 	if (raid_dev == NULL) return -1;
 
-	memset(raid_dev, 0, sizeof(mraid_device_t));
 
 	/*
 	 * Attach the adapter soft state to raid device soft state

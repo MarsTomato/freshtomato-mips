@@ -1056,12 +1056,14 @@ static const nvset_t nvset_list[] = {
 #endif
 
 /* advanced-adblock */
+#ifdef TCONFIG_HTTPS
 	{ "adblock_enable",		V_01				},
 	{ "adblock_blacklist",		V_LENGTH(0, 4096)		},
 	{ "adblock_blacklist_custom",	V_LENGTH(0, 4096)		},
 	{ "adblock_whitelist",		V_LENGTH(0, 4096)		},
 	{ "adblock_limit",		V_LENGTH(0, 32)			},
 	{ "adblock_path",		V_LENGTH(0, 64)			},
+#endif
 
 // advanced-misc
 #ifdef TCONFIG_BCMARM
@@ -1186,7 +1188,7 @@ static const nvset_t nvset_list[] = {
 
 // advanced-wireless
 	{ "wl_country_code",		V_LENGTH(0, 4)			},	/* Country code */
-#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6) || defined(TCONFIG_BLINK)
 	{ "wl_country_rev",		V_RANGE(0, 999)			},	/* Country rev */
 	{ "0:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
 	{ "1:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
@@ -1196,11 +1198,15 @@ static const nvset_t nvset_list[] = {
 	{ "1:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
 	{ "pci/1/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
 	{ "pci/2/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
+#ifdef TCONFIG_BLINK
+	{ "sb/1/ccode",			V_LENGTH(0, 2)			},	/* Country code (SB) */	
+	{ "sb/1/regrev",		V_RANGE(0, 999)			},	/* regrev (SB) */
+#endif
 #ifdef TCONFIG_AC3200
 	{ "2:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
 	{ "2:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
 #endif
-#endif /* TCONFIG_BCMARM || CONFIG_BCMWL6 */
+#endif /* TCONFIG_BCMARM || CONFIG_BCMWL6 || TCONFIG_BLINK */
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
 	{ "wl_afterburner",		V_LENGTH(2, 4)			},	// off, on, auto
 	{ "wl_auth",			V_01				},
@@ -1226,6 +1232,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wme_no_ack",		V_ONOFF				},	// off, on
 	{ "wl_wme_apsd",		V_ONOFF				},	// off, on
 	{ "wl_maxassoc",		V_RANGE(0, 255)			},
+	{ "wl_bss_maxassoc",		V_RANGE(0, 255)			},
 	{ "wl_distance",		V_LENGTH(0, 5)			},	// "", 1-99999
 	{ "wlx_hpamp",			V_01				},
 	{ "wlx_hperx",			V_01				},
@@ -1480,6 +1487,9 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_BCMARM
 	{ "usb_usb3",			V_RANGE(-1, 1)			},
 #endif
+#ifdef TCONFIG_MICROSD
+	{ "usb_mmc",			V_RANGE(-1, 1)			},
+#endif
 	{ "usb_irq_thresh",		V_RANGE(0, 6)			},
 	{ "usb_storage",		V_01				},
 	{ "usb_printer",		V_01				},
@@ -1520,7 +1530,7 @@ static const nvset_t nvset_list[] = {
 	{ "script_usbumount", 		V_TEXT(0, 2048)			},
 	{ "idle_enable",		V_01				},
 	{ "usb_3g",			V_01				},
-#endif
+#endif /* TCONFIG_USB */
 
 // nas-ftp - !!TB
 #ifdef TCONFIG_FTP
