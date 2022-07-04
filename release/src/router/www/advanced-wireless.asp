@@ -87,36 +87,36 @@ function save() {
 			if (nvram['wl'+u+'_country_rev'] != c_rev)
 				router_reboot = 1;
 
-			if (nvram['sb/1/ccode'] && nvram['sb/1/regrev']) { /* check SDK5 / sb (Southbridge) first */
+			if ((nvram['sb/1/ccode'].length > 0) && (nvram['sb/1/regrev'].length > 0)) { /* check SDK5 / sb (Southbridge) first */
 				if (u_sb == 1) {
 					E('_sb/'+u_sb+'/ccode').value = c_code;
 					E('_sb/'+u_sb+'/regrev').value = c_rev;
 				}
 				else if (u_sb == 2) { /* second interface PCI */
-					if (nvram['0:ccode']) /* check short version */
+					if (nvram['0:ccode'].length > 0) /* check short version */
 						E('_0:ccode').value = c_code;
     
-					if (nvram['pci/1/1/ccode']) /* check long version */
+					if (nvram['pci/1/1/ccode'].length > 0) /* check long version */
 						E('_pci/1/1/ccode').value = c_code;
 
-					if (nvram['0:regrev'])
+					if (nvram['0:regrev'].length > 0)
 						E('_0:regrev').value = c_rev;
 
-					if (nvram['pci/1/1/regrev'])
+					if (nvram['pci/1/1/regrev'].length > 0)
 						E('_pci/1/1/regrev').value = c_rev;
 				}
 			}
 			else { /* SDK6 and PCI */
-				if (nvram[+u+':ccode']) /* check short version */
+				if (nvram[+u+':ccode'].length > 0) /* check short version */
 					E('_'+u+':ccode').value = c_code;
     
-				if (nvram['pci/'+u_pci+'/1/ccode']) /* check long version */
+				if (nvram['pci/'+u_pci+'/1/ccode'].length > 0) /* check long version */
 					E('_pci/'+u_pci+'/1/ccode').value = c_code;
 
-				if (nvram[+u+':regrev'])
+				if (nvram[+u+':regrev'].length > 0)
 					E('_'+u+':regrev').value = c_rev;
 
-				if (nvram['pci/'+u_pci+'/1/regrev'])
+				if (nvram['pci/'+u_pci+'/1/regrev'].length > 0)
 					E('_pci/'+u_pci+'/1/regrev').value = c_rev;
 			}
 /* BCMWL6-END */
