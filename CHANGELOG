@@ -5,6 +5,107 @@ FreshTomato-MIPS Changelog
 
 
 
+2022.5          2022.08.06
+---------------------------
+
+Note: mainly bugfixes release.
+
+- nginx: update to 1.23.1
+- sqlite: update to 3.39.2
+- libcurl: update CA certificate bundle as of 2022-07-19
+- build: dhcpv6: add #ifdef to have one version for ARM and MIPS
+- build: Makefile: remove IPSEC support from 'm' (Max) target to save some space
+- GUI: fix copy-paste for advanced-dhcpdns.asp
+- GUI: Advanced: DHCP/DNS: 'Solve .onion' checkbox should be available regardless of tor status
+- GUI: basic-ipv6.asp - fix problems with saving IPv6 setting
+- GUI: Advanced: DHCP/DNS: rename option
+- dhcpv6: Improve log messages when a REPLY message arrives. The old ones were confusing
+- dhcpv6: Add a new script event "EXIT", which is invoked when dhcp6c exits
+
+
+2022.4          2022.07.31
+---------------------------
+
+Note: because of changes in GUI, clean your browser cache and/or use Ctrl+F5 (FF) to avoid artifacts.
+
+- toolchain: hndtools-mipsel-uclibc update; uClibc 0.9.30.1 with CVE-2022-30295 and CVE-2016-6264 fixes
+- toolchain: add support for be64toh/htobe64 (iperf); ULLONG_MAX/LLONG_MAX/LLONG_MIN defs were unavailable for compiler (e2fsprogs)
+- libcurl: update to 7.84.0
+- libxml2: update to 2.9.14
+- libiconv: update to 1.17
+- flac: update to 1.3.4
+- openvpn: update to 2.5.7
+- ntfs-3g: update to 2022.5.17
+- libsodium: update to 1.0.18-stable
+- nettle: update to 3.8
+- tor: update to 0.4.7.8
+- zlib: update to 1.2.12 (add two fixes from the develop tree)
+- libubox: update to d2223ef (2022-05-15) snapshot
+- uqmi: update to 56cb2d4 (2022-05-04) snapshot
+- openssl-1.1: update to 1.1.1q
+- sqlite: update to 3.39.0
+- nginx: update to 1.23.0
+- dnsmasq: update to 2022.07.07 (20b4a4e) snapshot
+- build: Makefile: Asus RT-N53: this model only supports 100Mbps WAN/LAN, so remove bcmnat from recipe
+- build: Makefile: Linksys E2500: this model only supports 100Mbps WAN/LAN, so remove bcmnat from recipe
+- build: Makefile: Netgear WNDR3400v2/v3: this model only supports 100Mbps WAN/LAN, so remove bcmnat from recipe
+- build: Makefile: sync Asus RT-N53 and Linksys E2500v2 targets (almost the same)
+- build: router: Makefile: also install zlib when samba is added to the (not AIO) image - fix build break
+- build: only include adblock when image is built with TCONFIG_HTTPS (all (or most) servers from the adblock list are now redirecting to https, so wget can't download them without OpenSSL)
+- build: Makefile: WNDR3400V2/V3: change NVRAM size to 32K (issue with 5GHz WL driver and disappearing settings) - workaround for #82
+- GUI: Administration: Configuration: fix date in the filename of saved config file
+- GUI: Administration: NFS Server: correct link to the NFS website
+- GUI: Advanced: Firewall: change link for Efficient Multicast Forwarding option
+- GUI: Advanced: Tor: add daemon status, add start/stop button
+- GUI: advanced-wireless.asp - make it possible to select country rev also for newer SDK5 wl driver 5.100.x and up
+- GUI: advanced-wireless.asp - Set bss_maxassoc same as global max clients
+- GUI: advanced-wireless.asp - adjust/improve saving country/rev selection
+- GUI: Status: Logs: implement maximum filter level
+- GUI: Status: Overview: clearly explain what the WL enable/disable buttons are for
+- GUI: status-overview.asp - Show WL Radio Temperatures (if available) for MIPS Router (SDK5 RT-N and up)
+- GUI: Tools: Wireless Survey: add a note for ARM routers, that WL survey doesn't work when WL filter is turned on in 'permit only' mode
+- GUI: USB and NAS: FTP/Samba/FTPD/BT: add daemon status, add re-start button (unify to nginx/mysql page)
+- GUI: VPN Tunneling: OpenVPN Client: also allow range of IP addresses as a source IP
+- GUI: fix backup filename date
+- adblock: convert all lists to https; additionally add Steven Black list
+- apcupsd: add PCNET and SNMP support in AIO targets; allow to use custom config
+- dhcpv6: Add a no release option '-n'. This prevents a release signal from being sent to the ISP causing a new PD or address to be allocated
+- dhcpv6: Remove the PID file just before dhcp6c actually exits
+- dhcpv6: Add a signal handler for SIGUSR1 to forcibly exit without releasing the obtained addresses
+- dhcpv6: Set a DHCPv6 state keyword to an environment variable "REASON"
+- dhcpv6: reload config on SIGHUP
+- dropbear: add login limits
+- dropbear: fix MAX_UNAUTH_CLIENTS regression - fix from the upstream
+- dropbear: patches: add DEFAULT_ROOT_PATH
+- httpd: misc.c: use utf8 in asp_rrule()
+- IPv6: add DUID type selection (currently only DUID-LL (default) OR DUID-LLT)
+- IPv6: extend GUI status page (status-overview.asp) - show DUID
+- IPv6: add GUI option (basic-ipv6.asp) to start DHCP6 Client in debug mode (only for RT-N+ router)
+- IPv6: add GUI option (basic-ipv6.asp) for DHCP6 client to prevent prefix/address release on exit
+- IPv6: check environment variable "REASON" which is passed to the client script when receiving a REPLY message (only for DEBUG currently)
+- JFFS: do not start if router model is unknown 
+- others: linkagg: fix warning messages, cosmetic
+- rc: serialize (re-)starts from GUI, avoid zombies
+- rc: do not (re)start services during upgrade/reboot
+- rc: firewall: add IPv4 IPSEC passthrough
+- rc: gpio.c - extend gpio poll up to 32 pins
+- rc: openvpn.c: also abort when can not create tap/tun interface
+- rc: openvpn.c: fix parsing of pidof result in watchdog script
+- rc: services.c: start_ntpd(): correct verbose option
+- rc: services.c: start_ntpd(): run ntpd at high priority
+- rc: services: move samba support to outer file
+- rc: transmission: rewrite, to get rid of shell scripts
+- router: httpd: wl.c - adjust and correct scan params for wireless survey (GUI: tools-survey)
+- shared: wlscan.h - increase buffer for wireless survey (SDK6 and up)
+- stubby: add Cisco Umbrella/OpenDNS DoT Servers to Stubby Options
+- SDK5: USB AP Router: adjust loading USB driver
+- SDK5: use wl driver USB AP 5.110.27.20012 (March 2018)
+- wireless ethernet bridge AND media bridge mode: use dnsmasq (provide DNS service)
+- Wireless Survey: rework / optimize code for wl survey (GUI: tools-survey) 
+- Wireless Survey: optimize code for wl survey (GUI: tools-survey) and keep wl up while using survey tool (SDK5 RT-N and up)
+- www: tomato.js: fix id in TomatoGrid.prototype.createEditor
+
+
 2022.3          2022.05.12
 ---------------------------
 

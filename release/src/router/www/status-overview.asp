@@ -285,6 +285,9 @@ function show() {
 	anon_update();
 
 	c('cpu', stats.cpuload);
+/* RTNPLUS-BEGIN */
+	c('wlsense', stats.wlsense);
+/* RTNPLUS-END */
 	c('uptime', stats.uptime);
 	c('time', stats.time);
 	c('memory', stats.memory);
@@ -292,6 +295,8 @@ function show() {
 	elem.display('swap', stats.swap != '');
 	c('nvram_stat', scaleSize(nvstat.size - nvstat.free)+' / '+scaleSize(nvstat.size)+' <small>('+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%)<\/small><div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2))+';width:'+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%"><\/div><\/div><\/div>');
 /* IPV6-BEGIN */
+	c('ip6_duid', stats.ip6_duid);
+	elem.display('ip6_duid', stats.ip6_duid != '');
 	c('ip6_wan', stats.ip6_wan);
 	elem.display('ip6_wan', stats.ip6_wan != '');
 	c('ip6_wan_dns1', stats.ip6_wan_dns1);
@@ -488,7 +493,11 @@ function init() {
 		{ title: 'CPU Load <small>(1 / 5 / 15 mins)<\/small>', rid: 'cpu', text: stats.cpuload },
 		{ title: 'Used / Total RAM', rid: 'memory', text: stats.memory },
 		{ title: 'Used / Total Swap', rid: 'swap', text: stats.swap, hidden: (stats.swap == '') },
-		{ title: 'Used / Total NVRAM', rid: 'nvram_stat', text: scaleSize(nvstat.size - nvstat.free)+' / '+scaleSize(nvstat.size)+' <small>('+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%)<\/small><div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2))+';width:'+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%"><\/div><\/div><\/div>' },
+		{ title: 'Used / Total NVRAM', rid: 'nvram_stat', text: scaleSize(nvstat.size - nvstat.free)+' / '+scaleSize(nvstat.size)+' <small>('+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%)<\/small><div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2))+';width:'+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%"><\/div><\/div><\/div>' }
+/* RTNPLUS-BEGIN */
+		,null,
+		{ title: 'Wireless Temperature', rid: 'wlsense', text: stats.wlsense }
+/* RTNPLUS-END */
 	]);
 </script>
 </div>
@@ -525,6 +534,7 @@ function init() {
 			{ title: 'Subnet Mask', rid: 'wan'+u+'netmask', text: stats.wannetmask[uidx - 1] },
 			{ title: 'Gateway', rid: 'wan'+u+'gateway', text: stats.wangateway[uidx - 1] },
 /* IPV6-BEGIN */
+			{ title: 'IPv6 DUID', rid: 'ip6_duid', text: stats.ip6_duid, hidden: (stats.ip6_duid == '') },
 			{ title: 'IPv6 Address', rid: 'ip6_wan', text: stats.ip6_wan, hidden: (stats.ip6_wan == '') },
 			{ title: 'IPv6 DNS1', rid: 'ip6_wan_dns1', text: stats.ip6_wan_dns1, hidden: (stats.ip6_wan_dns1 == '') },
 			{ title: 'IPv6 DNS2', rid: 'ip6_wan_dns2', text: stats.ip6_wan_dns2, hidden: (stats.ip6_wan_dns2 == '') },
@@ -644,8 +654,8 @@ function init() {
 			{ title: 'Signal Quality', rid: 'qual'+uidx, text: stats.qual[uidx] || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) }
 		]);
 
-		W('<input type="button" class="status-controls" onclick="wlenable('+uidx+', 1)" id="b_wl'+uidx+'_enable" value="Enable" style="display:none">');
-		W('<input type="button" class="status-controls" onclick="wlenable('+uidx+', 0)" id="b_wl'+uidx+'_disable" value="Disable" style="display:none">');
+		W('<input type="button" class="status-controls" onclick="wlenable('+uidx+', 1)" id="b_wl'+uidx+'_enable" title="Enable temporary this WL (up to the router\'s reboot)" value="Enable" style="display:none">');
+		W('<input type="button" class="status-controls" onclick="wlenable('+uidx+', 0)" id="b_wl'+uidx+'_disable" title="Disable temporary this WL (up to the router\'s reboot)" value="Disable" style="display:none">');
 		W('<\/div>');
 	}
 </script>

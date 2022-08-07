@@ -24,7 +24,7 @@
 #define TINC_SUBNETDOWN_SCRIPT	"/etc/tinc/subnet-down"
 
 
-void tinc_setup_watchdog(void)
+static void tinc_setup_watchdog(void)
 {
 	FILE *fp;
 	char buffer[64], buffer2[64];
@@ -32,18 +32,18 @@ void tinc_setup_watchdog(void)
 
 	if ((nvi = nvram_get_int("tinc_poll")) > 0) {
 		memset(buffer, 0, sizeof(buffer));
-		sprintf(buffer, TINC_DIR"/watchdog.sh");
+		snprintf(buffer, sizeof(buffer), TINC_DIR"/watchdog.sh");
 
 		if ((fp = fopen(buffer, "w"))) {
 			fprintf(fp, "#!/bin/sh\n"
-			            "[ -z $(pidof tincd) ] && {\n"
+			            "[ -z \"$(pidof tincd)\" -a \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
 			            " service tinc restart\n"
 			            "}\n");
 			fclose(fp);
 			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
 
 			memset(buffer2, 0, sizeof(buffer2));
-			sprintf(buffer2, "*/%d * * * * %s", nvi, buffer);
+			snprintf(buffer2, sizeof(buffer2), "*/%d * * * * %s", nvi, buffer);
 			eval("cru", "a", "CheckTincDaemon", buffer2);
 		}
 	}
@@ -57,11 +57,10 @@ void start_tinc(int force)
 	FILE *fp, *hp;
 
 	/* only if enabled on wanup or forced */
-	if (!nvram_get_int("tinc_wanup") && force == 0)
+	if (!nvram_get_int("tinc_enable") && force == 0)
 		return;
 
-	/* Don't try to start tinc if it is already running */
-	if (pidof("tincd") >= 0)
+	if (serialize_restart("tincd", 1))
 		return;
 
 	/* create tinc directories */
@@ -118,7 +117,7 @@ void start_tinc(int force)
 			continue;
 
 		memset(buffer, 0, (BUF_SIZE));
-		sprintf(buffer, TINC_HOSTS"/%s", name);
+		snprintf(buffer, sizeof(buffer), TINC_HOSTS"/%s", name);
 		if (!(hp = fopen(buffer, "w"))) {
 			perror(buffer);
 			return;
@@ -297,9 +296,16 @@ void start_tinc(int force)
 
 void stop_tinc(void)
 {
-	killall("tincd", SIGTERM);
-	system("/bin/sed -i \'s/-A/-D/g;s/-I/-D/g\' "TINC_FW_SCRIPT);
-	run_tinc_firewall_script();
+	if (serialize_restart("tincd", 0))
+		return;
+
+	killall_tk_period_wait("tincd", 50);
+
+	if (f_exists(TINC_FW_SCRIPT)) {
+		system("/bin/sed -i \'s/-A/-D/g;s/-I/-D/g\' "TINC_FW_SCRIPT);
+		run_tinc_firewall_script();
+	}
+
 	system("/bin/rm -rf "TINC_DIR);
 	eval("cru", "d", "CheckTincDaemon");
 }

@@ -1,9 +1,8 @@
 /*
-
-	Tomato Firmware
-	Copyright (C) 2006-2010 Jonathan Zarate
-
-*/
+ * Tomato Firmware
+ * Copyright (C) 2006-2010 Jonathan Zarate
+ *
+ */
 
 #include "tomato.h"
 
@@ -304,6 +303,7 @@ const struct mime_handler mime_handlers[] = {
 	{ "**.png",			"image/png",				12,	wi_generic_noid,	do_file,		1 },
 	{ "**.js",			mime_javascript,			12,	wi_generic_noid,	do_file,		1 },
 	{ "**.jsx",			mime_javascript,			0,	wi_generic,		wo_asp,			1 },
+	{ "**.jsz",			mime_javascript,			0,	wi_generic_noid,	wo_asp,			1 },
 	{ "**.svg",			"image/svg+xml",			0,	wi_generic_noid,	wo_asp,			1 },
 	{ "**.txt",			mime_plain,				2,	wi_generic_noid,	do_file,		1 },
 	{ "**.bin",			mime_binary,				0,	wi_generic_noid,	do_file,		1 },
@@ -947,6 +947,10 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_IPV6
 // basic-ipv6
 	{ "ipv6_service",		V_LENGTH(0, 16)			},	// '', native, native-pd, 6to4, sit, other
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+	{ "ipv6_debug",			V_01				},	/* enable/show debug infos */
+#endif
+	{ "ipv6_duid_type",		V_RANGE(1, 4)			},	/* see RFC8415 Section 11; DUID-LLT = 1, DUID-EN = 2, DUID-LL = 3, DUID-UUID = 4 */
 	{ "ipv6_prefix",		V_IPV6(0)			},
 	{ "ipv6_prefix_length",		V_RANGE(3, 127)			},
 	{ "ipv6_rtr_addr",		V_IPV6(0)			},
@@ -970,7 +974,7 @@ static const nvset_t nvset_list[] = {
 	{ "ipv6_vlan",			V_RANGE(0, 7)			},	// Enable IPv6: bit 0 = LAN1, bit 1 = LAN2, bit 2 = LAN3
 	{ "ipv6_isp_opt",		V_01				},	// see router/rc/wan.c --> add default route ::/0
 	{ "ipv6_pdonly",		V_01				},	// Request DHCPv6 Prefix Delegation Only (send ia-pd and NO send ia-na)
-	{ "ipv6_ipsec",			V_01				},	// Enable Incoming IPv6 IPSec
+	{ "ipv6_pd_norelease",		V_01				},	/* DHCP6 client - no prefix/address release on exit */
 	{ "ipv6_wan_addr",		V_IPV6(0)			},	// Static IPv6 Wan Address
 	{ "ipv6_prefix_len_wan",	V_RANGE(3, 64)			},	// Static IPv6 Wan Prefix Length
 	{ "ipv6_isp_gw",		V_IPV6(0)			},	// Static IPv6 ISP Router Gateway
@@ -1047,6 +1051,7 @@ static const nvset_t nvset_list[] = {
 	{ "DSCP_fix_enable",		V_01				},
 	{ "ne_snat",			V_01				},
 	{ "wan_dhcp_pass",		V_01				},
+	{ "ipsec_pass",			V_RANGE(0, 3)			},	/* Enable IPSec Passthrough */
 	{ "fw_blackhole",		V_01				},	/* MTU black hole detection */
 #ifdef TCONFIG_EMF
 	{ "emf_entry",			V_NONE				},
@@ -1160,7 +1165,6 @@ static const nvset_t nvset_list[] = {
 	{ "dhcp_routes",		V_01				},
 	{ "force_igmpv2",		V_01				},
 	{ "lan_stp",			V_RANGE(0, 1)			},
-	{ "wk_mode",			V_LENGTH(1, 32)			},	// gateway, router
 #ifdef TCONFIG_ZEBRA
 	{ "dr_setting",			V_RANGE(0, 3)			},
 	{ "dr_lan_tx",			V_LENGTH(0, 32)			},
@@ -2037,7 +2041,7 @@ static const nvset_t nvset_list[] = {
 #endif
 
 #ifdef TCONFIG_TINC
-	{"tinc_wanup",			V_RANGE(0, 1)			},
+	{"tinc_enable",			V_RANGE(0, 1)			},
 	{"tinc_name",			V_LENGTH(0, 30)			},
 	{"tinc_devicetype",		V_TEXT(3, 3)			},	// tun, tap
 	{"tinc_mode",			V_TEXT(3, 6)			},	// switch, hub
@@ -2384,7 +2388,7 @@ static void wo_tomato(char *url)
 
 	if ((v = webcgi_get("_service")) != NULL && *v != 0) {
 		if (!*red) {
-			if (ajax) web_printf("Some services are being restarted...");
+			if (ajax) web_printf(" Some services are being restarted...");
 			web_close();
 		}
 		sleep(1);

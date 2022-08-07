@@ -44,6 +44,9 @@ stats.systemtype = sysinfo.systemtype;
 stats.cfeversion = sysinfo.cfeversion;
 stats.cpuload = ((sysinfo.loads[0] / 65536.0).toFixed(2)+'<small> / </small> '+(sysinfo.loads[1] / 65536.0).toFixed(2)+'<small> / </small>'+(sysinfo.loads[2] / 65536.0).toFixed(2));
 stats.uptime = sysinfo.uptime_s;
+/* RTNPLUS-BEGIN */
+stats.wlsense = sysinfo.wlsense;
+/* RTNPLUS-END */
 
 a = sysinfo.totalram;
 b = sysinfo.totalfreeram;
@@ -125,6 +128,7 @@ for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 }
 
 /* IPV6-BEGIN */
+stats.ip6_duid = ((typeof(sysinfo.ip6_duid) != 'undefined') ? sysinfo.ip6_duid : '')+'';
 stats.ip6_wan = ((typeof(sysinfo.ip6_wan) != 'undefined') ? sysinfo.ip6_wan : '')+'';
 stats.ip6_wan_dns1 = ((typeof(sysinfo.ip6_wan_dns1) != 'undefined') ? sysinfo.ip6_wan_dns1 : '')+'';
 stats.ip6_wan_dns2 = ((typeof(sysinfo.ip6_wan_dns2) != 'undefined') ? sysinfo.ip6_wan_dns2 : '')+'';
