@@ -50,6 +50,7 @@ TCONFIG_SAMBASRV=y
 # TCONFIG_DNSSEC is not set
 # TCONFIG_TINC is not set
 # TCONFIG_OPENSSL11 is not set
+# TCONFIG_BCMARM is not set
 # TCONFIG_ROAM is not set
 # TCONFIG_IPERF is not set
 # TCONFIG_QRCODE is not set

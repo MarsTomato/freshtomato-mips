@@ -14,30 +14,15 @@
 <title>[<% ident(); %>] Advanced: DHCP / DNS</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
 <script src="tomato.js"></script>
 
 <script>
 
 //	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnsmasq_edns_size,dnssec_enable,dnssec_method,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_force_tls13,stubby_port,wan_wins,mdns_enable,mdns_reflector,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
 var cprefix = 'advanced_dhcpdns';
 var height = 0;
-
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-}
 
 /* STUBBY-BEGIN */
 var up_servers_arr = [<% stubby_presets("dot"); %>];
@@ -113,6 +98,14 @@ function verifyFields(focused, quiet) {
 /* MDNS-BEGIN */
 	E('_f_mdns_reflector').disabled = !E('_f_mdns_enable').checked;
 /* MDNS-END */
+/* TOR-BEGIN */
+	if (E('_f_dnsmasq_onion_support').checked) { /* disable/uncheck 'DNS Rebind protection' when onion support is enabled */
+		E('_f_dns_norebind').disabled = 1;
+		E('_f_dns_norebind').checked = 0;
+	}
+	else
+		E('_f_dns_norebind').disabled = 0;
+/* TOR-END */
 
 	for (var a in vis) {
 		var b = E(a);
@@ -201,7 +194,7 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	if (!verifyFields(null, false))
+	if (!verifyFields(null, 0))
 		return;
 
 	var fom = E('t_fom');
@@ -516,7 +509,7 @@ function init() {
 			{ title: 'Ignore DHCP requests from unknown devices', name: 'f_dhcpd_static_only', type: 'checkbox', value: nvram.dhcpd_static_only == 1 },
 			{ title: 'Generate a name for DHCP clients which do not otherwise have one', name: 'f_dnsmasq_gen_names', type: 'checkbox', value: nvram.dnsmasq_gen_names == 1 },
 /* TOR-BEGIN */
-			{ title: 'Solve .onion using Tor<br>(<a href="advanced-tor.asp" class="new_window">enable Tor first<\/a>)', name: 'f_dnsmasq_onion_support', type: 'checkbox', value: nvram.dnsmasq_onion_support == 1 },
+			{ title: 'Resolve .onion using Tor<br>(<a href="advanced-tor.asp" class="new_window">enable/start Tor first<\/a>)', name: 'f_dnsmasq_onion_support', type: 'checkbox', suffix: ' <small>note: disables \'DNS Rebind protection\'<\/small>', value: nvram.dnsmasq_onion_support == 1 },
 /* TOR-END */
 			{ title: 'Maximum active DHCP leases', name: 'dhcpd_lmax', type: 'text', maxlen: 5, size: 8, value: nvram.dhcpd_lmax },
 			{ title: 'Static lease time', multi: [
@@ -534,7 +527,7 @@ function init() {
 			{ title: 'Mute RA logging', name: 'f_dnsmasq_qr', type: 'checkbox', value: (nvram.dnsmasq_q & 4) },
 /* IPV6-END */
 			{ title: 'Prevent client auto DoH', name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == 1 },
-			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', value: nvram.dns_norebind == 1 },
+			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', suffix: ' <small>note: disabled when \'Resolve .onion using Tor\' is checked<\/small>', value: nvram.dns_norebind == 1 },
 			{ title: 'Forward local domain queries to upstream DNS', name: 'f_dns_fwd_local', type: 'checkbox', value: nvram.dns_fwd_local == 1 },
 /* MDNS-BEGIN */
 			{ title: 'Enable multicast DNS<br>(Avahi mDNS)', name: 'f_mdns_enable', type: 'checkbox', value: nvram.mdns_enable == 1 },

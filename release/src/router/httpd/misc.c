@@ -303,7 +303,9 @@ static char* get_cfeversion(char *buf)
 }
 
 #ifdef TCONFIG_IPV6
-static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, dns, lan, lan-ll, lan1, lan1-ll, lan2, lan2-ll, lan3, lan3-ll */
+#define NOT_AVAIL		"--"
+
+static void print_ipv6_infos(void) /* show IPv6 DUID and addresses: wan, dns, lan, lan-ll, lan1, lan1-ll, lan2, lan2-ll, lan3, lan3-ll */
 {
 	char buffer[INET6_ADDRSTRLEN];
 	char buffer2[16];
@@ -313,9 +315,21 @@ static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, dns, lan, lan-ll
 	struct in6_addr addr;
 	int cnt = 0;
 	char br;
+	FILE *fp = NULL;
+	char line[TOMATO_DUID_MAX_LEN];
 
 	if (!ipv6_enabled())
 		return;
+
+	/* DUID */
+	if ((fp = fopen(TOMATO_DUID_GUI, "r")) != NULL) {
+		fgets(line, sizeof(line), fp);
+		web_printf("\tip6_duid: '%s',\n", line);
+		fclose(fp);
+	}
+	else {
+		web_printf("\tip6_duid: '%s',\n", NOT_AVAIL);
+	}
 
 	/* check LAN */
 	for (br = 0; br < BRIDGE_COUNT; br++) {
@@ -576,6 +590,11 @@ void asp_sysinfo(int argc, char **argv)
 	char bogomips[8];
 	char cpuclk[8];
 	char cfe_version[16];
+
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+	char wl_tempsense[128];
+#endif
+
 #ifdef TCONFIG_BCMARM
 	char sa[64];
 	FILE *a;
@@ -583,19 +602,22 @@ void asp_sysinfo(int argc, char **argv)
 	char *f= NULL;
 	const char procstat[] = "/proc/stat";
 	char cputemp[8];
-	char wl_tempsense[128];
 
-	get_wl_tempsense(wl_tempsense);
 	get_cpuinfo(system_type, cpu_model, bogomips, cpuclk, cputemp);
 #else
 	get_cpuinfo(system_type, cpu_model, bogomips, cpuclk);
 #endif
+
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+	get_wl_tempsense(wl_tempsense);
+#endif
+
 	get_cfeversion(cfe_version);
 
 	web_puts("\nsysinfo = {\n");
 
 #ifdef TCONFIG_IPV6
-	print_ipv6_addrs();
+	print_ipv6_infos();
 #endif
 	sysinfo(&si);
 	get_memory(&mem);
@@ -617,6 +639,8 @@ void asp_sysinfo(int argc, char **argv)
 	           "\tcpuclk: '%s',\n"
 #ifdef TCONFIG_BCMARM
 	           "\tcputemp: '%s',\n"
+#endif
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
 	           "\twlsense: '%s',\n"
 #endif
 	           "\tcfeversion: '%s'",
@@ -635,6 +659,8 @@ void asp_sysinfo(int argc, char **argv)
 	           cpuclk,
 #ifdef TCONFIG_BCMARM
 	           cputemp,
+#endif
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
 	           wl_tempsense,
 #endif
 	           cfe_version);

@@ -87,21 +87,6 @@ void do_connect_file(unsigned int connect, char *prefix)
 		unlink(buf);
 }
 
-/* copy env to nvram
- * returns 1 if new/changed, 0 if not changed/no env
- */
-static int env2nv(char *env, char *nv)
-{
-	char *value;
-	if ((value = getenv(env)) != NULL) {
-		if (!nvram_match(nv, value)) {
-			nvram_set(nv, value);
-			return 1;
-		}
-	}
-	return 0;
-}
-
 static int env2nv_gateway(const char *nv)
 {
 	char *v, *g;
@@ -322,6 +307,7 @@ static int renew(char *ifname, char *prefix)
 
 	if (changed) {
 		set_host_domain_name();
+		stop_dnsmasq();
 		start_dnsmasq();
 	}
 
@@ -524,9 +510,17 @@ int dhcp6c_state_main(int argc, char **argv)
 	const char *lanif;
 	struct in6_addr addr;
 	int i, r;
+	char *reason;
 
 	if (!wait_action_idle(10))
 		return 1;
+
+	/* check environment variable "REASON" which is passed to the client script when receiving a REPLY message
+	 * Example: reason can be "REQUEST" or "RENEW" or "RELEASE" or ... see dhcp6c.8 manual
+	 */
+	if ((reason = getenv("REASON")) != NULL) {
+		logmsg(LOG_DEBUG, "*** %s: REASON=%s", __FUNCTION__, reason);
+	}
 
 	lanif = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0);
 
@@ -548,7 +542,9 @@ int dhcp6c_state_main(int argc, char **argv)
 		}
 		/* (re)start dnsmasq and httpd */
 		set_host_domain_name();
+		stop_dnsmasq();
 		start_dnsmasq();
+		stop_httpd();
 		start_httpd();
 	}
 
@@ -564,13 +560,36 @@ void start_dhcp6c(void)
 	FILE *f;
 	int prefix_len;
 	char *wan6face;
-	char *argv[] = { "/usr/sbin/dhcp6c", "-T", "LL", NULL, NULL, NULL }; /* DUID type 3 (DUID-LL) */
+	char *argv[] = { "/usr/sbin/dhcp6c", "-T",
+			 NULL,	/* LL | LLT */
+			 NULL,	/* -D (Debug On) */
+			 NULL,	/* -n (no prefix/address release on exit) */
+			 NULL,	/* interface */
+			 NULL };
 	int argc;
 	int ipv6_vlan = 0; /* bit 0 = IPv6 enabled for LAN1, bit 1 = IPv6 enabled for LAN2, bit 2 = IPv6 enabled for LAN3, 1 == TRUE, 0 == FALSE */
+	int duid_type;
 
 	/* Check if turned on */
 	if (get_ipv6_service() != IPV6_NATIVE_DHCP)
 		return;
+
+	duid_type = nvram_get_int("ipv6_duid_type");
+
+	/* check duid range */
+	if (duid_type < 1 || duid_type > 4)
+		duid_type = 3; /* default to DUID-LL */
+	  
+	argc = 2;
+	switch (duid_type) {
+		case 1: /* DUID-LLT */
+			argv[argc] = "LLT";
+			break;
+		case 3: /* DUID-LL (default) and fall through */
+		default:
+			argv[argc] = "LL";
+			break;
+	}
 
 	prefix_len = 64 - (nvram_get_int("ipv6_prefix_length") ? : 64);
 	if (prefix_len < 0)
@@ -640,8 +659,13 @@ void start_dhcp6c(void)
 	}
 
 	argc = 3;
-	if (nvram_get_int("debug_ipv6"))
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+	if (nvram_get_int("ipv6_debug"))
 		argv[argc++] = "-D";
+#endif
+
+	if (nvram_get_int("ipv6_pd_norelease"))
+		argv[argc++] = "-n";
 
 	argv[argc++] = wan6face;
 	argv[argc] = NULL;
