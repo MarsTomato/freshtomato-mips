@@ -5,7 +5,11 @@ CFLAGS += -I. -I$(TOP)/shared -I$(SRCBASE)/include -idirafter$(LINUXDIR)/include
 CFLAGS += -ffunction-sections -fdata-sections
 
 ifeq ($(TCONFIG_DPSTA),y)
+ifeq ($(TCONFIG_BCM714),y)
+CFLAGS += -I$(TOP)/dpsta$(BCMEX)
+else
 CFLAGS += -I$(TOP)/dpsta
+endif
 endif
 
 ifeq ($(TCONFIG_BCMARM),y)
@@ -194,6 +198,7 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcpc-event
 	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcpc-release
 	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcpc-renew
+	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcpc-event-lan
 
 	@cd $(INSTALLDIR)/sbin && ln -sf rc wldist
 

@@ -5,7 +5,7 @@
 	http://www.polarcloud.com/tomato/
 
 	Tinc Web GUI
-	Copyright (C) 2014 Lance Fredrickson
+	Copyright (C) 2014-2022 Lance Fredrickson
 	lancethepants@gmail.com
 
 	For use with Tomato Firmware only.
@@ -27,7 +27,7 @@
 
 var cprefix = 'vpn_tinc';
 var tabs = [['config','Config'],['hosts','Hosts'],['scripts','Scripts'],['keys','Generate Keys'],['status','Status']];
-var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9 - Best zlib'],['10','10 - Fast lzo'],['11','11 - Best lzo']];
+var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9 - Best zlib'],['10','10 - Fast lzo'],['11','11 - Best lzo'],['12','12 - lz4']];
 var cmd = null;
 var cmdresult = '';
 var changed = 0;
@@ -156,30 +156,31 @@ th.rpDel = function(e) {
 th.verifyFields = function(row, quiet) {
 	var f = fields.getAll(row);
 	changed = 1;
+	var ok = 1;
 
 	if (f[1].value == '') {
 		ferror.set(f[1], 'Host Name is required', quiet || !ok);
-		return 0;
+		ok = 0;
 	}
 	else
 		ferror.clear(f[1]);
 
 	if (f[0].checked && f[2].value == '') {
 		ferror.set(f[2], 'Address must be supplied when ConnectTo is checked', quiet || !ok);
-		return 0;
+		ok = 0;
 	}
 	else
 		ferror.clear(f[2]);
 
 	if (!f[3].value == '') {
 		if (!v_port(f[3], quiet || !ok))
-			return 0;
+			ok = 0;
 	}
 
 	if (E('_tinc_devicetype').value == 'tun') {
 		if ((!v_subnet(f[5], 1)) && (!v_ip(f[5], 1))) {
 			ferror.set(f[5], 'Invalid Subnet or IP address', quiet || !ok);
-			return 0;
+			ok = 0;
 		}
 		else
 			ferror.clear(f[5]);
@@ -187,7 +188,7 @@ th.verifyFields = function(row, quiet) {
 	else if (E('_tinc_devicetype').value == 'tap') {
 		if (f[5].value != '') {
 			ferror.set(f[5], 'Subnet must be left blank when using the TAP Interface Type', quiet || !ok);
-			return 0;
+			ok = 0;
 		}
 		else
 			ferror.clear(f[5]);
@@ -195,12 +196,12 @@ th.verifyFields = function(row, quiet) {
 
 	if (E('_host_ed25519_key').value == '') {
 		ferror.set(E('_host_ed25519_key'), 'Ed25519 Public Key is required', quiet || !ok);
-		return 0;
+		ok = 0;
 	}
 	else
 		ferror.clear(E('_host_ed25519_key'));
 
-	return 1;
+	return ok;
 }
 
 function escapeText(s) {
@@ -586,7 +587,7 @@ function init() {
 	W('<li><b>Address<\/b> <i>(optional)<\/i> - Must resolve to the external IP address where the host can be reached.');
 	W('<li><b>Port<\/b> <i>(optional)<\/i> - Port the host listens on. If empty the default value (655) is used.');
 	W('<li><b>Compression<\/b> - Level of compression used for UDP packets. Possible values are ');
-	W('0 (off), 1 (fast zlib) and any integer up to 9 (best zlib), 10 (fast lzo) and 11 (best lzo).');
+	W('0 (off), 1 (fast zlib) and any integer up to 9 (best zlib), 10 (fast lzo), 11 (best lzo), and 12 (lz4)');
 	W('<li><b>Subnet<\/b> - Subnet which the host will serve.');
 	W('<\/ul>');
 	W('<\/div><\/div>');

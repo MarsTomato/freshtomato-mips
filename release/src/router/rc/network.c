@@ -156,6 +156,19 @@ void wlconf_pre(void)
 		if (nvram_match(strlcat_r(prefix, "nband", tmp, sizeof(tmp)), "1") && /* only for wlX_nband == 1 for 5 GHz */
 		    nvram_match(strlcat_r(prefix, "vreqd", tmp, sizeof(tmp)), "1") &&
 		    nvram_match(strlcat_r(prefix, "nmode", tmp, sizeof(tmp)), "-1")) { /* only for mode AUTO == -1 */
+
+#ifdef TCONFIG_BCM714
+			if (nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "1") ||
+			    nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "2")) { /* check turbo/nitro qam on or off ? (keep it simple) */
+				logmsg(LOG_DEBUG, "*** %s: set vht_features 4 for %s", __FUNCTION__, word);
+				eval("wl", "-i", word, "vht_features", "4");
+			}
+			else {
+				logmsg(LOG_DEBUG, "*** %s: set vht_features 0 for %s", __FUNCTION__, word);
+				eval("wl", "-i", word, "vht_features", "0");
+			}
+#endif /* TCONFIG_BCM714 */
+
 			logmsg(LOG_DEBUG, "*** %s: set vhtmode 1 for %s", __FUNCTION__, word);
 			eval("wl", "-i", word, "vhtmode", "1");
 		}
@@ -163,10 +176,17 @@ void wlconf_pre(void)
 		         nvram_match(strlcat_r(prefix, "vreqd", tmp, sizeof(tmp)), "1") &&
 		         nvram_match(strlcat_r(prefix, "nmode", tmp, sizeof(tmp)), "-1")) { /* only for mode AUTO == -1 */
 
+
 			if (nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "1")) { /* check turbo qam on or off ? */
 				logmsg(LOG_DEBUG, "*** %s: set vht_features 3 for %s", __FUNCTION__, word);
 				eval("wl", "-i", word, "vht_features", "3");
 			}
+#ifdef TCONFIG_BCM714
+			else if (nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "2")) { /* check nitro qam on or off ? */
+				logmsg(LOG_DEBUG, "*** %s: set vht_features 7 for %s", __FUNCTION__, word);
+				eval("wl", "-i", word, "vht_features", "7");
+			}
+#endif /* TCONFIG_BCM714 */
 			else {
 				logmsg(LOG_DEBUG, "*** %s: set vht_features 0 for %s", __FUNCTION__, word);
 				eval("wl", "-i", word, "vht_features", "0");
@@ -186,6 +206,22 @@ void wlconf_pre(void)
 }
 #endif /* TCONFIG_BCMARM */
 
+#ifdef TCONFIG_EBTABLES
+static void bridges_flush_all_chains(void)
+{
+	/* every chain will be flushed */
+	eval("ebtables", "-F");
+}
+
+static void bridges_block_all_ipv6(void)
+{
+	/* basic filter table configuration - block all IPv6 */
+	eval("ebtables", "-I", "INPUT", "-p", "IPv6", "-j", "DROP");
+	eval("ebtables", "-I", "FORWARD", "-p", "IPv6", "-j", "DROP");
+	eval("ebtables", "-I", "OUTPUT", "-p", "IPv6", "-j", "DROP");
+}
+#endif /* TCONFIG_EBTABLES */
+
 static void set_lan_hostname(const char *wan_hostname)
 {
 	const char *s;
@@ -196,7 +232,7 @@ static void set_lan_hostname(const char *wan_hostname)
 	nvram_set("lan_hostname", wan_hostname);
 	if ((wan_hostname == NULL) || (*wan_hostname == 0)) {
 		/* derive from et0 mac address */
-		s = nvram_get("et0macaddr");
+		s = nvram_get("lan_hwaddr");
 		if (s && strlen(s) >= 17) {
 			snprintf(hostname, sizeof(hostname), "FT-%c%c%c%c%c%c%c%c%c%c%c%c", s[0], s[1], s[3], s[4], s[6], s[7], s[9], s[10], s[12], s[13], s[15], s[16]);
 
@@ -626,6 +662,14 @@ void restart_wl(void)
 	int model = get_model();
 #endif
 
+#ifdef TCONFIG_EBTABLES
+	/* check for wireless ethernet bridge mode (wet) and block IPv6 */
+	if (foreach_wif(1, NULL, is_wet)) {
+		logmsg(LOG_INFO, "No IPv6 support for wireless ethernet bridge mode");
+		bridges_block_all_ipv6();
+	}
+#endif
+
 	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
 		if (br != 0)
@@ -732,12 +776,12 @@ void restart_wl(void)
 	    || (model == MODEL_R6900)
 	    || (model == MODEL_R7000)
 	    || (model == MODEL_XR300)
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	    || (model == MODEL_R8000)
 #endif
 	) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1")
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 		    || nvram_match("wl2_radio", "1")
 #endif
 		)
@@ -775,7 +819,9 @@ void stop_lan_wl(void)
 	char tmp[32];
 	char br;
 
-	eval("ebtables", "-F");
+#ifdef TCONFIG_EBTABLES
+	bridges_flush_all_chains(); /* ebtables clean-up */
+#endif
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
@@ -1590,6 +1636,10 @@ void stop_lan(void)
 	int vlan0tag = nvram_get_int("vlan0tag");
 #endif
 
+#ifdef TCONFIG_EBTABLES
+	bridges_flush_all_chains(); /* ebtables clean-up */
+#endif
+
 	ifconfig("lo", 0, NULL, NULL); /* Bring down loopback interface */
 
 #ifdef TCONFIG_BCMWL6
@@ -1702,7 +1752,7 @@ void do_static_routes(int add)
 					((strcmp(ifname, "MAN3") == 0) ? "wan3_ifname" :
 					((strcmp(ifname, "MAN4") == 0) ? "wan4_ifname" :
 					((strcmp(ifname, "WAN") == 0) ? "wan_iface" : "wan_ifname"))))))))))));
-		logmsg(LOG_WARNING, "Static route, ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
+		logmsg(LOG_WARNING, "Static route %s: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", (add ? "added" : "deleted"), ifname, metric, dest, gateway, mask);
 
 		if (add) {
 			for (r = 3; r >= 0; --r) {

@@ -790,12 +790,12 @@ static const nvset_t nvset_list[] = {
 	{ "lan_state",			V_01				},
 	{ "lan_desc",			V_01				},
 	{ "lan_invert",			V_01				},
+	{ "lan_dhcp",			V_01				},	/* DHCP client [0|1] - obtain a LAN (br0) IP via DHCP */
 	{ "lan_proto",			V_WORD				},	// static, dhcp
-	{ "dhcp_start",			V_LENGTH(0, 15)			},	// remove !
-	{ "dhcp_num",			V_LENGTH(0, 4)			},	// remove !
 	{ "dhcpd_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp_lease",			V_LENGTH(0, 5)			},
+	{ "dhcp_moveip",		V_RANGE(0, 2)			},	/* GUI helper for automatic IP change */
 	{ "wan_wins",			V_IP				},
 
 #ifdef TCONFIG_USB
@@ -852,8 +852,6 @@ static const nvset_t nvset_list[] = {
 	{ "lan1_netmask",		V_LENGTH(0, 15)			},
 	{ "lan1_proto",			V_LENGTH(0, 6)			},
 	{ "lan1_stp",			V_LENGTH(0, 1)			},
-	{ "dhcp1_start",		V_LENGTH(0, 15)			},
-	{ "dhcp1_num",			V_LENGTH(0, 4)			},
 	{ "dhcpd1_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd1_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp1_lease",		V_LENGTH(0, 5)			},
@@ -864,8 +862,6 @@ static const nvset_t nvset_list[] = {
 	{ "lan2_netmask",		V_LENGTH(0, 15)			},
 	{ "lan2_proto",			V_LENGTH(0, 6)			},
 	{ "lan2_stp",			V_LENGTH(0, 1)			},
-	{ "dhcp2_start",		V_LENGTH(0, 15)			},
-	{ "dhcp2_num",			V_LENGTH(0, 4)			},
 	{ "dhcpd2_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd2_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp2_lease",		V_LENGTH(0, 5)			},
@@ -876,8 +872,6 @@ static const nvset_t nvset_list[] = {
 	{ "lan3_netmask",		V_LENGTH(0, 15)			},
 	{ "lan3_proto",			V_LENGTH(0, 6)			},
 	{ "lan3_stp",			V_LENGTH(0, 1)			},
-	{ "dhcp3_start",		V_LENGTH(0, 15)			},
-	{ "dhcp3_num",			V_LENGTH(0, 4)			},
 	{ "dhcpd3_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd3_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp3_lease",		V_LENGTH(0, 5)			},
@@ -1209,6 +1203,8 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_AC3200
 	{ "2:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
 	{ "2:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+	{ "pci/3/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
+	{ "pci/3/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
 #endif
 #endif /* TCONFIG_BCMARM || CONFIG_BCMWL6 || TCONFIG_BLINK */
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
@@ -1258,10 +1254,14 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wmf_igmpq_filter",	V_01				},	/* Disable igmp query filter */
 #endif /* TCONFIG_EMF */
 	{ "wl_atf",			V_01				},	// Air Time Fairness support on = 1, off = 0
-	{ "wl_turbo_qam",		V_01				},	// turbo qam on = 1 , off = 0
+	{ "wl_turbo_qam",		V_RANGE(0, 2)			},	// turbo qam on = 1 , off = 0, nitro qam = 2
 	{ "wl_txbf",			V_01				},	// Explicit Beamforming on = 1 , off = 0 (default: on)
-	{ "wl_txbf_bfr_cap",		V_01				},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case (not for Tomato...)
-	{ "wl_txbf_bfe_cap",		V_01				},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case (not for Tomato...)
+	{ "wl_txbf_bfr_cap",		V_RANGE(0, 2)			},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
+	{ "wl_txbf_bfe_cap",		V_RANGE(0, 2)			},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
+#ifdef TCONFIG_BCM714
+	{ "wl_mu_features", 		V_LENGTH(0, 8)			},	/* mu_features=0x8000 when mu-mimo enabled */
+	{ "wl_mumimo", 			V_01				},	/* mumimo on = 1, off = 0 */
+#endif /* TCONFIG_BCM714 */
 	{ "wl_itxbf",			V_01				},	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
 	{ "wl_txbf_imp",		V_01				},	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
 #ifdef TCONFIG_BCMBSD

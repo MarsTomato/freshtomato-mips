@@ -1226,6 +1226,9 @@ f7d:
 
 
 ## Linksys E-Series with 64K NVRAM ##
+n64e:
+	@$(MAKE) e MIPS32=r2 NVRAM_SIZE=64 LINKSYS_E_64k=y ROAM=y
+
 n64m:
 	@$(MAKE) m MIPS32=r2 NVRAM_SIZE=64 NO_KEYGEN=y LINKSYS_E_64k=y ROAM=y
 
@@ -1445,13 +1448,6 @@ help:
 	@echo ""
 	@echo "       Linksys E-Series with 64k Nvram/8MB Flash (E800/E900/E1200v2/E1500)"
 	@echo "n64e           Linksys E-series VPN"
-	@echo "n64c           Linksys E-series BTGui-VPN"
-	@echo "n64d           Linksys E-series BTGui-VPN plus Nocat"
-	@echo "n64u           Linksys E-series BT"
-	@echo "n64t           Linksys E-series BT-VPN"
-	@echo "n64b           Linksys E-series Big-VPN"
-	@echo "n64o           Linksys E-series Mega-VPN"
-	@echo "n64v           Linksys E-series IPv6-VPN"
 	@echo "n64m           Linksys E-series Max"
 	@echo ""
 	@echo "       Belkin F5D/F7D Series with 8MB Flash"

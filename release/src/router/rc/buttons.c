@@ -365,6 +365,7 @@ int buttons_main(int argc, char *argv[])
 		ses_mask = 1 << 7; /* wps button (active LOW) */
 		ses_led = LED_AOSS;
 		break;
+	case MODEL_DSLAC68U:
 	case MODEL_RTAC68U:
 	case MODEL_RTAC68UV3:
 		reset_mask = 1 << 11; /* reset button (active LOW) */
@@ -467,7 +468,7 @@ int buttons_main(int argc, char *argv[])
 		ses_mask = 1 << 12; /* wps button (active LOW) */
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. */
 		break;
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_RTAC3200:
 		reset_mask = 1 << 11; /* reset button (active LOW) */
 		ses_mask = 1 << 7; /* wps button (active LOW) */
@@ -480,7 +481,23 @@ int buttons_main(int argc, char *argv[])
 		wlan_mask = 1 << 4; /* wifi button (active LOW) */
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
 		break;
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
+#ifdef TCONFIG_BCM714
+	case MODEL_RTAC3100:
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 20; /* wps button (active LOW) */
+		wlan_mask = 1 << 18;  /* wifi button (active LOW) */
+		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed. */
+		break;
+#ifdef TCONFIG_AC5300
+	case MODEL_RTAC5300:
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 18; /* wps button (active LOW) */
+		wlan_mask = 1 << 20;  /* wifi button (active LOW) */
+		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed. */
+		break;
+#endif /* TCONFIG_AC5300 */
+#endif /* TCONFIG_BCM714 */
 #endif /* !CONFIG_BCMWL6A */
 
 	default:
@@ -605,9 +622,16 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_RTAC66U_B1)
 			     || (model == MODEL_RTAC1900P)
 			     || (model == MODEL_RTAC67U)
+			     || (model == MODEL_DSLAC68U)
 			     || (model == MODEL_RTAC68U)
 			     || (model == MODEL_RTAC68UV3)
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_BCM714
+			     || (model == MODEL_RTAC3100)
+#endif /* TCONFIG_BCM714 */
+#ifdef TCONFIG_AC3200
+#ifdef TCONFIG_AC5300
+			     || (model == MODEL_RTAC5300)
+#endif			     
 			     || (model == MODEL_RTAC3200)
 #endif
 			)) {
@@ -722,9 +746,16 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_AC18)
 			     || (model == MODEL_RTAC56U)
 			     || (model == MODEL_RTAC1900P)
+			     || (model == MODEL_DSLAC68U)
 			     || (model == MODEL_RTAC68U)
 			     || (model == MODEL_RTAC68UV3)
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_BCM714
+			     || (model == MODEL_RTAC3100)
+#endif /* TCONFIG_BCM714 */
+#ifdef TCONFIG_AC3200
+#ifdef TCONFIG_AC5300
+			     || (model == MODEL_RTAC5300)
+#endif
 			     || (model == MODEL_RTAC3200)
 #endif
 			)) {

@@ -754,6 +754,16 @@ bcm_robo_attach(si_t *sih, void *h, char *vars, miird_f miird, miiwr_f miiwr)
 		/* nothing to do here --> skip enable switch leds! (see belkin src) */
 		printk(KERN_EMERG "bcmrobo: Belkin F9K1102 v1/v3 special case - skip enable switch leds!\n");
 	}
+	/* Netgear WNDR3400 v2/v3 special case */
+	else if (boardnum != NULL &&
+		 boardtype != NULL &&
+		 boardrev != NULL &&
+		 !strcmp(boardnum, "01") &&
+		 !strcmp(boardtype, "0x0550") &&
+		 !strcmp(boardrev, "0x1400")) {
+		/* nothing to do here --> skip enable switch leds! (see netgear src) */
+		printk(KERN_EMERG "bcmrobo: Netgear WNDR3400 v2/v3 special case - skip enable switch leds!\n");
+	}
 	else { /* default */
 	/* Enable switch leds */
 	if (sih->chip == BCM5356_CHIP_ID) {

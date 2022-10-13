@@ -1,6 +1,6 @@
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1436,15 +1436,25 @@
+@@ -1439,15 +1439,25 @@
  #endif
  
  /* log.c */
@@ -62,7 +62,7 @@
  static unsigned char *option_find(struct dhcp_packet *mess, size_t size, int opt_type, int minsize);
  static unsigned char *option_find1(unsigned char *p, unsigned char *end, int opt, int minsize);
  static size_t dhcp_packet_size(struct dhcp_packet *mess, unsigned char *agent_id, unsigned char *real_end);
-@@ -1692,6 +1699,7 @@
+@@ -1689,6 +1696,7 @@
  }
  #endif
  
@@ -70,7 +70,7 @@
  static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
  		       int mac_len, char *interface, char *string, char *err, u32 xid)
  {
-@@ -1743,6 +1751,7 @@
+@@ -1740,6 +1748,7 @@
        start += start[1] + 2;
      }
  }
