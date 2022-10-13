@@ -92,18 +92,6 @@ static pid_t pid_phy_tempsense = -1;
 #endif
 
 
-static int is_wet(int idx, int unit, int subunit, void *param)
-{
-	return nvram_match(wl_nvname("mode", unit, subunit), "wet");
-}
-
-#ifdef TCONFIG_BCMWL6
-static int is_psta(int idx, int unit, int subunit, void *param)
-{
-	return nvram_match(wl_nvname("mode", unit, subunit), "psta");
-}
-#endif /* TCONFIG_BCMWL6 */
-
 void start_dnsmasq_wet()
 {
 	FILE *f;
@@ -162,7 +150,7 @@ void start_dnsmasq()
 	char *nve, *nvp;
 	unsigned char ea[ETHER_ADDR_LEN];
 	int n;
-	int dhcp_start, dhcp_count, dhcp_lease;
+	int dhcp_lease;
 	int do_dhcpd, do_dns, do_dhcpd_hosts = 0;
 #ifdef TCONFIG_IPV6
 	int ipv6_lease; /* DHCP IPv6 lease time */
@@ -178,9 +166,9 @@ void start_dnsmasq()
 	char lanN_netmask[] = "lanXX_netmask";
 	char dhcpdN_startip[] = "dhcpdXX_startip";
 	char dhcpdN_endip[] = "dhcpdXX_endip";
-	char dhcpN_start[] = "dhcpXX_start";
-	char dhcpN_num[] = "dhcpXX_num";
 	char dhcpN_lease[] = "dhcpXX_lease";
+	unsigned int start_ip = 2;
+	unsigned int end_ip = 50;
 
 	if (serialize_restart("dnsmasq", 1))
 		return;
@@ -389,15 +377,9 @@ void start_dnsmasq()
 
 			if ((p = nvram_safe_get(dhcpdN_startip)) && (*p) && (e = nvram_safe_get(dhcpdN_endip)) && (*e))
 				fprintf(f, "dhcp-range=tag:%s,%s,%s,%s,%dm\n", nvram_safe_get(lanN_ifname), p, e, nvram_safe_get(lanN_netmask), dhcp_lease);
-			else {
-				/* for compatibility */
-				sprintf(dhcpN_start, "dhcp%s_start", bridge);
-				sprintf(dhcpN_num, "dhcp%s_num", bridge);
-				sprintf(lanN_netmask, "lan%s_netmask", bridge);
-				dhcp_start = nvram_get_int(dhcpN_start);
-				dhcp_count = nvram_get_int(dhcpN_num);
-				fprintf(f, "dhcp-range=tag:%s,%s%d,%s%d,%s,%dm\n", nvram_safe_get(lanN_ifname), lan, dhcp_start, lan, (dhcp_start + dhcp_count - 1), nvram_safe_get(lanN_netmask), dhcp_lease);
-			}
+			else
+				/* defaults if not present in nvram */
+				fprintf(f, "dhcp-range=tag:%s,%s%d,%s%d,%s,%dm\n", nvram_safe_get(lanN_ifname), lan, start_ip, lan, end_ip, nvram_safe_get(lanN_netmask), dhcp_lease);
 
 			nv = nvram_safe_get(lanN_ipaddr);
 			if ((nvram_get_int("dhcpd_gwmode") == 1) && (get_wan_proto() == WP_DISABLED)) {
@@ -793,7 +775,7 @@ void start_stubby(void)
 
 	/* alternative (user) configuration file */
 	if (f_exists("/etc/stubby/stubby_alt.yml")) {
-		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", "/etc/stubby/stubby_alt.yml");
+		eval("stubby", "-g", "-C", "/etc/stubby/stubby_alt.yml");
 		return;
 	}
 
@@ -819,6 +801,7 @@ void start_stubby(void)
 	            "tls_connection_retries: 5\n"
 	            "tls_backoff_time: 900\n"
 	            "timeout: 2000\n"
+	            "log_level: %s\n"
 	            "round_robin_upstreams: 1\n"
 	            "tls_min_version: %s\n"
 	/* listen address */
@@ -827,6 +810,7 @@ void start_stubby(void)
 	            ntp_ready ? "  - GETDNS_TRANSPORT_TLS\n" : "  - GETDNS_TRANSPORT_UDP\n  - GETDNS_TRANSPORT_TCP\n",
 	            ntp_ready ? "GETDNS_AUTHENTICATION_REQUIRED" : "GETDNS_AUTHENTICATION_NONE",
 	            (ntp_ready && dnssec) ? "dnssec: GETDNS_EXTENSION_TRUE\n" : "",
+	            nvram_safe_get("stubby_log"),
 	            nvram_get_int("stubby_force_tls13") ? "GETDNS_TLS1_3" : "GETDNS_TLS1_2",
 	            nvram_safe_get("stubby_port"));
 #ifdef TCONFIG_IPV6
@@ -884,12 +868,10 @@ void start_stubby(void)
 			logmsg(LOG_INFO, "stubby: DNSSEC pending ntp sync");
 	}
 
-	ret = eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", (char *)stubby_config);
+	ret = eval("stubby", "-g", "-C", (char *)stubby_config);
 
 	if (ret)
 		logmsg(LOG_ERR, "starting stubby failed ...");
-	else
-		logmsg(LOG_INFO, "stubby is started");
 }
 
 void stop_stubby(void)
@@ -2674,7 +2656,7 @@ static void start_media_server(int force)
 			mkdir_if_none(dbdir ? : "/var/run/"MEDIA_SERVER_APP);
 
 			/* persistent ident (router's mac as serial) */
-			if (!ether_atoe(nvram_safe_get("et0macaddr"), ea))
+			if (!ether_atoe(nvram_safe_get("lan_hwaddr"), ea))
 				f_read("/dev/urandom", ea, sizeof(ea));
 
 			snprintf(serial, sizeof(serial), "%02x:%02x:%02x:%02x:%02x:%02x", ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]);
@@ -2852,6 +2834,7 @@ void start_services(void)
 		if (nvram_get_int("sshd_eas"))
 			start_sshd();
 	}
+	start_dhcpc_lan(); /* start very early */
 	start_nas();
 #ifdef TCONFIG_ZEBRA
 	start_zebra();
@@ -2924,6 +2907,7 @@ void start_services(void)
 
 void stop_services(void)
 {
+	stop_dhcpc_lan(); /* stop very early */
 	clear_resolv();
 	stop_ntpd();
 #ifdef TCONFIG_FANCTRL

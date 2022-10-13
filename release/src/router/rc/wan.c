@@ -740,7 +740,7 @@ void create_wanx_mac(char *prefix, int mac_plus)
 	char buffer[32] = { 0 };
 	char nvtmp[16];
 
-	snprintf(buffer, sizeof(buffer), "%s", nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+	snprintf(buffer, sizeof(buffer), "%s", nvram_safe_get("lan_hwaddr"));	/* get LAN MAC address (usually et0) */
 	inc_mac(buffer, mac_plus);						/* MAC + value for wanX */
 	nvram_set(strcat_r(prefix, "_mac", nvtmp), buffer);			/* save it to nvram */
 	logmsg(LOG_INFO, "Create and save wanX mac address - WAN: %s - Address: %s", prefix, buffer);
@@ -1218,9 +1218,15 @@ void start_wan_done(char *wan_ifname, char *prefix)
 #endif
 
 		if ((wanup || (proto == WP_DISABLED)) && (!nvram_get_int("ntp_ready"))) {
-			first_ntp_sync = 1;
-			stop_ntpd();
-			start_ntpd();
+			if ((proto == WP_DISABLED) && nvram_get_int("lan_dhcp")) { /* Case: AP / WET / MB Mode with DHCP client for Lan (br0) */
+				/* nothing to do here! and start ntpd (only) with bound event */
+				logmsg(LOG_DEBUG, "*** %s: start ntpd with bound event (DHCP client)", __FUNCTION__);
+			}
+			else { /* default */
+				first_ntp_sync = 1;
+				stop_ntpd();
+				start_ntpd();
+			}
 		}
 
 		if ((wanup) || (proto == WP_DISABLED)) {

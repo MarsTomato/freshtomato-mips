@@ -53,6 +53,28 @@ define CMAKE_CrossOptions
  )
 endef
 
+define meson_CrossOptions
+ ( \
+  echo "[host_machine]" >>$(1); \
+  echo "system = 'linux'" >>$(1); \
+  echo "cpu_family = '$(if $(TCONFIG_BCMARM),arm,mips)'" >>$(1); \
+  echo "cpu = '$(if $(TCONFIG_BCMARM),arm7-a,$(if $(TCONFIG_MIPSR2),mips32r2,mips32))'" >>$(1); \
+  echo "endian = 'little'" >>$(1); \
+  echo "[binaries]" >>$(1); \
+  echo "c = '$(CC)'" >>$(1); \
+  echo "cpp = '$(CXX)'" >>$(1); \
+  echo "ar = '$(AR)'" >>$(1); \
+  echo "strip = '$(STRIP)'" >>$(1); \
+  echo "pkgconfig = '/usr/bin/pkg-config'" >>$(1); \
+  echo "[built-in options]" >>$(1); \
+  echo "wrap_mode = 'nodownload'" >>$(1); \
+  echo "[properties]" >>$(1); \
+  echo "have_c99_vsnprintf=true" >>$(1); \
+  echo "have_c99_snprintf=true" >>$(1); \
+  echo "have_unix98_printf=true" >>$(1); \
+ )
+endef
+
 
 #
 #
@@ -239,8 +261,13 @@ obj-$(TCONFIG_BCMARM) += nas$(BCMEX)
 obj-y += prebuilt
 obj-$(TCONFIG_EMF) += emf$(BCMEX)
 obj-$(TCONFIG_EMF) += igs$(BCMEX)
+ifeq ($(TCONFIG_BCM714),y)
+obj-$(TCONFIG_DPSTA) += dpsta$(BCMEX)
+obj-$(TCONFIG_DHDAP) += dhd$(BCMEX)
+else
 obj-$(TCONFIG_DPSTA) += dpsta
 obj-$(TCONFIG_DHDAP) += dhd $(if $(TCONFIG_BCM7),pciefd)
+endif # TCONFIG_BCM714
 obj-y += igmpproxy
 obj-y += rc
 obj-y += rom
@@ -405,6 +432,7 @@ obj-$(TCONFIG_FTP) += vsftpd
 obj-$(TCONFIG_TINC) += zlib
 obj-$(TCONFIG_TINC) += $(OPENSSLDIR)
 obj-$(TCONFIG_TINC) += lzo
+obj-$(TCONFIG_TINC) += lz4
 obj-$(TCONFIG_TINC) += tinc
 obj-$(TCONFIG_NGINX) += zlib
 obj-$(TCONFIG_NGINX) += sqlite
@@ -461,7 +489,23 @@ ifeq ($(TCONFIG_BCMARM),y)
  LINUX_KERNEL=2.6.36
  export PLATFORM LIBDIR USRLIBDIR LINUX_VERSION
 
- ifeq ($(TCONFIG_BCM7),y)
+ ifeq ($(TCONFIG_BCM714),y)
+  export BCMSRC=src-rt-7.14.114.x/src
+
+  ifeq ($(TCONFIG_DHDAP),y)
+   export CONFIG_DHDAP=y
+   export CFLAGS += -D__CONFIG_DHDAP__
+   export SRCBASE_DHD := $(SRCBASE)/../dhd/src
+   export SRCBASE_FW := $(SRCBASE)/../4365/src
+   export SRCBASE_SYS := $(SRCBASE_DHD)
+   include Makefile.fw
+  endif # TCONFIG_DHDAP
+
+  ifeq ($(TCONFIG_GMAC3),y)
+   export CFLAGS += -D__CONFIG_GMAC3__
+  endif
+
+ else ifeq ($(TCONFIG_BCM7),y)
   export BCMSRC=src-rt-7.x.main/src
 
   ifeq ($(TCONFIG_DHDAP),y)
@@ -488,9 +532,9 @@ ifeq ($(TCONFIG_BCMARM),y)
    export CFLAGS += -D__CONFIG_GMAC3__
   endif
 
- else # TCONFIG_BCM7
+ else # SDK6
   export BCMSRC=src-rt-6.x.4708
- endif # TCONFIG_BCM7
+ endif # TCONFIG_BCM714
 
  WLAN_ComponentsInUse := bcmwifi clm ppr olpc
  include $(SRCBASE)/makefiles/WLAN_Common.mk
@@ -1028,17 +1072,6 @@ roldconf: config/conf
 ifeq ($(TCONFIG_BCMARM),y)
 	@$(MAKE) compressed-clean
 endif
-ifeq ($(TCONFIG_DHDAP),y)
-ifeq ($(TCONFIG_BCM7),y)
-ifneq ($(wildcard $(SRCBASE_FW)/wl/sys),)
-ifeq ($(wildcard /opt/hndtools-armeabi-2011.09),)
-	# build 43602 src and to match its path
-	sudo rm -rf /opt/hndtools-armeabi-2011.09
-	sudo ln -sf $(SRCBASE)/toolchains/hndtools-armeabi-2011.09 /opt/hndtools-armeabi-2011.09
-endif
-endif
-endif
-endif
 
 kconf:
 	@$(MAKE) -C $(LINUXDIR) config
@@ -1071,7 +1104,7 @@ oldconfig oldconf: koldconf roldconf dependconf bboldconf
 # overrides and extra dependencies
 #
 
-
+ifneq ($(TCONFIG_BCM714),y) # only for BCM7
 ifeq ($(TCONFIG_BCM7),y)
 $(obj-pciefd):
 # Build PCIEFD firmware only if it is not prebuilt
@@ -1090,6 +1123,7 @@ ifneq ($(wildcard $(SRCBASE_FW)/wl/sys),)
 		cp $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/wlc_clm_data.c $(SRCBASE_FW)/wl/clm/src/wlc_clm_data.c.GEN && \
 		cp $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/wlc_clm_data_inc.c $(SRCBASE_FW)/wl/clm/src/wlc_clm_data_inc.c.GEN; \
 	fi;
+endif
 endif
 endif
 
@@ -2696,12 +2730,13 @@ lzo/stamp-h1:
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --enable-shared --enable-static
+		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static
 	@touch $@
 
 lzo: lzo/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/lzo/staged install
 
 lzo-install:
 	install -D lzo/src/.libs/liblzo2.so $(INSTALLDIR)/lzo/usr/lib/liblzo2.so.2.0.0
@@ -2713,6 +2748,7 @@ lzo-install:
 lzo-clean:
 	-@$(MAKE) -C lzo clean
 	@rm -f lzo/stamp-h1
+	@rm -rf lzo/staged
 
 openvpn-2.4/Makefile:
 	$(call patch_files,openvpn-2.4)
@@ -3050,40 +3086,73 @@ ifneq ($(TCONFIG_BCMARM),y)
 	$(call unpatch_files,nfs-utils)
 endif
 
+lz4:
+	@$(SEP)
+	cd lz4 && \
+		CPPFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CXXFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		LDFLAGS="-Wl,--gc-sections -fPIC" \
+		PREFIX=/usr \
+		LIBDIR=/usr/lib \
+		$(MAKE) \
+		LN_S="ln -sf" \
+		BUILD_SHARED=no \
+		install \
+		DESTDIR=$(TOP)/lz4/staged
+
+lz4-install:
+	@true
+
+lz4-clean:
+	-@$(MAKE) -C lz4 clean
+	@rm -rf lz4/staged
+
 tinc/stamp-h1:
-	$(call patch_files,tinc)
-	cd tinc && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
-		LIBS="-lpthread" \
-		$(CONFIGURE) \
-			--prefix=/usr \
-			--sysconfdir=/etc \
-			--localstatedir=/var \
-			--with-zlib-include="$(TOP)/zlib/staged/usr/include" \
-			--with-zlib-lib="$(TOP)/zlib/staged/usr/lib" \
-			--with-lzo-include="$(TOP)/lzo/include" \
-			--with-lzo-lib="$(TOP)/lzo/src/.libs" \
-			--with-openssl-include="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
-			--with-openssl-lib="$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
-			--disable-curses \
-			--disable-readline
+	cd tinc && \
+		$(call meson_CrossOptions, meson-cross.txt) && \
+		PKG_CONFIG_LIBDIR='$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/lzo/staged/usr/lib/pkgconfig:$(TOP)/lz4/staged/usr/lib/pkgconfig:$(TOP)/$(OPENSSLDIR)/staged/usr/lib/pkgconfig'\
+		$(TOP)/meson/meson.py \
+		build \
+		--cross-file meson-cross.txt \
+		-Doptimization=2 \
+		-Ddebug=false \
+		--prefix=/usr \
+		-Dsysconfdir=/etc \
+		-Dlocalstatedir=/var \
+		-Dc_std=gnu99 \
+		-Dwarning_level=0 \
+		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -I$(TOP)/lzo/staged/usr/include -I$(TOP)/lz4/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		-Dc_link_args="-Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/lzo/staged/usr/lib -L$(TOP)/lz4/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread" \
+		-Dcrypto=openssl \
+		-Dzlib=enabled \
+		-Dlzo=enabled \
+		-Dlz4=enabled \
+		-Dhardening=true \
+		-Db_staticpic=true \
+		-Db_pie=true \
+		-Dreadline=disabled \
+		-Dcurses=disabled \
+		-Dminiupnpc=disabled \
+		-Dvde=disabled \
+		-Dsystemd=disabled \
+		-Ddocs=disabled \
+		-Dtests=disabled
 	@touch $@
 
 tinc: tinc/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@ LIBS="-lcrypto $(TOP)/zlib/staged/usr/lib/libz.a -llzo2 -lm -lpthread" $(PARALLEL_BUILD)
+	@ninja -C tinc/build
 
 tinc-install:
-	install -D tinc/src/tinc $(INSTALLDIR)/tinc/usr/sbin/tinc
-	install -D tinc/src/tincd $(INSTALLDIR)/tinc/usr/sbin/tincd
+	install -D tinc/build/src/tinc $(INSTALLDIR)/tinc/usr/sbin/tinc
+	install -D tinc/build/src/tincd $(INSTALLDIR)/tinc/usr/sbin/tincd
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tinc
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tincd
 
 tinc-clean:
-	-@$(MAKE) -C tinc clean
+	@rm -rf tinc/build
 	@rm -f tinc/stamp-h1
-	$(call unpatch_files,tinc)
 
 snmp/stamp-h1:
 	$(call patch_files,snmp)

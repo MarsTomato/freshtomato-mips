@@ -147,7 +147,7 @@ function init() {
 	- Tinc Daemon integration and GUI<br>
 <!-- TINC-END -->
 	- Comcast DSCP Fix GUI<br>
-	<i>Copyright (C) 2014 Lance Fredrickson</i><br>
+	<i>Copyright (C) 2014-2022 Lance Fredrickson</i><br>
 	<a href="mailto:lancethepants@gmail.com">lancethepants@gmail.com</a><br>
 	<br>
 

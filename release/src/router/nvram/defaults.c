@@ -45,7 +45,7 @@ const defaults_t defaults[] = {
 	{ "lan_hwaddr",			""				},	// LAN interface MAC address
 
 	/* LAN TCP/IP parameters */
-	{ "lan_dhcp",			"0"				},	// DHCP client [static|dhcp]
+	{ "lan_dhcp",			"0"				},	/* DHCP client [0|1] - obtain a LAN (br0) IP via DHCP */
 	{ "lan_proto",			"dhcp"				},	// DHCP server [static|dhcp]
 	{ "lan_ipaddr",			"192.168.1.1"			},	// LAN IP address
 	{ "lan_netmask",		"255.255.255.0"			},	// LAN netmask
@@ -75,7 +75,7 @@ const defaults_t defaults[] = {
 	{ "mwan_num",			"1"				},
 	{ "mwan_init",			"0"				},
 	{ "mwan_cktime",		"0"				},
-	{ "mwan_ckdst",			"google.com,microsoft.com"	},	// target1,target2
+	{ "mwan_ckdst",			"google.com,1.1.1.1"		},	// target1,target2
 	{ "mwan_debug",			"0"				},
 	{ "mwan_tune_gc",		"0"				},	/* tune route cache for multiwan in load balancing */
 	{ "mwan_state_init",		"1"				},	/* init wan state files with this value */
@@ -189,7 +189,7 @@ const defaults_t defaults[] = {
 	{ "stubby_port",		"5453"				},	/* local port */
 	{ "stubby_resolvers",		"<1.1.1.1>>cloudflare-dns.com><1.0.0.1>>cloudflare-dns.com>"},	/* default DoT resolvers */
 	{ "stubby_force_tls13",		"0"				},	/* TLS version */
-	{ "stubby_log",			"4"				},	/* log level */
+	{ "stubby_log",			"6"				},	/* log level */
 #endif
 	{ "wan_wins",			""				},	// x.x.x.x x.x.x.x ...
 	{ "wan_lease",			"86400"				},	// WAN lease time in seconds
@@ -204,28 +204,21 @@ const defaults_t defaults[] = {
 #endif
 
 	/* DHCP server parameters */
-	{ "dhcp_start",			"2"				},	//
-	{ "dhcp_num",			"50"				},	//
-	{ "dhcpd_startip",		"" 				},	// if empty, tomato will use dhcp_start/dchp_num for better compatibility
+	{ "dhcpd_startip",		"" 				},
 	{ "dhcpd_endip",		"" 				},	//
 	{ "dhcp_lease",			"1440"				},	// LAN lease time in minutes
+	{ "dhcp_moveip",		"0"				},	/* GUI helper for automatic IP change */
 	{ "dhcp_domain",		"wan"				},	// Use WAN domain name first if available (wan|lan)
 	{ "wan_get_dns",		""				},	// DNS IP address which get by dhcpc
 	{ "wan_routes",			""				},
 	{ "wan_msroutes",		""				},
 
-	{ "dhcp1_start",		""				},
-	{ "dhcp1_num",			""				},
 	{ "dhcpd1_startip",		"" 				},
 	{ "dhcpd1_endip",		"" 				},
 	{ "dhcp1_lease",		"1440"				},
-	{ "dhcp2_start",		""				},
-	{ "dhcp2_num",			""				},
 	{ "dhcpd2_startip",		"" 				},
 	{ "dhcpd2_endip",		"" 				},
 	{ "dhcp2_lease",		"1440"				},
-	{ "dhcp3_start",		""				},
-	{ "dhcp3_num",			""				},
 	{ "dhcpd3_startip",		"" 				},
 	{ "dhcpd3_endip",		"" 				},
 	{ "dhcp3_lease",		"1440"				},

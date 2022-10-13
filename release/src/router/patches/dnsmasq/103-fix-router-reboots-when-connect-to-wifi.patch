@@ -11,7 +11,7 @@
    
    union {
      struct cmsghdr align; /* this ensures alignment */
-@@ -182,8 +184,10 @@
+@@ -181,8 +183,10 @@
  #endif
    
  #if defined (HAVE_LINUX_NETWORK)
