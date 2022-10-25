@@ -105,6 +105,7 @@ static inline int is_psta(int idx, int unit, int subunit, void *param)
 extern void chains_log_detection(void);
 extern int env2nv(char *env, char *nv);
 extern int serialize_restart(char *service, int start);
+extern void run_del_firewall_script(char *infile, char *outfile);
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
@@ -521,6 +522,7 @@ extern int nvram_nvram2file(const char *name, const char *filename);
 #ifdef TCONFIG_BT
 extern void start_bittorrent(int force);
 extern void stop_bittorrent(void);
+extern void run_bt_firewall_script(void);
 #endif
 
 /* nfs.c */
@@ -564,7 +566,6 @@ extern void start_ovpn_eas();
 extern void stop_ovpn_eas();
 extern void stop_ovpn_all();
 extern void run_ovpn_firewall_scripts();
-extern void ovpn_kill_switch();
 extern void write_ovpn_dnsmasq_config(FILE*);
 extern int write_ovpn_resolv(FILE*);
 #endif
@@ -602,6 +603,7 @@ extern void stop_nocat();
 extern void nginx_write(const char *format, ...);
 extern void start_nginx(int force);
 extern void stop_nginx(void);
+extern void run_nginx_firewall_script(void);
 
 /* mysql.c */
 extern void start_mysql(int force);
