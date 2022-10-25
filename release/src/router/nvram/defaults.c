@@ -1368,7 +1368,6 @@ const defaults_t defaults[] = {
 	{ "bt_blocklist",		"0"				},
 	{ "bt_blocklist_url",		"http://list.iblocklist.com/?list=bt_level1"	},
 	{ "bt_sleep",			"10"				},
-	{ "bt_check",			"1"				},
 	{ "bt_check_time",		"15"				},
 	{ "bt_dl_queue_enable",		"0"				},
 	{ "bt_dl_queue_size",		"5"				},

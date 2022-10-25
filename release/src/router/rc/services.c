@@ -3567,8 +3567,6 @@ TOP:
 #ifdef TCONFIG_BT
 	if ((strcmp(service, "bittorrent") == 0) || (strcmp(service, "transmission") == 0) || (strcmp(service, "transmission_da") == 0)) {
 		if (act_stop) stop_bittorrent();
-		stop_firewall();
-		start_firewall(); /* always restarted */
 		if (act_start) start_bittorrent(1); /* force (re)start */
 		goto CLEAR;
 	}
@@ -3707,8 +3705,6 @@ TOP:
 #ifdef TCONFIG_NGINX
 	if (strcmp(service, "nginx") == 0) {
 		if (act_stop) stop_nginx();
-		stop_firewall();
-		start_firewall(); /* always restarted (needed?) */
 		if (act_start) start_nginx(1); /* force (re)start */
 		goto CLEAR;
 	}
