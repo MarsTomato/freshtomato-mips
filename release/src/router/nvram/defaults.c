@@ -653,6 +653,7 @@ const defaults_t defaults[] = {
 	{ "dhcpd_lmax",			""				},
 	{ "dns_addget",			"0"				},
 	{ "dns_intcpt",			"0"				},
+	{ "dhcpc_minpkt",		"1"				},
 	{ "dhcpc_custom",		""				},
 	{ "dns_norebind",		"1"				},
 	{ "dns_fwd_local",		"0"				},
@@ -1460,8 +1461,7 @@ const defaults_t defaults[] = {
 /* bwq518 - MySQL */
 	{ "mysql_enable",		"0"				},
 	{ "mysql_sleep",		"2"				},
-	{ "mysql_check",		"1"				},
-	{ "mysql_check_time",		"1"				},
+	{ "mysql_check_time",		"5"				},
 	{ "mysql_binary",		"internal"			},
 	{ "mysql_binary_custom",	"/mnt/sda1/mysql/bin"		},
 	{ "mysql_usb_enable",		"1"				},
