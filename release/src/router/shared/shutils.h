@@ -67,6 +67,7 @@ extern int _eval(char *const argv[], const char *path, int timeout, pid_t *ppid)
  */
 extern void killall_tk_period_wait(const char *name, int wait_ds);
 extern int kill_pidfile_s(char *pidfile, int sig);
+extern void killall_and_waitfor(const char *name, int loop, int killtime);
 
 /*
  * fread() with automatic retry on syscall interrupt
