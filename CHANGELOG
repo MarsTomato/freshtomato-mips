@@ -5,6 +5,82 @@ FreshTomato-MIPS Changelog
 
 
 
+2022.6          2022.11.06
+---------------------------
+
+- toolchain: fix support for realpath() - allow a NULL argument; causing segfault in ie. nano 
+- libcurl: update to 7.86.0
+- nano: update to 6.4
+- nettle: update to 3.8.1
+- sqlite: update to 3.39.4
+- tor: update to 0.4.7.10
+- dnsmasq: update to 2.87 final
+- tinc: update to the latest commit. 4c6a9a9; update to meson build system. Add lz4 support to tinc
+- dnscrypt-proxy: update resolvers csv file
+- getdns: update to 1.7.2
+- openssl-1.1: update to 1.1.1s
+- igmpproxy: update to 0.4
+- libsodium: update to latest version of 1.0.18-stable
+- nginx: update to 1.23.2
+- ntfs-3g: update to 2022.10.3
+- miniupnpd: update to 2.3.1
+- openvpn: update to 2.5.8
+- flac: update to 1.4.2
+- libxml2: update to 2.10.3
+- libcurl: update CA certificate bundle as of 2022-10-11
+- meson: add clean source for version 0.63.0
+- lz4: add clean source for version 1.9.3
+- lz4: update to 1.9.4
+- zlib: backport fix for heap-based buffer over-read (CVE-2022-37434)
+- zlib: backport null dereference fix
+- nocat: import some patches found in debian
+- build: sync up DockerFile to current build process
+- build: Makefile: clean-up Linksys E-Series with 64k Nvram/8MB Flash (E800/E900/E1200v2/E1500) - two targets possible now (VPN & Max image)
+- build: Makefile: add back original target recipe, make help for wndr3400 v2/v3
+- build: Makefile: edit e3200 target recipe and make help menu. - changing from mega-vpn to vpn
+- build: samba3: update Makefile; due to the recent changes to the toolchain, we now have realpath() with support for NULL argument. So change that option
+- GUI: advanced-misc.asp - Make it possible to save settings without rebooting
+- GUI: Wireless Survey: check for Channel Spec BW 160 / 8080 MHz (SDK6 and up)
+- GUI: VPN Tunneling: Tinc Daemon: fix javascript error
+- GUI: NAS: Media Server: fix allowed port range
+- GUI: Basic: Network: remove unnecessary javascript alert
+- GUI: move IPSec Passthrough from Firewall to Conntrack/Netfilter
+- GUI: Advanced: Routing: increase route metric limit from 10 to 4294967295
+- GUI: Status: Overview: add link to DHCP/DNS page when using stubby/dnscrypt-proxy
+- GUI: basic-ddns.asp - do not show the DDNS password 
+- GUI: Asus RT-N16: fix saving country/rev selection starting with release 2022.4/5 (GUI: advanced-wireless.asp)
+- GUI: basic-network.asp - Option: Automatic IP --> give some more Infos to the FT user about changing IP address (DHCP client on/off)
+- GUI: fix start/stop button behaviour, when there is an error in config file
+- GUI: add new default theme
+- GUI: USB and NAS: Media Server: fix the operation of the 'Rescan on the next run' button
+- GUI: Administration: Admin Access: add 'Notes' section about dropbear additional configuration files
+- GUI: Status: Overview: add current operator to WWAN Modem Status
+- Access Point Mode / WET / Media Bridge Mode: Allow to obtain a LAN IP via DHCP
+- firewall: check GUI IPSec config first (small fix for operator priority)
+- httpd: misc.c: asp_notice(): sanitize file name
+- httpd: log.c: wo_viewlog(): sanitize search string more aggressively
+- IPv6: add/use function to extract prefix from configured IPv6 address
+- nvram: remove no more needed variables (dhcp_start, dhcp_num)
+- Revert "GUI: Advanced: DHCP / DNS Client: remove 'Reduce packet size' option - no more available in udhcpc from busybox"; 'Reduce packet size' option is available via patch!
+- rc: firewall: move nginx FW rules (remote access) to nginx.c script
+- rc: openvpn.c: rewrite openvpn FW rules
+- rc: tinc.c: rewrite tinc FW rules
+- rc: transmission.c: rewrite transmission FW rules and watchdog script
+- rc: mysql: rewrite, to get rid of shell scripts
+- rc: pptpd.c: rewrite pptpd FW rules
+- rc/shared: introduce and use killall_and_waitpid()
+- rc: tune stop_stubby function
+- rc: fix call to restart_nas_services() - to restart it needs stop/start, not only start
+- watchdog: use 1.1.1.1 as a 2nd target instead of microsoft.com
+- www: tools-qr.asp: fix bug when certain characters are in ssid or PSK
+- www: status-log.asp: add maxlength to find input element
+- Netgear WNDR3400 v2/v3: skip enable switch leds at bcmrobo
+- Linksys E3200: modify init (default) values
+- WNDR3400v2 / WNDR3400v3: modify init (default) values
+- Share Max N300 (F7D3301/F7D7301) v1 and Share N300 (F7D3302/F7D7302) v1: fix saving country/rev selection starting with release 2022.4/5 (GUI: advanced-wireless.asp)
+- F9K1102: init.c: modify variables, parameters same as E3200
+
+
 2022.5          2022.08.06
 ---------------------------
 

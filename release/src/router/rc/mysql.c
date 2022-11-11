@@ -372,7 +372,6 @@ END:
 
 void stop_mysql(void)
 {
-	pid_t pid;
 	char pbi[128], buf[512];
 	int m = atoi(nvram_safe_get("mysql_sleep")) + 70;
 

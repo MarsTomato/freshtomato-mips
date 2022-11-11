@@ -315,7 +315,6 @@ void start_bittorrent(int force)
 
 void stop_bittorrent(void)
 {
-	pid_t pid;
 	char buf[16];
 	int m = atoi(nvram_safe_get("bt_sleep")) + 10;
 
