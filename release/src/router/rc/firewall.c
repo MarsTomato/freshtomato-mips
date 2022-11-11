@@ -805,14 +805,6 @@ static void mangle_table(void)
 		}
 	}
 #endif
-
-#ifdef TCONFIG_PPTPD
-	/* pptp server: bypass CTF if enabled */
-	if (nvram_match("pptpd_enable", "1") && !nvram_get_int("ctf_disable")) {
-		ipt_write("-A PREROUTING -p tcp --dport 1723 -j MARK --set-mark 0x01/0x7\n"
-			  "-A PREROUTING -p 47 -j MARK --set-mark 0x01/0x7\n");
-	}
-#endif
 #endif /* TCONFIG_BCMARM */
 
 	ipt_routerpolicy();
@@ -1329,11 +1321,6 @@ static void filter_input(void)
 		ipt_write("-A INPUT -p udp --dport 520 -j ACCEPT\n");
 
 #ifdef TCONFIG_PPTPD
-	/* Add for pptp server */
-	if (nvram_match("pptpd_enable", "1"))
-		ipt_write("-A INPUT -p tcp --dport 1723 -j ACCEPT\n"
-		          "-A INPUT -p 47 -j ACCEPT\n");
-
 	/* Add for pptp client */
 	pptp_client_firewall("INPUT", "", ipt_write);
 #endif
@@ -1341,6 +1328,10 @@ static void filter_input(void)
 	/* if logging */
 	if (*chain_in_drop == 'l')
 		ipt_write("-A INPUT -j %s\n", chain_in_drop);
+
+	/* NTP server LAN & WAN */
+	if (nvram_get_int("ntpd_enable") == 2)
+		ipt_write("-A INPUT -p udp -m udp --dport 123 -j %s\n", chain_in_accept);
 
 	/* default policy: DROP */
 }
@@ -2209,6 +2200,10 @@ int start_firewall(void)
 
 	unlink("/var/webmon/domain");
 	unlink("/var/webmon/search");
+
+#ifdef TCONFIG_PPTPD
+	run_pptpd_firewall_script();
+#endif
 
 #ifdef TCONFIG_NGINX
 	/* Web Server WAN access */

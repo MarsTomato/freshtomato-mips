@@ -76,7 +76,7 @@ int _eval(char *const argv[], const char *path, int timeout, int *ppid)
 
 	pid = fork();
 	if (pid == -1) {
-		perror("fork");
+		logerr(__FUNCTION__, __LINE__, "fork");
 		status = errno;
 		goto EXIT;
 	}
@@ -89,7 +89,7 @@ int _eval(char *const argv[], const char *path, int timeout, int *ppid)
 		do {
 			if ((w = waitpid(pid, &status, 0)) == -1) {
 				status = errno;
-				perror("waitpid");
+				logerr(__FUNCTION__, __LINE__, "waitpid");
 				goto EXIT;
 			}
 		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
@@ -164,7 +164,7 @@ EXIT:
 		}
 		
 		if ((fd = open(path, flags, 0644)) < 0) {
-			perror(path);
+			logerr(__FUNCTION__, __LINE__, path);
 		}
 		else {
 			dup2(fd, STDOUT_FILENO);
@@ -182,7 +182,7 @@ EXIT:
 	alarm(timeout);
 	execvp(argv[0], argv);
 	
-	perror(argv[0]);
+	logerr(__FUNCTION__, __LINE__, argv[0]);
 	_exit(errno);
 }
 
@@ -1014,7 +1014,7 @@ char *file2str(const char *path)
 	int fd;
 
 	if ((fd = open(path, O_RDONLY)) == -1) {
-		perror(path);
+		logerr(__FUNCTION__, __LINE__, path);
 		return NULL;
 	}
 

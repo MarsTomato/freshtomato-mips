@@ -30,6 +30,9 @@ typedef u_int8_t u8;
 #include <typedefs.h>
 #include <wlioctl.h>
 #include <wlutils.h>
+#include <syslog.h>
+
+#include "shared.h"
 
 // xref: nas,wlconf,httpd,rc,
 int wl_ioctl(char *name, int cmd, void *buf, int len)
@@ -41,7 +44,7 @@ int wl_ioctl(char *name, int cmd, void *buf, int len)
 
 	/* open socket to kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("socket");
+		logerr(__FUNCTION__, __LINE__, "socket");
 		return errno;
 	}
 	
@@ -61,7 +64,7 @@ int wl_ioctl(char *name, int cmd, void *buf, int len)
 /*
 	if ((ret = ioctl(s, SIOCDEVPRIVATE, &ifr)) < 0)
 		if (cmd != WLC_GET_MAGIC)
-			perror(ifr.ifr_name);
+			logerr(__FUNCTION__, __LINE__, ifr.ifr_name);
 */
 	/* cleanup */
 	close(s);
@@ -78,7 +81,7 @@ int wl_get_dev_type(char *name, void *buf, int len)
 
 	/* open socket to kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("socket");
+		logerr(__FUNCTION__, __LINE__, "socket");
 		return -1;
 	}
 
@@ -107,7 +110,7 @@ int wl_hwaddr(char *name, unsigned char *hwaddr)
 
 	/* open socket to kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("socket");
+		logerr(__FUNCTION__, __LINE__, "socket");
 		return errno;
 	}
 

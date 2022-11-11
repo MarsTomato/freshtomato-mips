@@ -126,11 +126,11 @@ int serialize_restart(char *service, int start)
 		strlcat(s, "_", sizeof(s));
 		strlcat(s, service + index + 1, sizeof(s));
 	}
-	logmsg(LOG_DEBUG, "*** %s: service: %s %s - PID[rc]: %d", __FUNCTION__, service, (start ? "start" : "stop"), pid_rc);
+	logmsg(LOG_DEBUG, "*** %s: IN - service: %s %s - PID[rc]: %d", __FUNCTION__, service, (start ? "start" : "stop"), pid_rc);
 
 	if (start == 1) {
 		if (pid_rc != 1) {
-			logmsg(LOG_DEBUG, "*** %s: start_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
+			logmsg(LOG_DEBUG, "*** %s: --> call start_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
 			start_service(s);
 			return 1;
 		}
@@ -141,7 +141,7 @@ int serialize_restart(char *service, int start)
 	}
 	else {
 		if (pid_rc != 1) {
-			logmsg(LOG_DEBUG, "*** %s: stop_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
+			logmsg(LOG_DEBUG, "*** %s: --> call stop_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
 			stop_service(s);
 			return 1;
 		}
@@ -168,6 +168,7 @@ void run_del_firewall_script(char *infile, char *outfile)
 		}
 		return;
 	}
+	chmod(outfile, (S_IRUSR | S_IWUSR | S_IXUSR));
 
 	while (fgets(read, sizeof(read), ifp) != NULL) {
 		if ((strstr(read, "-A") != NULL) || (strstr(read, "-I") != NULL)) {
@@ -184,7 +185,6 @@ void run_del_firewall_script(char *infile, char *outfile)
 	fclose(ifp);
 	fclose(ofp);
 
-	chmod(outfile, 0744);
 	logmsg(LOG_DEBUG, "*** %s: removing existing firewall rules: %s", __FUNCTION__, infile);
 	eval(outfile);
 	unlink(outfile);

@@ -54,7 +54,7 @@ static void build_tr_firewall(void)
 
 	/* create firewall script */
 	if (!(p = fopen(tr_fw_script, "w"))) {
-		perror(tr_fw_script);
+		logerr(__FUNCTION__, __LINE__, tr_fw_script);
 		return;
 	}
 
@@ -136,7 +136,7 @@ void start_bittorrent(int force)
 	/* writing data to file */
 	mkdir_if_none(tr_dir);
 	if (!(fp = fopen(tr_settings, "w"))) {
-		perror(tr_settings);
+		logerr(__FUNCTION__, __LINE__, tr_settings);
 		return;
 	}
 
@@ -315,7 +315,6 @@ void start_bittorrent(int force)
 
 void stop_bittorrent(void)
 {
-	pid_t pid;
 	char buf[16];
 	int m = atoi(nvram_safe_get("bt_sleep")) + 10;
 

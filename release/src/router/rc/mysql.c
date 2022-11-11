@@ -151,7 +151,7 @@ void start_mysql(int force)
 
 	/* config file */
 	if (!(fp = fopen(mysql_conf, "w"))) {
-		perror(mysql_conf);
+		logerr(__FUNCTION__, __LINE__, mysql_conf);
 		return;
 	}
 
@@ -372,7 +372,6 @@ END:
 
 void stop_mysql(void)
 {
-	pid_t pid;
 	char pbi[128], buf[512];
 	int m = atoi(nvram_safe_get("mysql_sleep")) + 70;
 
