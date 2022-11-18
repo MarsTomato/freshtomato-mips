@@ -1,6 +1,6 @@
 --- dropbear/localoptions.h
 +++ dropbear/localoptions.h
-@@ -0,0 +1,51 @@
+@@ -0,0 +1,50 @@
 +/* Override SSH 2.0 ident */
 +#define LOCAL_IDENT "SSH-2.0-dropbear"
 +
@@ -30,8 +30,7 @@
 +#define DROPBEAR_DSS 0
 +#define DROPBEAR_ECDSA 0
 +#define DROPBEAR_ED25519 0
-+#define DROPBEAR_SK_ECDSA 0
-+#define DROPBEAR_SK_ED25519 0
++#define DROPBEAR_SK_KEYS 0
 +
 +#else /* NO_OPTSIZE */
 +
@@ -55,7 +54,7 @@
 --- dropbear/sysoptions.h
 +++ dropbear/sysoptions.h
 @@ -7,7 +7,9 @@
- #define DROPBEAR_VERSION "2022.82"
+ #define DROPBEAR_VERSION "2022.83"
  #endif
  
 +#ifndef LOCAL_IDENT
@@ -64,7 +63,7 @@
  #define PROGNAME "dropbear"
  
  /* Spec recommends after one hour or 1 gigabyte of data. One hour
-@@ -338,7 +340,7 @@
+@@ -355,7 +357,7 @@
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__
