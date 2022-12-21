@@ -148,9 +148,9 @@
  #include <fcntl.h>
  #include <netinet/in.h>
  #include <arpa/inet.h>
++#include <resolv.h>
 +#include <net/route.h>
 +#include <sys/ioctl.h>
-+#include <resolv.h>
  #include "l2tp.h"
  
  struct tunnel_list tunnels;
@@ -169,7 +169,7 @@
      port = htons (port);
      hp = gethostbyname (host);
      if (!hp)
-@@ -1921,3 +1932,95 @@ int main (int argc, char *argv[])
+@@ -1929,3 +1940,95 @@ int main (int argc, char *argv[])
      network_thread ();
      return 0;
  }

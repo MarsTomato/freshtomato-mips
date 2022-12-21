@@ -44,7 +44,7 @@
  	}
  	if (opts & (OPT_d|OPT_t)) {
  		struct tm tm_time;
-@@ -152,21 +157,40 @@
+@@ -154,21 +159,40 @@
  		t = validate_tm_time(date_str, &tm_time);
  
  		timebuf[1].tv_sec = timebuf[0].tv_sec = t;
@@ -95,7 +95,7 @@
  		if (result != 0) {
  			if (errno == ENOENT) { /* no such file? */
  				if (opts & OPT_c) {
-@@ -177,7 +201,7 @@
+@@ -179,7 +203,7 @@
  				fd = open(*argv, O_RDWR | O_CREAT, 0666);
  				if (fd >= 0) {
  					if (opts & (OPT_r|OPT_d|OPT_t))

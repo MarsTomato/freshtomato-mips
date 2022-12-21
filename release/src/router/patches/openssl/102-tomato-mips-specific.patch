@@ -20,8 +20,8 @@
 -	s_time.c $(A_SRC) $(S_SRC) $(RAND_SRC) version.c sess_id.c \
 -	ciphers.c nseq.c pkcs12.c pkcs8.c pkey.c pkeyparam.c pkeyutl.c \
 -	spkac.c smime.c cms.c rand.c engine.c ocsp.c prime.c ts.c srp.c
-+E_OBJ= req.o genpkey.o rsa.o x509.o $(A_OBJ) $(RAND_OBJ) enc.o $(S_OBJ) s_client.o
-+E_SRC= req.c genpkey.c rsa.c x509.c $(A_SRC) $(RAND_SRC) enc.c $(S_SRC) s_client.c
++E_OBJ= req.o genpkey.o rsa.o x509.o $(A_OBJ) $(RAND_OBJ) enc.o $(S_OBJ) s_client.o ec.o ecparam.o
++E_SRC= req.c genpkey.c rsa.c x509.c $(A_SRC) $(RAND_SRC) enc.c $(S_SRC) s_client.c ec.c ecparam.c
 +
 +#E_OBJ=	verify.o asn1pars.o req.o dgst.o dh.o dhparam.o enc.o passwd.o gendh.o errstr.o \
 +#	ca.o pkcs7.o crl2p7.o crl.o \
@@ -76,7 +76,7 @@
              fp = &f;
 --- openssl/apps/progs.h
 +++ openssl/apps/progs.h
-@@ -63,9 +63,46 @@ typedef struct {
+@@ -63,9 +63,49 @@ typedef struct {
  DECLARE_LHASH_OF(FUNCTION);
  
  FUNCTION functions[] = {
@@ -114,6 +114,9 @@
 +#if !defined(OPENSSL_NO_SOCK)
 +    {FUNC_TYPE_GENERAL,"s_client",s_client_main},
 +#endif
++#ifndef OPENSSL_NO_EC
++    {FUNC_TYPE_GENERAL, "ecparam", ecparam_main},
++#endif
 +
 +
 +#if 0
@@ -124,7 +127,7 @@
      {FUNC_TYPE_GENERAL, "dgst", dgst_main},
  #ifndef OPENSSL_NO_DH
      {FUNC_TYPE_GENERAL, "dh", dh_main},
-@@ -73,7 +110,6 @@ FUNCTION functions[] = {
+@@ -73,7 +113,6 @@ FUNCTION functions[] = {
  #ifndef OPENSSL_NO_DH
      {FUNC_TYPE_GENERAL, "dhparam", dhparam_main},
  #endif
@@ -132,7 +135,7 @@
      {FUNC_TYPE_GENERAL, "passwd", passwd_main},
  #ifndef OPENSSL_NO_DH
      {FUNC_TYPE_GENERAL, "gendh", gendh_main},
-@@ -82,9 +118,6 @@ FUNCTION functions[] = {
+@@ -82,9 +121,6 @@ FUNCTION functions[] = {
      {FUNC_TYPE_GENERAL, "ca", ca_main},
      {FUNC_TYPE_GENERAL, "crl", crl_main},
  #ifndef OPENSSL_NO_RSA
@@ -142,10 +145,16 @@
      {FUNC_TYPE_GENERAL, "rsautl", rsautl_main},
  #endif
  #ifndef OPENSSL_NO_DSA
-@@ -99,20 +132,15 @@ FUNCTION functions[] = {
- #ifndef OPENSSL_NO_EC
-     {FUNC_TYPE_GENERAL, "ecparam", ecparam_main},
+@@ -93,26 +129,15 @@ FUNCTION functions[] = {
+ #ifndef OPENSSL_NO_DSA
+     {FUNC_TYPE_GENERAL, "dsaparam", dsaparam_main},
  #endif
+-#ifndef OPENSSL_NO_EC
+-    {FUNC_TYPE_GENERAL, "ec", ec_main},
+-#endif
+-#ifndef OPENSSL_NO_EC
+-    {FUNC_TYPE_GENERAL, "ecparam", ecparam_main},
+-#endif
 -    {FUNC_TYPE_GENERAL, "x509", x509_main},
  #ifndef OPENSSL_NO_RSA
      {FUNC_TYPE_GENERAL, "genrsa", genrsa_main},

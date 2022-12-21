@@ -270,3 +270,7 @@ config TCONFIG_BONDING
 config TCONFIG_MDNS
 	bool "MDNS Support"
 	default n
+
+config TCONFIG_PROXY
+	bool "udpxy and igmpproxy"
+	default n

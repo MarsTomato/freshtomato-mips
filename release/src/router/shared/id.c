@@ -167,7 +167,7 @@ int check_hw_type(void)
 	return HW_UNKNOWN;
 }
 
-int get_model(void)
+static int get_model_once(void)
 {
 	int hw;
 	char *c;
@@ -374,6 +374,20 @@ int get_model(void)
 	}
 
 	return MODEL_UNKNOWN;
+}
+
+/* return the MODEL number
+ * cache the result for safe multiple use
+ */
+int get_model(void)
+{
+	static int model = MODEL_UNKNOWN;  /* initialize with 0 / MODEL_UNKNOWN */
+
+	if (model == MODEL_UNKNOWN) { /* model unknown OR detect router for the first time */
+		model = get_model_once();
+	}
+
+	return model;
 }
 
 int supports(unsigned long attr)
