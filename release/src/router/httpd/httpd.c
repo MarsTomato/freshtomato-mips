@@ -605,7 +605,7 @@ static void erase_cert(void)
 
 static void start_ssl(void)
 {
-	int i, lock, ok, retry = 2, save;
+	int i, lock, ok, retry, save;
 	unsigned long long sn;
 	char t[32];
 
@@ -622,6 +622,7 @@ static void start_ssl(void)
 	if (nvram_match("https_crt_gen", "1"))
 		erase_cert();
 
+	retry = 1;
 	while (1) {
 		save = nvram_get_int("https_crt_save");
 
@@ -678,7 +679,7 @@ static void start_ssl(void)
 			file_unlock(lock);
 			exit(1);
 		}
-		retry -= 1;
+		retry = 0;
 	}
 }
 #endif /* TCONFIG_HTTPS */

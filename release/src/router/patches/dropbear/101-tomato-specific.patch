@@ -1,6 +1,6 @@
 --- dropbear/localoptions.h
 +++ dropbear/localoptions.h
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,46 @@
 +/* Override SSH 2.0 ident */
 +#define LOCAL_IDENT "SSH-2.0-dropbear"
 +
@@ -17,25 +17,21 @@
 +#define DROPBEAR_SVR_AGENTFWD 0
 +#define DROPBEAR_CLI_AGENTFWD 0
 +
-+/* encryption algo (only AES128) */
-+#define DROPBEAR_AES128 1
-+#define DROPBEAR_AES256 0
-+#define DROPBEAR_BLOWFISH 0
-+#define DROPBEAR_TWOFISH256 0
-+#define DROPBEAR_TWOFISH128 0
-+#define DROPBEAR_CHACHA20POLY1305 0
++/* encryption/hostkey/public-key algo (only RSA, AES128) */
 +#define DROPBEAR_3DES 0
-+
-+/* hostkey/public-key algo (only RSA) */
 +#define DROPBEAR_DSS 0
 +#define DROPBEAR_ECDSA 0
 +#define DROPBEAR_ED25519 0
 +#define DROPBEAR_SK_KEYS 0
++#define DROPBEAR_AES256 0
++#define DROPBEAR_CHACHA20POLY1305 0
++#define DROPBEAR_AES128 1
 +
 +#else /* NO_OPTSIZE */
 +
-+/* encryption algo (disable 3DES) */
++/* encryption/hostkey/public-key algo (disable 3DES, DSS) */
 +#define DROPBEAR_3DES 0
++#define DROPBEAR_DSS 0
 +
 +#define XAUTH_COMMAND "/opt/X11R6/X11/xauth -q"
 +#define SFTPSERVER_PATH "/opt/libexec/sftp-server"
@@ -44,8 +40,8 @@
 +
 +#define DROPBEAR_ENABLE_CBC_MODE 0
 +#define DROPBEAR_SHA1_96_HMAC 0
-+#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin"
-+#define DEFAULT_ROOT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin"
++#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin:/opt/usr/bin:/opt/usr/sbin"
++#define DEFAULT_ROOT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin:/opt/usr/bin:/opt/usr/sbin"
 +
 +#define MAX_UNAUTH_PER_IP 2  /* default 5 */
 +#define MAX_UNAUTH_CLIENTS 5 /* default 30 */
@@ -72,3 +68,17 @@
  #define DROPBEAR_CLIENT_TCP_FAST_OPEN 0
  #else
  #define DROPBEAR_SERVER_TCP_FAST_OPEN 0
+@@ -383,9 +385,9 @@
+ #endif
+ 
+ /* Fuzzing expects all key types to be enabled */
+-#if defined(DROPBEAR_DSS)
+-#undef DROPBEAR_DSS
+-#endif
+-#define DROPBEAR_DSS 1
++//#if defined(DROPBEAR_DSS)
++//#undef DROPBEAR_DSS
++//#endif
++//#define DROPBEAR_DSS 1
+ 
+ /* no include guard for this file */

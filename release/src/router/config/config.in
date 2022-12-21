@@ -312,3 +312,7 @@ config TCONFIG_MDNS
 config TCONFIG_BCMWL6
 	bool "BCM WL 6"
 	default n
+
+config TCONFIG_PROXY
+	bool "udpxy and igmpproxy"
+	default n

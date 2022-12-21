@@ -678,6 +678,7 @@ const defaults_t defaults[] = {
 	{ "block_wan",			"1"				},	// block inbound icmp
 	{ "block_wan_limit",		"1"				},
 	{ "block_wan_limit_icmp",	"3"				},
+#ifdef TCONFIG_PROXY
 	{ "multicast_pass",		"0"				},	// enable multicast proxy
 	{ "multicast_lan",		"0"				},	// on LAN (br0)
 	{ "multicast_lan1",		"0"				},	// on LAN1 (br1)
@@ -694,6 +695,7 @@ const defaults_t defaults[] = {
 	{ "udpxy_clients",		"3"				},
 	{ "udpxy_port",			"4022"				},
 	{ "udpxy_wanface",		""				},	/* alternative wanface */
+#endif /* TCONFIG_PROXY */
 	{ "ne_syncookies",		"0"				},	// tcp_syncookies
 	{ "DSCP_fix_enable",		"1"				},	// Comacst DSCP fix
 	{ "ne_snat",			"0"				},	// use SNAT instead of MASQUERADE

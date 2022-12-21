@@ -130,7 +130,7 @@ int serialize_restart(char *service, int start)
 
 	if (start == 1) {
 		if (pid_rc != 1) {
-			logmsg(LOG_DEBUG, "*** %s: --> call start_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
+			logmsg(LOG_DEBUG, "*** %s: call start_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
 			start_service(s);
 			return 1;
 		}
@@ -141,7 +141,7 @@ int serialize_restart(char *service, int start)
 	}
 	else {
 		if (pid_rc != 1) {
-			logmsg(LOG_DEBUG, "*** %s: --> call stop_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
+			logmsg(LOG_DEBUG, "*** %s: call stop_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
 			stop_service(s);
 			return 1;
 		}
@@ -157,8 +157,6 @@ void run_del_firewall_script(char *infile, char *outfile)
 	char read[128], temp[128];
 	char *pos;
 	int index = 0;
-
-	logmsg(LOG_DEBUG, "*** %s: IN", __FUNCTION__);
 
 	ifp = fopen(infile, "r");
 	ofp = fopen(outfile, "w+");
