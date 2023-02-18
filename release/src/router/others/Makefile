@@ -28,7 +28,8 @@ endif # TCONFIG_USB
 # MultiWAN watchdog script
 	install -m 0700 watchdog $(INSTALLDIR)/usr/sbin
 
-ifeq ($(TCONFIG_DNSCRYPT),y)
+# ntp2ip
+ifeq ($(or $(TCONFIG_DNSCRYPT),$(TCONFIG_STUBBY)),y)
 	install -m 0700 ntp2ip $(INSTALLDIR)/usr/sbin
 endif
 
@@ -42,7 +43,12 @@ endif
 
 # Adblock
 ifeq ($(TCONFIG_HTTPS),y)
-	install -m 0700 adblock $(INSTALLDIR)/usr/sbin
+# Only include Adblock v2 if it is required (not for MIPS R1)
+ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
+	install -m 0700 adblock-v2 $(INSTALLDIR)/usr/sbin/adblock
+else
+	install -m 0700 adblock-v1 $(INSTALLDIR)/usr/sbin/adblock
+endif
 ifneq ($(TCONFIG_STUBBY),y)
 	sed -i $(INSTALLDIR)/usr/sbin/adblock -e "/STUBBY-BEGIN/,/STUBBY-END/d"
 else

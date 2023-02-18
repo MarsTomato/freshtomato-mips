@@ -178,14 +178,14 @@ sub fixDyn
 	fixDynDep("minidlna", "libstdc.so.6");
 	fixDynDep("minidlna", "libiconv.so.2.6.1");
 #	fixDynDep("minidlna", "libssl.so.1.0.0");
-	fixDynDep("minidlna", "libjpeg.so");
+	fixDynDep("minidlna", "libjpeg.so.8.2.2");
 	fixDynDep("minidlna", "libogg.so.0");
 	fixDynDep("minidlna", "libvorbis.so.0");
 	fixDynDep("minidlna", "libid3tag.so.0");
 	fixDynDep("minidlna", "libexif.so.12");
 	fixDynDep("minidlna", "libFLAC.so.12");
 	fixDynDep("minidlna", "libsqlite3.so.0.8.6");
-	fixDynDep("libjpeg.so", "libc.so.0");
+	fixDynDep("libjpeg.so.8.2.2", "libc.so.0");
 	fixDynDep("libavcodec.so.52", "libpthread.so.0");
 
 #mysql - bwq518
@@ -605,7 +605,7 @@ else {
 
 genSO("${root}/usr/lib/libzebra.so", "${router}/zebra/lib/libzebra.a");
 genSO("${root}/usr/lib/libz.so.1", "${router}/zlib/libz.a");
-genSO("${root}/usr/lib/libjpeg.so", "${router}/jpeg/libjpeg.a");
+genSO("${root}/usr/lib/libjpeg.so.8.2.2", "${router}/jpeg/libjpeg.a");
 genSO("${root}/usr/lib/libsqlite3.so.0.8.6", "${router}/sqlite/.libs/libsqlite3.a", "", "-L${router}/zlib");
 genSO("${root}/usr/lib/libvorbis.so.0", "${router}/libvorbis/lib/.libs/libvorbis.a", "", "-L${router}/libogg/src/.libs");
 genSO("${root}/usr/lib/libid3tag.so.0", "${router}/libid3tag/.libs/libid3tag.a", "", "-L${router}/zlib");

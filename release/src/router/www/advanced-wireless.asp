@@ -219,8 +219,10 @@ function init() {
 
 			at = ((nvram['wl'+u+'_security_mode'] != "wep") && (nvram['wl'+u+'_security_mode'] != "radius") && (nvram['wl'+u+'_security_mode'] != "disabled"));
 			createFieldTable('', [
+/* NO-BCMWL6-BEGIN */
 				{ title: 'Afterburner', name: 'wl'+u+'_afterburner', type: 'select', options: [['auto','Auto'],['on','Enable'],['off','Disable *']],
 					value: nvram['wl'+u+'_afterburner'] },
+/* NO-BCMWL6-END */
 				{ title: 'Authentication Type', name: 'wl'+u+'_auth', type: 'select',
 					options: [['0','Auto *'],['1','Shared Key']], attrib: at ? 'disabled' : '',
 					value: at ? 0 : nvram['wl'+u+'_auth'] },

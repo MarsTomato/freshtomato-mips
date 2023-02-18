@@ -1,0 +1,13 @@
+diff --git pppd/pppd/Makefile.linux pppd/pppd/Makefile.linux
+index 1fb2c43..18b8f3a 100644
+--- pppd/pppd/Makefile.linux
++++ pppd/pppd/Makefile.linux
+@@ -34,7 +34,7 @@ ifeq (.depend,$(wildcard .depend))
+ include .depend
+ endif
+ 
+-LIBS = -lrt
++LIBS =
+ 
+ # Uncomment the next 2 lines to include support for Microsoft's
+ # MS-CHAP authentication protocol.  Also, edit plugins/radius/Makefile.linux.

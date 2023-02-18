@@ -250,6 +250,11 @@ ifneq ($(TCONFIG_BLINK),y)
 	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
 endif
 
+# Remove for BCMWL6 SDK and up
+ifeq ($(CONFIG_BCMWL6),y)
+	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/NO-BCMWL6-BEGIN/,/NO-BCMWL6-END/d"
+endif
+
 # Only for BCMWL6 SDK / RT-AC branch
 ifneq ($(CONFIG_BCMWL6),y)
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
@@ -364,6 +369,16 @@ ifneq ($(TCONFIG_IPERF),y)
 	rm -f $(INSTALLDIR)/www/tools-iperf.asp
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/IPERF-BEGIN/,/IPERF-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/IPERF-BEGIN/,/IPERF-END/d"
+endif
+
+
+# Only include Adblock v2 if it is required (not for MIPS R1)
+ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
+	rm -f $(INSTALLDIR)/www/advanced-adblock-v1.asp
+	mv $(INSTALLDIR)/www/advanced-adblock-v2.asp $(INSTALLDIR)/www/advanced-adblock.asp || true
+else
+	rm -f $(INSTALLDIR)/www/advanced-adblock-v2.asp
+	mv $(INSTALLDIR)/www/advanced-adblock-v1.asp $(INSTALLDIR)/www/advanced-adblock.asp || true
 endif
 
 # Only include the https option if it is compiled in
@@ -501,6 +516,7 @@ endif
 		-e "/CTF-BEGIN/d"	-e "/CTF-END/d" \
 		-e "/BCMNAT-BEGIN/d"	-e "/BCMNAT-END/d" \
 		-e "/BCMWL6-BEGIN/d"	-e "/BCMWL6-END/d" \
+		-e "/NO-BCMWL6-BEGIN/d"	-e "/NO-BCMWL6-END/d" \
 		-e "/ROAM-BEGIN/d"	-e "/ROAM-END/d" \
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
 		-e "/BT-BEGIN/d"	-e "/BT-END/d" \

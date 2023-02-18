@@ -1,0 +1,10 @@
+--- openvpn-2.5/src/openvpn/lladdr.h
++++ openvpn-2.5/src/openvpn/lladdr.h
+@@ -4,6 +4,7 @@
+ 
+ #include "misc.h"
+ #include "networking.h"
++#include <linux/if_ether.h>
+ 
+ int set_lladdr(openvpn_net_ctx_t *ctx, const char *ifname, const char *lladdr,
+                const struct env_set *es);
