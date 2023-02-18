@@ -62,7 +62,9 @@ static void build_tr_firewall(void)
 
 	/* open BT port */
 	fprintf(p, "#!/bin/sh\n"
-	           "iptables -A INPUT -p tcp --dport %s -j %s\n",
+	           "iptables -A INPUT -p tcp --dport %s -j %s\n"
+	           "iptables -A INPUT -p udp --dport %s -j %s\n",
+	            nvram_safe_get("bt_port"), chain_in_accept,
 	            nvram_safe_get("bt_port"), chain_in_accept);
 
 	/* GUI WAN access */
@@ -70,7 +72,7 @@ static void build_tr_firewall(void)
 		fprintf(p, "iptables -A INPUT -p tcp --dport %s -j %s\n"
 		           "iptables -t nat -A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", /* nat table */
 		            nvram_safe_get("bt_port_gui"), chain_in_accept,
-		            nvram_safe_get("bt_port_gui"), nvram_safe_get("lan_ipaddr"));
+		            nvram_safe_get("bt_port_gui"), nvram_safe_get("lan_ipaddr")); /* FIXME: when custom added bind, it's not true */
 
 	fclose(p);
 	chmod(tr_fw_script, 0744);
@@ -364,5 +366,6 @@ void run_bt_firewall_script(void)
 		fclose(fp);
 		logmsg(LOG_DEBUG, "*** %s: running firewall script: %s", __FUNCTION__, tr_fw_script);
 		eval(tr_fw_script);
+		fix_chain_in_drop();
 	}
 }
