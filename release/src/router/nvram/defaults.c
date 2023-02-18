@@ -399,7 +399,9 @@ const defaults_t defaults[] = {
 	{ "wl_net_mode",		"mixed"				},	// Wireless mode (mixed|g-only|b-only|disable)
 	{ "wl_gmode",			"1"				},	// 54g mode
 	{ "wl_gmode_protection",	"off"				},	// 802.11g RTS/CTS protection (off|auto)
+#if !defined(CONFIG_BCMWL6) /* only mips RT AND RT-N */
 	{ "wl_afterburner",		"off"				},	// AfterBurner
+#endif
 	{ "wl_frameburst",		"off"				},	// BRCM Frambursting mode (off|on)
 	{ "wl_wme",			"auto"				},	// WME mode (auto|off|on)
 	{ "wl1_wme",			"auto"				},	// WME mode (auto|off|on)
@@ -617,6 +619,7 @@ const defaults_t defaults[] = {
 #endif
 	{ "adblock_blacklist_custom",	""				},
 	{ "adblock_whitelist",		""				},
+	{ "adblock_logs",		"3"				},
 	{ "adblock_limit",		""				},
 	{ "adblock_path",		""				},
 #endif /* TCONFIG_HTTPS */
@@ -1067,6 +1070,8 @@ const defaults_t defaults[] = {
 	{ "ms_tivo",			"0"				},
 	{ "ms_stdlna",			"0"				},
 	{ "ms_sas",			"0"				},
+	{ "ms_autoscan",		"1"				},
+	{ "ms_custom",			""				},
 #endif
 
 #ifdef TCONFIG_SDHC

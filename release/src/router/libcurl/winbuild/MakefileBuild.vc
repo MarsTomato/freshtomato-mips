@@ -5,7 +5,7 @@
 #                            | (__| |_| |  _ <| |___
 #                             \___|\___/|_| \_\_____|
 #
-# Copyright (C) 1999 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+# Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
@@ -338,7 +338,7 @@ USE_IDN   = true
 !ENDIF
 
 !IF "$(USE_IDN)"=="true"
-IDN_CFLAGS = $(IDN_CFLAGS) /DUSE_WIN32_IDN /DWANT_IDN_PROTOTYPES
+IDN_CFLAGS = $(IDN_CFLAGS) /DUSE_WIN32_IDN
 WIN_LIBS   = $(WIN_LIBS) Normaliz.lib
 !ENDIF
 

@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -27,10 +27,14 @@
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
 
 #include <curl/curl.h>
 #include "vtls/vtls.h"
 #include "sendf.h"
+#include "timeval.h"
 #include "rand.h"
 
 /* The last 3 #include files should be in this order */

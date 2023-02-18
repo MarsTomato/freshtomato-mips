@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -1345,7 +1345,7 @@ static int test_weird_arguments(void)
                          "0123456789" /* 10 7 */
                          "0123456789" /* 10 8 */
                          "0123456789" /* 10 9 */
-                         "0123456789" /* 10 10*/
+                         "0123456789" /* 10 10 */
                          "0123456789" /* 10 11 */
                          "01234567"   /* 8 */
     );

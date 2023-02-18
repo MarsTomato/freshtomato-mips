@@ -7,7 +7,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -32,11 +32,6 @@
 
 #ifdef HAVE_SETJMP_H
 #include <setjmp.h>
-#endif
-
-#ifdef NETWARE
-#undef in_addr_t
-#define in_addr_t unsigned long
 #endif
 
 /* Allocate enough memory to hold the full name information structs and

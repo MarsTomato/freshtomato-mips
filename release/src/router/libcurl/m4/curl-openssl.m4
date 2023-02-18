@@ -5,7 +5,7 @@
 #                            | (__| |_| |  _ <| |___
 #                             \___|\___/|_| \_\_____|
 #
-# Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+# Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
@@ -102,7 +102,6 @@ if test "x$OPT_OPENSSL" != xno; then
       SSL_LDFLAGS="-L$LIB_OPENSSL"
       SSL_CPPFLAGS="-I$PREFIX_OPENSSL/include"
     fi
-    SSL_CPPFLAGS="$SSL_CPPFLAGS -I$PREFIX_OPENSSL/include/openssl"
     ;;
   esac
 
@@ -150,7 +149,7 @@ if test "x$OPT_OPENSSL" != xno; then
      fi
      if test "$PKGCONFIG" = "no" -a -n "$PREFIX_OPENSSL" ; then
        # only set this if pkg-config wasn't used
-       CPPFLAGS="$CLEANCPPFLAGS -I$PREFIX_OPENSSL/include/openssl -I$PREFIX_OPENSSL/include"
+       CPPFLAGS="$CLEANCPPFLAGS -I$PREFIX_OPENSSL/include"
      fi
      # Linking previously failed, try extra paths from --with-openssl or
      # pkg-config.  Use a different function name to avoid reusing the earlier

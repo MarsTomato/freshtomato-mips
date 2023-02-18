@@ -5,8 +5,8 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 2020 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
- * Copyright (C) 2019, Björn Stenberg, <bjorn@haxx.se>
+ * Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) Björn Stenberg, <bjorn@haxx.se>
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -242,7 +242,7 @@ static int init_connpack(char *packet, char *remain, int remain_pos)
   /* keep-alive 0 = disabled */
   packet[remain_pos + 9] = 0x00;
   packet[remain_pos + 10] = 0x3c;
-  /*end of variable header*/
+  /* end of variable header */
   return remain_pos + 10;
 }
 
@@ -251,7 +251,7 @@ static CURLcode mqtt_connect(struct Curl_easy *data)
   CURLcode result = CURLE_OK;
   int pos = 0;
   int rc = 0;
-  /*remain length*/
+  /* remain length */
   int remain_pos = 0;
   char remain[4] = {0};
   size_t packetlen = 0;

@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -300,12 +300,11 @@ static char *sanitize_cookie_path(const char *cookie_path)
   /* some stupid site sends path attribute with '"'. */
   len = strlen(new_path);
   if(new_path[0] == '\"') {
-    memmove((void *)new_path, (const void *)(new_path + 1), len);
+    memmove(new_path, new_path + 1, len);
     len--;
   }
   if(len && (new_path[len - 1] == '\"')) {
-    new_path[len - 1] = 0x0;
-    len--;
+    new_path[--len] = 0x0;
   }
 
   /* RFC6265 5.2.4 The Path Attribute */
@@ -330,7 +329,7 @@ static char *sanitize_cookie_path(const char *cookie_path)
  */
 void Curl_cookie_loadfiles(struct Curl_easy *data)
 {
-  struct curl_slist *list = data->state.cookielist;
+  struct curl_slist *list = data->set.cookielist;
   if(list) {
     Curl_share_lock(data, CURL_LOCK_DATA_COOKIE, CURL_LOCK_ACCESS_SINGLE);
     while(list) {
@@ -348,8 +347,6 @@ void Curl_cookie_loadfiles(struct Curl_easy *data)
         data->cookies = newcookies;
       list = list->next;
     }
-    curl_slist_free_all(data->state.cookielist); /* clean up list */
-    data->state.cookielist = NULL; /* don't do this again! */
     Curl_share_unlock(data, CURL_LOCK_DATA_COOKIE);
   }
 }
@@ -515,7 +512,7 @@ Curl_cookie_add(struct Curl_easy *data,
     return NULL; /* bail out if we're this low on memory */
 
   if(httpheader) {
-    /* This line was read off a HTTP-header */
+    /* This line was read off an HTTP-header */
     char name[MAX_NAME];
     char what[MAX_NAME];
     const char *ptr;
@@ -605,9 +602,9 @@ Curl_cookie_add(struct Curl_easy *data,
          * only test for names where that can possibly be true.
          */
         if(nlen > 3 && name[0] == '_' && name[1] == '_') {
-          if(!strncmp("__Secure-", name, 9))
+          if(strncasecompare("__Secure-", name, 9))
             co->prefix |= COOKIE_PREFIX__SECURE;
-          else if(!strncmp("__Host-", name, 7))
+          else if(strncasecompare("__Host-", name, 7))
             co->prefix |= COOKIE_PREFIX__HOST;
         }
 
@@ -780,10 +777,16 @@ Curl_cookie_add(struct Curl_easy *data,
       offt = curlx_strtoofft((*co->maxage == '\"')?
                              &co->maxage[1]:&co->maxage[0], NULL, 10,
                              &co->expires);
-      if(offt == CURL_OFFT_FLOW)
+      switch(offt) {
+      case CURL_OFFT_FLOW:
         /* overflow, used max value */
         co->expires = CURL_OFF_T_MAX;
-      else if(!offt) {
+        break;
+      case CURL_OFFT_INVAL:
+        /* negative or otherwise bad, expire */
+        co->expires = 1;
+        break;
+      case CURL_OFFT_OK:
         if(!co->expires)
           /* already expired */
           co->expires = 1;
@@ -792,6 +795,7 @@ Curl_cookie_add(struct Curl_easy *data,
           co->expires = CURL_OFF_T_MAX;
         else
           co->expires += now;
+        break;
       }
     }
     else if(co->expirestr) {
@@ -864,7 +868,7 @@ Curl_cookie_add(struct Curl_easy *data,
   }
   else {
     /*
-     * This line is NOT a HTTP header style line, we do offer support for
+     * This line is NOT an HTTP header style line, we do offer support for
      * reading the odd netscape cookies-file format here
      */
     char *ptr;
@@ -1258,7 +1262,7 @@ struct CookieInfo *Curl_cookie_init(struct Curl_easy *data,
     fp = NULL;
   }
   else {
-    fp = fopen(file, FOPEN_READTEXT);
+    fp = fopen(file, "rb");
     if(!fp)
       infof(data, "WARNING: failed to open cookie file \"%s\"", file);
   }
@@ -1295,7 +1299,7 @@ struct CookieInfo *Curl_cookie_init(struct Curl_easy *data,
      */
     remove_expired(c);
 
-    if(fromfile && fp)
+    if(fromfile)
       fclose(fp);
   }
 
@@ -1794,12 +1798,10 @@ void Curl_flush_cookies(struct Curl_easy *data, bool cleanup)
   CURLcode res;
 
   if(data->set.str[STRING_COOKIEJAR]) {
-    if(data->state.cookielist) {
-      /* If there is a list of cookie files to read, do it first so that
-         we have all the told files read before we write the new jar.
-         Curl_cookie_loadfiles() LOCKS and UNLOCKS the share itself! */
-      Curl_cookie_loadfiles(data);
-    }
+    /* If there is a list of cookie files to read, do it first so that
+       we have all the told files read before we write the new jar.
+       Curl_cookie_loadfiles() LOCKS and UNLOCKS the share itself! */
+    Curl_cookie_loadfiles(data);
 
     Curl_share_lock(data, CURL_LOCK_DATA_COOKIE, CURL_LOCK_ACCESS_SINGLE);
 
@@ -1810,12 +1812,6 @@ void Curl_flush_cookies(struct Curl_easy *data, bool cleanup)
             data->set.str[STRING_COOKIEJAR], curl_easy_strerror(res));
   }
   else {
-    if(cleanup && data->state.cookielist) {
-      /* since nothing is written, we can just free the list of cookie file
-         names */
-      curl_slist_free_all(data->state.cookielist); /* clean up list */
-      data->state.cookielist = NULL;
-    }
     Curl_share_lock(data, CURL_LOCK_DATA_COOKIE, CURL_LOCK_ACCESS_SINGLE);
   }
 

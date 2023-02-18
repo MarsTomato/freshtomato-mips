@@ -217,7 +217,7 @@ void start_pptpd(int force)
 	else
 		fprintf(fp, "require-mppe-128\n");
 
-	fprintf(fp, "ms-ignore-domain\n"
+	fprintf(fp, "chapms-strip-domain\n"
 	            "chap-secrets "PPTPD_SECRETS"\n"
 	            "ip-up-script "PPTPD_UP_SCRIPT"\n"
 	            "ip-down-script "PPTPD_DOWN_SCRIPT"\n"
@@ -379,5 +379,6 @@ void run_pptpd_firewall_script(void)
 		fclose(fp);
 		logmsg(LOG_DEBUG, "*** %s: running firewall script: %s", __FUNCTION__, PPTPD_FW_SCRIPT);
 		eval(PPTPD_FW_SCRIPT);
+		fix_chain_in_drop();
 	}
 }

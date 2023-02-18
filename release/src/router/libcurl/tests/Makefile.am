@@ -5,7 +5,7 @@
 #                            | (__| |_| |  _ <| |___
 #                             \___|\___/|_| \_\_____|
 #
-# Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+# Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
@@ -32,9 +32,9 @@ EXTRA_DIST = ftpserver.pl httpserver.pl secureserver.pl runtests.pl           \
  serverhelp.pm tftpserver.pl rtspserver.pl directories.pm symbol-scan.pl      \
  CMakeLists.txt mem-include-scan.pl valgrind.supp extern-scan.pl              \
  manpage-scan.pl nroff-scan.pl http2-server.pl dictserver.py                  \
- negtelnetserver.py smbserver.py util.py                                      \
- disable-scan.pl manpage-syntax.pl error-codes.pl badsymbols.pl               \
- azure.pm appveyor.pm version-scan.pl options-scan.pl markdown-uppercase.pl
+ negtelnetserver.py smbserver.py util.py disable-scan.pl manpage-syntax.pl    \
+ error-codes.pl badsymbols.pl azure.pm appveyor.pm version-scan.pl            \
+ options-scan.pl markdown-uppercase.pl check-deprecated.pl option-check.pl
 
 DISTCLEANFILES = configurehelp.pm
 
@@ -49,7 +49,7 @@ BUILD_UNIT =
 DIST_UNIT = unit
 endif
 
-SUBDIRS = certs data server libtest $(BUILD_UNIT)
+SUBDIRS = certs data server libtest tests-httpd $(BUILD_UNIT)
 DIST_SUBDIRS = $(SUBDIRS) $(DIST_UNIT)
 
 PERLFLAGS = -I$(srcdir)

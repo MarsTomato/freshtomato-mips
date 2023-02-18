@@ -653,6 +653,7 @@ static const nvset_t nvset_list[] = {
 	{ "adblock_blacklist",		V_LENGTH(0, 4096)		},
 	{ "adblock_blacklist_custom",	V_LENGTH(0, 4096)		},
 	{ "adblock_whitelist",		V_LENGTH(0, 4096)		},
+	{ "adblock_logs",		V_RANGE(0, 7)			},
 	{ "adblock_limit",		V_LENGTH(0, 32)			},
 	{ "adblock_path",		V_LENGTH(0, 64)			},
 #endif
@@ -801,7 +802,9 @@ static const nvset_t nvset_list[] = {
 #endif
 #endif /* TCONFIG_BCMARM || CONFIG_BCMWL6 || TCONFIG_BLINK */
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	/* BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption) */
+#if !defined(CONFIG_BCMWL6) /* only mips RT AND RT-N */
 	{ "wl_afterburner",		V_LENGTH(2, 4)			},	/* off, on, auto */
+#endif
 	{ "wl_auth",			V_01				},
 	{ "wl_rateset",			V_LENGTH(2, 7)			},	/* all, default, 12 */
 	{ "wl_rate",			V_RANGE(0, 54 * 1000 * 1000)	},
@@ -1192,6 +1195,8 @@ static const nvset_t nvset_list[] = {
 	{ "ms_stdlna",			V_01				},
 	{ "ms_rescan",			V_01				},
 	{ "ms_sas",			V_01				},
+	{ "ms_autoscan",		V_01				},
+	{ "ms_custom",			V_TEXT(0, 4096)			},
 #endif
 
 /* qos */
@@ -1319,7 +1324,7 @@ static const nvset_t nvset_list[] = {
 	{ "bt_lpd",			V_01				},
 	{ "bt_utp",			V_01				},
 	{ "bt_blocklist",		V_01				},
-	{ "bt_blocklist_url",		V_LENGTH(0, 80)			},
+	{ "bt_blocklist_url",		V_LENGTH(0, 256)		},
 	{ "bt_sleep",			V_RANGE(1, 60)			},
 	{ "bt_check_time",		V_RANGE(0, 55)			},
 	{ "bt_dl_queue_enable",		V_01				},

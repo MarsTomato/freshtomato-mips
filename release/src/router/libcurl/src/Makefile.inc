@@ -5,7 +5,7 @@
 #                            | (__| |_| |  _ <| |___
 #                             \___|\___/|_| \_\_____|
 #
-# Copyright (C) 1998 - 2022, Daniel Stenberg, <daniel@haxx.se>, et al.
+# Copyright (C) Daniel Stenberg, <daniel@haxx.se>, et al.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution. The terms
@@ -79,7 +79,6 @@ CURL_CFILES = \
   tool_msgs.c \
   tool_operate.c \
   tool_operhlp.c \
-  tool_panykey.c \
   tool_paramhlp.c \
   tool_parsecfg.c \
   tool_progress.c \
@@ -120,7 +119,6 @@ CURL_HFILES = \
   tool_msgs.h \
   tool_operate.h \
   tool_operhlp.h \
-  tool_panykey.h \
   tool_paramhlp.h \
   tool_parsecfg.h \
   tool_progress.h \

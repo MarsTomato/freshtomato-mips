@@ -1,0 +1,26 @@
+--- openvpn-2.5/src/openvpn/networking_sitnl.c
++++ openvpn-2.5/src/openvpn/networking_sitnl.c
+@@ -25,6 +25,10 @@
+ #endif
+ 
+ #ifdef TARGET_LINUX
++/* be compatible with Tomato */
++typedef __signed__ long __s64;
++typedef unsigned long __u64;
++/* end Tomato */
+ 
+ #include "syshead.h"
+ 
+--- openvpn-2.5/src/openvpn/route.c
++++ openvpn-2.5/src/openvpn/route.c
+@@ -46,6 +46,10 @@
+ #include "memdbg.h"
+ 
+ #if defined(TARGET_LINUX) || defined(TARGET_ANDROID)
++/* be compatible with Tomato */
++typedef __signed__ long __s64;
++typedef unsigned long __u64;
++/* end Tomato */
+ #include <linux/rtnetlink.h>            /* RTM_GETROUTE etc. */
+ #endif
+ 
