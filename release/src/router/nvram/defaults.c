@@ -364,6 +364,9 @@ const defaults_t defaults[] = {
 	/* Wireless parameters */
 	{ "wl_ifname",			""				},	// Interface name
 	{ "wl_hwaddr",			""				},	// MAC address
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+	{ "wl_clap_hwaddr",		""				},	/* ap mac addr for the FT client (sta/psta/wet) to connect to (default "empty" / not needed) */
+#endif
 	{ "wl_phytype",			"b"				},	// Current wireless band ("a" (5 GHz), "b" (2.4 GHz), or "g" (2.4 GHz))
 	{ "wl_corerev",			""				},	// Current core revision
 	{ "wl_phytypes",		""				},	// List of supported wireless bands (e.g. "ga")
@@ -659,8 +662,17 @@ const defaults_t defaults[] = {
 	{ "dnsmasq_q",			"0"				},	// Bit0=quiet-dhcp, 1=dhcp6, 2=ra
 	{ "dnsmasq_gen_names",		"0"				},
 	{ "dnsmasq_edns_size",		"1280"				},	/* dnsmasq EDNS packet size */
+	{ "dnsmasq_safe",		"0"				},	/* should dnsmasq starts in safe mode? (without custom config and /etc/dnsmasq.custom file */
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	"0"				},
+#endif
+#ifdef TCONFIG_USB_EXTRAS
+	{ "dnsmasq_tftp",		"0"				},
+	{ "dnsmasq_tftp_path",		""				},
+	{ "dnsmasq_pxelan0",		"0"				},
+	{ "dnsmasq_pxelan1",		"0"				},
+	{ "dnsmasq_pxelan2",		"0"				},
+	{ "dnsmasq_pxelan3",		"0"				 },
 #endif
 #ifdef TCONFIG_MDNS
 	{ "mdns_enable",		"0"				},

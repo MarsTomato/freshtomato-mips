@@ -5,6 +5,36 @@ FreshTomato-MIPS Changelog
 
 
 
+2023.2          2023.03.18
+---------------------------
+
+- WL Client / Media Bridge / Wireless Ethernet Bridge: add AP MAC (xx:xx:xx:xx:xx:xx) to scan and join (--> try to connect to that specific MAC with SSID "ABCDEF")
+- libcurl: update to 7.88.1
+- libjpeg-turbo: update to 2.1.5.1
+- libsodium: update to latest 1.0.18-stable
+- miniupnpd: update to 2.3.3
+- rp-pppoe: update to 3c0f6c02 (2023-02-08) snapshot
+- sqlite: update to 3.41.1
+- e2fsprogs: update to 1.47.0
+- openvpn-2.5: update to 2.5.9
+- dnscrypt-proxy: update resolvers csv file
+- rom: update CA bundle to 2023-01-10
+- dnsmasq: add safe-mode + TFTP
+- build: scripts: added PATH directive to avoid conflicts with entware/optware
+- build: sync to MIPS RT-N/AC & ARM branch (WL Client / Media Bridge / Wireless Ethernet Bridge: add AP MAC (xx:xx:xx:xx:xx:xx) to scan and join)
+- GUI: vpn-server.asp: corrected "Uncrypted" for "Unencrypted"
+- GUI: VPN Tunneling: add Wireguard page (for now only with link to the wiki howto)
+- GUI: DHCP / DNS / TFTP: clean-up
+- Revert "GUI: add new default theme"
+- others: entware-install-MIPS.sh: use the full path when calling programs
+- rc: fix logdrop bevaviour (if enabled)
+- rc: init.c: wndr3400v2/v3 add missing QTD params
+- rc: transmission.c: fix port forwarding (UDP)
+- rc: transmission.c: revert changes from 4c4f653 - everything works just fine
+- rc: wan.c: fix commit 80a7e66
+- shared: led.c: wndr3400v2 set active high for AOSS
+
+
 2023.1          2023.02.17
 ---------------------------
 
