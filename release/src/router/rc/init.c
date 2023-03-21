@@ -4572,6 +4572,15 @@ static int init_nvram(void)
 			nvram_set("boardflags", "0x710");
 			nvram_set("boardflags2", "0x1000");
 
+			/* set QTD params in nvram for USB wl radio IC */
+			nvram_set("ehciirqt", "1");
+			nvram_set("qtdc_pid", "48407");
+			nvram_set("qtdc_vid", "2652");
+			nvram_set("qtdc0_ep", "4");
+			nvram_set("qtdc0_sz", "0");
+			nvram_set("qtdc1_ep", "18");
+			nvram_set("qtdc1_sz", "10");
+
 			/* wifi settings/channels */
 			nvram_set("wl0_nbw", "20");
 			nvram_set("wl0_nbw_cap", "0");
@@ -4772,6 +4781,15 @@ static int init_nvram(void)
 
 			nvram_set("boardflags", "0x80001710");
 			nvram_set("boardflags2", "0x1000");
+
+			/* set QTD params in nvram for USB wl radio IC */
+			nvram_set("ehciirqt", "1");
+			nvram_set("qtdc_pid", "48407");
+			nvram_set("qtdc_vid", "2652");
+			nvram_set("qtdc0_ep", "4");
+			nvram_set("qtdc0_sz", "0");
+			nvram_set("qtdc1_ep", "18");
+			nvram_set("qtdc1_sz", "10");
 
 			/* wifi settings/channels */
 			nvram_set("wl0_nbw", "20");

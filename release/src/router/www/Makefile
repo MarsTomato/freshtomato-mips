@@ -148,6 +148,7 @@ ifeq ($(filter y,$(TCONFIG_BLINK) $(TCONFIG_BCMARM)),)
 	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 	sed -i $(INSTALLDIR)/www/status-data.jsx -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 	sed -i $(INSTALLDIR)/www/basic-ipv6.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
+	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 endif
 
 # Only include IPv6 options if IPv6 is configured in.
@@ -371,7 +372,6 @@ ifneq ($(TCONFIG_IPERF),y)
 	sed -i $(INSTALLDIR)/www/about.asp -e "/IPERF-BEGIN/,/IPERF-END/d"
 endif
 
-
 # Only include Adblock v2 if it is required (not for MIPS R1)
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
 	rm -f $(INSTALLDIR)/www/advanced-adblock-v1.asp
@@ -493,6 +493,17 @@ ifneq ($(TCONFIG_PROXY),y)
 	sed -i $(INSTALLDIR)/www/advanced-firewall.asp -e "/PROXY-BEGIN/,/PROXY-END/d"
 endif
 
+# Only include TFTP if it is compiled in
+ifneq ($(TCONFIG_USB_EXTRAS),y)
+	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/TFTP-BEGIN/,/TFTP-END/d"
+endif
+
+# Only include wireguard page if it is compiled in
+ifneq ($(TCONFIG_WIREGUARD),y)
+	rm -f $(INSTALLDIR)/www/vpn-wireguard.asp
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/WIREGUARD-BEGIN/,/WIREGUARD-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.jsz *.html); do \
@@ -552,6 +563,8 @@ endif
 		-e "/BCMARMNO-BEGIN/d"	-e "/BCMARMNO-END/d" \
 		-e "/RTNPLUS-BEGIN/d"	-e "/RTNPLUS-END/d" \
 		-e "/PROXY-BEGIN/d"	-e "/PROXY-END/d" \
+		-e "/TFTP-BEGIN/d"	-e "/TFTP-END/d" \
+		-e "/WIREGUARD-BEGIN/d"	-e "/WIREGUARD-END/d" \
 		|| true; \
 	done
 

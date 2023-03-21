@@ -228,7 +228,7 @@ int do_led(int which, int mode)
 	static int wnr2000v2[]	= { 255,  255,   255,  255,  255,   -7,  255,  255,    255};
 	static int wndr4000[]	= {   3,    1,     0,    1,  255,    6,  255,    5,      4};
 	static int wndr3400[]	= {  -9,   -7,    -3,   -7,  255,  255,  255,    2,    -99}; /* Note: 5 = Switch, 4 = Reset button, 8 = SES button */
-	static int wndr3400v2[]	= {  17,   14,   255,  255,  255,   22,  255,   20,     18}; /* Note: 12 = Reset button, 23 = WPS button */
+	static int wndr3400v2[]	= {  17,   14,   255,  255,  255,  -22,  255,   20,     18}; /* Note: 12 = Reset button, 23 = WPS button */
 	static int wndr3400v3[]	= { -17,   14,   255,  255,  255,  -22,  255,  -20,    -18}; /* Note: 12 = Reset button, 23 = WPS button */
 	static int f7d[]	= { 255,  255,   255,  255,   12,   13,  255,   14,    255};
 	static int f9k[]	= { 255,    1,     0,  255,  255,  255,  255,  255,    255};
