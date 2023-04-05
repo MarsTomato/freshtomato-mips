@@ -380,6 +380,195 @@ static int defaults_main(int argc, char **argv)
 	return 0;
 }
 
+static int defaults_rstats(int argc, char **argv)
+{
+	const defaults_t *t;
+	int add = 0;
+	int del = 0;
+
+
+	if (strcmp(argv[1], "--add") == 0) {
+		add = 1;
+	}
+	else if (strcmp(argv[1], "--del") == 0) {
+		del = 1;
+	}
+	else
+		return 1;
+
+	if (add) {
+		/* Restore defaults if necessary */
+		for (t = rstats_defaults; t->key; t++) {
+			if (!nvram_get(t->key)) { /* check existence */
+				nvram_set(t->key, t->value);
+			}
+		}
+	}
+
+	if (del) {
+		if (nvram_match("rstats_enable", "0")) {
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+			for (t = rstats_defaults; t->key; t++) {
+				nvram_unset(t->key);
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int defaults_cstats(int argc, char **argv)
+{
+	const defaults_t *t;
+	int add = 0;
+	int del = 0;
+
+
+	if (strcmp(argv[1], "--add") == 0) {
+		add = 1;
+	}
+	else if (strcmp(argv[1], "--del") == 0) {
+		del = 1;
+	}
+	else
+		return 1;
+
+	if (add) {
+		/* Restore defaults if necessary */
+		for (t = cstats_defaults; t->key; t++) {
+			if (!nvram_get(t->key)) { /* check existence */
+				nvram_set(t->key, t->value);
+			}
+		}
+	}
+
+	if (del) {
+		if (nvram_match("cstats_enable", "0")) {
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+			for (t = cstats_defaults; t->key; t++) {
+				nvram_unset(t->key);
+			}
+		}
+	}
+
+	return 0;
+}
+
+#ifdef TCONFIG_FTP
+static int defaults_ftp(int argc, char **argv)
+{
+	const defaults_t *t;
+	int add = 0;
+	int del = 0;
+
+
+	if (strcmp(argv[1], "--add") == 0) {
+		add = 1;
+	}
+	else if (strcmp(argv[1], "--del") == 0) {
+		del = 1;
+	}
+	else
+		return 1;
+
+	if (add) {
+		/* Restore defaults if necessary */
+		for (t = ftp_defaults; t->key; t++) {
+			if (!nvram_get(t->key)) { /* check existence */
+				nvram_set(t->key, t->value);
+			}
+		}
+	}
+
+	if (del) {
+		if (nvram_match("ftp_enable", "0")) {
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+			for (t = ftp_defaults; t->key; t++) {
+				nvram_unset(t->key);
+			}
+		}
+	}
+
+	return 0;
+}
+#endif /* TCONFIG_FTP */
+
+#ifdef TCONFIG_SNMP
+static int defaults_snmp(int argc, char **argv)
+{
+	const defaults_t *t;
+	int add = 0;
+	int del = 0;
+
+
+	if (strcmp(argv[1], "--add") == 0) {
+		add = 1;
+	}
+	else if (strcmp(argv[1], "--del") == 0) {
+		del = 1;
+	}
+	else
+		return 1;
+
+	if (add) {
+		/* Restore defaults if necessary */
+		for (t = snmp_defaults; t->key; t++) {
+			if (!nvram_get(t->key)) { /* check existence */
+				nvram_set(t->key, t->value);
+			}
+		}
+	}
+
+	if (del) {
+		if (nvram_match("snmp_enable", "0")) {
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+			for (t = snmp_defaults; t->key; t++) {
+				nvram_unset(t->key);
+			}
+		}
+	}
+
+	return 0;
+}
+#endif /* TCONFIG_SNMP */
+
+static int defaults_upnp(int argc, char **argv)
+{
+	const defaults_t *t;
+	int add = 0;
+	int del = 0;
+
+
+	if (strcmp(argv[1], "--add") == 0) {
+		add = 1;
+	}
+	else if (strcmp(argv[1], "--del") == 0) {
+		del = 1;
+	}
+	else
+		return 1;
+
+	if (add) {
+		/* Restore defaults if necessary */
+		for (t = upnp_defaults; t->key; t++) {
+			if (!nvram_get(t->key)) { /* check existence */
+				nvram_set(t->key, t->value);
+			}
+		}
+	}
+
+	if (del) {
+		if (nvram_match("upnp_enable", "0")) {
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+			for (t = upnp_defaults; t->key; t++) {
+				nvram_unset(t->key);
+			}
+		}
+	}
+
+	return 0;
+}
+
 static int commit_main(int argc, char **argv)
 {
 	int r;
@@ -980,7 +1169,16 @@ static const applets_t applets[] = {
 	{ "find",		3,	find_main		},
 	{ "export",		-3,	export_main		},
 	{ "import",		-3,	import_main		},
-	{ "defaults",	3,	defaults_main	},
+	{ "defaults",		3,	defaults_main		},
+	{ "rstats_defaults",	3,	defaults_rstats		},
+	{ "cstats_defaults",	3,	defaults_cstats		},
+#ifdef TCONFIG_FTP
+	{ "ftp_defaults",	3,	defaults_ftp		},
+#endif /* TCONFIG_FTP */
+#ifdef TCONFIG_SNMP
+	{ "snmp_defaults",	3,	defaults_snmp		},
+#endif /* TCONFIG_SNMP */
+	{ "upnp_defaults",	3,	defaults_upnp		},
 	{ "validate",		-3,	validate_main		},
 	{ "backup",		3,	backup_main		},
 	{ "restore",	-3,	restore_main	},
