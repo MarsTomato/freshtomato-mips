@@ -286,6 +286,7 @@ const defaults_t defaults[] = {
 	/* DHCP server parameters */
 	{ "dhcpd_startip",		"" 				},
 	{ "dhcpd_endip",		"" 				},	//
+	{ "dhcpd_ostatic",		"0"				},	/* ignore DHCP requests from unknown devices on LAN0 */
 	{ "dhcp_lease",			"1440"				},	// LAN lease time in minutes
 	{ "dhcp_moveip",		"0"				},	/* GUI helper for automatic IP change */
 	{ "dhcp_domain",		"wan"				},	// Use WAN domain name first if available (wan|lan)
@@ -295,12 +296,15 @@ const defaults_t defaults[] = {
 
 	{ "dhcpd1_startip",		"" 				},
 	{ "dhcpd1_endip",		"" 				},
+	{ "dhcpd1_ostatic",		"0"				},	/* ignore DHCP requests from unknown devices on LAN1 */
 	{ "dhcp1_lease",		"1440"				},
 	{ "dhcpd2_startip",		"" 				},
 	{ "dhcpd2_endip",		"" 				},
+	{ "dhcpd2_ostatic",		"0"				},	/* ignore DHCP requests from unknown devices on LAN2 */
 	{ "dhcp2_lease",		"1440"				},
 	{ "dhcpd3_startip",		"" 				},
 	{ "dhcpd3_endip",		"" 				},
+	{ "dhcpd3_ostatic",		"0"				},	/* ignore DHCP requests from unknown devices on LAN3 */
 	{ "dhcp3_lease",		"1440"				},
 
 #ifdef TCONFIG_USB
@@ -680,7 +684,7 @@ const defaults_t defaults[] = {
 
 /* basic-static */
 	{ "dhcpd_static",		""				},
-	{ "dhcpd_static_only",		"0"				},
+
 /* basic-wfilter */
 	{ "wl_maclist",			""				},	// xx:xx:xx:xx:xx:xx ...
 	{ "wl_macmode",			"disabled"			},

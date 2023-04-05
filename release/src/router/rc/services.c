@@ -299,7 +299,14 @@ void start_dnsmasq_wet()
 		}
 	}
 
-	fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
+	if (!nvram_get_int("dnsmasq_safe")) {
+		fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
+		fappend(f, "/etc/dnsmasq.custom");
+	}
+	else
+		logmsg(LOG_WARNING, "Warning! Dnsmasq Custom configuration contains a disruptive syntax error. The Custom configuration is now excluded to allow dnsmasq to operate");
+
+	fappend(f, "/etc/dnsmasq.ipset");
 
 	fclose(f);
 
@@ -459,8 +466,15 @@ void start_dnsmasq()
 		}
 	}
 
-	if (nvram_get_int("dhcpd_static_only"))
-		fprintf(f, "dhcp-ignore=tag:!known\n");
+	/* ignore DHCP requests from unknown devices for given LAN */
+	if (nvram_get_int("dhcpd_ostatic"))
+		fprintf(f, "dhcp-ignore=tag:br0,tag:!known\n");
+	if (nvram_get_int("dhcpd1_ostatic"))
+		fprintf(f, "dhcp-ignore=tag:br1,tag:!known\n");
+	if (nvram_get_int("dhcpd2_ostatic"))
+		fprintf(f, "dhcp-ignore=tag:br2,tag:!known\n");
+	if (nvram_get_int("dhcpd3_ostatic"))
+		fprintf(f, "dhcp-ignore=tag:br3,tag:!known\n");
 
 	if ((n = nvram_get_int("dnsmasq_q"))) { /* process quiet flags */
 		if (n & 1)
