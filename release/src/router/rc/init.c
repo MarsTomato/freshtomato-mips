@@ -10561,7 +10561,16 @@ static void sysinit(void)
 	}
 #endif /* TCONFIG_BCMARM */
 
-	restore_defaults(); /* restore defaults if necessary */
+	restore_defaults(); /* restore (basic) defaults if necessary */
+	del_rstats_defaults(); /* remove rstats nvram values if feature is disabled! */
+	del_cstats_defaults(); /* remove cstats nvram values if feature is disabled! */
+#ifdef TCONFIG_FTP
+	del_ftp_defaults(); /* remove ftp nvram values if feature is disabled! */
+#endif /* TCONFIG_FTP */
+#ifdef TCONFIG_SNMP
+	del_snmp_defaults(); /* remove snmp nvram values if feature is disabled! */
+#endif /* TCONFIG_SNMP */
+	del_upnp_defaults(); /* remove upnp nvram values if feature is disabled! */
 	init_nvram();
 
 	set_jumbo_frame(); /* enable or disable jumbo_frame and set jumbo frame size */
@@ -10749,6 +10758,9 @@ int init_main(int argc, char *argv[])
 				add_remove_usbhost("-1", 1);
 #endif
 
+			/* enable watchdog and other services */
+			nvram_set("g_reboot", "0");
+
 			log_segfault();
 			create_passwd();
 			init_lan_hwaddr();
@@ -10777,9 +10789,6 @@ int init_main(int argc, char *argv[])
 			 * last one as ssh telnet httpd samba etc can fail to load until start_wan_done
 			 */
 			start_wan();
-
-			/* enable watchdog */
-			nvram_set("g_reboot", "0");
 
 			if (wds_enable()) {
 				/* Restart NAS one more time - for some reason without

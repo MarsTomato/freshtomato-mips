@@ -69,6 +69,22 @@
 #define LOGMSG_DISABLE		DISABLE_SYSLOG_OSM
 #define LOGMSG_NVDEBUG		"services_debug"
 
+#ifdef TCONFIG_BCMARM
+extern struct nvram_tuple rstats_defaults[];
+#endif /* TCONFIG_BCMARM */
+#ifdef TCONFIG_BCMARM
+extern struct nvram_tuple cstats_defaults[];
+#endif /* TCONFIG_BCMARM */
+#if defined(TCONFIG_FTP) && defined(TCONFIG_BCMARM)
+extern struct nvram_tuple ftp_defaults[];
+#endif /* TCONFIG_FTP && TCONFIG_BCMARM */
+#if defined(TCONFIG_SNMP) && defined(TCONFIG_BCMARM)
+extern struct nvram_tuple snmp_defaults[];
+#endif /* TCONFIG_SNMP && TCONFIG_BCMARM */
+#ifdef TCONFIG_BCMARM
+extern struct nvram_tuple upnp_defaults[];
+#endif /* TCONFIG_BCMARM */
+
 /* Pop an alarm to recheck pids in 500 msec */
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
 /* Pop an alarm to reap zombies */
@@ -83,6 +99,169 @@ static pid_t pid_igmp = -1;
 static pid_t pid_phy_tempsense = -1;
 #endif
 
+void add_rstats_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	struct nvram_tuple *t;
+
+	/* Restore defaults if necessary */
+	for (t = rstats_defaults; t->name; t++) {
+		if (!nvram_get(t->name)) { /* check existence */
+			nvram_set(t->name, t->value);
+		}
+	}
+#else
+	eval("nvram", "rstats_defaults", "--add");
+#endif /* TCONFIG_BCMARM */
+}
+
+void del_rstats_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	if (nvram_match("rstats_enable", "0")) {
+		struct nvram_tuple *t;
+
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+		for (t = rstats_defaults; t->name; t++) {
+			nvram_unset(t->name);
+		}
+	}
+#else
+	eval("nvram", "rstats_defaults", "--del");
+#endif /* TCONFIG_BCMARM */
+}
+
+void add_cstats_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	struct nvram_tuple *t;
+
+	/* Restore defaults if necessary */
+	for (t = cstats_defaults; t->name; t++) {
+		if (!nvram_get(t->name)) { /* check existence */
+			nvram_set(t->name, t->value);
+		}
+	}
+#else
+	eval("nvram", "cstats_defaults", "--add");
+#endif /* TCONFIG_BCMARM */
+}
+
+void del_cstats_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	if (nvram_match("cstats_enable", "0")) {
+		struct nvram_tuple *t;
+
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+		for (t = cstats_defaults; t->name; t++) {
+			nvram_unset(t->name);
+		}
+	}
+#else
+	eval("nvram", "cstats_defaults", "--del");
+#endif /* TCONFIG_BCMARM */
+}
+
+#ifdef TCONFIG_FTP
+void add_ftp_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	struct nvram_tuple *t;
+
+	/* Restore defaults if necessary */
+	for (t = ftp_defaults; t->name; t++) {
+		if (!nvram_get(t->name)) { /* check existence */
+			nvram_set(t->name, t->value);
+		}
+	}
+#else
+	eval("nvram", "ftp_defaults", "--add");
+#endif /* TCONFIG_BCMARM */
+}
+
+void del_ftp_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	if (nvram_match("ftp_enable", "0")) {
+		struct nvram_tuple *t;
+
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+		for (t = ftp_defaults; t->name; t++) {
+			nvram_unset(t->name);
+		}
+	}
+#else
+	eval("nvram", "ftp_defaults", "--del");
+#endif /* TCONFIG_BCMARM */
+}
+#endif /* TCONFIG_FTP */
+
+#ifdef TCONFIG_SNMP
+void add_snmp_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	struct nvram_tuple *t;
+
+	/* Restore defaults if necessary */
+	for (t = snmp_defaults; t->name; t++) {
+		if (!nvram_get(t->name)) { /* check existence */
+			nvram_set(t->name, t->value);
+		}
+	}
+#else
+	eval("nvram", "snmp_defaults", "--add");
+#endif /* TCONFIG_BCMARM */
+}
+
+void del_snmp_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	if (nvram_match("snmp_enable", "0")) {
+		struct nvram_tuple *t;
+
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+		for (t = snmp_defaults; t->name; t++) {
+			nvram_unset(t->name);
+		}
+	}
+#else
+	eval("nvram", "snmp_defaults", "--del");
+#endif /* TCONFIG_BCMARM */
+}
+#endif /* TCONFIG_SNMP */
+
+void add_upnp_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	struct nvram_tuple *t;
+
+	/* Restore defaults if necessary */
+	for (t = upnp_defaults; t->name; t++) {
+		if (!nvram_get(t->name)) { /* check existence */
+			nvram_set(t->name, t->value);
+		}
+	}
+#else
+	eval("nvram", "upnp_defaults", "--add");
+#endif /* TCONFIG_BCMARM */
+}
+
+void del_upnp_defaults(void)
+{
+#ifdef TCONFIG_BCMARM
+	if (nvram_match("upnp_enable", "0")) {
+		struct nvram_tuple *t;
+
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+		for (t = upnp_defaults; t->name; t++) {
+			nvram_unset(t->name);
+		}
+	}
+#else
+	eval("nvram", "upnp_defaults", "--del");
+#endif /* TCONFIG_BCMARM */
+}
 
 void start_dnsmasq_wet()
 {
@@ -120,7 +299,14 @@ void start_dnsmasq_wet()
 		}
 	}
 
-	fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
+	if (!nvram_get_int("dnsmasq_safe")) {
+		fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
+		fappend(f, "/etc/dnsmasq.custom");
+	}
+	else
+		logmsg(LOG_WARNING, "Warning! Dnsmasq Custom configuration contains a disruptive syntax error. The Custom configuration is now excluded to allow dnsmasq to operate");
+
+	fappend(f, "/etc/dnsmasq.ipset");
 
 	fclose(f);
 
@@ -280,8 +466,15 @@ void start_dnsmasq()
 		}
 	}
 
-	if (nvram_get_int("dhcpd_static_only"))
-		fprintf(f, "dhcp-ignore=tag:!known\n");
+	/* ignore DHCP requests from unknown devices for given LAN */
+	if (nvram_get_int("dhcpd_ostatic"))
+		fprintf(f, "dhcp-ignore=tag:br0,tag:!known\n");
+	if (nvram_get_int("dhcpd1_ostatic"))
+		fprintf(f, "dhcp-ignore=tag:br1,tag:!known\n");
+	if (nvram_get_int("dhcpd2_ostatic"))
+		fprintf(f, "dhcp-ignore=tag:br2,tag:!known\n");
+	if (nvram_get_int("dhcpd3_ostatic"))
+		fprintf(f, "dhcp-ignore=tag:br3,tag:!known\n");
 
 	if ((n = nvram_get_int("dnsmasq_q"))) { /* process quiet flags */
 		if (n & 1)
@@ -1531,6 +1724,8 @@ void start_upnp(void)
 	if (enable == 0)
 		return;
 
+	add_upnp_defaults(); /* backup: check nvram! */
+
 	mkdir(UPNP_DIR, 0777);
 
 	/* alternative configuration file */
@@ -2316,6 +2511,7 @@ static void stop_rstats(void)
 static void start_rstats(int new)
 {
 	if (nvram_get_int("rstats_enable")) {
+		add_rstats_defaults(); /* backup: check nvram! */
 		stop_rstats();
 		if (new)
 			xstart("rstats", "--new");
@@ -2357,6 +2553,7 @@ static void stop_cstats(void)
 static void start_cstats(int new)
 {
 	if (nvram_get_int("cstats_enable")) {
+		add_cstats_defaults(); /* backup: check nvram! */
 		stop_cstats();
 		if (new)
 			xstart("cstats", "--new");
@@ -2798,6 +2995,40 @@ TOP:
 	act_stop  = action & A_STOP;
 
 	user = (modifier != NULL && *modifier == 'c');
+
+	if (strcmp(service, "rstats_nvram") == 0) {
+		if (act_stop) del_rstats_defaults();
+		if (act_start) add_rstats_defaults();
+		goto CLEAR;
+	}
+
+	if (strcmp(service, "cstats_nvram") == 0) {
+		if (act_stop) del_cstats_defaults();
+		if (act_start) add_cstats_defaults();
+		goto CLEAR;
+	}
+
+#ifdef TCONFIG_FTP
+	if (strcmp(service, "ftp_nvram") == 0) {
+		if (act_stop) del_ftp_defaults();
+		if (act_start) add_ftp_defaults();
+		goto CLEAR;
+	}
+#endif /* TCONFIG_FTP */
+
+#ifdef TCONFIG_SNMP
+	if (strcmp(service, "snmp_nvram") == 0) {
+		if (act_stop) del_snmp_defaults();
+		if (act_start) add_snmp_defaults();
+		goto CLEAR;
+	}
+#endif /* TCONFIG_SNMP */
+
+	if (strcmp(service, "upnp_nvram") == 0) {
+		if (act_stop) del_upnp_defaults();
+		if (act_start) add_upnp_defaults();
+		goto CLEAR;
+	}
 
 	if (strcmp(service, "dhcpc_wan") == 0) {
 		if (act_stop) stop_dhcpc("wan");

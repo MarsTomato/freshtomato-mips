@@ -302,6 +302,20 @@ extern void stop_bsd(void);
 extern void start_mdns(void);
 extern void stop_mdns(void);
 #endif /* TCONFIG_MDNS */
+extern void add_rstats_defaults(void);
+extern void del_rstats_defaults(void);
+extern void add_cstats_defaults(void);
+extern void del_cstats_defaults(void);
+#ifdef TCONFIG_FTP
+extern void add_ftp_defaults(void);
+extern void del_ftp_defaults(void);
+#endif /* TCONFIG_FTP */
+#ifdef TCONFIG_SNMP
+extern void add_snmp_defaults(void);
+extern void del_snmp_defaults(void);
+#endif /* TCONFIG_SNMP */
+extern void add_upnp_defaults(void);
+extern void del_upnp_defaults(void);
 
 /* usb.c */
 #ifdef TCONFIG_USB
