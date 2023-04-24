@@ -663,6 +663,7 @@ function verifyFields(focused, quiet) {
 /* KEYGEN-END */
 
 		var keyHelp = E(t+'-keyhelp');
+		keyHelp.className = 'new_window';
 		switch (auth) {
 		case 'tls':
 			keyHelp.href = helpURL['TLSKeys'];
@@ -826,6 +827,7 @@ function init() {
 	rewriteUsers();
 /* KEYGEN-END */
 	up.initPage(250, 5);
+	eventHandler();
 }
 </script>
 </head>
