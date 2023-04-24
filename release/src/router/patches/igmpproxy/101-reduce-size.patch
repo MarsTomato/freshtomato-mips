@@ -16,7 +16,7 @@
  
  // Local function Prototypes
  static void signalHandler(int);
-@@ -100,7 +102,9 @@
+@@ -103,7 +105,9 @@
                  LogLevel = LOG_INFO;
              break;
          case 'h':
@@ -28,7 +28,7 @@
          default:
 --- igmpproxy/src/igmpproxy.h
 +++ igmpproxy/src/igmpproxy.h
-@@ -108,7 +108,11 @@
+@@ -111,7 +111,11 @@
  extern bool Log2Stderr;           // Log to stderr instead of to syslog
  extern int  LogLevel;             // Log threshold, LOG_WARNING .... LOG_DEBUG
  
