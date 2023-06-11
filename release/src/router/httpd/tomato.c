@@ -186,6 +186,7 @@ static const nvset_t nvset_list[] = {
 	{ "ddnsx_ip",			V_LENGTH(0, 32)			},
 	{ "ddnsx_save",			V_01				},
 	{ "ddnsx_refresh",		V_RANGE(0, 365)			},
+	{ "ddnsx_cktime",		V_RANGE(5, 99999)		},
 
 /* basic-network */
 	/* WAN */
@@ -1978,12 +1979,12 @@ static void asp_css(int argc, char **argv)
 #if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
 static void asp_discovery(int argc, char **argv)
 {
-	char buf[32] = "/usr/sbin/discovery.sh ";
+	char buf[64] = "/usr/sbin/discovery.sh ";
 
 	if (strncmp(argv[0], "off", 3) == 0)
 		return;
 	else if (strncmp(argv[0], "traceroute", 10) == 0)
-		strcat(buf, argv[0]);
+		strlcat(buf, argv[0], sizeof(buf));
 
 	system(buf);
 }

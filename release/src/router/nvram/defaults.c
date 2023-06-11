@@ -601,6 +601,7 @@ const defaults_t defaults[] = {
 	{ "wl_bcn_rotate",		"1"				},	/* Beacon rotation */
 	{ "wl_vlan_prio_mode",		"off"				},	/* VLAN Priority support */
 	{ "wl_obss_coex",		"0"				},	/* OBSS Coexistence (0|1): when enabled, channel width is forced to 20MHz */
+
 #ifdef TCONFIG_WLCONF_VHT /* prepare for future change; right now we use wl util to apply it */
 	{ "wl_vht_features",		"-1"				},	/* VHT features */
 	{ "wl_vhtmode",			"-1"				},	/* VHT mode */
@@ -803,6 +804,7 @@ const defaults_t defaults[] = {
 	{ "ddnsx1_cache",		""				},
 	{ "ddnsx_save",			"1"				},
 	{ "ddnsx_refresh",		"28"				},
+	{ "ddnsx_cktime",		"10"				},
 
 /* basic-ident */
 	{ "router_name",		"FreshTomato"			},

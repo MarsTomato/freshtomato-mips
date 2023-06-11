@@ -1481,7 +1481,7 @@ int mround(float val)
  * Get temperature of wireless chip
  * bwq518. Copyright 2013
 */
-char* get_wl_tempsense(char *buf)
+char* get_wl_tempsense(char *buf, const size_t buf_sz)
 {
 	char *lan_ifnames;
 	char *p;
@@ -1491,7 +1491,7 @@ char* get_wl_tempsense(char *buf)
 	unsigned *cur_temp;
 	int  ret = 0, len, i;
 
-	strcpy(buf, "");
+	memset(buf, 0, buf_sz); /* reset */
 	if ((lan_ifnames = strdup(nvram_safe_get("wl_ifnames"))) != NULL) {
 		p = lan_ifnames;
 		while ((ifname = strsep(&p, " ")) != NULL) {
@@ -1499,12 +1499,12 @@ char* get_wl_tempsense(char *buf)
 				++ifname;
 
 			trimstr(ifname);
-			if ((*ifname == 0) || (strncasecmp(ifname, "eth",3) != 0))
+			if ((*ifname == 0) || (strncasecmp(ifname, "eth", 3) != 0))
 				continue;
 
-			bzero(s, sizeof(s));
-			bzero(tempC, sizeof(tempC));
-			bzero(tempF, sizeof(tempF));
+			memset(s, 0, sizeof(s));
+			memset(tempC, 0, sizeof(tempC));
+			memset(tempF, 0, sizeof(tempF));
 			strcpy(s, "phy_tempsense");
 			if ((ret = wl_ioctl(ifname, WLC_GET_VAR, s, sizeof(s))) == 0) {
 				cur_temp = (unsigned int*) s;
@@ -1523,8 +1523,8 @@ char* get_wl_tempsense(char *buf)
 			}
 
 			/* get band of ifname */
-			bzero(s, sizeof(s));
-			bzero(band, sizeof(band));
+			memset(s, 0, sizeof(s));
+			memset(band, 0, sizeof(band));
 			int bandlist[WLC_BAND_ALL];
 			if (wl_ioctl(ifname, WLC_GET_BANDLIST, bandlist, sizeof(bandlist)) == 0) {
 				if (bandlist[0] == 0)
@@ -1558,16 +1558,8 @@ char* get_wl_tempsense(char *buf)
 				strcpy(band,"--");
 
 			if ((strlen(tempC) > 0) && (strlen(band) > 0)) {
-				if ((strcmp(tempC, "--") != 0) || (strcmp(band, "--") != 0)) {
-					strcat(buf, ifname);
-					strcat(buf, ": ");
-					strcat(buf, band);
-					strcat(buf, " - ");
-					strcat(buf, tempC);
-					strcat(buf, "&#176;C&nbsp;/&nbsp;");
-					strcat(buf, tempF);
-					strcat(buf, "&#176;F&nbsp;&nbsp;&nbsp;&nbsp;");
-				}
+				if ((strcmp(tempC, "--") != 0) || (strcmp(band, "--") != 0))
+					snprintf(buf + strlen(buf), buf_sz - strlen(buf), "%s: %s - %s&#176;C&nbsp;/&nbsp;%s&#176;F&nbsp;&nbsp;&nbsp;&nbsp;", ifname, band, tempC, tempF);
 			}
 		}
 		free(lan_ifnames);
