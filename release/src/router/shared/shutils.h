@@ -112,13 +112,20 @@ extern char * ether_etoa(const unsigned char *e, char *a);
  * @param	buf	buffer large enough to hold both strings
  * @return	buf
  */
+static inline char *strlcat_r(const char *s1, const char *s2, char *buf, const size_t buf_len)
+{
+	strlcpy(buf, s1, buf_len);
+	strlcat(buf, s2, buf_len);
+	return buf;
+}
+/*
 static inline char * strcat_r(const char *s1, const char *s2, char *buf)
 {
 	strcpy(buf, s1);
 	strcat(buf, s2);
 	return buf;
-}	
-
+}
+*/
 /* Strip trailing CR/NL from string <s> */
 #define chomp(s) ({ \
 	char *c = (s) + strlen((s)) - 1; \

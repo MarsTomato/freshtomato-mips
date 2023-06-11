@@ -1600,6 +1600,7 @@ ntfs-3g-clean:
 	$(call unpatch_files,ntfs-3g)
 
 libusb10/Makefile: libusb10/Makefile.in
+	$(call patch_files,libusb10)
 	cd libusb10 && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
@@ -1618,6 +1619,7 @@ libusb10-install:
 libusb10-clean:
 	-@$(MAKE) -C $@ clean
 	@rm -rf libusb10/Makefile
+	$(call unpatch_files,libusb10)
 
 usbmodeswitch:
 	@$(SEP)
@@ -1898,7 +1900,7 @@ zlib-clean:
 
 sqlite/stamp-h1:
 	cd sqlite && autoreconf -fsi && \
-		CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -fPIC -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
+		CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -fPIC -std=gnu99 -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static \
 			--disable-readline --enable-dynamic-extensions=no --enable-threadsafe
@@ -2377,11 +2379,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.10.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.10.3
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.10.3
+	install -D libxml2/.libs/libxml2.so.2.11.4 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.4
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.4
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.10.3 libxml2.so.2 && \
-		ln -sf libxml2.so.2.10.3 libxml2.so
+		ln -sf libxml2.so.2.11.4 libxml2.so.2 && \
+		ln -sf libxml2.so.2.11.4 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -3736,7 +3738,7 @@ gettext-tiny-clean:
 
 util-linux/stamp-h1:
 	cd util-linux && ./autogen.sh && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) \
 			--prefix=/usr \
