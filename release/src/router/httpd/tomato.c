@@ -555,6 +555,7 @@ static const nvset_t nvset_list[] = {
 	{ "ipv6_tun_mtu",		V_NUM				},	/* Tunnel MTU */
 	{ "ipv6_tun_ttl",		V_NUM				},	/* Tunnel TTL */
 	{ "ipv6_dns",			V_LENGTH(0, 40*3)		},	/* ip6 ip6 ip6 */
+	{ "ipv6_dns_lan",		V_LENGTH(0, 40*2)		},	/* ip6 ip6 */
 	{ "ipv6_6rd_prefix",		V_IPV6(0)			},
 	{ "ipv6_6rd_prefix_length",	V_RANGE(3, 127)			},
 	{ "ipv6_6rd_borderrelay",	V_IP				},
@@ -1092,7 +1093,7 @@ static const nvset_t nvset_list[] = {
 
 /* admin-tomatoanon */
 	{ "tomatoanon_answer",		V_RANGE(0, 1)			},
-	{ "tomatoanon_enable",		V_RANGE(-1, 1)			},
+	{ "tomatoanon_enable",		V_RANGE(0, 1)			},
 	{ "tomatoanon_id",		V_LENGTH(0, 32)			},
 	{ "tomatoanon_notify",		V_01				},
 
