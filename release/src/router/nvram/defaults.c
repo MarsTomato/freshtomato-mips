@@ -1224,7 +1224,7 @@ const defaults_t defaults[] = {
 	{ "jffs2_auto_unmount",		"0"				},	/* automatically unmount JFFS2 during FW upgrade */
 
 /* admin-tomatoanon */
-	{ "tomatoanon_enable",		"-1"				},
+	{ "tomatoanon_enable",		"0"				},
 	{ "tomatoanon_answer",		"0"				},
 	{ "tomatoanon_id",		""				},
 	{ "tomatoanon_notify",		"1"				},
