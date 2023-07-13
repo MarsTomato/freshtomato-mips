@@ -65,6 +65,7 @@ signal4g() {
 	local DIAGSFILE="/tmp/switch4g_$PREFIX.diags"
 
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" -o "$MTYPE" == "hw-ether" ]; then
+		[ -f "$DIAGSFILE" ] || return
 		DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
 		for i in $DEVALL; do	# find working interface
@@ -176,17 +177,21 @@ signal4g() {
 		esac
 
 	elif [ "$MTYPE" == "qmi_wwan" ]; then
+		[ -f "$DIAGSFILE" ] || return
 		SIGNAL=$(uqmiCall "--get-signal-info")
 		SPEED=$(echo "$SIGNAL" | cut -d '"' -f4)
 		MCC=$(uqmiCall "--get-serving-system")
 		MCCMNC=$(echo "$MCC" | cut -d "," -f2 | cut -d ":" -f2)$(printf "%02d" $(echo "$MCC" | cut -d "," -f3 | cut -d ":" -f2))
+
+		OPERATOR=$(echo "$MCC" | cut -d "," -f4 | cut -d ":" -f2)
+		$LOGS "MODEM Current Operator: $OPERATOR"
 
 		case "$SPEED" in
 			"lte")
 				RSSI=$(echo "$SIGNAL" | cut -d "," -f2 | cut -d ":" -f2)
 				RSRQ=$(echo "$SIGNAL" | cut -d "," -f3 | cut -d ":" -f2)
 				RSRP=$(echo "$SIGNAL" | cut -d "," -f4 | cut -d ":" -f2)
-				SINR=$(echo "$SIGNAL" | cut -d ":" -f6 | cut -d "}" -f1)
+				SINR=$(echo "$SIGNAL" | cut -d ":" -f6 | cut -d "}" -f1 | cut -c1-4)
 				$LOGS "MODEM Current Mode: LTE"
 				$LOGS "MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
 				$LOGS "MODEM BTS: MCCMNC $MCCMNC"
