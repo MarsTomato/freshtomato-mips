@@ -1088,7 +1088,7 @@ const defaults_t defaults[] = {
 	{ "http_lanport",		"80"				},	/* LAN port to listen on */
 	{ "http_enable",		"1"				},	/* HTTP server enable/disable */
 	{ "remote_upgrade",		"1"				},	/* allow remote upgrade [1|0] - for brave guys */
-	{ "http_wanport_bfm",		"0"				},	/* enable/disable brute force mitigation rule for WAN port */
+	{ "http_wanport_bfm",		"1"				},	/* enable/disable brute force mitigation rule for WAN port */
 #ifdef TCONFIG_HTTPS
 	{ "remote_mgt_https",		"0"				},	/* Remote Management use https [1|0] */
 	{ "https_lanport",		"443"				},	/* LAN port to listen on */

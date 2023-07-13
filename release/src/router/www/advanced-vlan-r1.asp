@@ -350,42 +350,43 @@ REMOVE-END */
 			f[COL_P4T].checked = 0;
 		}
 
-		var err_vlan = ' cannot be assigned to more than one VLAN unless frames are tagged on all VLANs ';
+		/* Modifications to enable Native VLAN support (allow one untagged vlan per port) by default */
+		var err_vlan = 'Only one untagged VLAN per port is allowed (Native VLAN)';
 		if ((f[COL_P0].checked == 1) && (this.countElem(COL_P0, 1) > 0)) {
-			if (((this.countElem(COL_P0, 1) != this.countElem(COL_P0T, 1)) || (f[COL_P0T].checked == 0))) {
-				ferror.set(f[COL_P0T], 'Port 1'+err_vlan+'Port 1 is member', quiet);
+			if (((this.countElem(COL_P0,1)-1) >= this.countElem(COL_P0T,1)) && (f[COL_P0T].checked == 0)) {
+				ferror.set(f[COL_P0T], err_vlan, quiet);
 				valid = 0;
 			}
 			else
 				ferror.clear(f[COL_P0T]);
 		}
 		if ((f[COL_P1].checked == 1) && (this.countElem(COL_P1, 1) > 0)) {
-			if (((this.countElem(COL_P1, 1) != this.countElem(COL_P1T, 1)) || (f[COL_P1T].checked == 0))) {
-				ferror.set(f[COL_P1T], 'Port 2'+err_vlan+'Port 2 is member', quiet);
+			if (((this.countElem(COL_P1, 1) - 1) >= this.countElem(COL_P1T, 1)) && (f[COL_P1T].checked == 0)) {
+				ferror.set(f[COL_P1T], err_vlan, quiet);
 				valid = 0;
 			}
 			else
 				ferror.clear(f[COL_P1T]);
 		}
 		if ((f[COL_P2].checked == 1) && (this.countElem(COL_P2, 1) > 0)) {
-			if (((this.countElem(COL_P2, 1) != this.countElem(COL_P2T, 1)) || (f[COL_P2T].checked == 0))) {
-				ferror.set(f[COL_P2T], 'Port 3'+err_vlan+'Port 3 is member', quiet);
+			if (((this.countElem(COL_P2, 1) - 1) >= this.countElem(COL_P2T, 1)) && (f[COL_P2T].checked == 0)) {
+				ferror.set(f[COL_P2T], err_vlan, quiet);
 				valid = 0;
 			}
 			else
 				ferror.clear(f[COL_P2T]);
 		}
 		if ((f[COL_P3].checked == 1) && (this.countElem(COL_P3, 1) > 0)) {
-			if (((this.countElem(COL_P3, 1) != this.countElem(COL_P3T, 1)) || (f[COL_P3T].checked == 0))) {
-				ferror.set(f[COL_P3T], 'Port 4'+err_vlan+'Port 4 is member', quiet);
+			if (((this.countElem(COL_P3, 1) - 1) >= this.countElem(COL_P3T, 1)) && (f[COL_P3T].checked == 0)) {
+				ferror.set(f[COL_P3T], err_vlan, quiet);
 				valid = 0;
 			}
 			else
 				ferror.clear(f[COL_P3T]);
 		}
 		if ((f[COL_P4].checked == 1) && (this.countElem(COL_P4, 1) > 0)) {
-			if (((this.countElem(COL_P4, 1) != this.countElem(COL_P4T, 1)) || (f[COL_P4T].checked == 0))) {
-				ferror.set(f[COL_P4T], 'WAN port'+err_vlan+'WAN port is member', quiet);
+			if (((this.countElem(COL_P4, 1) - 1) >= this.countElem(COL_P4T, 1)) && (f[COL_P4T].checked == 0)) {
+				ferror.set(f[COL_P4T], err_vlan, quiet);
 				valid = 0;
 			}
 			else

@@ -90,7 +90,7 @@ function verifyFields(focused, quiet) {
 	vis._stubby_priority = v;
 	vis._stubby_log = v;
 	vis._stubby_port = v;
-	vis._stubby_servers = v;
+	vis._stubby_servers = v && E('_f_stubby_show_hide').checked;
 	vis._f_stubby_force_tls13 = v;
 	vis._dnssec_enable = v;
 	vis._dnssec_method_1 = (v && E('_dnssec_enable').checked);
@@ -98,6 +98,8 @@ function verifyFields(focused, quiet) {
 	if (E('_dnssec_method_0') != null)
 		if (!E('_dnssec_method_0').checked)
 			E('_dnssec_method_0').checked = !v;
+
+	PR(E('_f_stubby_show_hide')).style.display = (v ? 'table-row' : 'none');;
 /* STUBBY-END */
 /* DNSSEC-BEGIN */
 	vis._dnssec_enable = 1;
@@ -106,14 +108,6 @@ function verifyFields(focused, quiet) {
 /* MDNS-BEGIN */
 	E('_f_mdns_reflector').disabled = !E('_f_mdns_enable').checked;
 /* MDNS-END */
-/* TOR-BEGIN */
-	if (E('_f_dnsmasq_onion_support').checked) { /* disable/uncheck 'DNS Rebind protection' when onion support is enabled */
-		E('_f_dns_norebind').disabled = 1;
-		E('_f_dns_norebind').checked = 0;
-	}
-	else
-		E('_f_dns_norebind').disabled = 0;
-/* TOR-END */
 /* TFTP-BEGIN */
 	v = E('_f_dnsmasq_tftp').checked;
 	vis._dnsmasq_tftp_path = v;
@@ -125,12 +119,34 @@ function verifyFields(focused, quiet) {
 	if (v && !v_length('_dnsmasq_tftp_path', quiet, 0, 128))
 		return 0;
 /* TFTP-END */
+/* IPV6-BEGIN */
+	v = !nvram.ipv6_service == '';
+	vis._f_ipv6_dhcpd = v;
+	vis._f_ipv6_radvd = v;
+	vis._f_ipv6_lease_time = v;
+	vis._f_ipv6_fast_ra = v;
+	vis._f_dnsmasq_qr = v;
+	vis._f_dnsmasq_q6 = v;
+/* IPV6-END */
+
 	for (i in vis) {
 		var b = E(i);
 		var c = vis[i];
 		b.disabled = (c != 1);
 		PR(b).style.display = (c ? 'table-row' : 'none');
 	}
+
+/* TOR-BEGIN */
+	a = !E('_f_dhcpd_dmdns').checked;
+	if (E('_f_dnsmasq_onion_support').checked) { /* disable/uncheck 'DNS Rebind protection' when onion support is enabled */
+		E('_f_dns_norebind').disabled = 1;
+		E('_f_dns_norebind').checked = 0;
+	}
+	else
+		E('_f_dns_norebind').disabled = a;
+
+	E('_f_dnsmasq_onion_support').disabled = a;
+/* TOR-END */
 
 	if (!v_range('_f_dnsmasq_edns_size', quiet, 512, 4096))
 		return 0;
@@ -147,6 +163,7 @@ function verifyFields(focused, quiet) {
 	a = ['_f_ipv6_dns1_lan', '_f_ipv6_dns2_lan']; /* optional IPv6 DNS Server address */
 	for (i = a.length - 1; i >= 0; --i) {
 		E(a[i]).disabled = !enable_ipv6_dns_lan;
+		PR(E(a[i])).style.display = (enable_ipv6_dns_lan ? 'table-row' : 'none');
 
 		if (enable_ipv6_dns_lan && (E(a[i]).value.length > 0) && (!v_ipv6_addr(a[i], quiet)))
 			return 0;
@@ -412,7 +429,7 @@ function save() {
 
 function init() {
 	var c;
-	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1'))
+	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, 'notes');
 
 	var e = E('_dnsmasq_custom');
@@ -536,7 +553,8 @@ function init() {
 		]);
 /* STUBBY-BEGIN */
 		createFieldTable('noopen,noclose', [
-			{ title: 'Use Stubby', name: 'f_stubby_proxy', type: 'checkbox', value: nvram.stubby_proxy == 1 }
+			{ title: 'Use Stubby', name: 'f_stubby_proxy', type: 'checkbox', value: nvram.stubby_proxy == 1 },
+			{ title: 'Show/Hide Servers', indent: 2, name: 'f_stubby_show_hide', type: 'checkbox', value: 0 }
 		]);
 
 		W('<tr><td class="title indent2">Upstream resolvers<br> (max. 8)<\/td><td class="content" id="_stubby_servers"><table class="tomato-grid" id="stubby-grid">');
