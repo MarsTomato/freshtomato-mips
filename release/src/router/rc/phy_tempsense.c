@@ -23,6 +23,11 @@
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
  */
+/*
+ *
+ * Fixes/updates (C) 2018 - 2023 pedro
+ *
+ */
 
 
 #include <stdio.h>
@@ -103,8 +108,8 @@ static void phy_tempsense_mon()
 	unsigned int *ret_int1 = NULL;
 	unsigned int *ret_int2 = NULL;
 
-	strcpy(buf1, "phy_tempsense");
-	strcpy(buf2, "phy_tempsense");
+	strlcpy(buf1, "phy_tempsense", WLC_IOCTL_SMLEN);
+	strlcpy(buf2, "phy_tempsense", WLC_IOCTL_SMLEN);
 
 	if ((ret = wl_ioctl("eth1", WLC_GET_VAR, buf1, sizeof(buf1))) == 0)
 		ret_int1 = (unsigned int *)buf1;
@@ -174,8 +179,8 @@ static void phy_tempsense_mon()
 	if (!base)
 		nvram_set("fanctrl_dutycycle_ex", "0");
 	else {
-		memset(w, 0, 8);
-		sprintf(w, "%d", base);
+		memset(w, 0, sizeof(w));
+		snprintf(w, sizeof(w), "%d", base);
 		nvram_set("fanctrl_dutycycle_ex", w);
 	}
 }

@@ -111,10 +111,18 @@ char *reltime(time_t t, char *buf, const size_t buf_sz)
 	int days;
 	int m;
 
-	if (t < 0) t = 0;
+	if (t < 0)
+		t = 0;
+
 	days = t / 86400;
 	m = t / 60;
-	snprintf(buf, buf_sz, "%d day%s, %02d:%02d:%02d", days, ((days==1) ? "" : "s"), ((m / 60) % 24), (m % 60), (int)(t % 60));
+
+	memset(buf, 0, buf_sz); /* reset */
+
+	if (days > 0) /* show days if they are NOT equal to zero */
+		snprintf(buf, buf_sz, "%d day%s, ", days, ((days == 1) ? "" : "s"));
+
+	snprintf(buf + strlen(buf), buf_sz - strlen(buf), "%02d%s %02d%s %02d%s", ((m / 60) % 24), "h", (m % 60), "m", (int)(t % 60), "s");
 
 	return buf;
 }
@@ -900,12 +908,15 @@ void asp_link_uptime(int argc, char **argv)
 	else
 		strlcpy(prefix, "wan", sizeof(prefix));
 
-	buf[0] = '-';
-	buf[1] = 0;
 	if (check_wanup(prefix)) {
 		uptime = check_wanup_time(prefix); /* get wanX uptime */
 		reltime(uptime, buf, sizeof(buf));
 	}
+	else {
+		memset(buf, 0, sizeof(buf)); /* reset */
+		strlcpy(buf, "-", sizeof(buf));
+	}
+
 	web_puts(buf);
 }
 

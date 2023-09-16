@@ -605,7 +605,7 @@ function init() {
 /* STUBBY-END */
 		createFieldTable('noopen', [
 			{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins },
-			{ title: '<a href="https://wiki.freshtomato.org/doku.php/dns_flag_day_2020" class="new_window">EDNS packet size<\/a>', name: 'f_dnsmasq_edns_size', type: 'text', maxlen: 4, size: 8, suffix: ' <small>(default: 1280)<\/small>', value: nvram.dnsmasq_edns_size },
+			{ title: '<a href="https://wiki.freshtomato.org/doku.php/dns_flag_day_2020" class="new_window">EDNS packet size<\/a>', name: 'f_dnsmasq_edns_size', type: 'text', maxlen: 4, size: 8, suffix: ' <small>(default: 1232)<\/small>', value: nvram.dnsmasq_edns_size },
 			null,
 			{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'text', maxlen: 256, size: 70, value: nvram.dhcpc_custom },
 			{ title: 'Reduce packet size', name: 'f_dhcpc_minpkt', type: 'checkbox', value: nvram.dhcpc_minpkt == 1 }
@@ -714,7 +714,6 @@ function init() {
 	<ul>
 		<li><b>Use internal DNS</b> - Allow dnsmasq to be your DNS server on LAN.</li>
 		<li><b>Use received DNS with user-entered DNS</b> - Add DNS servers received from your WAN connection to the static DNS server list (see <a href="basic-network.asp">Network</a> configuration).</li>
-		<li><b>Prevent DNS-rebind attacks</b> - Enable DNS rebinding protection on Dnsmasq.</li>
 		<li><b>Intercept DNS port</b> - Any DNS requests/packets sent out to UDP/TCP port 53 are redirected to the internal DNS server. Currently only IPv4 DNS is intercepted.</li>
 		<li><b>Use user-entered gateway if WAN is disabled</b> - DHCP will use the IP address of the router as the default gateway on each LAN.</li>
 		<li><b>Ignore DHCP requests (...)</b> - Dnsmasq will ignore DHCP requests to only MAC addresses listed on the <a href="basic-static.asp">Static DHCP/ARP</a> page won't be able to obtain an IP address through DHCP.</li>

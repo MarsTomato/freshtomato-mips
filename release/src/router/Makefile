@@ -366,7 +366,6 @@ obj-$(TCONFIG_BBT) += libcurl
 obj-$(TCONFIG_BBT) += transmission
 obj-$(TCONFIG_MEDIA_SERVER) += zlib
 obj-$(TCONFIG_MEDIA_SERVER) += sqlite
-obj-$(TCONFIG_MEDIA_SERVER) += ffmpeg
 ifeq ($(TCONFIG_BCMARM),y)
  obj-$(TCONFIG_MEDIA_SERVER) += libiconv
 endif
@@ -376,6 +375,7 @@ obj-$(TCONFIG_MEDIA_SERVER) += libjpeg-turbo
 obj-$(TCONFIG_MEDIA_SERVER) += libexif
 obj-$(TCONFIG_MEDIA_SERVER) += libid3tag
 obj-$(TCONFIG_MEDIA_SERVER) += libvorbis
+obj-$(TCONFIG_MEDIA_SERVER) += ffmpeg
 obj-$(TCONFIG_MEDIA_SERVER) += minidlna
 obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_conntrack
 obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_log
@@ -1281,7 +1281,7 @@ endif # !TCONFIG_BCMARM
 		AR=$(AR:$(CROSS_COMPILE)%=%) \
 		NM=$(NM:$(CROSS_COMPILE)%=%) \
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_BCMARM),-O2,$(if $(TCONFIG_AIO),-O3,-Os)) --prefix=/usr --openssldir=/etc/ssl \
+		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) --prefix=/usr --openssldir=/etc/ssl \
 			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 			shared $(OPENSSL_CIPHERS) --api=1.0.0 \
 			no-async no-aria no-sm2 no-sm3 no-sm4 \
@@ -1484,7 +1484,7 @@ iptables-1.8.x-clean:
 rp-pppoe/src/stamp-h1: rp-pppoe/src/Makefile.in
 	$(call patch_files,rp-pppoe)
 	cd rp-pppoe/src && \
-		CFLAGS="$(if $(TCONFIG_BCMARM),-O2,-Os) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CFLAGS="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-plugin=$(TOP)/pppd --disable-debugging \
@@ -1724,7 +1724,7 @@ pppd/Makefile: pppd/linux/Makefile.top
 	$(call patch_files,pppd)
 	cd pppd && \
 		LDFLAGS="-Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --sysconfdir=/tmp --cc=$(CC) --cflags="$(if $(TCONFIG_BCMARM),-O2,$(if $(TCONFIG_AIO),-O3,-Os)) -Wall -ffunction-sections -fdata-sections"
+		$(CONFIGURE) --prefix=/usr --sysconfdir=/tmp --cc=$(CC) --cflags="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) -Wall -ffunction-sections -fdata-sections"
 
 pppd: pppd/Makefile
 	@$(SEP)
@@ -1948,13 +1948,14 @@ libogg-clean:
 flac/stamp-h1:
 	$(call patch_files,flac)
 	cd flac && autoreconf -fsi && \
-		CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections --param max-inline-insns-single=3000 --param large-function-growth=500" \
-		CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC --param max-inline-insns-single=3000 --param large-function-growth=500" \
+		CFLAGS="-Os $(EXTRACFLAGS) -std=gnu99 -fPIC -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC" \
 		LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix='' --enable-shared --enable-static --with-ogg=$(TOP)/libogg/src/.libs \
+		LIBS="-logg" \
+		$(CONFIGURE) --prefix='' --enable-shared --enable-static --with-ogg=$(TOP)/libogg/src/.libs --with-ogg-includes=$(TOP)/libogg/include/ogg \
 			--disable-doxygen-docs --disable-examples --disable-cpplibs \
-			--disable-oggtest --disable-thorough-tests --disable-stack-smash-protection \
-			--disable-altivec --disable-vsx --disable-avx --enable-debug=no \
+			--disable-programs --disable-oggtest --disable-thorough-tests \
+			--disable-stack-smash-protection --disable-avx --enable-debug=no \
 			--without-libiconv-prefix --disable-rpath --disable-dependency-tracking
 	@touch $@
 
@@ -1964,8 +1965,9 @@ flac: flac/stamp-h1
 
 flac-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D flac/src/libFLAC/.libs/libFLAC.so.12 $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12
-	$(STRIP) $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12
+	install -D flac/src/libFLAC/.libs/libFLAC.so.12.1.0 $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12.1.0
+	$(STRIP) $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12.1.0
+	cd $(INSTALLDIR)/flac/usr/lib/ && ln -sf libFLAC.so.12.1.0 libFLAC.so.12
 endif
 	@true
 
@@ -1997,12 +1999,12 @@ libjpeg-turbo: libjpeg-turbo/build/Makefile
 
 libjpeg-turbo-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D libjpeg-turbo/build/libjpeg.so.8.2.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.2.2
-	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.2.2 && ln -sf libjpeg.so.8.2.2 libjpeg.so && ln -sf libjpeg.so.8.2.2 libjpeg.so.8
+	install -D libjpeg-turbo/build/libjpeg.so.8.3.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.3.2
+	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.3.2 && ln -sf libjpeg.so.8.3.2 libjpeg.so && ln -sf libjpeg.so.8.3.2 libjpeg.so.8
 endif
 ifeq ($(TCONFIG_NGINX),y)
-	install -D libjpeg-turbo/build/libjpeg.so.8.2.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.2.2
-	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.2.2 && ln -sf libjpeg.so.8.2.2 libjpeg.so && ln -sf libjpeg.so.8.2.2 libjpeg.so.8
+	install -D libjpeg-turbo/build/libjpeg.so.8.3.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.3.2
+	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.3.2 && ln -sf libjpeg.so.8.3.2 libjpeg.so && ln -sf libjpeg.so.8.3.2 libjpeg.so.8
 endif
 	@true
 
@@ -2087,7 +2089,7 @@ libvorbis-clean:
 ffmpeg/stamp-h1:
 	$(call patch_files,ffmpeg)
 	cd ffmpeg && \
-		./configure --prefix='' --enable-cross-compile --arch=$(ARCH) --target-os=linux $(if $(TCONFIG_BCMARM),--cpu=cortex-a9,) \
+		./configure --prefix='' --enable-cross-compile --arch=$(ARCH) --target-os=linux \
 		--cross-prefix=$(CROSS_COMPILE) --pkg-config="pkg-config" \
 		--enable-pthreads --enable-small --enable-shared --enable-gpl \
 		--disable-doc --disable-ffmpeg --disable-ffplay --disable-ffserver --disable-ffprobe --disable-symver \
@@ -2100,8 +2102,8 @@ ffmpeg/stamp-h1:
 		--disable-parsers $(FFMPEG_CONFIGURE_PARSERS) \
 		--disable-protocols $(FFMPEG_CONFIGURE_PROTOCOLS) \
 		--extra-cflags="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include $(OPTSIZE_FLAG)" \
-		--extra-ldflags="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		--extra-libs="-L$(TOP)/zlib/staged/usr/lib -lz" \
+		--extra-ldflags="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib" \
+		--extra-libs="-lz" \
 		--enable-zlib --disable-debug
 	@touch $@
 
@@ -2111,12 +2113,12 @@ ffmpeg: ffmpeg/stamp-h1
 
 ffmpeg-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D ffmpeg/libavformat/libavformat.so.52 $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.52
-	install -D ffmpeg/libavcodec/libavcodec.so.52 $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.52
-	install -D ffmpeg/libavutil/libavutil.so.50 $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.50
-	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.52
-	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.52
-	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.50
+	install -D ffmpeg/libavformat/libavformat.so.54 $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.54
+	install -D ffmpeg/libavcodec/libavcodec.so.54 $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.54
+	install -D ffmpeg/libavutil/libavutil.so.51 $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.51
+	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.54
+	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.54
+	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.51
 endif
 	@true
 
@@ -2129,10 +2131,10 @@ minidlna/stamp-h1:
 	$(call patch_files,minidlna)
 	cd minidlna && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg -I$(TOP)/flac/include \
-			-I$(TOP)/sqlite -I$(TOP)/libjpeg-turbo -I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
-		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs \
-			-L$(TOP)/libjpeg-turbo/build -L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
+		CPPFLAGS="-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg -I$(TOP)/flac/include -I$(TOP)/sqlite -I$(TOP)/libjpeg-turbo \
+			-I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
+		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs -L$(TOP)/libjpeg-turbo/build \
+			-L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
 		LIBS="-lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -lpthread -lm" \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --with-db-path=/tmp/minidlna --with-log-path=/var/log --with-os-name="FreshTomato" --with-os-url="https://freshtomato.org/" \
 			--with-os-version="Linux/2.6.$(if $(TCONFIG_BCMARM),36.4brcmarm,22.19)" $(if $(MEDIA_SERVER_STATIC),--enable-static,) --enable-tivo --disable-dependency-tracking
@@ -2378,11 +2380,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.11.4 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.4
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.4
+	install -D libxml2/.libs/libxml2.so.2.11.5 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.5
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.5
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.11.4 libxml2.so.2 && \
-		ln -sf libxml2.so.2.11.4 libxml2.so
+		ln -sf libxml2.so.2.11.5 libxml2.so.2 && \
+		ln -sf libxml2.so.2.11.5 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -2406,11 +2408,11 @@ libpng: libpng/stamp-h1
 	@rm -f $(TOP)/libpng/staged/usr/lib/libpng12.la
 
 libpng-install:
-	install -D libpng/.libs/libpng16.so.16.39.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.39.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.39.0
+	install -D libpng/.libs/libpng16.so.16.40.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.40.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.40.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng16.so.16.39.0 libpng16.so && \
-		ln -sf libpng16.so.16.39.0 libpng16.so.16
+		ln -sf libpng16.so.16.40.0 libpng16.so && \
+		ln -sf libpng16.so.16.40.0 libpng16.so.16
 
 libpng-clean:
 	-@$(MAKE) -C libpng clean
@@ -3378,7 +3380,7 @@ getdns-clean:
 
 tor/stamp-h1:
 	cd tor && autoreconf -fsi && \
-		CFLAGS="$(if $(TCONFIG_BCMARM),-O2,-Os) -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -ffunction-sections -fdata-sections $(if $(TCONFIG_KEYGEN),,-DOPENSSL_NO_ENGINE)" \
+		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,-Os) -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -ffunction-sections -fdata-sections $(if $(TCONFIG_KEYGEN),,-DOPENSSL_NO_ENGINE)" \
 		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
@@ -3964,8 +3966,9 @@ diskdev_cmds-332.25-clean:
 
 libffi/stamp-h1:
 	cd libffi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
-		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --disable-builddir --disable-dependency-tracking
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		LDFLAGS="-Wl,--gc-sections -fPIC" \
+		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --disable-builddir --disable-docs --disable-dependency-tracking
 	@touch $@
 
 libffi: libffi/stamp-h1
@@ -3975,11 +3978,11 @@ libffi: libffi/stamp-h1
 	@rm -f libffi/staged/usr/lib/libffi.la
 
 libffi-install:
-	install -D $(TOP)/libffi/.libs/libffi.so.6.0.4 $(INSTALLDIR)/libffi/usr/lib/libffi.so.6.0.4
-	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.6.0.4
+	install -D $(TOP)/libffi/.libs/libffi.so.8.1.2 $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.2
+	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.2
 	cd $(INSTALLDIR)/libffi/usr/lib && \
-		ln -sf libffi.so.6.0.4 libffi.so.6 && \
-		ln -sf libffi.so.6.0.4 libffi.so
+		ln -sf libffi.so.8.1.2 libffi.so.8 && \
+		ln -sf libffi.so.8.1.2 libffi.so
 
 libffi-clean:
 	-@$(MAKE) -C libffi distclean
@@ -3989,12 +3992,15 @@ glib2/stamp-h1:
 	$(call patch_files,glib2)
 	cd glib2 && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/glib2" \
-		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -ldl -lpthread -lz -liconv -lffi" \
-		LIBFFI_CFLAGS="-I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/zlib/staged/usr/include \
+			-I$(TOP)/glib2 $(if $(TCONFIG_NGINX),-I$(TOP)/pcre,)" \
+		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/pcre/.libs,) \
+			-ldl -lpthread -lz -liconv -lffi $(if $(TCONFIG_NGINX),-lpcre,)" \
+		LIBFFI_CFLAGS="-I$(TOP)/libffi/staged/usr/include" \
 		LIBFFI_LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so" \
+		$(if $(TCONFIG_NGINX),PCRE_CFLAGS="-I$(TOP)/pcre" PCRE_LIBS="$(TOP)/pcre/.libs/libpcre.so",) \
 		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so" \
-		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --enable-debug=no --enable-man=no \
+		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --enable-debug=no --enable-man=no $(if $(TCONFIG_NGINX),--with-pcre=system,--with-pcre=internal) \
 			--disable-selinux --disable-fam --with-libiconv=gnu --disable-dependency-tracking
 	@touch $@
 
@@ -4021,9 +4027,10 @@ irqbalance/stamp-h1:
 	$(call patch_files,irqbalance)
 	cd irqbalance && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include" \
-		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib" \
-		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so" \
+		CPPFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/libiconv/staged/usr/include \
+			-I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include $(if $(TCONFIG_NGINX),-I$(TOP)/pcre,)" \
+		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/pcre/.libs,)" \
+		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so $(if $(TCONFIG_NGINX),$(TOP)/pcre/.libs/libpcre.so,)" \
 		GLIB2_CFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2" \
 		GLIB2_LIBS="-L$(TOP)/glib2/staged/usr/lib -lglib-2.0" \
 		$(CONFIGURE) --prefix=/usr --enable-static=glib2 --with-libcap_ng=no \

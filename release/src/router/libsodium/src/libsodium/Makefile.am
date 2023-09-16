@@ -82,6 +82,7 @@ libsodium_la_SOURCES = \
 	crypto_stream/salsa20/stream_salsa20.h \
 	crypto_stream/xsalsa20/stream_xsalsa20.c \
 	crypto_verify/sodium/verify.c \
+	include/sodium/private/asm_cet.h \
 	include/sodium/private/chacha20_ietf_ext.h \
 	include/sodium/private/common.h \
 	include/sodium/private/ed25519_ref10.h \
@@ -213,7 +214,7 @@ endif
 
 libaesni_la_LDFLAGS = $(libsodium_la_LDFLAGS)
 libaesni_la_CPPFLAGS = $(libsodium_la_CPPFLAGS) \
-	@CFLAGS_SSE2@ @CFLAGS_SSSE3@ @CFLAGS_AESNI@ @CFLAGS_PCLMUL@
+	@CFLAGS_SSE2@ @CFLAGS_SSSE3@ @CFLAGS_AVX@ @CFLAGS_AESNI@ @CFLAGS_PCLMUL@
 libaesni_la_SOURCES = \
 	crypto_aead/aes256gcm/aesni/aead_aes256gcm_aesni.c
 

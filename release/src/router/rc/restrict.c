@@ -6,6 +6,7 @@
  *
  */
 
+
 #include "rc.h"
 
 #include <time.h>
@@ -104,7 +105,7 @@ int rcheck_main(int argc, char *argv[])
 	radio = foreach_wif(0, NULL, radio_on) ? -1 : -2;
 	for (nrule = 0; nrule < MAX_NRULES; ++nrule) {
 		memset(buf, 0, sizeof(buf));
-		sprintf(buf, "rrule%d", nrule);
+		snprintf(buf, sizeof(buf), "rrule%d", nrule);
 		if ((p = nvram_get(buf)) == NULL)
 			continue;
 		if (sscanf(p, "%d|%d|%d|%d|%c", &n, &sched_begin, &sched_end, &sched_dow, &comp) != 5)
@@ -137,7 +138,7 @@ int rcheck_main(int argc, char *argv[])
 		}
 		else {
 			memset(buf, 0, sizeof(buf));
-			sprintf(buf, "r%s%02d", (comp != '|') ? "dev" : "res", nrule);
+			snprintf(buf, sizeof(buf), "r%s%02d", (comp != '|') ? "dev" : "res", nrule);
 
 			r = eval("iptables", "-D", "restrict", "-j", buf);
 			if (insch)
@@ -172,7 +173,7 @@ int rcheck_main(int argc, char *argv[])
 	}
 
 	memset(buf, 0, sizeof(buf));
-	sprintf(buf, "%llx", activated);
+	snprintf(buf, sizeof(buf), "%llx", activated);
 	nvram_set("rrules_activated", buf);
 
 	if (count > 0) {
@@ -229,13 +230,13 @@ void ipt_restrictions(void)
 
 	for (nrule = 0; nrule < MAX_NRULES; ++nrule) {
 		memset(buf, 0, sizeof(buf));
-		sprintf(buf, "rrule%d", nrule);
+		snprintf(buf, sizeof(buf), "rrule%d", nrule);
 		if ((p = nvram_get(buf)) == NULL)
 			continue;
 		if (strlen(p) >= sizeof(buf))
 			continue;
 
-		strcpy(buf, p);
+		strlcpy(buf, p, sizeof(buf));
 
 		/* q = 0/1, p = time (ignored), http file match */
 		if ((vstrsep(buf, "|", &q, &p, &p, &p, &comps, &matches, &http, &p) < 8) || (*q != '1'))
@@ -266,7 +267,7 @@ void ipt_restrictions(void)
 		}
 
 		memset(reschain, 0, sizeof(reschain));
-		sprintf(reschain, "rres%02d", nrule);
+		snprintf(reschain, sizeof(reschain), "rres%02d", nrule);
 		ip46t_write(ipv6_enabled, ":%s - [0:0]\n", reschain);
 
 		blockall = 1;
@@ -280,8 +281,8 @@ void ipt_restrictions(void)
 
 			/* p2p, layer7 */
 			memset(app, 0, sizeof(app));
-			if (!ipt_ipp2p(ipp2p, app)) {
-				if (ipt_layer7(layer7, app) == -1)
+			if (!ipt_ipp2p(ipp2p, app, sizeof(app))) {
+				if (ipt_layer7(layer7, app, sizeof(app)) == -1)
 					continue;
 			}
 #ifdef TCONFIG_IPV6
@@ -358,11 +359,11 @@ void ipt_restrictions(void)
 
 		app[0] = 0;
 		if (http_file & 1)
-			strcat(app, ".ocx$ .cab$ ");
+			strlcat(app, ".ocx$ .cab$ ", sizeof(app));
 		if (http_file & 2)
-			strcpy(app, ".swf$ ");
+			strlcpy(app, ".swf$ ", sizeof(app));
 		if (http_file & 4)
-			strcat(app, ".class$ .jar$");
+			strlcat(app, ".class$ .jar$", sizeof(app));
 
 		if (app[0]) {
 			ip46t_write(ipv6_enabled, "-A %s -p tcp -m multiport --dports %s -m web --path \"%s\" -j %s\n", reschain, nvram_safe_get("rrulewp"), app, chain_out_reject);
@@ -374,14 +375,14 @@ void ipt_restrictions(void)
 			memset(nextchain, 0, sizeof(nextchain));
 			if (blockall) {
 				ip46t_write(ipv6_enabled, "-X %s\n", reschain);	/* chain not needed */
-				sprintf(nextchain, "-j %s", chain_out_drop);
+				snprintf(nextchain, sizeof(nextchain), "-j %s", chain_out_drop);
 			}
 			else
-				sprintf(nextchain, "-g %s", reschain);
+				snprintf(nextchain, sizeof(nextchain), "-g %s", reschain);
 
 			ex = 0;
 			memset(devchain, 0, sizeof(devchain));
-			sprintf(devchain, "rdev%02d", nrule);
+			snprintf(devchain, sizeof(devchain), "rdev%02d", nrule);
 			ip46t_write(ipv6_enabled, ":%s - [0:0]\n", devchain);
 
 			while ((q = strsep(&comps, ">")) != NULL) {
