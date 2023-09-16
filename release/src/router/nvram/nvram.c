@@ -277,7 +277,7 @@ static int defaults_main(int argc, char **argv)
 		help();
 	}
 
-	if ((!nvram_match("restore_defaults", "0")) || (!nvram_match("os_name", "linux"))) {
+	if (!nvram_match("restore_defaults", "0")) {
 		force = 1;
 	}
 

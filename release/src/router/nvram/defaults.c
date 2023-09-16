@@ -1264,7 +1264,7 @@ const defaults_t defaults[] = {
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			"0"				},
 #ifdef TCONFIG_BCMARM
-#ifdef TCONFIG_TUXERA_HFS
+#ifdef TCONFIG_TUX_HFS
 	{ "usb_hfs_driver",		"tuxera"			},
 #else
 	{ "usb_hfs_driver",		"kernel"			},
