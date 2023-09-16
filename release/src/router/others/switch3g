@@ -19,13 +19,11 @@ LOGS="logger -t switch3g[$PID]"
 
 
 [ -z "$PREFIX" ] && {
-	echo "usage: switch3g INTERFACE [signal]"
+	echo "usage: $0 INTERFACE [signal]"
 	exit 0
 }
 
-[ ! "$MODE" == "ppp3g" ] && {
-	exit 0
-}
+[ ! "$MODE" == "ppp3g" ] && exit 0
 
 
 switchMode() {
@@ -199,10 +197,10 @@ searchDiag() {
 	[ -z "$TTYS" ] && {
 		nvram set "$PREFIX"_modem_type=""
 		[ "$(nvram get mwan_cktime)" -gt 0 ] && {
-			watchdog add
-			wayOut "3G MODEM not found - watchdog enabled"
+			mwwatchdog add
+			wayOut "3G MODEM not found - mwwatchdog enabled"
 		} || {
-			watchdog del
+			mwwatchdog del
 			wayOut "3G MODEM not found - connection process terminated!"
 		}
 	} || {
@@ -253,7 +251,7 @@ setPIN() {
 	}
 
 	[ "$IS_PIN" -eq 1 -a "$IS_DONE" -ne 1 ] && {
-		watchdog del
+		mwwatchdog del
 		wayOut "3G MODEM - SIM locked - connection process terminated!"
 	} || {
 		$LOGS "3G MODEM - SIM ready"
@@ -265,7 +263,7 @@ checkPid() {
 
 	[ -f $PIDFILE ] && {
 		PIDNO=$(cat $PIDFILE)
-		cat "/proc/$PIDNO/cmdline" > /dev/null 2>&1
+		cat "/proc/$PIDNO/cmdline" &>/dev/null
 
 		[ $? -eq 0 ] && {
 			$LOGS "3G MODEM - another process in action - exiting"
@@ -294,7 +292,7 @@ wayOut() {
 	[[ -z $TEXT ]] && TEXT="3G Modem - exiting"
 
 	$LOGS "$TEXT"
-	rm -f $PIDFILE > /dev/null 2>&1
+	rm -f $PIDFILE &>/dev/null
 	exit 0
 }
 
@@ -309,5 +307,5 @@ wayOut() {
 	switchMode
 	searchDiag
 	setPIN
-	rm -f $PIDFILE > /dev/null 2>&1
+	rm -f $PIDFILE &>/dev/null
 }

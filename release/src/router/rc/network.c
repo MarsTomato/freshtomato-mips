@@ -1,44 +1,45 @@
 /*
-
-	Copyright 2003, CyberTAN  Inc.  All Rights Reserved
-
-	This is UNPUBLISHED PROPRIETARY SOURCE CODE of CyberTAN Inc.
-	the contents of this file may not be disclosed to third parties,
-	copied or duplicated in any form without the prior written
-	permission of CyberTAN Inc.
-
-	This software should be used as a reference only, and it not
-	intended for production use!
-
-	THIS SOFTWARE IS OFFERED "AS IS", AND CYBERTAN GRANTS NO WARRANTIES OF ANY
-	KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE.  CYBERTAN
-	SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
-	FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE
-
-*/
+ *
+ * Copyright 2003, CyberTAN  Inc.  All Rights Reserved
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of CyberTAN Inc.
+ * the contents of this file may not be disclosed to third parties,
+ * copied or duplicated in any form without the prior written
+ * permission of CyberTAN Inc.
+ *
+ * This software should be used as a reference only, and it not
+ * intended for production use!
+ *
+ * THIS SOFTWARE IS OFFERED "AS IS", AND CYBERTAN GRANTS NO WARRANTIES OF ANY
+ * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE.  CYBERTAN
+ * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE
+ *
+ */
 /*
-
-	Copyright 2005, Broadcom Corporation
-	All Rights Reserved.
-
-	THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
-	KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
-	SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
-	FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
-
-*/
+ *
+ * Copyright 2005, Broadcom Corporation
+ * All Rights Reserved.
+ *
+ * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
+ * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
+ * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
+ *
+ */
 /*
-
-	wificonf, OpenWRT
-	Copyright (C) 2005 Felix Fietkau <nbd@vd-s.ath.cx>
-	
-*/
+ *
+ * wificonf, OpenWRT
+ * Copyright (C) 2005 Felix Fietkau <nbd@vd-s.ath.cx>
+ *
+ */
 /*
-
-	Modified for Tomato Firmware
-	Portions, Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
+ *
+ * Modified for Tomato Firmware
+ * Portions, Copyright (C) 2006-2009 Jonathan Zarate
+ * Fixes/updates (C) 2018 - 2023 pedro
+ *
+ */
 
 
 #include "rc.h"
@@ -95,6 +96,9 @@ typedef u_int8_t u8;
 #define WL_MAX_ASSOC		128
 #define STACHECK_CONNECT	30
 #define STACHECK_DISCONNECT	5
+#ifdef TCONFIG_BCMWL6
+#define STA_ARPING_FREQ		5 /* arping after X STACHECK_CONNECT checks (default: (5+1) * 30 sec = 180 sec) */
+#endif
 
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
@@ -603,7 +607,7 @@ static void wl_driver_mode_update(void)
 
 			if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
 				maxunit = (unit > maxunit) ? unit : maxunit + 1;
-				sprintf(mode_str, "wlradio_dmode_%d", maxunit);
+				snprintf(mode_str, sizeof(mode_str), "wlradio_dmode_%d", maxunit);
 				if (strcmp(nvram_safe_get(mode_str), mode) != 0) {
 					logmsg(LOG_INFO,"%s: Setting %s = %s\n", __FUNCTION__, mode_str, mode);
 					nvram_set(mode_str, mode);
@@ -624,7 +628,7 @@ static void wl_driver_mode_update(void)
 #endif
 
 			if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
-				sprintf(mode_str, "wlradio_dmode_%d", i);
+				snprintf(mode_str, sizeof(mode_str), "wlradio_dmode_%d", i);
 				if (strcmp(nvram_get(mode_str), mode) != 0) {
 					logmsg(LOG_INFO,"%s: Setting %s = %s\n", __FUNCTION__, mode_str, mode);
 					nvram_set(mode_str, mode);
@@ -803,15 +807,15 @@ void restart_wl(void)
 		if (br != 0)
 			bridge[0] += br;
 		else
-			strcpy(bridge, "");
+			memset(bridge, 0, sizeof(bridge));
 
-		strcpy(tmp, "lan");
+		strlcpy(tmp, "lan", sizeof(tmp));
 		strlcat(tmp, bridge, sizeof(tmp));
 		strlcat(tmp, "_ifname", sizeof(tmp));
 		lan_ifname = nvram_safe_get(tmp);
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
-			strcpy(tmp, "lan");
+			strlcpy(tmp, "lan", sizeof(tmp));
 			strlcat(tmp, bridge, sizeof(tmp));
 			strlcat(tmp, "_ifnames", sizeof(tmp));
 
@@ -956,14 +960,14 @@ void stop_lan_wl(void)
 		if (br !=0 )
 			bridge[0] += br;
 		else
-			strcpy(bridge, "");
+			memset(bridge, 0, sizeof(bridge));
 
-		strcpy(tmp, "lan");
+		strlcpy(tmp, "lan", sizeof(tmp));
 		strlcat(tmp, bridge, sizeof(tmp));
 		strlcat(tmp, "_ifname", sizeof(tmp));
 		lan_ifname = nvram_safe_get(tmp);
 
-		strcpy(tmp, "lan");
+		strlcpy(tmp, "lan", sizeof(tmp));
 		strlcat(tmp, bridge, sizeof(tmp));
 		strlcat(tmp, "_ifnames", sizeof(tmp));
 		if ((wl_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
@@ -1025,9 +1029,9 @@ void start_lan_wl(void)
 		if (br != 0)
 			bridge[0] += br;
 		else
-			strcpy(bridge, "");
+			memset(bridge, 0, sizeof(bridge));
 
-		strcpy(tmp, "lan");
+		strlcpy(tmp, "lan", sizeof(tmp));
 		strlcat(tmp, bridge, sizeof(tmp));
 		strlcat(tmp, "_ifname", sizeof(tmp));
 		lan_ifname = nvram_safe_get(tmp);
@@ -1039,12 +1043,12 @@ void start_lan_wl(void)
 				eval("igs", "add", "bridge", lan_ifname);
 			}
 #endif
-			strcpy(tmp, "lan");
+			strlcpy(tmp, "lan", sizeof(tmp));
 			strlcat(tmp, bridge, sizeof(tmp));
 			strlcat(tmp, "_ipaddr", sizeof(tmp));
 			inet_aton(nvram_safe_get(tmp), (struct in_addr *)&ip);
 
-			strcpy(tmp, "lan");
+			strlcpy(tmp, "lan", sizeof(tmp));
 			strlcat(tmp, bridge, sizeof(tmp));
 			strlcat(tmp, "_ifnames", sizeof(tmp));
 
@@ -1133,7 +1137,7 @@ void stop_wireless(void) {
 	char prefix[] = "wanXX";
 
 	stop_nas();
-	if (get_sta_wan_prefix(prefix)) { /* wl client will be down */
+	if (get_sta_wan_prefix(prefix, sizeof(prefix))) { /* wl client will be down */
 		logmsg(LOG_INFO, "wireless client WAN: stopping %s (WL down)", prefix);
 		stop_wan_if(prefix);
 	}
@@ -1161,7 +1165,7 @@ void start_wireless(void) {
 #ifdef TCONFIG_BCMWL6
 	    ret &&
 #endif
-	    get_sta_wan_prefix(prefix)) { /* wl client up again */
+	    get_sta_wan_prefix(prefix, sizeof(prefix))) { /* wl client up again */
 		logmsg(LOG_INFO, "wireless client WAN: starting %s (WL up)", prefix);
 		start_wan_if(prefix);
 		sleep(5);
@@ -1523,12 +1527,12 @@ void start_lan(void)
 		if (br != 0)
 			bridge[0] += br;
 		else
-			strcpy(bridge, "");
+			memset(bridge, 0, sizeof(bridge));
 
 		if ((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
 			return;
 
-		strcpy(tmp, "lan");
+		strlcpy(tmp, "lan", sizeof(tmp));
 		strlcat(tmp, bridge, sizeof(tmp));
 		strlcat(tmp, "_ifname", sizeof(tmp));
 		lan_ifname = strdup(nvram_safe_get(tmp));
@@ -1538,7 +1542,7 @@ void start_lan(void)
 
 			eval("brctl", "addbr", lan_ifname);
 			eval("brctl", "setfd", lan_ifname, "0");
-			strcpy(tmp, "lan");
+			strlcpy(tmp, "lan", sizeof(tmp));
 			strlcat(tmp, bridge, sizeof(tmp));
 			strlcat(tmp, "_stp", sizeof(tmp));
 			eval("brctl", "stp", lan_ifname, nvram_safe_get(tmp));
@@ -1550,7 +1554,7 @@ void start_lan(void)
 			}
 #endif
 
-			strcpy(tmp, "lan");
+			strlcpy(tmp, "lan", sizeof(tmp));
 			strlcat(tmp, bridge, sizeof(tmp));
 			strlcat(tmp, "_ipaddr", sizeof(tmp));
 			inet_aton(nvram_safe_get(tmp), (struct in_addr *)&ip);
@@ -1558,7 +1562,7 @@ void start_lan(void)
 			hwaddrset = 0;
 			sta = 0;
 
-			strcpy(tmp, "lan");
+			strlcpy(tmp, "lan", sizeof(tmp));
 			strlcat(tmp, bridge, sizeof(tmp));
 			strlcat(tmp, "_ifnames", sizeof(tmp));
 			if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
@@ -1709,7 +1713,7 @@ void start_lan(void)
 
 		/* Get current LAN hardware address */
 		strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
-		strcpy(tmp, "lan");
+		strlcpy(tmp, "lan", sizeof(tmp));
 		strlcat(tmp, bridge, sizeof(tmp));
 		strlcat(tmp, "_hwaddr", sizeof(tmp));
 		if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) {
@@ -1722,10 +1726,10 @@ void start_lan(void)
 		set_et_qos_mode();
 
 		/* bring up and configure LAN interface */
-		strcpy(tmp, "lan");
+		strlcpy(tmp, "lan", sizeof(tmp));
 		strlcat(tmp, bridge, sizeof(tmp));
 		strlcat(tmp, "_ipaddr", sizeof(tmp));
-		strcpy(tmp2, "lan");
+		strlcpy(tmp2, "lan", sizeof(tmp2));
 		strlcat(tmp2, bridge, sizeof(tmp2));
 		strlcat(tmp2, "_netmask", sizeof(tmp2));
 		ifconfig(lan_ifname, IFUP | IFF_ALLMULTI, nvram_safe_get(tmp), nvram_safe_get(tmp2));
@@ -1791,16 +1795,16 @@ void stop_lan(void)
 		if (br != 0)
 			bridge[0] += br;
 		else
-			strcpy(bridge, "");
+			memset(bridge, 0, sizeof(bridge));
 
-		strcpy(tmp, "lan");
+		strlcpy(tmp, "lan", sizeof(tmp));
 		strlcat(tmp, bridge, sizeof(tmp));
 		strlcat(tmp, "_ifname", sizeof(tmp));
 		lan_ifname = nvram_safe_get(tmp);
 		ifconfig(lan_ifname, 0, NULL, NULL);
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
-			strcpy(tmp, "lan");
+			strlcpy(tmp, "lan", sizeof(tmp));
 			strlcat(tmp, bridge, sizeof(tmp));
 			strlcat(tmp, "_ifnames", sizeof(tmp));
 			if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
@@ -2047,7 +2051,7 @@ int wl_send_dif_event(const char *ifname, uint32 event)
 	/* Init the message contents to send to eapd. Specify the interface
 	 * and the event that occured on the interface.
 	 */
-	strncpy(data, ifname, IFNAMSIZ);
+	strlcpy(data, ifname, IFNAMSIZ);
 	*(uint32 *)(data + IFNAMSIZ) = event;
 	len = IFNAMSIZ + sizeof(uint32);
 
@@ -2151,6 +2155,9 @@ static int check_wl_client(char *ifname, int unit, int subunit)
 static int radio_join(int idx, int unit, int subunit, void *param)
 {
 	int i, stacheck_connect, stacheck;
+#ifdef TCONFIG_BCMWL6
+	static int arp_count = 0;
+#endif /* TCONFIG_BCMWL6 */
 	char s[32], f[64];
 	char ifname[16];
 	char *amode, sec[16];
@@ -2191,6 +2198,14 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 
 			if (check_wl_client(ifname, unit, subunit)) {
 				stacheck = stacheck_connect;
+#ifdef TCONFIG_BCMWL6
+				/* check next arping cycle for psta (MediaBridge) */
+				if (!strcmp(nvram_safe_get(wl_nvname("mode", unit, subunit)), "psta") && ((arp_count++) >= STA_ARPING_FREQ)) {
+					arp_count = 0; /* reset */
+					logmsg(LOG_DEBUG, "*** %s: MediaBridge - ARPING cycle (%d sec)", __FUNCTION__, ((STA_ARPING_FREQ + 1) * stacheck));
+					send_arpreq();
+				}
+#endif /* TCONFIG_BCMWL6 */
 			}
 			else {
 				eval("wl", "-i", ifname, "disassoc");

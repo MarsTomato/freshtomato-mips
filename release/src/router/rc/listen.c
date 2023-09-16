@@ -1,20 +1,26 @@
 /*
-	listen.c -- Listen for any packet through an interface
-	Copyright 2003, CyberTAN  Inc.  All Rights Reserved
-
-	This is UNPUBLISHED PROPRIETARY SOURCE CODE of CyberTAN Inc.
-	the contents of this file may not be disclosed to third parties,
-	copied or duplicated in any form without the prior written
-	permission of CyberTAN Inc.
-
-	This software should be used as a reference only, and it not
-	intended for production use!
-
-	THIS SOFTWARE IS OFFERED "AS IS", AND CYBERTAN GRANTS NO WARRANTIES OF ANY
-	KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE.  CYBERTAN
-	SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
-	FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE
-*/
+ * listen.c -- Listen for any packet through an interface
+ * Copyright 2003, CyberTAN  Inc.  All Rights Reserved
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of CyberTAN Inc.
+ * the contents of this file may not be disclosed to third parties,
+ * copied or duplicated in any form without the prior written
+ * permission of CyberTAN Inc.
+ *
+ * This software should be used as a reference only, and it not
+ * intended for production use!
+ *
+ * THIS SOFTWARE IS OFFERED "AS IS", AND CYBERTAN GRANTS NO WARRANTIES OF ANY
+ * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE.  CYBERTAN
+ * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE
+ */
+/*
+ *
+ * Modified for FreshTomato Firmware
+ * Fixes/updates (C) 2018 - 2023 pedro
+ *
+ */
 
 
 #include "rc.h"
@@ -85,7 +91,7 @@ static int read_interface(const char *interface, int *ifindex, unsigned char *ma
 
 	r = -1;
 	ifr.ifr_addr.sa_family = AF_INET;
-	strcpy(ifr.ifr_name, interface);
+	strlcpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name));
 
 	if (ioctl(fd, SIOCGIFINDEX, &ifr) == 0) {
 		*ifindex = ifr.ifr_ifindex;
@@ -328,7 +334,7 @@ int listen_main(int argc, char *argv[])
 		usage_exit(argv[0], "<interface> <wanN>");
 
 	interface = argv[1];
-	strcpy(prefix, argv[2]);
+	strlcpy(prefix, argv[2], sizeof(prefix));
 
 	printf("Starting listen on %s ...", interface);
 
@@ -338,8 +344,8 @@ int listen_main(int argc, char *argv[])
 		return 0;
 
 	if (pid == 0) {	/* forked process */
-		memset(pid_file, 0, 64);
-		sprintf(pid_file, "/var/run/listen-%s.pid", prefix);
+		memset(pid_file, 0, sizeof(pid_file));
+		snprintf(pid_file, sizeof(pid_file), "/var/run/listen-%s.pid", prefix);
 
 		/* read / write pid */
 		if (access(pid_file, F_OK) != -1) {	/* pid file exists */

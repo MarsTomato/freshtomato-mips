@@ -1,21 +1,21 @@
 /*
-
-	Copyright 2003-2005, CyberTAN Inc.  All Rights Reserved
-
-	This is UNPUBLISHED PROPRIETARY SOURCE CODE of CyberTAN Inc.
-	the contents of this file may not be disclosed to third parties,
-	copied or duplicated in any form without the prior written
-	permission of CyberTAN Inc.
-
-	This software should be used as a reference only, and it not
-	intended for production use!
-
-	THIS SOFTWARE IS OFFERED "AS IS", AND CYBERTAN GRANTS NO WARRANTIES OF ANY
-	KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE.  CYBERTAN
-	SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
-	FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE
-
-*/
+ *
+ * Copyright 2003-2005, CyberTAN Inc.  All Rights Reserved
+ *
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of CyberTAN Inc.
+ * the contents of this file may not be disclosed to third parties,
+ * copied or duplicated in any form without the prior written
+ * permission of CyberTAN Inc.
+ *
+ * This software should be used as a reference only, and it not
+ * intended for production use!
+ *
+ * THIS SOFTWARE IS OFFERED "AS IS", AND CYBERTAN GRANTS NO WARRANTIES OF ANY
+ * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE.  CYBERTAN
+ * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE
+ *
+ */
 /*
  *
  * Modified for Tomato Firmware
@@ -85,7 +85,7 @@ static int is_sta(int idx, int unit, int subunit, void *param)
 }
 
 #ifdef TCONFIG_BCMARM
-void ip2class(char *lan_ip, char *netmask, char *buf)
+void ip2class(char *lan_ip, char *netmask, char *buf, const size_t buf_sz)
 {
 	unsigned int val, ip;
 	struct in_addr in;
@@ -99,7 +99,7 @@ void ip2class(char *lan_ip, char *netmask, char *buf)
 	for (val = ntohl(val); val; i++)
 		val <<= 1;
 
-	sprintf(buf, "%s/%d", inet_ntoa(in), i);
+	snprintf(buf, buf_sz, "%s/%d", inet_ntoa(in), i);
 }
 #endif
 
@@ -161,7 +161,7 @@ void log_segfault(void)
 	f_write_string("/proc/sys/kernel/print-fatal-signals", (nvram_get_int("debug_logsegfault") ? "1" : "0"), 0, 0);
 }
 
-static int dmz_dst(char *s)
+static int dmz_dst(char *s, const size_t buf_sz)
 {
 	struct in_addr ia;
 	char *p;
@@ -176,25 +176,25 @@ static int dmz_dst(char *s)
 		return 0;
 
 	if (s)
-		strcpy(s, p);
+		strlcpy(s, p, buf_sz);
 
 	return 1;
 }
 
-void lan_ip(char *buffer, char *ret)
+void lan_ip(char *buffer, char *ret, const size_t buf_sz)
 {
 	char *nv, *p;
 	char s[32];
 
 	if ((nv = nvram_get(buffer)) != NULL) {
-		strcpy(s, nv);
+		strlcpy(s, nv, sizeof(s));
 		if ((p = strrchr(s, '.')) != NULL) {
 			*p = 0;
-			strcpy(ret, s);
+			strlcpy(ret, s, buf_sz);
 		}
 	}
 	else
-		strcpy(ret, "");
+		memset(ret, 0, buf_sz);
 }
 
 void ipt_log_unresolved(const char *addr, const char *addrtype, const char *categ, const char *name)
@@ -298,7 +298,7 @@ static void foreach_wan_nat(int wanXup, wanface_list_t wanXfaces, char *p)
 	}
 }
 
-int ipt_dscp(const char *v, char *opt)
+int ipt_dscp(const char *v, char *opt, const size_t buf_sz)
 {
 	unsigned int n;
 
@@ -311,14 +311,14 @@ int ipt_dscp(const char *v, char *opt)
 	if (n > 63)
 		n = 63;
 
-	sprintf(opt, " -m dscp --dscp 0x%02X", n);
+	snprintf(opt, buf_sz, " -m dscp --dscp 0x%02X", n);
 
 	modprobe("xt_dscp");
 
 	return 1;
 }
 
-int ipt_ipp2p(const char *v, char *opt)
+int ipt_ipp2p(const char *v, char *opt, const size_t buf_sz)
 {
 	int n = atoi(v);
 
@@ -327,25 +327,25 @@ int ipt_ipp2p(const char *v, char *opt)
 		return 0;
 	}
 
-	strcpy(opt, " -m ipp2p ");
+	strlcpy(opt, " -m ipp2p ", buf_sz);
 	if ((n & 0xFFF) == 0xFFF)
-		strcat(opt, "--ipp2p");
+		strlcat(opt, "--ipp2p", buf_sz);
 	else {
 		/* x12 */
-		if (n & 0x0001) strcat(opt, "--apple ");
-		if (n & 0x0002) strcat(opt, "--ares ");
-		if (n & 0x0004) strcat(opt, "--bit ");
-		if (n & 0x0008) strcat(opt, "--dc ");
-		if (n & 0x0010) strcat(opt, "--edk ");
-		if (n & 0x0020) strcat(opt, "--gnu ");
-		if (n & 0x0040) strcat(opt, "--kazaa ");
-		if (n & 0x0080) strcat(opt, "--mute ");
-		if (n & 0x0100) strcat(opt, "--soul ");
-		if (n & 0x0200) strcat(opt, "--waste ");
-		if (n & 0x0400) strcat(opt, "--winmx ");
-		if (n & 0x0800) strcat(opt, "--xdcc ");
-		if (n & 0x1000) strcat(opt, "--pp ");
-		if (n & 0x2000) strcat(opt, "--xunlei ");
+		if (n & 0x0001) strlcat(opt, "--apple ", buf_sz);
+		if (n & 0x0002) strlcat(opt, "--ares ", buf_sz);
+		if (n & 0x0004) strlcat(opt, "--bit ", buf_sz);
+		if (n & 0x0008) strlcat(opt, "--dc ", buf_sz);
+		if (n & 0x0010) strlcat(opt, "--edk ", buf_sz);
+		if (n & 0x0020) strlcat(opt, "--gnu ", buf_sz);
+		if (n & 0x0040) strlcat(opt, "--kazaa ", buf_sz);
+		if (n & 0x0080) strlcat(opt, "--mute ", buf_sz);
+		if (n & 0x0100) strlcat(opt, "--soul ", buf_sz);
+		if (n & 0x0200) strlcat(opt, "--waste ", buf_sz);
+		if (n & 0x0400) strlcat(opt, "--winmx ", buf_sz);
+		if (n & 0x0800) strlcat(opt, "--xdcc ", buf_sz);
+		if (n & 0x1000) strlcat(opt, "--pp ", buf_sz);
+		if (n & 0x2000) strlcat(opt, "--xunlei ", buf_sz);
 	}
 
 	modprobe("ipt_ipp2p");
@@ -408,7 +408,7 @@ static void ipt_layer7_inbound(void)
 	layer7_in = NULL;
 }
 
-int ipt_layer7(const char *v, char *opt)
+int ipt_layer7(const char *v, char *opt, const size_t buf_sz)
 {
 	char s[128];
 	char *path;
@@ -433,7 +433,7 @@ int ipt_layer7(const char *v, char *opt)
 		}
 	}
 
-	sprintf(opt, " -m layer7 --l7dir %s --l7proto %s", path, v);
+	snprintf(opt, buf_sz, " -m layer7 --l7dir %s --l7proto %s", path, v);
 
 	if (nvram_match("nf_l7in", "1")) {
 		if (!layer7_in)
@@ -477,7 +477,7 @@ static void ipt_account(void) {
 		if (br != 0)
 			bridge[0] += br;
 		else
-			strcpy(bridge, "");
+			memset(bridge, 0, sizeof(bridge));
 
 		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
 
@@ -757,7 +757,7 @@ static void mangle_table(void)
 	if (!nvram_get_int("ctf_disable")) {
 		for (i = 0; i < BRIDGE_COUNT; i++) {
 			if ((strcmp(lanface[i], "") != 0) && (strcmp(lanaddr[i], "") != 0)) { /* check LAN setup */
-				ip2class(lanaddr[i], lanmask[i], lan_class);
+				ip2class(lanaddr[i], lanmask[i], lan_class, sizeof(lan_class));
 				ipt_write("-A FORWARD -o %s -s %s -d %s -j MARK --set-mark 0x01/0x7\n", lanface[i], lan_class, lan_class);
 			}
 		}
@@ -1040,7 +1040,7 @@ static void nat_table(void)
 #endif
 	) {
 		memset(dst, 0, sizeof(dst));
-		if (dmz_dst(dst)) {
+		if (dmz_dst(dst, sizeof(dst))) {
 			strlcpy(t, nvram_safe_get("dmz_sip"), sizeof(t));
 			p = t;
 			do {
@@ -1420,7 +1420,7 @@ static void filter_forward(void)
 		if (br != 0)
 			bridge[0] += br;
 		else
-			strcpy(bridge, "");
+			memset(bridge, 0, sizeof(bridge));
 
 		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
 		if (strncmp(nvram_safe_get(lanN_ifname), "br", 2) == 0) {
@@ -1435,7 +1435,7 @@ static void filter_forward(void)
 				if (br2 != 0)
 					bridge2[0] += br2;
 				else
-					strcpy(bridge2, "");
+					memset(bridge2, 0, sizeof(bridge2));
 
 				snprintf(lanN_ifname2, sizeof(lanN_ifname2), "lan%s_ifname", bridge2);
 
@@ -1519,7 +1519,7 @@ static void filter_forward(void)
 		if (br != 0)
 			bridge[0] += br;
 		else
-			strcpy(bridge, "");
+			memset(bridge, 0, sizeof(bridge));
 
 		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
 		if (strncmp(nvram_safe_get(lanN_ifname), "br", 2) == 0)
@@ -1560,14 +1560,14 @@ static void filter_forward(void)
 			ip6t_forward();
 #endif
 		memset(dst, 0, sizeof(dst));
-		if (dmz_dst(dst)) {
+		if (dmz_dst(dst, sizeof(dst))) {
 			memset(dmz_ifname, 0, sizeof(dmz_ifname));
 			for (i = 0; i < BRIDGE_COUNT; i++) {
 				if (strcmp(lanface[i], "") != 0) { /* LAN is enabled */
 					memset(buffer, 0, sizeof(buffer));
 					snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-					lan_ip(buffer, dmz1);
-					lan_ip("dmz_ipaddr", dmz2);
+					lan_ip(buffer, dmz1, sizeof(dmz1));
+					lan_ip("dmz_ipaddr", dmz2, sizeof(dmz2));
 
 					if (strcmp(dmz1, dmz2) == 0 && strcmp(lanface[i], "") != 0) {
 						strlcpy(dmz_ifname, lanface[i], sizeof(dmz_ifname));
@@ -2134,7 +2134,7 @@ int start_firewall(void)
 	sched_restrictions();
 	enable_ip_forward();
 
-	led(LED_DMZ, dmz_dst(NULL));
+	led(LED_DMZ, dmz_dst(NULL, 0));
 
 #ifdef TCONFIG_IPV6
 	modprobe_r("nf_conntrack_ipv6");

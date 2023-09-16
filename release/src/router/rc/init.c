@@ -1,14 +1,20 @@
 /*
-
-	Copyright 2005, Broadcom Corporation
-	All Rights Reserved.
-
-	THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
-	KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
-	SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
-	FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
-
-*/
+ *
+ * Copyright 2005, Broadcom Corporation
+ * All Rights Reserved.
+ *
+ * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
+ * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
+ * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
+ *
+ */
+/*
+ *
+ * Modified for FreshTomato Firmware
+ * Fixes/updates (C) 2018 - 2023 pedro
+ *
+ */
 
 
 #include "rc.h"
@@ -112,7 +118,6 @@ static void restore_defaults(void)
 	eval("nvram", "defaults", "--initcheck");
 #endif
 
-	nvram_set("os_name", "linux");
 	nvram_set("os_version", tomato_version);
 	nvram_set("os_date", tomato_buildtime);
 
@@ -233,7 +238,7 @@ static void setcaldata()
 	if (mtd == -1)
 		return;
 
-	sprintf(cmd, "strings /dev/mtd%dro | grep rpcal", mtd);
+	snprintf(cmd, sizeof(cmd), "strings /dev/mtd%dro | grep rpcal", mtd);
 	fp = popen(cmd, "r");
 
 	if (fp != NULL) {
@@ -615,7 +620,7 @@ static int find_dir320_mac_addr(void)
 					s[17] = 0;
 					nvram_set("il0macaddr", s);
 					if (!found) {
-						inc_mac(s, -1);
+						inc_mac(s, -1, sizeof(s));
 						nvram_set("et0macaddr", s);
 					}
 					found = 1;
@@ -628,7 +633,7 @@ static int find_dir320_mac_addr(void)
 out:
 	if (!found) {
 		strlcpy(s, nvram_safe_get("wl0_hwaddr"), sizeof(s));
-		inc_mac(s, -2);
+		inc_mac(s, -2, sizeof(s));
 		nvram_set("et0macaddr", s);
 	}
 	return 1;
@@ -1061,7 +1066,7 @@ static void check_bootnv(void)
 		/* fix WL500W mac adresses for WAN port */
 		if (invalid_mac(nvram_get("et1macaddr"))) {
 			strlcpy(mac, nvram_safe_get("et0macaddr"), sizeof(mac));
-			inc_mac(mac, 1);
+			inc_mac(mac, 1, sizeof(mac));
 			dirty |= check_nv("et1macaddr", mac);
 		}
 		dirty |= check_nv("wl0gpio0", "0x88");
@@ -1125,7 +1130,7 @@ static void check_bootnv(void)
 		dirty |= check_nv("sb/1/ledbh1", "8");
 		if (invalid_mac(nvram_get("pci/1/1/macaddr"))) {
 			strlcpy(mac, nvram_safe_get("et0macaddr"), sizeof(mac));
-			inc_mac(mac, 3);
+			inc_mac(mac, 3, sizeof(mac));
 			dirty |= check_nv("pci/1/1/macaddr", mac);
 		}
 		break;
@@ -1136,11 +1141,11 @@ static void check_bootnv(void)
 	case MODEL_F5D8235v3:
 		if (nvram_match("sb/1/macaddr", nvram_safe_get("et0macaddr"))) {
 			strlcpy(mac, nvram_safe_get("et0macaddr"), sizeof(mac));
-			inc_mac(mac, +2);
+			inc_mac(mac, +2, sizeof(mac));
 			dirty |= check_nv("sb/1/macaddr", mac);
 			if ((model == MODEL_F7D4301) || /* N600 Dual Band */
 			    (model == MODEL_F7D4302)) {
-				inc_mac(mac, +4);
+				inc_mac(mac, +4, sizeof(mac));
 				dirty |= check_nv("pci/1/1/macaddr", mac);
 			}
 		}
@@ -1150,9 +1155,9 @@ static void check_bootnv(void)
 		if (strncasecmp(nvram_safe_get("pci/1/1/macaddr"), "00:90:4c", 8) == 0 ||
 		    strncasecmp(nvram_safe_get("sb/1/macaddr"), "00:90:4c", 8) == 0) {
 			strlcpy(mac, nvram_safe_get("et0macaddr"), sizeof(mac));
-			inc_mac(mac, +2);
+			inc_mac(mac, +2, sizeof(mac));
 			dirty |= check_nv("sb/1/macaddr", mac);
-			inc_mac(mac, +4);
+			inc_mac(mac, +4, sizeof(mac));
 			dirty |= check_nv("pci/1/1/macaddr", mac);
 		}
 		break;
@@ -1200,7 +1205,7 @@ static void check_bootnv(void)
 		if (strncasecmp(nvram_safe_get("il0macaddr"), "00:90:4c", 8) == 0 ||
 		    strncasecmp(nvram_safe_get("wl0_hwaddr"), "00:90:4c", 8) == 0) {
 			strlcpy(mac, nvram_safe_get("et0macaddr"), sizeof(mac));
-			inc_mac(mac, +2);
+			inc_mac(mac, +2, sizeof(mac));
 			dirty |= check_nv("il0macaddr", mac);
 			dirty |= check_nv("wl0_hwaddr", mac);
 		}
@@ -1289,9 +1294,9 @@ static void check_bootnv(void)
 		 */
 		dirty |= check_nv("vlan2hwname", "et0");
 		strlcpy(mac, nvram_safe_get("et0macaddr"), sizeof(mac));
-		//inc_mac(mac, 2);
+		//inc_mac(mac, 2, sizeof(mac));
 		dirty |= check_nv("sb/1/macaddr", mac);
-		inc_mac(mac, -1);
+		inc_mac(mac, -1, sizeof(mac));
 		dirty |= check_nv("pci/1/1/macaddr", mac);
 		break;
 	case MODEL_WNDR3400v2:
@@ -1320,7 +1325,7 @@ static void check_bootnv(void)
 		dirty |= check_nv("vlan2hwname", "et0");
 		if (strncasecmp(nvram_safe_get("pci/2/1/macaddr"), "00:90:4c", 8) == 0) {
 			strlcpy(mac, nvram_safe_get("et0macaddr"), sizeof(mac));
-			inc_mac(mac, 3);
+			inc_mac(mac, 3, sizeof(mac));
 			dirty |= check_nv("pci/2/1/macaddr", mac);
 		}
 		break;
@@ -1344,7 +1349,7 @@ static void check_bootnv(void)
 				}
 				else { /* bring back FT default mac setup */
 					strlcpy(buf, nvram_safe_get("et0macaddr"), sizeof(buf));
-					inc_mac(buf, +2);
+					inc_mac(buf, +2, sizeof(buf));
 					nvram_set("0:macaddr", buf);
 				}
 			}
@@ -1358,7 +1363,7 @@ static void check_bootnv(void)
 				}
 				else { /* bring back FT default mac setup */
 					strlcpy(buf, nvram_safe_get("et0macaddr"), sizeof(buf));
-					inc_mac(buf, +6);
+					inc_mac(buf, +6, sizeof(buf));
 					nvram_set("1:macaddr", buf);
 				}
 			}
@@ -1669,7 +1674,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("il0macaddr", s);				/* fix WL mac for 2.4 GHz, was always 00:90:4C:5F:00:2A after upgrade/nvram full erase (for every router) */
 		}
 		switch (check_hw_type()) {
@@ -2120,11 +2125,11 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("sb/1/macaddr", s);				/* fix WL mac for 2,4G */
 			if ((model == MODEL_F7D4301) ||				/* N600 Dual Band */
 			    (model == MODEL_F7D4302)) {
-				inc_mac(s, +4);					/* do not overlap with VIFs */
+				inc_mac(s, +4, sizeof(s));					/* do not overlap with VIFs */
 				nvram_set("pci/1/1/macaddr", s);		/* fix WL mac for 5G */
 			}
 
@@ -2232,9 +2237,9 @@ static int init_nvram(void)
 #ifdef TCONFIG_BLINK /* RTN/RTAC */
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("sb/1/macaddr", s);				/* fix WL mac for 2,4G */
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 5G */
 
 			struct nvram_tuple e4200_pci_1_1_params[] = {
@@ -2754,10 +2759,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses for N66U and AC66U */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -3121,10 +3126,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 5G (eth1) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 2,4G (eth2) */
 			nvram_set("wl1_hwaddr", s);
 
@@ -3227,9 +3232,9 @@ static int init_nvram(void)
 				if (s[i] == '-')
 					s[i] = ':';
 			nvram_set("et0macaddr",s);
-			inc_mac(s, +2);
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +1);
+			inc_mac(s, +1, sizeof(s));
 			nvram_set("wl1_hwaddr", s);
 
 			/* fix ssid according to 5G(eth2) and 2.4G(eth1) */
@@ -3316,10 +3321,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -3594,10 +3599,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -3786,10 +3791,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -4024,11 +4029,11 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); /* get et0 MAC address for LAN */
-			inc_mac(s, +2); /* MAC + 1 will be for WAN */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); /* get et0 MAC address for LAN */
+			inc_mac(s, +2, sizeof(s)); /* MAC + 1 will be for WAN */
 			nvram_set("sb/1/macaddr", s); /* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4); /* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s)); /* do not overlap with VIFs */
 			nvram_set("wl1_hwaddr", s); /* fix WL mac for 5G eth2 */
 			nvram_set("0:macaddr", s);
 
@@ -4054,7 +4059,16 @@ static int init_nvram(void)
 			nvram_set("qtdc1_ep", "18");
 			nvram_set("qtdc1_sz", "10");
 		}
+		/* F9K1102(v3) adjust default values for wl_txq_thresh, et_txq_thresh and wl_rpcq_rxthresh (--> explicitly for WiFi modules) */
+		nvram_set("et_txq_thresh", "512");
+		nvram_set("wl_txq_thresh", "512");
+		nvram_set("wl_rpcq_rxthresh", "512");
 
+		nvram_set("wl0_txq_thresh", "512");
+		nvram_set("wl0_rpcq_rxthresh", "512");
+
+		nvram_set("wl1_txq_thresh", "512");
+		nvram_set("wl1_rpcq_rxthresh", "512");
 		break;
 	case MODEL_E900:
 	case MODEL_E1500:
@@ -4109,11 +4123,11 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); /* get et0 MAC address for LAN */
-			inc_mac(s, +2); /* MAC + 1 will be for WAN */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); /* get et0 MAC address for LAN */
+			inc_mac(s, +2, sizeof(s)); /* MAC + 1 will be for WAN */
 			nvram_set("sb/1/macaddr", s); /* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4); /* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s)); /* do not overlap with VIFs */
 			nvram_set("wl1_hwaddr", s); /* fix WL mac for 5G eth2 */
 			nvram_set("0:macaddr", s);
 
@@ -4160,11 +4174,11 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); 	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); 	/* get et0 MAC address for LAN */
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("sb/1/macaddr", s); 			/* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4); 				/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s)); 				/* do not overlap with VIFs */
 			nvram_set("wl1_hwaddr", s); 			/* fix WL mac for 5G eth2 */
 			nvram_set("usb/0xBD17/macaddr", s);
 
@@ -4190,6 +4204,10 @@ static int init_nvram(void)
 			nvram_set("qtdc1_ep", "18");
 			nvram_set("qtdc1_sz", "10");
 		}
+		/* E3200 adjust default values for wl_txq_thresh, et_txq_thresh and wl_rpcq_rxthresh (--> not explicitly for WiFi modules) */
+		nvram_set("et_txq_thresh", "256");
+		nvram_set("wl_txq_thresh", "256");
+		nvram_set("wl_rpcq_rxthresh", "256");
 		break;
 	case MODEL_WNDR4000:
 		mfr = "Netgear";
@@ -4557,11 +4575,11 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); 	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); 	/* get et0 MAC address for LAN */
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("sb/1/macaddr", s); 			/* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4); 				/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s)); 			/* do not overlap with VIFs */
 			nvram_set("0:macaddr", s);			/* fix WL mac for 5G eth2 */
 			nvram_set("wl1_hwaddr", s);
 
@@ -4738,6 +4756,17 @@ static int init_nvram(void)
 		set_defaults(wndr3400v2_sb_1_params, "sb/1/%s");
 		set_defaults(wndr3400v2_pci_1_1_params, "pci/1/1/%s");
 
+		/* WNDR3400v2 adjust default values for wl_txq_thresh, et_txq_thresh and wl_rpcq_rxthresh (--> explicitly for WiFi modules) */
+		nvram_set("et_txq_thresh", "512");
+		nvram_set("wl_txq_thresh", "512");
+		nvram_set("wl_rpcq_rxthresh", "512");
+
+		nvram_set("wl0_txq_thresh", "512");
+		nvram_set("wl0_rpcq_rxthresh", "512");
+
+		nvram_set("wl1_txq_thresh", "512");
+		nvram_set("wl1_rpcq_rxthresh", "512");
+
 		xstart("gpio", "disable", "16"); /* turn on Power LED (active LOW); GPIO 16 controls state (on/off) and GPIO 14 controls color, see led.c */
 		xstart("gpio", "enable", "21"); /* turn on USB supply (active HIGH) */
 		break;
@@ -4767,11 +4796,11 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); 	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); 	/* get et0 MAC address for LAN */
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("sb/1/macaddr", s); 			/* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4); 				/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));			/* do not overlap with VIFs */
 			nvram_set("0:macaddr", s);			/* fix WL mac for 5G eth2 */
 			nvram_set("wl1_hwaddr", s);
 
@@ -4949,6 +4978,17 @@ static int init_nvram(void)
 		set_defaults(wndr3400v3_sb_1_params, "sb/1/%s");
 		set_defaults(wndr3400v3_pci_1_1_params, "pci/1/1/%s");
 
+		/* WNDR3400v3 adjust default values for wl_txq_thresh, et_txq_thresh and wl_rpcq_rxthresh (--> explicitly for WiFi modules) */
+		nvram_set("et_txq_thresh", "512");
+		nvram_set("wl_txq_thresh", "512");
+		nvram_set("wl_rpcq_rxthresh", "512");
+
+		nvram_set("wl0_txq_thresh", "512");
+		nvram_set("wl0_rpcq_rxthresh", "512");
+
+		nvram_set("wl1_txq_thresh", "512");
+		nvram_set("wl1_rpcq_rxthresh", "512");
+
 		xstart("gpio", "disable", "16"); /* turn on Power LED (active LOW); GPIO 16 controls state (on/off) and GPIO 14 controls color, see led.c */
 		xstart("gpio", "enable", "21"); /* turn on USB supply (active HIGH) */
 		break;
@@ -4990,7 +5030,7 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
 
@@ -5054,10 +5094,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5166,10 +5206,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5228,10 +5268,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5295,10 +5335,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5357,10 +5397,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5422,10 +5462,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5490,10 +5530,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5561,10 +5601,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5626,10 +5666,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5693,10 +5733,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for wl0 (0:) 5G - eth1 for F9K1113v2 */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for wl1 (1:) 2.4G - eth2 for F9K1113v2 */
 			nvram_set("wl1_hwaddr", s);
 
@@ -5942,10 +5982,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for wl0 (0:) 5G - eth1 for F9K1113v2 and/or wl0 (0:) 5G - eth1 for F9K1113v2 */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for wl1 (1:) 2.4G - eth2 for F9K1113v2 and/or wl1 (1:) 2,4G - eth2 for F9K1113v2 */
 			nvram_set("wl1_hwaddr", s);
 
@@ -6189,10 +6229,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -6447,10 +6487,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -6704,10 +6744,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -6960,10 +7000,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -7231,10 +7271,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -7496,10 +7536,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -7777,10 +7817,10 @@ static int init_nvram(void)
 
 				/* fix MAC addresses */
 				strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-				inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+				inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 				nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
 				nvram_set("wl0_hwaddr", s);
-				inc_mac(s, +4);						/* do not overlap with VIFs */
+				inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 				nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 				nvram_set("wl1_hwaddr", s);
 
@@ -7794,10 +7834,10 @@ static int init_nvram(void)
 
 				/* fix MAC addresses */
 				strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-				inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+				inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 				nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
 				nvram_set("wl0_hwaddr", s);
-				inc_mac(s, +4);						/* do not overlap with VIFs */
+				inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 				nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
 				nvram_set("wl1_hwaddr", s);
 
@@ -8296,10 +8336,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -8579,10 +8619,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 2,4G */
 			nvram_set("wl1_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 5G */
 			nvram_set("wl0_hwaddr", s);
 
@@ -8856,10 +8896,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for wl0 (0:) 2,4G - eth1 for EA6350v1 and/or wl0 (0:) 5G - eth1 for EA6200 */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for wl1 (1:) 5G - eth2 for EA6350v1 and/or wl1 (1:) 2,4G - eth2 for EA6200 */
 			nvram_set("wl1_hwaddr", s);
 
@@ -8971,10 +9011,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -9204,10 +9244,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -9434,10 +9474,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -9673,10 +9713,10 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
 			nvram_set("wl1_hwaddr", s);
 
@@ -9752,7 +9792,7 @@ static int init_nvram(void)
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN - eth0 */
 			nvram_set("0:macaddr", s);				/* set WL mac for wl0 (0:) - 2,4GHz - eth1 (NOTE: needs to be the same like for LAN - other no wl connection with encryption/wpa possible ? --> align to RT-AC5300 for now! to be checked again for that case! ) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* set WL mac for wl1 (1:) - 5GHz low - eth2 */
 			nvram_set("wl1_hwaddr", s);
 
@@ -9829,7 +9869,7 @@ static int init_nvram(void)
 			strlcpy(s, nvram_safe_get("et1macaddr"), sizeof(s));	/* get et1 MAC address for LAN - eth0 */
 			nvram_set("0:macaddr", s);				/* set WL mac for wl0 (0:) - 2,4GHz - eth1 (NOTE: needs to be the same like for LAN - other no wl connection with encryption/wpa possible ? --> align to RT-AC5300 for now! to be checked again for that case! ) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* set WL mac for wl1 (1:) - 5GHz low - eth2 */
 			nvram_set("wl1_hwaddr", s);
 
@@ -9908,10 +9948,10 @@ static int init_nvram(void)
 			strlcpy(s, nvram_safe_get("et1macaddr"), sizeof(s));	/* get et1 MAC address for LAN - eth0 */
 			nvram_set("0:macaddr", s);				/* set WL mac for wl0 (0:) - 2,4GHz - eth1 (NOTE: needs to be the same like for LAN - other no wl connection with encryption/wpa possible) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("1:macaddr", s);				/* set WL mac for wl1 (1:) - 5GHz low - eth2 */
 			nvram_set("wl1_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("2:macaddr", s);				/* set WL mac for wl2 (2:) - 5GHz high - eth3 */
 			nvram_set("wl2_hwaddr", s);
 
@@ -10055,13 +10095,13 @@ static int init_nvram(void)
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
 			nvram_set("1:macaddr", s);				/* fix WL mac for wl0 (1:) - 2,4GHz - eth2 (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("0:macaddr", s);				/* fix WL mac for wl1 (0:) - 5GHz low (first one) - eth1 */
 			nvram_set("wl1_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("2:macaddr", s);				/* fix WL mac for wl2 (2:) - 5GHz high (second one) - eth3 */
 			nvram_set("wl2_hwaddr", s);
 
@@ -10378,13 +10418,13 @@ static int init_nvram(void)
 			strlcpy(s, nvram_safe_get("et2macaddr"), sizeof(s));	/* get et2 MAC address for LAN */
 			nvram_set("lan_hwaddr", s);				/* copy et2macaddr to lan_hwaddr */
 			nvram_set("et0macaddr", s);				/* copy et2macaddr to et0macaddr */
-			inc_mac(s, +2);
+			inc_mac(s, +2, sizeof(s));
 			nvram_set("1:macaddr", s);				/* fix WL mac for wl0 (1:) - 2,4GHz - eth2 */
 			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("0:macaddr", s);				/* fix WL mac for wl1 (0:) - 5GHz high - eth1 */
 			nvram_set("wl1_hwaddr", s);
-			inc_mac(s, +4);						/* do not overlap with VIFs */
+			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
 			nvram_set("2:macaddr", s);				/* fix WL mac for wl2 (2:) - 5GHz low - eth3 */
 			nvram_set("wl2_hwaddr", s);
 
