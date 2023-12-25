@@ -31,24 +31,29 @@
 #include <utils.h>
 #include <shared.h>
 
-#define PATH_DEV_NVRAM "/dev/nvram"
+#define PATH_DEV_NVRAM		"/dev/nvram"
+#define MAX_FS			4096
+#define MAGICNUM		0x12161770 /* Ludwig van Beethoven's birthdate. */
 
-/* Globals */
+
+/* globals */
 static int nvram_fd = -1;
 static char *nvram_buf = NULL;
+
 
 int nvram_init(void *unused)
 {
 	if ((nvram_fd = open(PATH_DEV_NVRAM, O_RDWR)) >= 0) {
-		/* Map kernel string buffer into user space */
+		/* map kernel string buffer into user space */
 		if ((nvram_buf = mmap(NULL, NVRAM_SPACE, PROT_READ, MAP_SHARED, nvram_fd, 0)) != MAP_FAILED) {
-			fcntl(nvram_fd, F_SETFD, FD_CLOEXEC);	// zzz
+			fcntl(nvram_fd, F_SETFD, FD_CLOEXEC);
 			return 0;
 		}
 		close(nvram_fd);
 		nvram_fd = -1;
 	}
- 	perror(PATH_DEV_NVRAM);
+	perror(PATH_DEV_NVRAM);
+
 	return errno;
 }
 
@@ -60,26 +65,30 @@ char *nvram_get(const char *name)
 	unsigned long *off = (unsigned long *)tmp;
 
 	if (nvram_fd < 0) {
-		if (nvram_init(NULL) != 0) return NULL;
+		if (nvram_init(NULL) != 0)
+			return NULL;
 	}
 
 	if (count > sizeof(tmp)) {
-		if ((off = malloc(count)) == NULL) return NULL;
+		if ((off = malloc(count)) == NULL)
+			return NULL;
 	}
 
 	/* Get offset into mmap() space */
 	strcpy((char *) off, name);
 	count = read(nvram_fd, off, count);
 
-	if (count == sizeof(*off)) {
+	if (count == sizeof(*off))
 		value = &nvram_buf[*off];
-	}
 	else {
 		value = NULL;
-		if (count < 0) perror(PATH_DEV_NVRAM);
+		if (count < 0)
+			perror(PATH_DEV_NVRAM);
 	}
 
-	if (off != (unsigned long *)tmp) free(off);
+	if (off != (unsigned long *)tmp)
+		free(off);
+
 	return value;
 }
 
@@ -87,14 +96,19 @@ int nvram_getall(char *buf, int count)
 {
 	int r;
 	
-	if (count <= 0) return 0;
+	if (count <= 0)
+		return 0;
 
 	*buf = 0;
 	if (nvram_fd < 0) {
-		if ((r = nvram_init(NULL)) != 0) return r;
+		if ((r = nvram_init(NULL)) != 0)
+			return r;
 	}
+
 	r = read(nvram_fd, buf, count);
-	if (r < 0) perror(PATH_DEV_NVRAM);
+	if (r < 0)
+		perror(PATH_DEV_NVRAM);
+
 	return (r == count) ? 0 : r;
 }
 
@@ -106,27 +120,30 @@ static int _nvram_set(const char *name, const char *value)
 	int ret;
 
 	if (nvram_fd < 0) {
-		if ((ret = nvram_init(NULL)) != 0) return ret;
+		if ((ret = nvram_init(NULL)) != 0)
+			return ret;
 	}
 
-	/* Unset if value is NULL */
-	if (value) count += strlen(value) + 1;
+	/* unset if value is NULL */
+	if (value)
+		count += strlen(value) + 1;
 
 	if (count > sizeof(tmp)) {
-		if ((buf = malloc(count)) == NULL) return -ENOMEM;
+		if ((buf = malloc(count)) == NULL)
+			return -ENOMEM;
 	}
 
-	if (value) {
+	if (value)
 		sprintf(buf, "%s=%s", name, value);
-	}
-	else {
+	else
 		strcpy(buf, name);
-	}
 
 	ret = write(nvram_fd, buf, count);
-	if (ret < 0) perror(PATH_DEV_NVRAM);
+	if (ret < 0)
+		perror(PATH_DEV_NVRAM);
 
-	if (buf != tmp) free(buf);
+	if (buf != tmp)
+		free(buf);
 
 	return (ret == (int) count) ? 0 : ret;
 }
@@ -141,12 +158,12 @@ int nvram_set(const char *name, const char *value)
 			break;
 		}
 	}
-	
+
 	if (strncmp(name, "wl_", 3) == 0) {
 		char wl0[48];
-		
+
 		if (strlen(name) < 32) {
-			sprintf(wl0, "wl0_%s", name + 3);
+			snprintf(wl0, sizeof(wl0), "wl0_%s", name + 3);
 			_nvram_set(wl0, value);
 		}
 	}
@@ -165,10 +182,11 @@ int nvram_commit(void)
 
 	if (wait_action_idle(10)) {
 		if (nvram_fd < 0) {
-			if ((r = nvram_init(NULL)) != 0) return r;
+			if ((r = nvram_init(NULL)) != 0)
+				return r;
 		}
 		set_action(ACT_NVRAM_COMMIT);
-//		nvram_unset("dirty");
+
 		r = ioctl(nvram_fd, NVRAM_MAGIC, NULL);
 		set_action(ACT_IDLE);
 		if (r < 0) {
@@ -176,9 +194,8 @@ int nvram_commit(void)
 			cprintf("commit: error\n");
 		}
 	}
-	else {
+	else
 		cprintf("commit: system busy\n");
-	}
 
 	return r;
 }
@@ -192,18 +209,16 @@ int nvram_commit(void)
  * Preserve mode (permissions) of the file.
  * Create the output directory.
  */
-#define MAX_FS 4096
-#define MAGICNUM 0x12161770	/* Ludwig van Beethoven's birthdate. */
 int nvram_file2nvram(const char *varname, const char *filename)
 {
 	FILE *fp;
-	int c,count;
+	int c, count;
 	unsigned int i = 0;
 	int j = 0;
 	struct stat stbuf;
 	unsigned char mem[MAX_FS], buf[3 * MAX_FS];
 
-	if ( !(fp=fopen(filename,"rb") )) {
+	if (!(fp = fopen(filename,"rb"))) {
 		perror("");
 		return 1;
 	}
@@ -211,31 +226,34 @@ int nvram_file2nvram(const char *varname, const char *filename)
 	stat(filename, &stbuf);
 	*((mode_t *)mem) = stbuf.st_mode;
 	*((mode_t *)mem+1) = MAGICNUM;
-   
-	count=fread(mem + 2*sizeof(mode_t), 1, sizeof(mem) - 2*sizeof(mode_t), fp);
+
+	count = fread(mem + 2 * sizeof(mode_t), 1, sizeof(mem) - 2 * sizeof(mode_t), fp);
 	if (!feof(fp)) {
 		fclose(fp);
 		fprintf(stderr, "File too big.\n");
 		return(1);
 	}
 	fclose(fp);
-	count += 2*sizeof(mode_t);
+	count += 2 * sizeof(mode_t);
 	for (j = 0; j < count; j++) {
-		if  (i > sizeof(buf)-3 )
+		if (i > sizeof(buf) - 3)
 			break;
-		c=mem[j];
-		if (c >= 32 && c <= 126 && c != '\\' && c != '~')  {
-			buf[i++]=(unsigned char) c;
-		} else if (c==0) {
-			buf[i++]='~';
-		} else {
-			buf[i++]='\\';
-			sprintf(buf+i,"%02X",c);
-			i+=2;
+
+		c = mem[j];
+		if (c >= 32 && c <= 126 && c != '\\' && c != '~')
+			buf[i++] = (unsigned char)c;
+		else if (c == 0)
+			buf[i++] = '~';
+		else {
+			buf[i++] = '\\';
+			//sprintf(buf + i, "%02X", c);
+			snprintf(buf + i, sizeof(buf) - i, "%02X", c);
+			i += 2;
 		}
 	}
-	buf[i]=0;
-	nvram_set(varname,buf);
+	buf[i] = 0;
+	nvram_set(varname, buf);
+
 	return 0;
 }
 
@@ -250,7 +268,7 @@ int nvram_file2nvram(const char *varname, const char *filename)
 int nvram_nvram2file(const char *varname, const char *filename)
 {
 	int fnum;
-	int c,tmp;
+	int c, tmp;
 	unsigned int i = 0;
 	int j = 0;
 	unsigned char *cp;
@@ -261,47 +279,52 @@ int nvram_nvram2file(const char *varname, const char *filename)
 		printf("Key does not exist: %s\n", varname);
 		return(1);
 	}
-	strcpy(buf, cp);
-	while (buf[i] && (j < (int) sizeof(mem)-3)) {
+	strlcpy(buf, cp, sizeof(buf));
+	while (buf[i] && (j < (int) sizeof(mem) - 3)) {
 		if (buf[i] == '\\')  {
 			i++;
-			tmp=buf[i+2];
-			buf[i+2]=0;
-			sscanf(buf+i,"%02X",&c);
-			buf[i+2]=tmp;
-			i+=2;
-			mem[j]=c;j++;
-		} else if (buf[i] == '~') {
-			mem[j++]=0;
-			i++;
-		} else {
-			mem[j++]=buf[i++];
+			tmp = buf[i + 2];
+			buf[i + 2] = 0;
+			sscanf(buf + i, "%02X", &c);
+			buf[i + 2] = tmp;
+			i += 2;
+			mem[j] = c;
+			j++;
 		}
+		else if (buf[i] == '~') {
+			mem[j++] = 0;
+			i++;
+		}
+		else
+			mem[j++] = buf[i++];
 	}
-   
-	if (j<=0)
+
+	if (j <= 0)
 		return j;
+
 	if (*((mode_t *)mem+1) != MAGICNUM) {
 		printf("Error: '%s' not created by nvram setfile.\n", varname);
 		return(-1);
 	}
 
-	/* Create the directories to the path, as necessary. */
-	strcpy(buf, filename);
+	/* create the directories to the path, as necessary. */
+	strlcpy(buf, filename, sizeof(buf));
 	cp = strrchr(buf, '/');
 	if (cp && cp > buf) {
 		*cp = 0;
 		eval("mkdir", "-m", "0777", "-p", buf);
 	}
-   
-	if ( (fnum=open(filename, O_WRONLY | O_CREAT | O_TRUNC, *((mode_t *)mem))) < 0) {
+
+	if ((fnum=open(filename, O_WRONLY | O_CREAT | O_TRUNC, *((mode_t *)mem))) < 0) {
 		printf("failed. errno: %d\n", errno);
 		perror(filename);
 		return (-1);
 	}
-	i = write(fnum, mem + 2*sizeof(mode_t), j - 2* sizeof(mode_t));
-	if (i != (j - 2* sizeof(mode_t)))
+	i = write(fnum, mem + 2 * sizeof(mode_t), j - 2 * sizeof(mode_t));
+	if (i != (j - 2 * sizeof(mode_t)))
 		perror(filename);
+
 	close(fnum);
-	return (i != (j - 2* sizeof(mode_t)));
+
+	return (i != (j - 2 * sizeof(mode_t)));
 }

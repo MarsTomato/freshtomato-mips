@@ -742,6 +742,9 @@ endif
 ifneq ($(TCONFIG_L7),y)
 	rm -f $(TARGETDIR)/usr/lib/*tables/libipt_layer7.so
 endif
+ifeq ($(TCONFIG_TUXERA),y)
+	cd $(TARGETDIR)/usr/sbin && ln -sf ntfsck fsck.ntfs
+endif
 
 # uClibc
 	install $(LIBDIR)/ld-uClibc.so.0 $(TARGETDIR)/lib/
@@ -1484,8 +1487,8 @@ iptables-1.8.x-clean:
 rp-pppoe/src/stamp-h1: rp-pppoe/src/Makefile.in
 	$(call patch_files,rp-pppoe)
 	cd rp-pppoe/src && \
-		CFLAGS="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-Os -ffunction-sections -fdata-sections" \
+		CFLAGS="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O2) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O2) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-plugin=$(TOP)/pppd --disable-debugging \
 			ac_cv_linux_kernel_pppoe=yes rpppoe_cv_pack_bitfields=rev ac_cv_path_PPPD=$(TOP)/pppd
@@ -1724,7 +1727,7 @@ pppd/Makefile: pppd/linux/Makefile.top
 	$(call patch_files,pppd)
 	cd pppd && \
 		LDFLAGS="-Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --sysconfdir=/tmp --cc=$(CC) --cflags="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) -Wall -ffunction-sections -fdata-sections"
+		$(CONFIGURE) --prefix=/usr --sysconfdir=/tmp --cc=$(CC) --cflags="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O2) -Wall -ffunction-sections -fdata-sections"
 
 pppd: pppd/Makefile
 	@$(SEP)
@@ -1908,6 +1911,7 @@ sqlite/stamp-h1:
 sqlite: sqlite/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/sqlite/staged install
 
 sqlite-install:
 ifeq ($(INSTALL_SQLITE),y)
@@ -1922,6 +1926,7 @@ endif
 sqlite-clean:
 	-@$(MAKE) -C sqlite clean
 	@rm -f sqlite/stamp-h1
+	@rm -rf sqlite/staged
 
 libogg/stamp-h1:
 	cd libogg && autoreconf -fsi && \
@@ -1996,6 +2001,7 @@ libjpeg-turbo/build/Makefile:
 libjpeg-turbo: libjpeg-turbo/build/Makefile
 	@$(SEP)
 	$(MAKE) -C libjpeg-turbo/build $(PARALLEL_BUILD)
+	@$(MAKE) -C libjpeg-turbo/build DESTDIR=$(TOP)/libjpeg-turbo/staged install
 
 libjpeg-turbo-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
@@ -2010,6 +2016,7 @@ endif
 
 libjpeg-turbo-clean:
 	@rm -rf libjpeg-turbo/build
+	@rm -rf libjpeg-turbo/staged
 	@rm -f libjpeg-turbo/jconfig.h
 
 libexif/stamp-h1:
@@ -2347,12 +2354,13 @@ pcre/stamp-h1:
 pcre: pcre/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/pcre/staged install
 
 pcre-install:
-	install -D pcre/.libs/libpcre.so.1 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.12
-	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.12
+	install -D pcre/.libs/libpcre.so.1 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.13
+	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.13
 	cd $(INSTALLDIR)/pcre/usr/lib/ && \
-		ln -sf libpcre.so.1.2.12 libpcre.so.1
+		ln -sf libpcre.so.1.2.13 libpcre.so.1
 ifeq ($(TCONFIG_BCMARM),y)
 	install -D pcre/.libs/libpcreposix.so.0.0.7 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
 	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
@@ -2363,6 +2371,7 @@ endif
 pcre-clean:
 	-@$(MAKE) -C pcre clean
 	@rm -f pcre/stamp-h1
+	@rm -rf pcre/staged
 	$(call unpatch_files,pcre)
 
 libxml2/stamp-h1:
@@ -2380,11 +2389,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.11.5 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.5
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.5
+	install -D libxml2/.libs/libxml2.so.2.12.2 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.2
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.2
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.11.5 libxml2.so.2 && \
-		ln -sf libxml2.so.2.11.5 libxml2.so
+		ln -sf libxml2.so.2.12.2 libxml2.so.2 && \
+		ln -sf libxml2.so.2.12.2 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -2423,72 +2432,74 @@ $(PHP_TARGET)/stamp-h1:
 	$(call patch_files,$(PHP_TARGET))
 	cd $(PHP_TARGET) && \
 		PKG_CONFIG_LIBDIR="" \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/build" \
-		LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/staged/usr/lib \
-			-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libjpeg-turbo/build" \
-		CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/.libs -L$(TOP)/libjpeg-turbo/build" \
-		LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libjpeg-turbo/build \
-			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -lssl -lcrypto -ljpeg" \
-		PHP_FCGI_LIBXML_DIR="$(TOP)/libxml2/staged/usr" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/pcre/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib \
+			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -Wl,--gc-sections" \
+		LIBS="-L$(TOP)/pcre/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/staged/usr/lib \
+			-L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -ljpeg -lssl -lcrypto" \
 		ac_cv_func_memcmp_working=yes \
-		cv_php_mbstring_stdarg=yes \
 		$(CONFIGURE) --prefix=/usr \
 			--enable-shared \
 			--disable-static \
 			--disable-rpath \
 			--disable-debug \
-			--without-pear \
 			--with-config-file-path=/etc \
 			--with-config-file-scan-dir=/etc/php5 \
-			--disable-short-tags \
 			--with-zlib \
 			--with-zlib-dir="$(TOP)/zlib/staged/usr" \
-			--disable-phar \
-			--enable-cli \
-			--enable-cgi \
-			--disable-calendar \
-			--enable-ctype \
+			--with-jpeg-dir="$(TOP)/libjpeg-turbo/staged/usr" \
 			--with-curl="$(TOP)/libcurl/staged/usr" \
-			--enable-fileinfo \
-			--without-gettext \
-			--enable-dom \
-			--enable-exif \
-			--disable-ftp \
-			--without-gmp \
-			--with-gd \
 			--with-png-dir="$(TOP)/libpng/staged/usr" \
-			--enable-hash \
 			--with-iconv="$(TOP)/libiconv/staged/usr" \
 			--with-iconv-dir="$(TOP)/libiconv/staged/usr" \
+			--with-pcre-dir="$(TOP)/pcre/staged/usr" \
+			--with-pcre-regex="$(TOP)/pcre/staged/usr" \
+			--with-libxml-dir="$(TOP)/libxml2/staged/usr" \
+			--with-pdo-sqlite="$(TOP)/sqlite/staged/usr" \
+			--with-sqlite3="$(TOP)/sqlite/staged/usr" \
+			--enable-cli \
+			--enable-cgi \
+			--enable-ctype \
+			--enable-fileinfo \
+			--enable-dom \
+			--enable-exif \
+			--enable-hash \
 			--enable-json \
-			--without-ldap \
 			--enable-mbstring \
-			--without-openssl \
-			--disable-pcntl \
 			--with-mysqli \
 			--with-mysql-sock="/var/run/mysqld.sock" \
 			--with-pdo-mysql \
-			--without-pdo-pgsql \
-			--with-pdo-sqlite \
 			--enable-pdo \
-			--without-pgsql \
 			--enable-session \
-			--disable-shmop \
 			--enable-simplexml \
-			--disable-soap \
-			--disable-sockets \
-			--with-sqlite3 \
-			--disable-sysvmsg \
-			--disable-sysvsem \
-			--disable-sysvshm \
-			--disable-tokenizer \
 			--enable-xml \
 			--enable-xmlreader \
 			--enable-xmlwriter \
 			--enable-zip \
 			$(if $(TCONFIG_BCMARM),--without-valgrind,) \
-			--with-libxml-dir="$(TOP)/libxml2/staged/usr"
+			--with-gd \
+			--without-pear \
+			--disable-short-tags \
+			--disable-phar \
+			--disable-calendar \
+			--without-gettext \
+			--disable-ftp \
+			--without-gmp \
+			--without-ldap \
+			--without-openssl \
+			--disable-pcntl \
+			--without-pdo-pgsql \
+			--without-pgsql \
+			--disable-shmop \
+			--disable-soap \
+			--disable-sockets \
+			--disable-sysvmsg \
+			--disable-sysvsem \
+			--disable-sysvshm \
+			--disable-tokenizer
 	@touch $@
 
 $(PHP_TARGET): $(PHP_TARGET)/stamp-h1
@@ -2497,9 +2508,9 @@ $(PHP_TARGET): $(PHP_TARGET)/stamp-h1
 
 $(PHP_TARGET)-install:
 	install -d $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin
-	install -D $(PHP_TARGET)/sapi/cli/.libs/php $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli
+	install -D $(PHP_TARGET)/sapi/cli/php $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli
 	$(STRIP) $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli
-	install -D $(PHP_TARGET)/sapi/cgi/.libs/php-cgi $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi
+	install -D $(PHP_TARGET)/sapi/cgi/php-cgi $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi
 	cd $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin && ln -sf php-cgi php-fcgi
 	$(STRIP) $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi
 
@@ -2519,8 +2530,7 @@ libatomic_ops: libatomic_ops/stamp-h1
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 libatomic_ops-install:
-	install -D libatomic_ops/src/.libs/libatomic_ops.so.1.0.3 $(INSTALLDIR)/libatomic_ops/usr/lib/libatomic_ops.so.1.0.3
-	$(STRIP) $(INSTALLDIR)/libatomic_ops/usr/lib/libatomic_ops.so.1.0.3
+	@true
 
 libatomic_ops-clean:
 	-@$(MAKE) -C libatomic_ops clean
@@ -2637,7 +2647,8 @@ mysql/target/Makefile:
 			-DCMAKE_INSTALL_PREFIX=/usr -DINSTALL_MYSQLSHAREDIR=share/mysql \
 			-DCMAKE_BUILD_TYPE=$(if $(TCONFIG_BCMARM),Release,MinSizeRel) -DCMAKE_SKIP_RPATH=TRUE \
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC" \
-			-DCMAKE_CXX_FLAGS="-Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC" \
+			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
+					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
 			-DDISABLE_SHARED=FALSE \
 			-DHAVE_LIBPTHREAD=TRUE \
@@ -2739,7 +2750,7 @@ lzo-clean:
 
 libcap-ng/stamp-h1:
 	cd libcap-ng && autoreconf -fsi && \
-		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --bindir=/usr/sbin --libdir=/usr/lib
 	@touch $@
@@ -2768,7 +2779,7 @@ openvpn-2.4/Makefile:
 	cd openvpn-2.4 && autoreconf -fsi && \
 		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
 		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR) -lcrypto -lssl" \
-		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CFLAGS="$(if $(TCONFIG_BCMARM),-O2,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
@@ -2796,7 +2807,7 @@ openvpn-2.5/Makefile:
 	cd openvpn-2.5 && autoreconf -fsi && \
 		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lcrypto -lssl" \
-		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CFLAGS="$(if $(TCONFIG_BCMARM),-O2,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
@@ -2830,7 +2841,7 @@ openvpn/Makefile:
 		LZO_LIBS="-L$(TOP)/lzo/src/.libs -llzo2" \
 		LZ4_CFLAGS="-I$(TOP)/lz4/lib" \
 		LZ4_LIBS="-L$(TOP)/lz4/lib -llz4" \
-		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(TCONFIG_BCMARM),-I$(TOP)/libcap-ng/src,)" \
+		CFLAGS="$(if $(TCONFIG_BCMARM),-O2,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(TCONFIG_BCMARM),-I$(TOP)/libcap-ng/src,)" \
 		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
@@ -2879,20 +2890,20 @@ nano-clean:
 libcurl/stamp-h1:
 	$(call patch_files,libcurl)
 	cd libcurl && autoreconf -fsi && \
-		CFLAGS="-Os -Wall -pipe -ffunction-sections -fdata-sections -fPIC \
+		CFLAGS="-Os -Wall -pipe -ffunction-sections -fdata-sections -std=gnu99 -fPIC \
 			$(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
 				$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32))" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
 		LIBS="-lpthread" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
-			--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
+			--enable-shared --enable-static --enable-cookies \
 			--enable-file --enable-ftp --enable-http --enable-tftp \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,) \
 			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)/staged/usr" --with-zlib="$(TOP)/zlib/staged/usr" \
-			--disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
-			--disable-ldap --disable-manual --disable-telnet --disable-verbose \
-			--without-gnutls --without-libidn2 --without-libpsl $(if $(TCONFIG_BCMARM),,--disable-tls-srp) \
+			--disable-dict --disable-debug --disable-gopher --disable-pthreads --disable-threaded-resolver --disable-progress-meter --disable-dateparse --disable-dnsshuffle \
+			--disable-ldap --disable-manual --disable-telnet --disable-verbose --disable-doh --disable-mime --disable-netrc --disable-socketpair --disable-headers-api \
+			--without-gnutls --without-libidn2 --without-libpsl $(if $(TCONFIG_BCMARM),,--disable-tls-srp) --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --disable-websockets \
 			$(CACERT)
 	@touch $@
 
@@ -2972,7 +2983,9 @@ transmission/build/Makefile:
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=TRUE \
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
-			-DCMAKE_CXX_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600 -fno-exceptions -fno-rtti" \
+			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
+					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) \
+					-ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600 -fno-exceptions -fno-rtti" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
 			-DENABLE_LIGHTWEIGHT=TRUE -DENABLE_UTP=TRUE -DENABLE_NLS=FALSE -DENABLE_CLI=FALSE -DENABLE_GTK=FALSE -DENABLE_TESTS=FALSE \
 			-DENABLE_NLS=FALSE -DINSTALL_DOC=FALSE -DUSE_SYSTEM_UTP=FALSE -DUSE_SYSTEM_DHT=FALSE -DUSE_SYSTEM_B64=FALSE -DWITH_SYSTEMD=FALSE \
@@ -3347,7 +3360,7 @@ getdns/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections -std=c99 $(EXTRACFLAGS)" \
+			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections -std=gnu99 $(EXTRACFLAGS)" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections $(if $(TCONFIG_OPENSSL11),-lpthread,)" \
 			-DENABLE_STATIC=TRUE -DENABLE_SHARED=FALSE -DENABLE_GOST=FALSE \
 			-DBUILD_GETDNS_QUERY=FALSE \
@@ -3381,7 +3394,7 @@ getdns-clean:
 tor/stamp-h1:
 	cd tor && autoreconf -fsi && \
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,-Os) -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -ffunction-sections -fdata-sections $(if $(TCONFIG_KEYGEN),,-DOPENSSL_NO_ENGINE)" \
-		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
 			--with-openssl-dir=$(TOP)/$(OPENSSLDIR)/staged/usr --with-zlib-dir=$(TOP)/zlib/staged/usr \
@@ -3702,16 +3715,19 @@ avahi-clean:
 	$(call unpatch_files,avahi)
 
 wireguard-tools:
-	WITH_BASHCOMPLETION=no WITH_WGQUICK=no WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" $(MAKE) -C wireguard-tools/src install
+	WITH_BASHCOMPLETION=no WITH_EMBEDDED=yes WITH_WGQUICK=yes WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" $(MAKE) -C wireguard-tools/src install
 
 wireguard-tools-install:
 	install -D wireguard-tools/staged/bin/wg $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
+	install -D wireguard-tools/staged/bin/wg-quick $(INSTALLDIR)/wireguard-tools/usr/sbin/wg-quick
 	$(STRIP) -s $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
 	chmod 0500 $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
+	chmod 0500 $(INSTALLDIR)/wireguard-tools/usr/sbin/wg-quick
 
 wireguard-tools-clean:
 	-@$(MAKE) -C wireguard-tools/src clean
 	@rm -f $(TOP)/wireguard-tools/staged/bin/wg
+	@rm -f $(TOP)/wireguard-tools/staged/bin/wg-quick
 
 gettext-tiny/stamp-h1:
 	$(MAKE) -C gettext-tiny \
@@ -3792,6 +3808,7 @@ zfs-install:
 	install -D zfs/cmd/zpool/zpool $(INSTALLDIR)/zfs/usr/sbin/zpool
 	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zfs
 	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zpool
+	cd $(INSTALLDIR)/zfs/usr/sbin/ && ln -sf zpool fsck.zpool
 
 zfs-clean:
 	-@$(MAKE) -C zfs clean

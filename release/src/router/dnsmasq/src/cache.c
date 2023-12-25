@@ -124,6 +124,7 @@ static const struct {
   { 258, "AVC" }, /* Application Visibility and Control [Wolfgang_Riedel] AVC/avc-completed-template 2016-02-26*/
   { 259, "DOA" }, /* Digital Object Architecture [draft-durand-doa-over-dns] DOA/doa-completed-template 2017-08-30*/
   { 260, "AMTRELAY" }, /* Automatic Multicast Tunneling Relay [RFC8777] AMTRELAY/amtrelay-completed-template 2019-02-06*/
+  { 261, "RESINFO" }, /* Resolver Information as Key/Value Pairs https://datatracker.ietf.org/doc/draft-ietf-add-resolver-info/06/ */
   { 32768,  "TA" }, /* DNSSEC Trust Authorities [Sam_Weiler][http://cameo.library.cmu.edu/][ Deploying DNSSEC Without a Signed Root. Technical Report 1999-19, Information Networking Institute, Carnegie Mellon University, April 2004.] 2005-12-13*/
   { 32769,  "DLV" }, /* DNSSEC Lookaside Validation (OBSOLETE) [RFC8749][RFC4431] */
 };
@@ -424,18 +425,21 @@ unsigned int cache_remove_uid(const unsigned int uid)
 {
   int i;
   unsigned int removed = 0;
-  struct crec *crecp, **up;
+  struct crec *crecp, *tmp, **up;
 
   for (i = 0; i < hash_size; i++)
-    for (crecp = hash_table[i], up = &hash_table[i]; crecp; crecp = crecp->hash_next)
-      if ((crecp->flags & (F_HOSTS | F_DHCP | F_CONFIG)) && crecp->uid == uid)
-	{
-	  *up = crecp->hash_next;
-	  free(crecp);
-	  removed++;
-	}
-      else
-	up = &crecp->hash_next;
+    for (crecp = hash_table[i], up = &hash_table[i]; crecp; crecp = tmp)
+      {
+	tmp = crecp->hash_next;
+	if ((crecp->flags & (F_HOSTS | F_DHCP | F_CONFIG)) && crecp->uid == uid)
+	  {
+	    *up = tmp;
+	    free(crecp);
+	    removed++;
+	  }
+	else
+	  up = &crecp->hash_next;
+      }
   
   return removed;
 }
@@ -629,8 +633,8 @@ static struct crec *really_insert(char *name, union all_addr *addr, unsigned sho
   if (insert_error)
     return NULL;
 
-  /* we don't cache zero-TTL records. */
-  if (ttl == 0)
+  /* we don't cache zero-TTL records unless we're doing stale-caching. */
+  if (daemon->cache_max_expiry == 0 && ttl == 0)
     {
       insert_error = 1;
       return NULL;
@@ -1891,7 +1895,12 @@ void dump_cache(time_t now)
 #endif
 
   blockdata_report();
-
+  my_syslog(LOG_INFO, _("child processes for TCP requests: in use %zu, highest since last SIGUSR1 %zu, max allowed %zu."),
+	    daemon->metrics[METRIC_TCP_CONNECTIONS],
+	    daemon->max_procs_used,
+	    daemon->max_procs);
+  daemon->max_procs_used = daemon->metrics[METRIC_TCP_CONNECTIONS];
+  
   /* sum counts from different records for same server */
   for (serv = daemon->servers; serv; serv = serv->next)
     serv->flags &= ~SERV_MARK;

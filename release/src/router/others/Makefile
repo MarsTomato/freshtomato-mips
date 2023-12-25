@@ -5,6 +5,7 @@ all:
 install:
 	install -d $(INSTALLDIR)/sbin
 	install -d $(INSTALLDIR)/usr/sbin
+	install -d $(INSTALLDIR)/usr/bin
 	install -d $(INSTALLDIR)/lib
 
 ifeq ($(TCONFIG_USB),y)
@@ -23,10 +24,18 @@ else
 endif
 # modem status script
 	install -m 0700 wwansignal $(INSTALLDIR)/usr/sbin
+# Only include curl part if libcurl is installed.
+ifneq ($(TCONFIG_BBT),y)
+	sed -i $(INSTALLDIR)/usr/sbin/wwansignal -e "/BBT-BEGIN/,/BBT-END/d"
+endif
 endif # TCONFIG_USB
 
 # MultiWAN watchdog script
 	install -m 0700 mwwatchdog $(INSTALLDIR)/usr/sbin
+# Only include curl part if libcurl is installed.
+ifneq ($(TCONFIG_BBT),y)
+	sed -i $(INSTALLDIR)/usr/sbin/mwwatchdog -e "/BBT-BEGIN/,/BBT-END/d"
+endif
 
 # ntp2ip
 ifeq ($(or $(TCONFIG_DNSCRYPT),$(TCONFIG_STUBBY)),y)
@@ -143,6 +152,9 @@ endif
 # system info
 	install -m 0700 sysinfo $(INSTALLDIR)/usr/sbin
 
+# nvram aliases used in other scripts
+	install -m 0700 nvram_ops $(INSTALLDIR)/usr/sbin
+
 # network discovery script for status-devices page
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
 	install -m 0755 discovery.sh $(INSTALLDIR)/usr/sbin
@@ -170,6 +182,7 @@ endif
 			-e "/STUBBYNO-BEGIN/d"	-e "/STUBBYNO-END/d" \
 			-e "/BCMARM-BEGIN/d"	-e "/BCMARM-END/d" \
 			-e "/BCMARMNO-BEGIN/d"	-e "/BCMARMNO-END/d" \
+			-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
 			|| true; \
 		done
 

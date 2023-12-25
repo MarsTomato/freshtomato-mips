@@ -8,16 +8,18 @@ export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/home/root:
 #
 
 
+. nvram_ops
+
 PREFIX="$1"
 
 PID=$$
-MODE=$(nvram get "$PREFIX"_proto)
-DEVNR=$(nvram get "$PREFIX"_modem_dev)
-MTYPE=$(nvram get "$PREFIX"_modem_type)
-WANIP=$(nvram get "$PREFIX"_gateway)
+MODE=$(NG "$PREFIX"_proto)
+DEVNR=$(NG "$PREFIX"_modem_dev)
+MTYPE=$(NG "$PREFIX"_modem_type)
+WANIP=$(NG "$PREFIX"_gateway)
 LOGS="logger -t wwansignal[$PID]"
 
-HILINK_IP=$(nvram get "$PREFIX"_hilink_ip)
+HILINK_IP=$(NG "$PREFIX"_hilink_ip)
 if ! [ -z "$HILINK_IP" ]  && [ "$HILINK_IP" != "0.0.0.0" ]; then
 	MODE=lte
 	MTYPE=hilink
@@ -35,7 +37,7 @@ fi
 signal3g() {
 	local CSQ RSSI i
 	local DIAGSFILE="/tmp/switch3g_$PREFIX.diags"
-	local SDEVNR=$(nvram get "$PREFIX"_modem_dev)
+	local SDEVNR=$(NG "$PREFIX"_modem_dev)
 
 	[ -z "$SDEVNR" ] && {
 		DEVALL=$(cat "$DIAGSFILE")
@@ -51,7 +53,7 @@ signal3g() {
 			break
 		}
 	done
-	nvram set "$PREFIX"_modem_dev="$i"
+	NS "$PREFIX"_modem_dev="$i"
 
 	CSQ=$(echo "$CSQ" | grep "CSQ:" | cut -d " " -f2 | cut -d "," -f1)
 	RSSI=$((-113+CSQ*2))
@@ -59,7 +61,7 @@ signal3g() {
 }
 
 signal4g() {
-	local HCSQ SPEED VALUE CERSSI LOCINFO MCC RSSI RSRP LAC CID SINR ECIO RSRQ CQI1 CQI2 BAND BBAND="" i
+	local HCSQ SPEED VALUE CERSSI LOCINFO MCC RSSI RSRP LAC CID SINR ECIO RSRQ CQI1 CQI2 BAND OPERATOR="" BBAND="" i
 	local DIAGSFILE="/tmp/switch4g_$PREFIX.diags"
 
 	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" -o "$MTYPE" == "hw-ether" ]; then
@@ -74,12 +76,12 @@ signal4g() {
 				break
 			}
 		done
-		nvram set "$PREFIX"_modem_dev="$i"
+		NS "$PREFIX"_modem_dev="$i"
 		DEVNR="$i"
 
 		SPEED=$(echo "$HCSQ" | cut -d "," -f1 | cut -d '"' -f2)
 
-		OPERATOR="$(MODE="AT+COPS?" gcom -d "$DEVNR" -s /etc/gcom/setverbose.gcom | grep "COPS" | tr -d '\r' | tr -d ' ' | cut -d ',' -f 3)"
+		OPERATOR="$(MODE="AT+COPS?" gcom -d "$DEVNR" -s /etc/gcom/setverbose.gcom | grep "COPS" | tr -d '\r' | tr -d ' ' | cut -d ',' -f 3 | tr -d '"')"
 		$LOGS "MODEM Current Operator: $OPERATOR"
 
 		case "$SPEED" in
@@ -96,7 +98,9 @@ signal4g() {
 				CERSSI=$(MODE="AT^CERSSI?" gcom -d "$DEVNR" -s /etc/gcom/setverbose.gcom | grep "CERSSI:" | tr -d '\r')
 				[ -n "$CERSSI" ] && {
 					CQI1=$(echo "$CERSSI" | cut -d "," -f10)
+					[ "$CQI1" -gt "15" ] && CQI1 = "unknown"
 					CQI2=$(echo "$CERSSI" | cut -d "," -f11)
+					[ "$CQI2" -gt "15" ] && CQI2 = "unknown"
 				}
 
 				HFREQINFO=$(MODE="AT^HFREQINFO?" gcom -d "$DEVNR" -s /etc/gcom/setverbose.gcom | grep "HFREQINFO:" | tr -d '\r')
@@ -181,7 +185,7 @@ signal4g() {
 		MCC=$(uqmiCall "--get-serving-system")
 		MCCMNC=$(echo "$MCC" | cut -d "," -f2 | cut -d ":" -f2)$(printf "%02d" $(echo "$MCC" | cut -d "," -f3 | cut -d ":" -f2))
 
-		OPERATOR=$(echo "$MCC" | cut -d "," -f4 | cut -d ":" -f2)
+		OPERATOR=$(echo "$MCC" | cut -d "," -f4 | cut -d ":" -f2 | tr -d '"')
 		$LOGS "MODEM Current Operator: $OPERATOR"
 
 		case "$SPEED" in
@@ -212,8 +216,8 @@ signal4g() {
 				$LOGS "MODEM Signal Strength: no data"
 			;;
 		esac
-
-	elif [ "$MTYPE" == "hilink" ]; then	# use huawei hilink api (for moded ie. E3372)
+# BBT-BEGIN
+	elif [ "$MTYPE" == "hilink" ]; then # use huawei hilink api (for moded ie. E3372)
 # TODO: Auth
 		local BTS NET PCI
 		local URLHOME="http://$WANIP/html/home.html" URLAPI1="http://$WANIP/api/device/signal"
@@ -222,7 +226,7 @@ signal4g() {
 
 		SIGNAL=$($FCURL -sf -m 5 "$URLAPI1" -b $COOKIEFILE)
 
-		[ "$(echo "$SIGNAL" | grep "<code>125002</code>" | wc -l)" -ne 0 ] && {		# repeat needed
+		[ "$(echo "$SIGNAL" | grep "<code>125002</code>" | wc -l)" -ne 0 ] && { # repeat needed
 			$FCURL -sf -m 5 "$URLHOME" -c $COOKIEFILE > /dev/null
 			SIGNAL=$($FCURL -sf -m 5 "$URLAPI1" -b $COOKIEFILE)
 		}
@@ -297,6 +301,7 @@ signal4g() {
 				;;
 			esac
 		}
+# BBT-END
 	fi
 }
 
