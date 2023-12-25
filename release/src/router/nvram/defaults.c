@@ -100,6 +100,61 @@ const defaults_t upnp_defaults[] = {
 	{ NULL, NULL }
 };
 
+#ifdef TCONFIG_BCMBSD
+const defaults_t bsd_defaults[] = {
+	{ "bsd_role", 		 	"3"				},	/* Band Steer Daemon; 0:Disable, 1:Primary, 2:Helper, 3:Standalone */
+	{ "bsd_hport", 		 	"9877"				},	/* BSD helper port */
+	{ "bsd_pport", 		 	"9878"				},	/* BSD Primary port */
+	{ "bsd_helper", 		"192.168.1.232"			},	/* BSD primary ipaddr */
+	{ "bsd_primary", 		"192.168.1.231"			},	/* BSD Helper ipaddr */
+#if 0
+	{ "bsd_msglevel", 		"0x000010"			},	/* BSD_DEBUG_STEER */
+	{ "bsd_dbg", 		 	"1"				},
+#endif
+#ifdef TCONFIG_AC3200 /* Tri-Band */
+#ifdef TCONFIG_AC5300 /* Tri-Band */
+	{"bsd_ifnames",			"eth1 eth2 eth3"		},
+#else
+	{"bsd_ifnames",			"eth2 eth1 eth3"		},
+#endif
+	{"wl0_bsd_steering_policy",	"0 5 3 -52 0 110 0x22"		},
+	{"wl1_bsd_steering_policy",	"80 5 3 -82 0 0 0x20"		},
+	{"wl2_bsd_steering_policy",	"0 5 3 -82 0 0 0x28"		},
+	{"wl0_bsd_sta_select_policy",	"10 -52 0 110 0 1 1 0 0 0 0x122"},
+	{"wl1_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x24"	},
+	{"wl2_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x28"	},
+#ifdef TCONFIG_AC5300 /* Tri-Band */
+	{"wl0_bsd_if_select_policy",	"eth3 eth2"			},
+	{"wl1_bsd_if_select_policy",	"eth1 eth3"			},
+	{"wl2_bsd_if_select_policy",	"eth1 eth2"			},
+#else
+	{"wl0_bsd_if_select_policy",	"eth3 eth1"			},
+	{"wl1_bsd_if_select_policy",	"eth2 eth3"			},
+	{"wl2_bsd_if_select_policy",	"eth2 eth1"			},
+#endif
+	{"wl0_bsd_if_qualify_policy",	"0 0x0"				},	/* bandwidth utilization disabled ; all clients possible (0x0) */
+	{"wl1_bsd_if_qualify_policy",	"60 0x0"			},	/* bandwidth utilization is less than 60 % ; all clients possible (0x0) */
+	{"wl2_bsd_if_qualify_policy",	"0 0x4"				},	/* bandwidth utilization disabled ; only AC clients possible (0x04) */
+	{"bsd_bounce_detect",		"180 2 3600"			},
+	{"bsd_aclist_timeout",		"3"				},
+#else /* Dual-Band */
+	{"bsd_ifnames",			"eth1 eth2"			},
+	{"wl0_bsd_steering_policy",	"0 5 3 -52 0 110 0x22"		},	/* Steering Trigger Condition 2,4 GHz: RSSI greater than -52 OR PHYRATE (HIGH) greater than or equal to 110 Mbit/s */
+	{"wl1_bsd_steering_policy",	"80 5 3 -82 0 0 0x20"		},	/* Steering Trigger Condition 5 GHz: RSSI less than or equal to -82 OR bandwidth use exceeds 80 % */
+	{"wl0_bsd_sta_select_policy",	"10 -52 0 110 0 1 1 0 0 0 0x122"},
+	{"wl1_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x20"	},
+	{"wl0_bsd_if_select_policy",	"eth2"				},
+	{"wl1_bsd_if_select_policy",	"eth1"				},
+	{"wl0_bsd_if_qualify_policy",	"0 0x0"				},	/* bandwidth utilization disabled ; all clients possible (0x0) */
+	{"wl1_bsd_if_qualify_policy",	"60 0x0"			},	/* bandwidth utilization is less than 60 % ; all clients possible (0x0) */
+	{"bsd_bounce_detect",		"180 2 3600"			},
+	{"bsd_aclist_timeout",		"3"				},
+#endif /* TCONFIG_AC3200 */
+	{"bsd_scheme",			"2"				},
+	{ 0, 0, 0 }
+};
+#endif /* TCONFIG_BCMBSD */
+
 const defaults_t defaults[] = {
 	{ "restore_defaults",		"0"				},	/* Set to 0 to not restore defaults on boot */
 
@@ -528,7 +583,7 @@ const defaults_t defaults[] = {
 	{ "wl_security_mode",		"disabled"			},	/* WPA mode (disabled|radius|wpa_personal|wpa_enterprise|wep|wpa2_personal|wpa2_enterprise) for WEB */
 	{ "wl_auth_mode",		"none"				},	/* Network authentication mode (radius|none) */
 	{ "wl_wpa_psk",			""				},	/* WPA pre-shared key */
-	{ "wl_wpa_gtk_rekey",		"3600"				},	/* WPA GTK rekey interval */
+	{ "wl_wpa_gtk_rekey",		"3600"				},	/* WPA GTK rekey interval; default: 3600 sec; 0 - disabled; range 1 sec up to 30 days (2592000 sec) */
 	{ "wl_radius_ipaddr",		""				},	/* RADIUS server IP address */
 	{ "wl_radius_key",		""				},	/* RADIUS shared secret */
 	{ "wl_radius_port",		"1812"				},	/* RADIUS server UDP port */
@@ -693,56 +748,8 @@ const defaults_t defaults[] = {
 	{ "wl_txbf_imp",		"1"				},	/* for Universal/Implicit Beamforming on = 1 , off = 0 (default: on - sync with wl_itxbf) */
 #endif /* TCONFIG_BCMWL6 */
 #ifdef TCONFIG_BCMBSD
-	{ "bsd_role", 		 	"3"				},	/* Band Steer Daemon; 0:Disable, 1:Primary, 2:Helper, 3:Standalone */
-	{ "bsd_hport", 		 	"9877"				},	/* BSD helper port */
-	{ "bsd_pport", 		 	"9878"				},	/* BSD Primary port */
-	{ "bsd_helper", 		"192.168.1.232"			},	/* BSD primary ipaddr */
-	{ "bsd_primary", 		"192.168.1.231"			},	/* BSD Helper ipaddr */
 	{ "smart_connect_x", 		"0"				},	/* 0 = off, 1 = on (all-band), 2 = 5 GHz only! (no support, maybe later) */
-#if 0
-	{ "bsd_msglevel", 		"0x000010"			},	/* BSD_DEBUG_STEER */
-	{ "bsd_dbg", 		 	"1"				},
-#endif
-#ifdef TCONFIG_AC3200 /* Tri-Band */
-#ifdef TCONFIG_AC5300 /* Tri-Band */
-	{"bsd_ifnames",			"eth1 eth2 eth3"		},
-#else
-	{"bsd_ifnames",			"eth2 eth1 eth3"		},
-#endif
-	{"wl0_bsd_steering_policy",	"0 5 3 -52 0 110 0x22"		},
-	{"wl1_bsd_steering_policy",	"80 5 3 -82 0 0 0x20"		},
-	{"wl2_bsd_steering_policy",	"0 5 3 -82 0 0 0x28"		},
-	{"wl0_bsd_sta_select_policy",	"10 -52 0 110 0 1 1 0 0 0 0x122"},
-	{"wl1_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x24"	},
-	{"wl2_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x28"	},
-#ifdef TCONFIG_AC5300 /* Tri-Band */
-	{"wl0_bsd_if_select_policy",	"eth3 eth2"			},
-	{"wl1_bsd_if_select_policy",	"eth1 eth3"			},
-	{"wl2_bsd_if_select_policy",	"eth1 eth2"			},
-#else
-	{"wl0_bsd_if_select_policy",	"eth3 eth1"			},
-	{"wl1_bsd_if_select_policy",	"eth2 eth3"			},
-	{"wl2_bsd_if_select_policy",	"eth2 eth1"			},
-#endif
-	{"wl0_bsd_if_qualify_policy",	"0 0x0"				},	/* bandwidth utilization disabled ; all clients possible (0x0) */
-	{"wl1_bsd_if_qualify_policy",	"60 0x0"			},	/* bandwidth utilization is less than 60 % ; all clients possible (0x0) */
-	{"wl2_bsd_if_qualify_policy",	"0 0x4"				},	/* bandwidth utilization disabled ; only AC clients possible (0x04) */
-	{"bsd_bounce_detect",		"180 2 3600"			},
-	{"bsd_aclist_timeout",		"3"				},
-#else /* Dual-Band */
-	{"bsd_ifnames",			"eth1 eth2"			},
-	{"wl0_bsd_steering_policy",	"0 5 3 -52 0 110 0x22"		},	/* Steering Trigger Condition 2,4 GHz: RSSI greater than -52 OR PHYRATE (HIGH) greater than or equal to 110 Mbit/s */
-	{"wl1_bsd_steering_policy",	"80 5 3 -82 0 0 0x20"		},	/* Steering Trigger Condition 5 GHz: RSSI less than or equal to -82 OR bandwidth use exceeds 80 % */
-	{"wl0_bsd_sta_select_policy",	"10 -52 0 110 0 1 1 0 0 0 0x122"},
-	{"wl1_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x20"	},
-	{"wl0_bsd_if_select_policy",	"eth2"				},
-	{"wl1_bsd_if_select_policy",	"eth1"				},
-	{"wl0_bsd_if_qualify_policy",	"0 0x0"				},	/* bandwidth utilization disabled ; all clients possible (0x0) */
-	{"wl1_bsd_if_qualify_policy",	"60 0x0"			},	/* bandwidth utilization is less than 60 % ; all clients possible (0x0) */
-	{"bsd_bounce_detect",		"180 2 3600"			},
-	{"bsd_aclist_timeout",		"3"				},
-#endif /* TCONFIG_AC3200 */
-	{"bsd_scheme",			"2"				},
+	/* all other bsd_xyz variables, see bsd_defaults */
 #endif /* TCONFIG_BCMBSD */
 
 #ifdef TCONFIG_BCM7
@@ -1636,6 +1643,82 @@ const defaults_t defaults[] = {
 	{"tinc_subnet_down",		""				},
 	{"tinc_firewall",		""				},
 #endif /* TCONFIG_TINC */
+
+#ifdef TCONFIG_WIREGUARD
+	{"wg_adns",			""				},
+	{"wg0_enable",			"0"				},
+	{"wg0_file",			""				},
+	{"wg0_key",			""				},
+	{"wg0_endpoint",		""				},
+	{"wg0_port",			""				},
+	{"wg0_ip",			"10.11.0.1/24"			},
+	{"wg0_fwmark",			"0"				},
+	{"wg0_mtu",			"1420"				},
+	{"wg0_preup",			""				},
+	{"wg0_postup",			""				},
+	{"wg0_predown",			""				},
+	{"wg0_postdown",		""				},
+	{"wg0_aip",			""				},
+	{"wg0_dns",			""				},
+	{"wg0_ka",			"0"				},
+	{"wg0_com",			"0"				},
+	{"wg0_lan0",			"0"				},
+	{"wg0_lan1",			"0"				},
+	{"wg0_lan2",			"0"				},
+	{"wg0_lan3",			"0"				},
+	{"wg0_rgw",			"0"				},
+	{"wg0_route",			""				},
+	{"wg0_peer_dns",		""				},
+	{"wg0_peers",			""				},
+	{"wg1_enable",			"0"				},
+	{"wg1_file",			""				},
+	{"wg1_key",			""				},
+	{"wg1_endpoint",		""				},
+	{"wg1_port",			""				},
+	{"wg1_ip",			"10.12.0.1/24"			},
+	{"wg1_fwmark",			"0"				},
+	{"wg1_mtu",			"1420"				},
+	{"wg1_preup",			""				},
+	{"wg1_postup",			""				},
+	{"wg1_predown",			""				},
+	{"wg1_postdown",		""				},
+	{"wg1_aip",			""				},
+	{"wg1_dns",			""				},
+	{"wg1_ka",			"0"				},
+	{"wg1_com",			"0"				},
+	{"wg1_lan0",			"0"				},
+	{"wg1_lan1",			"0"				},
+	{"wg1_lan2",			"0"				},
+	{"wg1_lan3",			"0"				},
+	{"wg1_rgw",			"0"				},
+	{"wg1_route",			""				},
+	{"wg1_peer_dns",		""				},
+	{"wg1_peers",			""				},
+	{"wg2_enable",			"0"				},
+	{"wg2_file",			""				},
+	{"wg2_key",			""				},
+	{"wg2_endpoint",		""				},
+	{"wg2_port",			""				},
+	{"wg2_ip",			"10.13.0.1/24"			},
+	{"wg2_fwmark",			"0"				},
+	{"wg2_mtu",			"1420"				},
+	{"wg2_preup",			""				},
+	{"wg2_postup",			""				},
+	{"wg2_predown",			""				},
+	{"wg2_postdown",		""				},
+	{"wg2_aip",			""				},
+	{"wg2_dns",			""				},
+	{"wg2_ka",			"0"				},
+	{"wg2_com",			"0"				},
+	{"wg2_lan0",			"0"				},
+	{"wg2_lan1",			"0"				},
+	{"wg2_lan2",			"0"				},
+	{"wg2_lan3",			"0"				},
+	{"wg2_rgw",			"0"				},
+	{"wg2_route",			""				},
+	{"wg2_peer_dns",		""				},
+	{"wg2_peers",			""				},
+#endif /* TCONFIG_WIREGUARD */
 
 #ifdef TCONFIG_BT
 /* nas-transmission */

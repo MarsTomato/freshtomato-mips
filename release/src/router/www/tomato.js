@@ -556,12 +556,28 @@ function aton(ip) {
 	// ---- this is goofy because << mangles numbers as signed
 	o = ip.split('.');
 	x = '';
-	for (i = 0; i < 4; ++i) x += (o[i] * 1).hex(2);
+	for (i = 0; i < 4; ++i) x += (o[i] * 1).toString(16).padStart(2, '0');
 	return parseInt(x, 16);
 }
 
 function ntoa(ip) {
 	return ((ip >> 24) & 255) + '.' + ((ip >> 16) & 255) + '.' + ((ip >> 8) & 255) + '.' + (ip & 255);
+}
+
+function ntoav6(ip) {
+	let output = "";
+	if (typeof(ip) == "number")
+		ip = BigInt(ip);
+	for (let i = 7n; i >= 0n; --i) {
+		output += ((ip >> (i*16n)) & 65535n).toString(16).padStart(2, '0');
+		if (i > 0n)
+			output += ":";
+	}
+    return output;
+}
+
+function atonv6(ip) {
+	return BigInt('0x' + ip.replaceAll(':', ''));
 }
 
 // ---- 1.2.3.4, 1.2.3.4/24, 1.2.3.4/255.255.255.0, 1.2.3.4-1.2.3.5
@@ -2962,8 +2978,24 @@ function wikiLink() {
 	else
 		page = 'status-overview';
 
-	var res = '<a href=\"'+url+'/'+page+'\" target=\"_blank\" rel=\"noopener noreferrer\">Wiki</a>';
+	var res = '<a href=\"'+url+'/'+page+'\" target=\"_blank\" rel=\"noopener noreferrer\">Wiki</a> \| <a onclick=\"toggleTheme()\" href=\"#\">◐</a>';
+
 	document.write(res);
+	var alt = cookie.get('gui_themet');
+	if (alt == '1') { getTheme(); }
+}
+
+function getTheme() {
+	var element = document.body;
+	element.classList.toggle("alt-mode");
+}
+
+function toggleTheme() {
+	var themet = cookie.get('gui_themet');
+	getTheme();
+	themet ^= true;
+	cookie.set('gui_themet', themet);
+
 }
 
 var up = new TomatoRefresh('isup.jsz', '', 5);

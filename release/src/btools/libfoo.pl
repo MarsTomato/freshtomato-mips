@@ -1,11 +1,12 @@
 #!/usr/bin/perl
 #
-#	libfoo.pl
-#	Copyright (C) 2006-2008 Jonathan Zarate
+# libfoo.pl
+# Copyright (C) 2006-2008 Jonathan Zarate
 #
-#	- strip un-needed objects
-#	- create xref of symbols used
+# - strip un-needed objects
+# - create xref of symbols used
 #
+
 
 $root = $ENV{"TARGETDIR"};
 $uclibc = $ENV{"TOOLCHAIN"};
@@ -36,7 +37,7 @@ sub load
 		($fname =~ /\.(asp|gif|png|svg|js|jsx|css|txt|pat|sh)$/)) {
 		return;
 	}
-	
+
 	if (-d $fname) {
 		my $d;
 		if (opendir($d, $fname)) {
@@ -58,9 +59,9 @@ sub load
 
 	$base = basename($fname);
 	print LOG "\n\nreadelf $base:\n";
-	
+
 	open($f, "mipsel-linux-readelf -WhsdD ${fname} 2>&1 |") || error("readelf - $!\n");
-	
+
 	while (<$f>) {
 		print LOG;
 
@@ -70,16 +71,16 @@ sub load
 			last;
 		}
 	}
-	
+
 	if (!$ok) {
 		close($f);
 		return;
 	}
 
 	print "$elf_type{$base} $base", " " x 30, "\r";
-	
+
 	push(@elfs, $base);
-	
+
 	while (<$f>) {
 		print LOG;
 		
@@ -90,7 +91,7 @@ sub load
 			last;
 		}
 	}
-	
+
 	while (<$f>) {
 		print LOG;
 
@@ -163,14 +164,14 @@ sub fixDyn
 	fixDynDep("transmission-remote", "libevent-2.1.so.7");
 	fixDynDep("transmission-remote", "libcurl.so.4.8.0");
 #	fixDynDep("transmission-remote", "libiconv.so.2.6.1");
-	fixDynDep("radvd", "libdaemon.so.0.5.0");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
 	fixDynDep("dnscrypt-proxy", "libsodium.so.23.3.0");
 	fixDynDep("tincd", "liblzo2.so.2.0.0");
 	fixDynDep("openvpn", "liblzo2.so.2.0.0");
 	fixDynDep("usb_modeswitch", "libusb-1.0.so");
-	fixDynDep("nginx", "libpcre.so.1.2.12");
-	fixDynDep("libpcreposix.so.0.0.7", "libpcre.so.1.2.12");
+	fixDynDep("libpcreposix.so.0.0.7", "libpcre.so.1.2.13");
+	fixDynDep("libjpeg.so.8.3.2", "libc.so.0");
+	fixDynDep("libavcodec.so.54", "libpthread.so.0");
 
 	fixDynDep("minidlna", "libz.so.1");
 	fixDynDep("minidlna", "libstdc.so.6");
@@ -183,9 +184,15 @@ sub fixDyn
 	fixDynDep("minidlna", "libexif.so.12");
 	fixDynDep("minidlna", "libFLAC.so.12.1.0");
 	fixDynDep("minidlna", "libsqlite3.so.0.8.6");
-	fixDynDep("libjpeg.so.8.3.2", "libc.so.0");
-	fixDynDep("libavcodec.so.54", "libpthread.so.0");
 
+	fixDynDep("libmysqlclient.so.16.0.0", "libz.so.1");
+	fixDynDep("libmysqlclient_r.so.16.0.0", "libz.so.1");
+	fixDynDep("libmysqlclient.so.16.0.0", "libncurses.so.6");
+	fixDynDep("libmysqlclient_r.so.16.0.0", "libncurses.so.6");
+	fixDynDep("libmysqlclient.so.16.0.0", "libcrypto.so.1.0.0");
+	fixDynDep("libmysqlclient_r.so.16.0.0", "libcrypto.so.1.0.0");
+	fixDynDep("libmysqlclient.so.16.0.0", "libssl.so.1.0.0");
+	fixDynDep("libmysqlclient_r.so.16.0.0", "libssl.so.1.0.0");
 	fixDynDep("mysql", "libmysqlclient.so.16.0.0");
 	fixDynDep("my_print_defaults", "libmysqlclient.so.16.0.0");
 	fixDynDep("myisamchk", "libmysqlclient.so.16.0.0");
@@ -198,14 +205,6 @@ sub fixDyn
 	fixDynDep("mysqladmin", "libmysqlclient_r.so.16.0.0");
 	fixDynDep("mysqld", "libmysqlclient_r.so.16.0.0");
 	fixDynDep("mysqldump", "libmysqlclient_r.so.16.0.0");
-	fixDynDep("libmysqlclient.so.16.0.0", "libz.so.1");
-	fixDynDep("libmysqlclient_r.so.16.0.0", "libz.so.1");
-	fixDynDep("libmysqlclient.so.16.0.0", "libncurses.so.6");
-	fixDynDep("libmysqlclient_r.so.16.0.0", "libncurses.so.6");
-	fixDynDep("libmysqlclient.so.16.0.0", "libcrypto.so.1.0.0");
-	fixDynDep("libmysqlclient_r.so.16.0.0", "libcrypto.so.1.0.0");
-	fixDynDep("libmysqlclient.so.16.0.0", "libssl.so.1.0.0");
-	fixDynDep("libmysqlclient_r.so.16.0.0", "libssl.so.1.0.0");
 	fixDynDep("mysql", "libz.so.1");
 	fixDynDep("mysqld", "libz.so.1");
 	fixDynDep("mysqldump", "libz.so.1");
@@ -237,7 +236,7 @@ sub fixDyn
 	fixDynDep("mysqladmin", "libssl.so.1.0.0");
 	fixDynDep("my_print_defaults", "libssl.so.1.0.0");
 
-#ipset modules
+# ipset modules
 	fixDynDep("libipset_iphash.so", "ipset");
 	fixDynDep("libipset_iptree.so", "ipset");
 	fixDynDep("libipset_ipmap.so", "ipset");
@@ -260,45 +259,51 @@ sub fixDyn
 #	fixDynDep("libbcm.so", "libshared.so");
 #	fixDynDep("libbcm.so", "libc.so.0");
 
-	fixDynDep("nginx", "libpcre.so.1.2.12");
+	fixDynDep("nginx", "libpcre.so.1.2.13");
 	fixDynDep("nginx", "libpcreposix.so.0.0.7");
-	fixDynDep("php-cgi", "libxml2.so.2.11.5");
+	fixDynDep("php-cgi", "libxml2.so.2.12.2");
 	fixDynDep("php-cgi", "libpng16.so.16.40.0");
 	fixDynDep("php-cgi", "libiconv.so.2.6.1");
 	fixDynDep("php-cgi", "libsqlite3.so.0.8.6");
 	fixDynDep("php-cgi", "libcurl.so.4.8.0");
-	fixDynDep("php-cli", "libxml2.so.2.11.5");
+	fixDynDep("php-cgi", "libjpeg.so.8.3.2");
+	fixDynDep("php-cgi", "libpcre.so.1.2.13");
+	fixDynDep("php-cgi", "libpcreposix.so.0.0.7");
+	fixDynDep("php-cli", "libxml2.so.2.12.2");
 	fixDynDep("php-cli", "libpng16.so.16.40.0");
 	fixDynDep("php-cli", "libiconv.so.2.6.1");
 	fixDynDep("php-cli", "libsqlite3.so.0.8.6");
 	fixDynDep("php-cli", "libcurl.so.4.8.0");
+	fixDynDep("php-cli", "libjpeg.so.8.3.2");
+	fixDynDep("php-cli", "libpcre.so.1.2.13");
+	fixDynDep("php-cli", "libpcreposix.so.0.0.7");
 
 	fixDynDep("curl", "libcurl.so.4.8.0");
 	fixDynDep("mdu", "libcurl.so.4.8.0");
 
-#!!TB - Updated Broadcom WL driver
+# broadcom WL driver
 	fixDynDep("libbcmcrypto.so", "libc.so.0");
 	fixDynDep("nas", "libbcmcrypto.so");
 	fixDynDep("wl", "libbcmcrypto.so");
 	fixDynDep("nas", "libc.so.0");
 	fixDynDep("wl", "libc.so.0");
 
-#Roadkill for NocatSplash
-	fixDynDep("splashd","libglib-1.2.so.0.0.10");
+# NocatSplash
+	fixDynDep("splashd", "libglib-1.2.so.0.0.10");
 
-# iperf (pedro)
+# iperf
 	fixDynDep("iperf", "libiperf.so.0.0.0");
 
-# ebtables (pedro)
+# ebtables
 	fixDynDep("ebtables-legacy", "libebtc.so.0.0.0");
 
-# samba3 (pedro)
+# samba3
 	fixDynDep("samba_multicall", "libiconv.so.2.6.1");
 
-# tor (pedro)
+# tor
 	fixDynDep("tor", "libevent-2.1.so.7");
 
-# e2fsprogs (pedro)
+# e2fsprogs
 	fixDynDep("e2fsck", "libext2fs.so.2.4");
 	fixDynDep("e2fsck", "libuuid.so.1.2");
 	fixDynDep("e2fsck", "libblkid.so.1.0");
@@ -320,7 +325,7 @@ sub fixDyn
 	fixDynDep("badblocks", "libe2p.so.2.3");
 	fixDynDep("badblocks", "libcom_err.so.2.1");
 
-# avahi (pedro)
+# avahi
 	fixDynDep("avahi-daemon", "libavahi-core.so.7.1.0");
 	fixDynDep("avahi-daemon", "libavahi-common.so.3.5.4");
 	fixDynDep("avahi-daemon", "libexpat.so.1.6.2");
@@ -334,7 +339,7 @@ sub usersOf
 	my @x;
 	my $e;
 	my $l;
-	
+
 	@x = ();
 	foreach $e (@elfs) {
 		foreach $l (@{$elf_lib{$e}}) {
@@ -372,7 +377,7 @@ sub fillGaps
 	my $found;
 
 #	print "Resolving implicit links...\n";
-	
+
 	foreach $name (@elfs) {
 		foreach $sym (keys %{$elf_ext{$name}}) {
 			$found = 0;
@@ -415,7 +420,7 @@ sub tab
 	my $target = shift;
 	my $s = "";
 	my $n;
-	
+
 	while (1) {
 		$n = $current + (4 - ($current % 4));
 		last if ($n > $target);
@@ -435,20 +440,20 @@ sub genXref
 	my $fname;
 	my $s;
 	my @u;
-	
-#	print "Generating Xref Report...\n";
-	
+
+	print "Generating Xref Report...\n";
+
 	open($f, ">libfoo_xref.txt");
 	foreach $fname (sort keys %elf_type) {
 		print $f "$fname:\n";
-		
+
 		if (scalar(@{$elf_lib{$fname}}) > 0) {
 			print $f "Dependency:\n";
 			foreach $s (sort @{$elf_lib{$fname}}) {
 				print $f "\t$s", defined $elf_dyn{$fname}{$s} ? " (dyn)\n" : "\n";
 			}
 		}
-		
+
 		if (scalar(keys %{$elf_exp{$fname}}) > 0) {
 			print $f "Export:\n";
 			foreach $s (sort keys %{$elf_exp{$fname}}) {
@@ -461,7 +466,7 @@ sub genXref
 				}
 			}
 		}
-		
+
 		if (scalar(keys %{$elf_ext{$fname}}) > 0) {
 			print $f "External:\n";
 			foreach $s (sort keys %{$elf_ext{$fname}}) {
@@ -492,7 +497,6 @@ sub genSO
 		return 0;
 	}
 
-	#!!TB
 	if (!-f $arc) {
 		print "$arc: not found, skipping...\n";
 		return 0;
@@ -510,7 +514,7 @@ sub genSO
 #	print "\n$name: Attempting to link ", scalar(@used), " and remove ", scalar(@unused), " objects...\n";
 
 	print LOG "\n\n${base}\n";
-	
+
 #	$cmd = "mipsel-uclibc-ld -shared -s -z combreloc --warn-common --fatal-warnings ${opt} -soname ${name} -o ${so}";
 	$cmd = "mipsel-uclibc-gcc -shared -nostdlib -Wl,-s,-z,combreloc -Wl,--warn-common -Wl,--fatal-warnings -Wl,--gc-sections ${opt} -Wl,-soname=${name} -o ${so}";
 	foreach (@{$elf_lib{$name}}) {
@@ -518,14 +522,13 @@ sub genSO
 			$cmd .= " -l$1";
 		}
 		else {
-#			print LOG "Not marking for linkage: $_\n";
+#			print "$_: not marked for linkage...\n";
 		}
 	}
-#	print "$cmd -u... ${arc}\n";	
+#	print "$cmd -u... ${arc}\n";
 	if (scalar(@used) == 0) {
 		print "$name: WARNING: Library is not used by anything, deleting...\n";
 		unlink $so;
-#		<>;
 		return 0;
 	}
 	$cmd .= " -u " . join(" -u ", @used) . " ". $arc;
@@ -538,14 +541,14 @@ sub genSO
 
 	system($cmd);
 	if ($? != 0) {
-		error("ld returned $?");
+		error("gcc returned $?");
 	}
 
 	$after = -s $so;
-	
+
 	print "$name: Attempted to remove ", scalar(@unused), "/", scalar(@unused) + scalar(@used), " symbols. ";
 	printf "%.2fK - %.2fK = %.2fK\n", $before / 1024, $after / 1024, ($before - $after) / 1024;
-	
+
 #	print "\n$name: Attempting to link ", scalar(@used), " and remove ", scalar(@unused), " objects...\n";
 #	printf "Before: %.2fK / After: %.2fK / Removed: %.2fK\n\n", $before / 1024, $after / 1024, ($before - $after) / 1024;
 
@@ -557,8 +560,8 @@ sub genSO
 ##
 ##
 
-#	print "\nlibfoo.pl - fooify shared libraries\n";
-#	print "Copyright (C) 2006-2007 Jonathan Zarate\n\n";
+print "\nlibfoo.pl - fooify shared libraries\n";
+print "Copyright (C) 2006-2007 Jonathan Zarate\n\n";
 
 if ((!-d $root) || (!-d $uclibc) || (!-d $router)) {
 	print "Missing or invalid environment variables\n";
@@ -568,7 +571,7 @@ if ((!-d $root) || (!-d $uclibc) || (!-d $router)) {
 #open(LOG, ">libfoo.debug");
 open(LOG, ">/dev/null");
 
-print "\r--- Loading...\r\r";
+print "\r--- Loading files... ---\r\r";
 load($root);
 print "\r--- Finished loading files. ---\r\r";
 
@@ -602,7 +605,7 @@ else {
 
 genSO("${root}/usr/lib/libzebra.so", "${router}/zebra/lib/libzebra.a");
 genSO("${root}/usr/lib/libz.so.1", "${router}/zlib/libz.a");
-genSO("${root}/usr/lib/libjpeg.so.8.3.2", "${router}/jpeg/libjpeg.a");
+genSO("${root}/usr/lib/libjpeg.so.8.3.2", "${router}/libjpeg-turbo/build/libjpeg.a");
 genSO("${root}/usr/lib/libsqlite3.so.0.8.6", "${router}/sqlite/.libs/libsqlite3.a", "", "-L${router}/zlib");
 genSO("${root}/usr/lib/libvorbis.so.0", "${router}/libvorbis/lib/.libs/libvorbis.a", "", "-L${router}/libogg/src/.libs");
 genSO("${root}/usr/lib/libid3tag.so.0", "${router}/libid3tag/.libs/libid3tag.a", "", "-L${router}/zlib");
@@ -617,11 +620,9 @@ genSO("${root}/usr/lib/liblzo2.so.2.0.0", "${router}/lzo/src/.libs/liblzo2.a");
 #genSO("${root}/usr/lib/libshared.so", "${router}/shared/libshared.a");
 #genSO("${root}/usr/lib/libnvram.so", "${router}/nvram/libnvram.a");
 #genSO("${root}/usr/lib/libusb-1.0.so.0", "${router}/libusb10/libusb/.libs/libusb-1.0.a");
-#genSO("${root}/usr/lib/libusb-0.1.so.4", "${router}/libusb/libusb/.libs/libusb.a", "", "-L${router}/libusb10/libusb/.libs");
 
 genSO("${root}/usr/lib/libbcmcrypto.so", "${router}/libbcmcrypto/libbcmcrypto.a");
 
-#shibby
 genSO("${root}/usr/lib/libcurl.so.4.8.0", "${router}/libcurl/lib/.libs/libcurl.a", "", "-L${router}/zlib -L${router}/${openssldir}");
 genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a");
 genSO("${root}/usr/lib/libdaemon.so.0.5.0", "${router}/libdaemon/libdaemon/.libs/libdaemon.a");
@@ -629,16 +630,16 @@ genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libicon
 genSO("${root}/usr/lib/libnfnetlink.so.0.2.0", "${router}/libnfnetlink/src/.libs/libnfnetlink.a");
 genSO("${root}/usr/lib/libsodium.so.23.3.0", "${router}/libsodium/src/libsodium/.libs/libsodium.a");
 genSO("${root}/usr/lib/libpng16.so.16.40.0", "${router}/libpng/.libs/libpng16.a", "", "-L${router}/zlib");
-genSO("${root}/usr/lib/libxml2.so.2.11.5", "${router}/libxml2/.libs/libxml2.a", "", "-L${router}/zlib");
-genSO("${root}/usr/lib/libpcre.so.1.2.12", "${router}/pcre/.libs/libpcre.a");
+genSO("${root}/usr/lib/libxml2.so.2.12.2", "${router}/libxml2/.libs/libxml2.a", "", "-L${router}/zlib");
+genSO("${root}/usr/lib/libpcre.so.1.2.13", "${router}/pcre/.libs/libpcre.a");
 genSO("${root}/usr/lib/libpcreposix.so.0.0.7", "${router}/pcre/.libs/libpcreposix.a");
 genSO("${root}/usr/lib/libatomic_ops.so.1.0.3", "${router}/libatomic_ops/src/.libs/libatomic_ops.a");
 genSO("${root}/usr/lib/libncurses.so.6", "${router}/libncurses/lib/libncurses.a");
 
-# iperf (pedro)
+# iperf
 genSO("${root}/usr/lib/libiperf.so.0.0.0", "${router}/iperf/src/.libs/libiperf.a");
 
-# e2fsprogs (pedro)
+# e2fsprogs
 genSO("${root}/usr/lib/libext2fs.so.2.4", "${router}/e2fsprogs/lib/libext2fs.a", "", "-L${router}/e2fsprogs/lib");
 genSO("${root}/usr/lib/libuuid.so.1.2", "${router}/e2fsprogs/lib/libuuid.a", "", "-L${router}/e2fsprogs/lib");
 genSO("${root}/usr/lib/libblkid.so.1.0", "${router}/e2fsprogs/lib/libblkid.a", "", "-L${router}/e2fsprogs/lib");

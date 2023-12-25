@@ -2,7 +2,7 @@
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/home/root:
 ###############################
 # Copyright (C) 2012/2013 shibby
-# Changes for new versioning: 2018 - 2021 by pedro
+# Changes for new versioning: 2018 - 2023 by pedro
 #
 # This script send anonymous or incompleted information about model of router and installed tomato version.
 # Those information will be used ONLY for stats.
@@ -21,9 +21,12 @@ export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/home/root:
 # That`s all
 ###############################
 
-ANON_ENABLED=$(nvram get tomatoanon_enable)
-ANON_ANSWER=$(nvram get tomatoanon_answer)
-ANON_NOTIFY=$(nvram get tomatoanon_notify)
+
+. nvram_ops
+
+ANON_ENABLED=$(NG tomatoanon_enable)
+ANON_ANSWER=$(NG tomatoanon_answer)
+ANON_NOTIFY=$(NG tomatoanon_notify)
 # STUBBYNO-BEGIN
 WGET="/usr/bin/wget --no-check-certificate"
 # STUBBYNO-END
@@ -33,19 +36,16 @@ WGET="/usr/bin/wget"
 
 [ "$ANON_ANSWER" -eq 1 ] && {
 	[ "$ANON_ENABLED" -eq 1 ] && {
-
-############################
 		MOD=FreshTomato
-############################
 
 		# Detect Version and Buildtype
-		IS_USB=$(nvram get os_version | grep USB | wc -l)
-		[ "$IS_USB" -eq 0 ] && { # if K26
-			VER=$(nvram get os_version | awk '{ print $1" "$(NF-1) }')
-		} || { # if K26USB
-			VER=$(nvram get os_version | awk '{ print $1" "$(NF-2)" "$(NF-1) }')
+		IS_USB=$(NG os_version | grep USB | wc -l)
+		[ "$IS_USB" -eq 0 ] && {
+			VER=$(NG os_version | awk '{ print $1" "$2 }')
+		} || {
+			VER=$(NG os_version | awk '{ print $1" "$2" "$(NF-1) }')
 		}
-		BUILDTYPE=$(nvram get os_version | awk '{ print $NF }')
+		BUILDTYPE=$(NG os_version | awk '{ print $NF }')
 
 		[ "$1" == "checkver" -a "$ANON_NOTIFY" -eq 1 ] && {
 			# Tomato Update Notification Script
@@ -81,7 +81,6 @@ WGET="/usr/bin/wget"
 			fi
 
 			# Thanks. Now add cron job
-
 			ISCRU=$(cru l | grep checkver | wc -l)
 			[ "$ISCRU" -eq 0 ] && {
 
@@ -98,16 +97,16 @@ WGET="/usr/bin/wget"
 		} || { # just update anon database
 			# Collect datas
 			UPTIME=$(uptime | cut -d "," -f1 | cut -d " " -f4,5)
-			WANMAC=$(nvram get wan_hwaddr)
-			LANMAC=$(nvram get lan_hwaddr)
-			MODEL=$(nvram get t_model_name)
+			WANMAC=$(NG wan_hwaddr)
+			LANMAC=$(NG lan_hwaddr)
+			MODEL=$(NG t_model_name)
 			DRIVER=$(wl ver | grep version | awk '{ print $7 }')
 			WANMAC_MD5=$(echo "$WANMAC+$LANMAC" | md5sum | awk '{ print $1 }')
 
-			ROUTERID=$(nvram get tomatoanon_id)
+			ROUTERID=$(NG tomatoanon_id)
 			[ ! "$ROUTERID" == "$WANMAC_MD5" ] && {
-				nvram set tomatoanon_id="$WANMAC_MD5"
-				nvram commit
+				NS tomatoanon_id="$WANMAC_MD5"
+				NC
 			}
 
 			# Change all spaces to %20.
@@ -118,7 +117,6 @@ WGET="/usr/bin/wget"
 			$WGET -O $RESULT $ANONSEND
 
 			# Thanks. Now add cron job
-
 			ISCRU=$(cru l | grep anonupdate | wc -l)
 			[ "$ISCRU" -eq 0 ] && {
 

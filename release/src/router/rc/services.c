@@ -85,6 +85,9 @@ extern struct nvram_tuple snmp_defaults[];
 #ifdef TCONFIG_BCMARM
 extern struct nvram_tuple upnp_defaults[];
 #endif /* TCONFIG_BCMARM */
+#ifdef TCONFIG_BCMBSD
+extern struct nvram_tuple bsd_defaults[];
+#endif /* TCONFIG_BCMBSD */
 
 /* Pop an alarm to recheck pids in 500 msec */
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
@@ -264,6 +267,32 @@ void del_upnp_defaults(void)
 #endif /* TCONFIG_BCMARM */
 }
 
+#ifdef TCONFIG_BCMBSD
+void add_bsd_defaults(void)
+{
+	struct nvram_tuple *t;
+
+	/* Restore defaults if necessary */
+	for (t = bsd_defaults; t->name; t++) {
+		if (!nvram_get(t->name)) { /* check existence */
+			nvram_set(t->name, t->value);
+		}
+	}
+}
+
+void del_bsd_defaults(void)
+{
+	if (nvram_match("smart_connect_x", "0")) {
+		struct nvram_tuple *t;
+
+		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
+		for (t = bsd_defaults; t->name; t++) {
+			nvram_unset(t->name);
+		}
+	}
+}
+#endif /* TCONFIG_BCMBSD */
+
 void start_dnsmasq_wet()
 {
 	FILE *f;
@@ -299,6 +328,12 @@ void start_dnsmasq_wet()
 			fprintf(f, "no-dhcp-interface=%s\n", nv);
 		}
 	}
+
+	if (nvram_get_int("dnsmasq_debug"))
+		fprintf(f, "log-queries\n");
+
+	if ((nvram_get_int("adblock_enable")) && (f_exists("/etc/dnsmasq.adblock")))
+		fprintf(f, "conf-file=/etc/dnsmasq.adblock\n");
 
 	if (!nvram_get_int("dnsmasq_safe")) {
 		fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
@@ -733,6 +768,10 @@ void start_dnsmasq()
 
 #ifdef TCONFIG_PPTPD
 	write_pptpd_dnsmasq_config(f);
+#endif
+
+#ifdef TCONFIG_WIREGUARD
+	write_wg_dnsmasq_config(f);
 #endif
 
 #ifdef TCONFIG_IPV6
@@ -2696,7 +2735,7 @@ static void start_media_server(int force)
 			           nvram_get_int("ms_autoscan") ? "yes" : "no",
 			           serial,
 			           uuident,
-			           nvram_safe_get("os_version"),
+			           tomato_version,
 			           nvram_safe_get("ms_custom"));
 
 			/* media directories */
@@ -2865,13 +2904,12 @@ void start_services(void)
 	start_mysql(0);
 #endif
 	start_cron();
-	start_rstats(0);
-	start_cstats(0);
 #ifdef TCONFIG_PPTPD
 	start_pptpd(0);
 #endif
 #ifdef TCONFIG_USB
 	restart_nas_services(1, 1); /* Samba, FTP and Media Server */
+	notice_set("nas", "" );
 #endif
 #ifdef TCONFIG_SNMP
 	start_snmp();
@@ -2893,6 +2931,8 @@ void start_services(void)
 	/* do LED setup for Router */
 	led_setup();
 #endif
+	start_rstats(0);
+	start_cstats(0);
 #ifdef TCONFIG_FANCTRL
 	start_phy_tempsense();
 #endif
@@ -2921,6 +2961,8 @@ void stop_services(void)
 	stop_dhcpc_lan(); /* stop very early */
 	clear_resolv();
 	stop_ntpd();
+	stop_rstats();
+	stop_cstats();
 #ifdef TCONFIG_FANCTRL
 	stop_phy_tempsense();
 #endif
@@ -2950,8 +2992,6 @@ void stop_services(void)
 	stop_pptpd();
 #endif
 	stop_sched();
-	stop_rstats();
-	stop_cstats();
 	stop_cron();
 #ifdef TCONFIG_NGINX
 	stop_mysql();
@@ -3057,6 +3097,14 @@ TOP:
 		if (act_start) add_upnp_defaults();
 		goto CLEAR;
 	}
+
+#ifdef TCONFIG_BCMBSD
+	if (strcmp(service, "bsd_nvram") == 0) {
+		if (act_stop) del_bsd_defaults();
+		if (act_start) add_bsd_defaults();
+		goto CLEAR;
+	}
+#endif /* TCONFIG_BCMBSD */
 
 	if (strcmp(service, "dhcpc_wan") == 0) {
 		if (act_stop) stop_dhcpc("wan");
@@ -3320,6 +3368,8 @@ TOP:
 			nvram_set("g_upgrade", "1");
 			stop_sched();
 			stop_cron();
+			killall("rstats", SIGTERM);
+			killall("cstats", SIGTERM);
 #ifdef TCONFIG_USB
 			restart_nas_services(1, 0); /* Samba, FTP and Media Server */
 #endif
@@ -3340,8 +3390,6 @@ TOP:
 #ifdef TCONFIG_IRQBALANCE
 			stop_irqbalance();
 #endif
-			killall("rstats", SIGTERM);
-			killall("cstats", SIGTERM);
 			killall("buttons", SIGTERM);
 			if (!nvram_get_int("remote_upgrade")) {
 				killall("xl2tpd", SIGTERM);
@@ -3720,6 +3768,14 @@ TOP:
 	}
 #endif
 
+#ifdef TCONFIG_WIREGUARD
+	if (strncmp(service, "wireguard", 9) == 0) {
+		if (act_stop) stop_wireguard(atoi(&service[9]));
+		if (act_start) start_wireguard(atoi(&service[9]));
+		goto CLEAR;
+	}
+#endif
+
 #ifdef TCONFIG_TINC
 	if ((strcmp(service, "tinc") == 0) || (strcmp(service, "tincd") == 0)) {
 		if (act_stop) stop_tinc();
@@ -3861,11 +3917,42 @@ void stop_service(const char *name)
 int start_bsd(void)
 {
 	int ret;
+	int bsd_enable = nvram_get_int("smart_connect_x");
+
+	/* only if enabled */
+	if (bsd_enable) {
+		add_bsd_defaults(); /* add bsd nvram values only if feature is enabled! */
+
+		/* band steering settings corrections, because 5 GHz module is the first one */
+		switch (get_model()) {
+			case MODEL_EA6350v1: /* EA6200 */
+				if (nvram_match("boardnum", "20140309")) {
+					/* nothing to do for EA6350v1 */
+					break;
+				}
+				/* fall through */
+			case MODEL_F9K1113v2:
+			case MODEL_F9K1113v2_20X0: /* version 2000 and 2010 */
+			case MODEL_R1D:
+				nvram_set("wl1_bsd_steering_policy", "0 5 3 -52 0 110 0x22");
+				nvram_set("wl0_bsd_steering_policy", "80 5 3 -82 0 0 0x20");
+				nvram_set("wl1_bsd_sta_select_policy", "10 -52 0 110 0 1 1 0 0 0 0x122");
+				nvram_set("wl0_bsd_sta_select_policy", "10 -82 0 0 0 1 1 0 0 0 0x20");
+				nvram_set("wl1_bsd_if_select_policy", "eth1");
+				nvram_set("wl0_bsd_if_select_policy", "eth2");
+				nvram_set("wl1_bsd_if_qualify_policy", "0 0x0");
+				nvram_set("wl0_bsd_if_qualify_policy", "60 0x0");
+				break;
+			default:
+				/* nothing to do right now */
+				break;
+		}
+	}
 
 	stop_bsd();
 
 	/* 0 = off, 1 = on (all-band), 2 = 5 GHz only! (no support, maybe later) */
-	if (!nvram_get_int("smart_connect_x")) {
+	if (!bsd_enable) {
 		ret = -1;
 		logmsg(LOG_INFO, "wireless band steering disabled");
 		return ret;

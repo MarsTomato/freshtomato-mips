@@ -2254,6 +2254,10 @@ example command to query this, using the
 utility would be
 
 dig +short chaos txt cachesize.bind
+.TP
+.B --max-tcp-connections=<number>
+The maximum number of concurrent TCP connections. The application forks to
+handle each TCP request. The default maximum is 20.
 
 .SH CONFIG FILE
 At startup, dnsmasq reads
@@ -2299,7 +2303,7 @@ they expired in order to make room for new names and the total number
 of names that have been inserted into the cache. The number of cache hits and 
 misses and the number of authoritative queries answered are also given. For each upstream
 server it gives the number of queries sent, and the number which
-resulted in an error. In 
+resulted in an error. It also gives information on the number of forks for TCP connections. In
 .B --no-daemon
 mode or when full logging is enabled (\fB--log-queries\fP), a complete dump of the
 contents of the cache is made. 
