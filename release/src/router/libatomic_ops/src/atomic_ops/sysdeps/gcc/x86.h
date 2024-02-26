@@ -87,7 +87,6 @@ AO_short_fetch_and_add_full (volatile unsigned short *p, unsigned short incr)
 #define AO_HAVE_short_fetch_and_add_full
 
 #ifndef AO_PREFER_GENERALIZED
-  /* Really only works for 486 and later */
   AO_INLINE void
   AO_and_full (volatile AO_t *p, AO_t value)
   {
@@ -190,6 +189,7 @@ AO_fetch_compare_and_swap_full(volatile AO_t *addr, AO_t old_val,
                                          AO_t old_val1, AO_t old_val2,
                                          AO_t new_val1, AO_t new_val2)
   {
+    AO_t dummy; /* an output for clobbered edx */
     char result;
 #   ifdef __PIC__
       AO_t saved_ebx;
@@ -205,11 +205,12 @@ AO_fetch_compare_and_swap_full(volatile AO_t *addr, AO_t old_val,
 #     ifdef __OPTIMIZE__
         __asm__ __volatile__("mov %%ebx, %2\n\t" /* save ebx */
                              "lea %0, %%edi\n\t" /* in case addr is in ebx */
-                             "mov %7, %%ebx\n\t" /* load new_val1 */
+                             "mov %8, %%ebx\n\t" /* load new_val1 */
                              "lock; cmpxchg8b (%%edi)\n\t"
                              "mov %2, %%ebx\n\t" /* restore ebx */
                              "setz %1"
-                        : "=m" (*addr), "=a" (result), "=m" (saved_ebx)
+                        : "=m" (*addr), "=a" (result),
+                          "=m" (saved_ebx), "=d" (dummy)
                         : "m" (*addr), "d" (old_val2), "a" (old_val1),
                           "c" (new_val2), "m" (new_val1)
                         : "%edi", "memory");
@@ -221,13 +222,13 @@ AO_fetch_compare_and_swap_full(volatile AO_t *addr, AO_t old_val,
         __asm__ __volatile__("mov %%edi, %3\n\t" /* save edi */
                              "mov %%ebx, %2\n\t" /* save ebx */
                              "lea %0, %%edi\n\t" /* in case addr is in ebx */
-                             "mov %8, %%ebx\n\t" /* load new_val1 */
+                             "mov %9, %%ebx\n\t" /* load new_val1 */
                              "lock; cmpxchg8b (%%edi)\n\t"
                              "mov %2, %%ebx\n\t" /* restore ebx */
                              "mov %3, %%edi\n\t" /* restore edi */
                              "setz %1"
                         : "=m" (*addr), "=a" (result),
-                          "=m" (saved_ebx), "=m" (saved_edi)
+                          "=m" (saved_ebx), "=m" (saved_edi), "=d" (dummy)
                         : "m" (*addr), "d" (old_val2), "a" (old_val1),
                           "c" (new_val2), "m" (new_val1) : "memory");
 #     endif
@@ -236,7 +237,7 @@ AO_fetch_compare_and_swap_full(volatile AO_t *addr, AO_t old_val,
       /* faster) by using ebx as new_val1 (GCC would refuse to compile  */
       /* such code for PIC mode).                                       */
       __asm__ __volatile__ ("lock; cmpxchg8b %0; setz %1"
-                        : "=m" (*addr), "=a" (result)
+                        : "=m" (*addr), "=a" (result), "=d" (dummy)
                         : "m" (*addr), "d" (old_val2), "a" (old_val1),
                           "c" (new_val2), "b" (new_val1)
                         : "memory");
@@ -316,9 +317,11 @@ AO_fetch_compare_and_swap_full(volatile AO_t *addr, AO_t old_val,
                                            AO_t old_val1, AO_t old_val2,
                                            AO_t new_val1, AO_t new_val2)
     {
+      AO_t dummy; /* an output for clobbered rdx */
       char result;
+
       __asm__ __volatile__("lock; cmpxchg16b %0; setz %1"
-                        : "=m"(*addr), "=a"(result)
+                        : "=m" (*addr), "=a" (result), "=d" (dummy)
                         : "m"(*addr), "d" (old_val2), "a" (old_val1),
                           "c" (new_val2), "b" (new_val1)
                         : "memory");

@@ -40,7 +40,7 @@
  *      The binary log of the object size in bytes (small objects)
  *      The object size (a multiple of CHUNK_SIZE) for large objects.
  * The second case only arises if mmap-based allocation is supported.
- * We align the user-visible part of each object on a GRANULARITY
+ * We align the user-visible part of each object on an ALIGNMENT
  * byte boundary.  That means that the actual (hidden) start of
  * the object starts a word before this boundary.
  */
@@ -91,6 +91,7 @@ static volatile AO_t initial_heap_ptr = (AO_t)AO_initial_heap;
 #   define OPT_MAP_ANON MAP_ANON
 # endif
 #else
+# include <unistd.h> /* for close() */
 # define OPT_MAP_ANON 0
 #endif
 
@@ -135,6 +136,21 @@ static char *get_mmaped(size_t sz)
   return result;
 }
 
+#ifndef SIZE_MAX
+# include <limits.h>
+#endif
+#ifdef SIZE_MAX
+# define AO_SIZE_MAX ((size_t)SIZE_MAX)
+            /* Extra cast to workaround some buggy SIZE_MAX definitions. */
+#else
+# define AO_SIZE_MAX (~(size_t)0)
+#endif
+
+/* Saturated addition of size_t values.  Used to avoid value wrap       */
+/* around on overflow.  The arguments should have no side effects.      */
+#define SIZET_SAT_ADD(a, b) \
+                ((a) < AO_SIZE_MAX - (b) ? (a) + (b) : AO_SIZE_MAX)
+
 /* Allocate an object of size (incl. header) of size > CHUNK_SIZE.      */
 /* sz includes space for an AO_t-sized header.                          */
 static char *
@@ -142,9 +158,8 @@ AO_malloc_large(size_t sz)
 {
  char * result;
  /* The header will force us to waste ALIGNMENT bytes, incl. header.    */
-   sz += ALIGNMENT;
- /* Round to multiple of CHUNK_SIZE.    */
-   sz = (sz + CHUNK_SIZE - 1) & ~(CHUNK_SIZE - 1);
+ /* Round to multiple of CHUNK_SIZE.                                    */
+ sz = SIZET_SAT_ADD(sz, ALIGNMENT + CHUNK_SIZE - 1) & ~(CHUNK_SIZE - 1);
  result = get_mmaped(sz);
  if (result == 0) return 0;
  result += ALIGNMENT;
@@ -192,7 +207,8 @@ get_chunk(void)
                                     (AO_t)initial_ptr, (AO_t)my_chunk_ptr);
       }
 
-    if (my_chunk_ptr - AO_initial_heap > AO_INITIAL_HEAP_SIZE - CHUNK_SIZE)
+    if ((AO_t)my_chunk_ptr - (AO_t)AO_initial_heap
+                        > (size_t)(AO_INITIAL_HEAP_SIZE - CHUNK_SIZE))
       break;
     if (AO_compare_and_swap(&initial_heap_ptr, (AO_t)my_chunk_ptr,
                             (AO_t)(my_chunk_ptr + CHUNK_SIZE))) {
@@ -217,7 +233,7 @@ static void add_chunk_as(void * chunk, unsigned log_sz)
   size_t ofs, limit;
   size_t sz = (size_t)1 << log_sz;
 
-  assert (CHUNK_SIZE >= sz);
+  assert((size_t)CHUNK_SIZE >= sz);
   limit = (size_t)CHUNK_SIZE - sz;
   for (ofs = ALIGNMENT - sizeof(AO_t); ofs <= limit; ofs += sz) {
     AO_stack_push(&AO_free_list[log_sz], (AO_t *)((char *)chunk + ofs));
@@ -270,7 +286,7 @@ AO_malloc(size_t sz)
   AO_t *result;
   unsigned log_sz;
 
-  if (sz > CHUNK_SIZE)
+  if (sz > CHUNK_SIZE - sizeof(AO_t))
     return AO_malloc_large(sz);
   log_sz = msb(sz + (sizeof(AO_t) - 1));
   result = AO_stack_pop(AO_free_list+log_sz);
@@ -282,8 +298,8 @@ AO_malloc(size_t sz)
   }
   *result = log_sz;
 # ifdef AO_TRACE_MALLOC
-    fprintf(stderr, "%x: AO_malloc(%lu) = %p\n",
-                    (int)pthread_self(), (unsigned long)sz, result+1);
+    fprintf(stderr, "%p: AO_malloc(%lu) = %p\n",
+            (void *)pthread_self(), (unsigned long)sz, (void *)(result + 1));
 # endif
   return result + 1;
 }
@@ -297,8 +313,8 @@ AO_free(void *p)
   if (0 == p) return;
   log_sz = (int)(*(AO_t *)base);
 # ifdef AO_TRACE_MALLOC
-    fprintf(stderr, "%x: AO_free(%p sz:%lu)\n", (int)pthread_self(), p,
-            (unsigned long)(log_sz > LOG_MAX_SIZE? log_sz : (1 << log_sz)));
+    fprintf(stderr, "%p: AO_free(%p sz:%lu)\n", (void *)pthread_self(), p,
+            log_sz > LOG_MAX_SIZE ? (unsigned)log_sz : 1UL << log_sz);
 # endif
   if (log_sz > LOG_MAX_SIZE)
     AO_free_large(p);

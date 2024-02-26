@@ -56,6 +56,9 @@ AO_stack_push_explicit_aux_release(volatile AO_t *list, AO_t *x,
   /* No deletions of x can start here, since x is not currently in the  */
   /* list.                                                              */
  retry:
+  do {
+    next = AO_load_acquire(list);
+    *x = next;
 # if AO_BL_SIZE == 2
   {
     /* Start all loads as close to concurrently as possible. */
@@ -91,12 +94,7 @@ AO_stack_push_explicit_aux_release(volatile AO_t *list, AO_t *x,
   }
 # endif
   /* x_bits is not currently being deleted */
-  do
-    {
-      next = AO_load(list);
-      *x = next;
-    }
-  while (AO_EXPECT_FALSE(!AO_compare_and_swap_release(list, next, x_bits)));
+  } while (AO_EXPECT_FALSE(!AO_compare_and_swap_release(list, next, x_bits)));
 }
 
 /*
@@ -152,11 +150,14 @@ AO_stack_pop_explicit_aux_acquire(volatile AO_t *list, AO_stack_aux * a)
   /* list.  Otherwise it's possible that a reinsertion of it was        */
   /* already started before we added the black list entry.              */
 # if defined(__alpha__) && (__GNUC__ == 4)
-    if (first != AO_load(list))
+    if (first != AO_load_acquire(list))
                         /* Workaround __builtin_expect bug found in     */
                         /* gcc-4.6.3/alpha causing test_stack failure.  */
 # else
-    if (AO_EXPECT_FALSE(first != AO_load(list)))
+    if (AO_EXPECT_FALSE(first != AO_load_acquire(list)))
+                        /* Workaround test failure on AIX, at least, by */
+                        /* using acquire ordering semantics for this    */
+                        /* load.  Probably, it is not the right fix.    */
 # endif
   {
     AO_store_release(a->AO_stack_bl+i, 0);
@@ -187,13 +188,17 @@ AO_stack_pop_explicit_aux_acquire(volatile AO_t *list, AO_stack_aux * a)
   return first_ptr;
 }
 
-#else /* ! USE_ALMOST_LOCK_FREE */
+#else /* !AO_USE_ALMOST_LOCK_FREE */
 
 /* Better names for fields in AO_stack_t */
 #define ptr AO_val2
 #define version AO_val1
 
 #if defined(AO_HAVE_compare_double_and_swap_double)
+
+#ifdef LINT2
+  volatile /* non-static */ AO_t AO_noop_sink;
+#endif
 
 void AO_stack_push_release(AO_stack_t *list, AO_t *element)
 {
@@ -208,6 +213,10 @@ void AO_stack_push_release(AO_stack_t *list, AO_t *element)
     /* by Treiber.  Pop is still safe, since we run into the ABA        */
     /* problem only if there were both intervening "pop"s and "push"es. */
     /* In that case we still see a change in the version number.        */
+#   ifdef LINT2
+      /* Instruct static analyzer that element is not lost. */
+      AO_noop_sink = (AO_t)element;
+#   endif
 }
 
 AO_t *AO_stack_pop_acquire(AO_stack_t *list)
@@ -239,7 +248,7 @@ AO_t *AO_stack_pop_acquire(AO_stack_t *list)
 
 /* Needed for future IA64 processors.  No current clients? */
 
-#error Untested!  Probably doesnt work.
+# error Untested!  Probably does not work.
 
 /* We have a wide CAS, but only does an AO_t-wide comparison.   */
 /* We can't use the Treiber optimization, since we only check   */
@@ -278,4 +287,4 @@ AO_t *AO_stack_pop_acquire(AO_stack_t *list)
 
 #endif /* AO_HAVE_compare_and_swap_double */
 
-#endif /* ! USE_ALMOST_LOCK_FREE */
+#endif /* !AO_USE_ALMOST_LOCK_FREE */

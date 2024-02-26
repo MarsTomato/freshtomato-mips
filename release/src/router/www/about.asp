@@ -240,7 +240,7 @@ function init() {
 <!-- OPTSIZE-END -->
 	<br><b>FreshTomato-MIPS - is an alternative, customized version, forked off from Tomato by Shibby</b>
 	<br>
-	Copyright (C) 2016-2023 by Pedro
+	Copyright (C) 2016-2024 by Pedro
 	<br>
 	<br>
 	Built on <% build_time(); %> by Pedro

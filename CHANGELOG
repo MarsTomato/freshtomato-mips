@@ -5,6 +5,39 @@ FreshTomato-MIPS Changelog
 
 
 
+2024.1          2024.02.14
+---------------------------
+
+- dnsmasq: update to aa9e965 (2024-01-21) snapshot
+- libcurl: update to 8.5.0
+- libcap-ng: update to 0.8.4
+- libpng: update to 1.6.41
+- libjpeg-turbo: update to 3.0.2
+- libid3tag: update to 0.16.3
+- dropbear: update to 41a6abc (2023-12-31) snapshot
+- miniupnpd: update to 2.3.4
+- ntfs-3g: update to 75dcdc2 (2023-06-13) snapshot
+- busybox: updates from the upstream
+- wsdd2: update from the upstream
+- uqmi: update to c3488b8 (2024-01-16) snapshot
+- sqlite: update to 3.45.1
+- libxml2: update to 2.12.4
+- libsodium: update to latest 1.0.19-stable
+- wireguard-tools: update to 1.0.20210914
+- libubox: update to 6339204 (2023-12-18) snapshot
+- build: Makefile: fix libcurl issue with http auth
+- build: Makefile: fix compilation on Debian 12
+- build: kernel: fix kernel warnings at generated shared_ksyms.c
+- build: Makefile: on %-clean, do not forget to remove staged dirs
+- GUI: advanced-wireless.asp - add Inactivity Timer option for Media Bridge Mode (60 up to 3600 sec)
+- GUI: VPN: Tinc: tune a little status page
+- mwwatchdog: tune cktracert() checker once again - it needs max hop value set to ~10
+- rc: snmpd.c: log start/stop events
+- switch4g/wwansignal: add timeouts to uqmi calls
+- www: tomato.js: restore compatibility with older browsers
+- www: tools-shell.asp: switch to our addEvent() function for better compatibility
+
+
 2023.5          2023.12.21
 ---------------------------
 

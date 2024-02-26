@@ -58,7 +58,8 @@
 # if !defined(__ARM_ARCH_6__) && !defined(__ARM_ARCH_6J__) \
      && !defined(__ARM_ARCH_6T2__) && !defined(__ARM_ARCH_6Z__) \
      && !defined(__ARM_ARCH_6ZT2__)
-#   if !defined(__ARM_ARCH_6K__) && !defined(__ARM_ARCH_6ZK__)
+#   if !defined(__ARM_ARCH_6K__) && !defined(__ARM_ARCH_6KZ__) \
+       && !defined(__ARM_ARCH_6ZK__)
       /* DMB is present in ARMv6M and ARMv7+.   */
 #     define AO_ARM_HAVE_DMB
 #   endif
@@ -457,7 +458,7 @@ AO_xor(volatile AO_t *p, AO_t value)
       : "=&r"(result), "=&r"(tmp), "+m"(*addr)
       : "r"(addr), "r"(old_val), "r"(new_val)
       : AO_THUMB_SWITCH_CLOBBERS "cc");
-    return !(result&2); /* if succeded, return 1, else 0 */
+    return !(result&2); /* if succeeded then return 1 else 0 */
   }
 # define AO_HAVE_compare_and_swap
 #endif /* !AO_GENERALIZE_ASM_BOOL_CAS */
@@ -551,7 +552,7 @@ AO_fetch_compare_and_swap(volatile AO_t *addr, AO_t old_val, AO_t new_val)
         : "r" (addr), "r" (new_val.AO_whole)
         : "cc");
     } while (AO_EXPECT_FALSE(result));
-    return !result;   /* if succeded, return 1 else 0 */
+    return !result;   /* if succeeded then return 1 else 0 */
   }
 # define AO_HAVE_double_compare_and_swap
 #endif /* AO_ARM_HAVE_LDREXD */
@@ -599,3 +600,7 @@ AO_fetch_compare_and_swap(volatile AO_t *addr, AO_t old_val, AO_t new_val)
 #endif /* !AO_HAVE_test_and_set[_full] && AO_ARM_HAVE_SWP */
 
 #define AO_T_IS_INT
+
+#undef AO_THUMB_GO_ARM
+#undef AO_THUMB_RESTORE_MODE
+#undef AO_THUMB_SWITCH_CLOBBERS

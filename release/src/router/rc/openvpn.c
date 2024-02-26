@@ -314,7 +314,7 @@ void start_ovpn_client(int unit)
 {
 	FILE *fp;
 	ovpn_auth_t auth_mode;
-	ovpn_route_t route_mode;
+	ovpn_route_t route_mode = NONE;
 	ovpn_if_t if_type;
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
@@ -1451,13 +1451,13 @@ void start_ovpn_eas()
 		start_ovpn_client(nums[i]);
 	}
 }
-
+/*
 void stop_ovpn_eas()
 {
 	char buffer[16], *cur;
 	int nums[OVPN_CLIENT_MAX], i;
 
-	/* Parse and stop servers */
+	// Parse and stop servers
 	strlcpy(buffer, nvram_safe_get("vpn_server_eas"), sizeof(buffer));
 
 	i = 0;
@@ -1473,7 +1473,7 @@ void stop_ovpn_eas()
 			stop_ovpn_server(nums[i]);
 	}
 
-	/* Parse and stop clients */
+	// Parse and stop clients
 	strlcpy(buffer, nvram_safe_get("vpn_client_eas"), sizeof(buffer));
 
 	i = 0;
@@ -1489,7 +1489,7 @@ void stop_ovpn_eas()
 			stop_ovpn_client(nums[i]);
 	}
 }
-
+*/
 void stop_ovpn_all()
 {
 	char buffer[16];
