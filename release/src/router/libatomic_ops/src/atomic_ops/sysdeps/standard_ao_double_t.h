@@ -32,8 +32,11 @@
   typedef __m128 double_ptr_storage;
 #elif defined(_WIN32) && !defined(__GNUC__)
   typedef unsigned __int64 double_ptr_storage;
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) && !defined(__ILP32__)
   typedef unsigned __int128 double_ptr_storage;
+#elif defined(__i386__) && defined(__GNUC__)
+  typedef unsigned long long double_ptr_storage
+                                __attribute__((__aligned__(8)));
 #else
   typedef unsigned long long double_ptr_storage;
 #endif
@@ -50,6 +53,11 @@ typedef union {
         /* to a structure or array/vector).                             */
 } AO_double_t;
 #define AO_HAVE_double_t
+
+/* Note: AO_double_t volatile variables are not intended to be local    */
+/* ones (at least those which are passed to AO double-wide primitives   */
+/* as the first argument), otherwise it is the client responsibility to */
+/* ensure they have double-word alignment.                              */
 
 /* Dummy declaration as a compile-time assertion for AO_double_t size.  */
 struct AO_double_t_size_static_assert {

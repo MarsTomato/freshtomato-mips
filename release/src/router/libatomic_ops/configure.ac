@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT([libatomic_ops],[7.4.4],bdwgc@lists.opendylan.org)
+AC_INIT([libatomic_ops],[7.4.20],https://github.com/ivmai/libatomic_ops/issues)
 
 AC_PREREQ(2.61)
 AC_CANONICAL_TARGET([])
@@ -86,8 +86,19 @@ if test "$enable_assertions" != yes; then
   AC_DEFINE([NDEBUG], 1, [Define to disable assertion checking.])
 fi
 
+AC_ARG_ENABLE(gcov, AC_HELP_STRING([--enable-gcov],
+                                   [Turn on code coverage analysis]))
+if test "$enable_gcov" = "yes"; then
+  CFLAGS="$CFLAGS --coverage"
+  # Turn off code optimization to get accurate line numbers.
+  CFLAGS=`echo "$CFLAGS" | sed -e 's/-O\(1\|2\|3\|4\|s\|fast\)\?//g'`
+fi
+
 AC_SUBST(PICFLAG)
 AC_SUBST(DEFS)
+
+# Extra user-defined C flags.
+AC_SUBST([CFLAGS_EXTRA])
 
 AH_TEMPLATE([_PTHREADS], [Indicates the use of pthreads (NetBSD).])
 

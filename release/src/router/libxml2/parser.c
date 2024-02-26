@@ -208,8 +208,7 @@ xmlParseExternalEntityPrivate(xmlDocPtr doc, xmlParserCtxtPtr oldctxt,
 		      const xmlChar *ID, xmlNodePtr *list);
 
 static int
-xmlCtxtUseOptionsInternal(xmlParserCtxtPtr ctxt, int options,
-                          const char *encoding);
+xmlCtxtUseOptionsInternal(xmlParserCtxtPtr ctxt, int options);
 #ifdef LIBXML_LEGACY_ENABLED
 static void
 xmlAddEntityReference(xmlEntityPtr ent, xmlNodePtr firstNode,
@@ -1689,13 +1688,11 @@ xmlParserNsPush(xmlParserCtxtPtr ctxt, const xmlHashedString *prefix,
         oldIndex = ctxt->nsdb->defaultNsIndex;
 
         if (oldIndex != INT_MAX) {
-            if (defAttr != 0)
-                return(0);
-
             extra = &ctxt->nsdb->extra[oldIndex];
 
             if (extra->elementId == ctxt->nsdb->elementId) {
-                xmlErrAttributeDup(ctxt, NULL, BAD_CAST "xmlns");
+                if (defAttr == 0)
+                    xmlErrAttributeDup(ctxt, NULL, BAD_CAST "xmlns");
                 return(0);
             }
 
@@ -1715,14 +1712,12 @@ xmlParserNsPush(xmlParserCtxtPtr ctxt, const xmlHashedString *prefix,
     if (oldIndex != INT_MAX) {
         extra = &ctxt->nsdb->extra[oldIndex];
 
-        if (defAttr != 0)
-            return(0);
-
         /*
          * Check for duplicate definitions on the same element.
          */
         if (extra->elementId == ctxt->nsdb->elementId) {
-            xmlErrAttributeDup(ctxt, BAD_CAST "xmlns", prefix->name);
+            if (defAttr == 0)
+                xmlErrAttributeDup(ctxt, BAD_CAST "xmlns", prefix->name);
             return(0);
         }
 
@@ -13242,7 +13237,7 @@ xmlParseInNodeContext(xmlNodePtr node, const char *data, int datalen,
         }
     }
 
-    xmlCtxtUseOptionsInternal(ctxt, options, NULL);
+    xmlCtxtUseOptionsInternal(ctxt, options);
     xmlDetectSAX2(ctxt);
     ctxt->myDoc = doc;
     /* parsing in context, i.e. as within existing content */
@@ -13256,8 +13251,10 @@ xmlParseInNodeContext(xmlNodePtr node, const char *data, int datalen,
     }
     xmlAddChild(node, fake);
 
-    if (node->type == XML_ELEMENT_NODE) {
+    if (node->type == XML_ELEMENT_NODE)
 	nodePush(ctxt, node);
+
+    if ((ctxt->html == 0) && (node->type == XML_ELEMENT_NODE)) {
 	/*
 	 * initialize the SAX2 namespaces stack
 	 */
@@ -13419,7 +13416,7 @@ xmlParseBalancedChunkMemoryRecover(xmlDocPtr doc, xmlSAXHandlerPtr sax,
         newDoc->dict = ctxt->dict;
         xmlDictReference(newDoc->dict);
     } else {
-	xmlCtxtUseOptionsInternal(ctxt, XML_PARSE_NODICT, NULL);
+	xmlCtxtUseOptionsInternal(ctxt, XML_PARSE_NODICT);
     }
     /* doc == NULL is only supported for historic reasons */
     if (doc != NULL) {
@@ -13704,7 +13701,7 @@ xmlCreateURLParserCtxt(const char *filename, int options)
     }
 
     if (options)
-	xmlCtxtUseOptionsInternal(ctxt, options, NULL);
+	xmlCtxtUseOptionsInternal(ctxt, options);
     ctxt->linenumbers = 1;
 
     inputStream = xmlLoadExternalEntity(filename, NULL, ctxt);
@@ -14561,15 +14558,10 @@ xmlCtxtResetPush(xmlParserCtxtPtr ctxt, const char *chunk,
  *         in case of error.
  */
 static int
-xmlCtxtUseOptionsInternal(xmlParserCtxtPtr ctxt, int options, const char *encoding)
+xmlCtxtUseOptionsInternal(xmlParserCtxtPtr ctxt, int options)
 {
     if (ctxt == NULL)
         return(-1);
-    if (encoding != NULL) {
-        if (ctxt->encoding != NULL)
-	    xmlFree((xmlChar *) ctxt->encoding);
-        ctxt->encoding = xmlStrdup((const xmlChar *) encoding);
-    }
     if (options & XML_PARSE_RECOVER) {
         ctxt->recovery = 1;
         options -= XML_PARSE_RECOVER;
@@ -14702,7 +14694,7 @@ xmlCtxtUseOptionsInternal(xmlParserCtxtPtr ctxt, int options, const char *encodi
 int
 xmlCtxtUseOptions(xmlParserCtxtPtr ctxt, int options)
 {
-   return(xmlCtxtUseOptionsInternal(ctxt, options, NULL));
+   return(xmlCtxtUseOptionsInternal(ctxt, options));
 }
 
 /**
@@ -14742,7 +14734,7 @@ xmlDoRead(xmlParserCtxtPtr ctxt, const char *URL, const char *encoding,
 {
     xmlDocPtr ret;
 
-    xmlCtxtUseOptionsInternal(ctxt, options, encoding);
+    xmlCtxtUseOptionsInternal(ctxt, options);
     if (encoding != NULL) {
         xmlCharEncodingHandlerPtr hdlr;
 
@@ -15044,7 +15036,8 @@ xmlCtxtReadMemory(xmlParserCtxtPtr ctxt, const char *buffer, int size,
 
     xmlCtxtReset(ctxt);
 
-    input = xmlParserInputBufferCreateMem(buffer, size, XML_CHAR_ENCODING_NONE);
+    input = xmlParserInputBufferCreateStatic(buffer, size,
+                                             XML_CHAR_ENCODING_NONE);
     if (input == NULL) {
 	return(NULL);
     }

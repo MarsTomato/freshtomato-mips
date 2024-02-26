@@ -139,17 +139,19 @@ else
  TCONFIG_RAID :=
 endif
 
-# Specify iptables/iproute2/ipset/php target
+# Specify iptables/iproute2/ipset/pcre/php target
 ifeq ($(TCONFIG_BCMARM),y)
  export IPTABLES_TARGET := iptables-1.8.x
  export IPROUTE_TARGET := iproute2-3.x
  export IPSET_TARGET := ipset
+ export PCRE_TARGET := pcre
  export PHP_TARGET := php
 else
  export IPTABLES_TARGET := iptables
  export IPROUTE_TARGET := iproute2
  export IPSET_TARGET := ipset-6.24
- export PHP_TARGET := php5
+ export PCRE_TARGET := pcre
+ export PHP_TARGET := php7
 endif
 
 # IPv6?
@@ -424,8 +426,10 @@ obj-$(TCONFIG_NGINX) += zlib
 obj-$(TCONFIG_NGINX) += sqlite
 obj-$(TCONFIG_NGINX) += $(OPENSSLDIR)
 obj-$(TCONFIG_NGINX) += libcurl
-obj-$(TCONFIG_NGINX) += spawn-fcgi
-obj-$(TCONFIG_NGINX) += pcre
+ifneq ($(TCONFIG_BCMARM),y)
+ obj-$(TCONFIG_NGINX) += spawn-fcgi
+endif
+obj-$(TCONFIG_NGINX) += $(PCRE_TARGET)
 obj-$(TCONFIG_NGINX) += libncurses
 ifneq ($(TCONFIG_BCMARM),y)
  obj-$(TCONFIG_NGINX) += libatomic_ops
@@ -435,6 +439,7 @@ obj-$(TCONFIG_NGINX) += libxml2
 obj-$(TCONFIG_NGINX) += libpng
 obj-$(TCONFIG_NGINX) += libjpeg-turbo
 obj-$(TCONFIG_NGINX) += mysql
+obj-$(TCONFIG_NGINX) += libzip
 obj-$(TCONFIG_NGINX) += $(PHP_TARGET)
 obj-$(TCONFIG_NGINX) += nginx
 ifeq ($(TCONFIG_BCMARM),y)
@@ -445,6 +450,8 @@ obj-$(TCONFIG_SDHC) += mmc
 obj-$(TCONFIG_NANO) += libncurses
 obj-$(TCONFIG_NANO) += nano
 obj-y += miniupnpd
+obj-$(TCONFIG_BCMARM) += zlib
+obj-$(TCONFIG_BCMARM) += libcurl
 obj-y += mdu
 obj-$(TCONFIG_WIREGUARD) += wireguard-tools
 obj-$(TCONFIG_MDNS) += libdaemon
@@ -458,6 +465,7 @@ obj-$(TCONFIG_ZFS) += zfs
 obj-$(TCONFIG_IRQBALANCE) += zlib
 obj-$(TCONFIG_IRQBALANCE) += libffi
 obj-$(TCONFIG_IRQBALANCE) += libiconv
+obj-$(TCONFIG_IRQBALANCE) += $(PCRE_TARGET)
 obj-$(TCONFIG_IRQBALANCE) += glib2
 obj-$(TCONFIG_IRQBALANCE) += irqbalance
 
@@ -1839,7 +1847,7 @@ iproute2-3.x-clean:
 
 dropbear/config.h:
 	$(call patch_files,dropbear)
-	cd dropbear && autoreconf -fsi && \
+	cd dropbear && autoreconf -fsi && ln -sf src/config.guess config.guess && ln -sf src/config.sub config.sub && ln -sf src/install-sh install-sh && \
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,-Os) -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections $(OPTSIZE_MORE_FLAG)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		ac_cv_func_logout=no ac_cv_func_logwtmp=no \
@@ -1987,9 +1995,9 @@ libjpeg-turbo/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=TRUE \
-			-DWITH_JPEG8=1 \
-			-DENABLE_SHARED=1 \
-			-DENABLE_STATIC=1 \
+			-DWITH_JPEG8=TRUE \
+			-DENABLE_SHARED=TRUE \
+			-DENABLE_STATIC=TRUE \
 			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
@@ -2000,7 +2008,7 @@ libjpeg-turbo/build/Makefile:
 
 libjpeg-turbo: libjpeg-turbo/build/Makefile
 	@$(SEP)
-	$(MAKE) -C libjpeg-turbo/build $(PARALLEL_BUILD)
+	@$(MAKE) -C libjpeg-turbo/build $(PARALLEL_BUILD)
 	@$(MAKE) -C libjpeg-turbo/build DESTDIR=$(TOP)/libjpeg-turbo/staged install
 
 libjpeg-turbo-install:
@@ -2042,31 +2050,56 @@ libexif-clean:
 	-@$(MAKE) -C libexif clean
 	@rm -f libexif/stamp-h1
 
-libid3tag/stamp-h1:
-	$(call patch_files,libid3tag)
-	cd libid3tag $(if $(TCONFIG_BCMARM),,&& autoreconf -fsi) && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="-Os -Wall -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include" \
-		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix='' --enable-shared --enable-static \
-			--disable-debugging --disable-profiling --disable-dependency-tracking
-	@touch $@
+libid3tag/build/Makefile:
+ifneq ($(TCONFIG_BCMARM),y)
+	@rm -rf libid3tag/static && mkdir -p libid3tag/static
+	cd libid3tag/static && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
+			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
+					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
+			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections" \
+			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
+			-DBUILD_SHARED_LIBS=FALSE \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
+endif
+	@rm -rf libid3tag/build && mkdir -p libid3tag/build
+	cd libid3tag/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
+			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
+					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
+			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections" \
+			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
 
-libid3tag: libid3tag/stamp-h1
+libid3tag: libid3tag/build/Makefile
 	@$(SEP)
-	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
+ifneq ($(TCONFIG_BCMARM),y)
+	$(MAKE) -C libid3tag/static all $(PARALLEL_BUILD)
+endif
+	$(MAKE) -C libid3tag/build all $(PARALLEL_BUILD)
 
 libid3tag-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D libid3tag/.libs/libid3tag.so.0 $(INSTALLDIR)/libid3tag/usr/lib/libid3tag.so.0
-	$(STRIP) $(INSTALLDIR)/libid3tag/usr/lib/libid3tag.so.0
+	install -D libid3tag/build/libid3tag.so.0.16.3 $(INSTALLDIR)/libid3tag/usr/lib/libid3tag.so.0.16.3
+	cd $(INSTALLDIR)/libid3tag/usr/lib/ && $(STRIP) libid3tag.so.0.16.3 && ln -sf libid3tag.so.0.16.3 libid3tag.so && ln -sf libid3tag.so.0.16.3 libid3tag.so.0
 endif
 	@true
 
 libid3tag-clean:
-	-@$(MAKE) -C libid3tag clean
-	@rm -f libid3tag/stamp-h1
-	$(call unpatch_files,libid3tag)
+ifneq ($(TCONFIG_BCMARM),y)
+	@rm -rf libid3tag/static
+endif
+	@rm -rf libid3tag/build
 
 libvorbis/stamp-h1:
 	cd libvorbis && \
@@ -2139,9 +2172,9 @@ minidlna/stamp-h1:
 	cd minidlna && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg -I$(TOP)/flac/include -I$(TOP)/sqlite -I$(TOP)/libjpeg-turbo \
-			-I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
+			-I$(TOP)/libexif -I$(TOP)/libid3tag/build -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
 		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs -L$(TOP)/libjpeg-turbo/build \
-			-L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
+			-L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/build -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
 		LIBS="-lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -lpthread -lm" \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --with-db-path=/tmp/minidlna --with-log-path=/var/log --with-os-name="FreshTomato" --with-os-url="https://freshtomato.org/" \
 			--with-os-version="Linux/2.6.$(if $(TCONFIG_BCMARM),36.4brcmarm,22.19)" $(if $(MEDIA_SERVER_STATIC),--enable-static,) --enable-tivo --disable-dependency-tracking
@@ -2269,8 +2302,7 @@ spawn-fcgi/stamp-h1:
 	cd spawn-fcgi && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		ac_cv_func_malloc_0_nonnull=yes \
-		$(CONFIGURE) --prefix=/usr
+		$(CONFIGURE) --prefix=/usr $(if $(TCONFIG_IPV6),,--disable-ipv6)
 	@touch $@
 
 spawn-fcgi: spawn-fcgi/stamp-h1
@@ -2342,37 +2374,35 @@ nocat-clean:
 	-@$(MAKE) -C nocat clean
 	@rm -f nocat/stamp-h1
 
-pcre/stamp-h1:
-	$(call patch_files,pcre)
-	cd pcre && autoreconf -fsi && \
+$(PCRE_TARGET)/stamp-h1:
+	$(call patch_files,$(PCRE_TARGET))
+	cd $(PCRE_TARGET) && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --disable-dependency-tracking --enable-utf8 --enable-unicode-properties --disable-cpp
-	[ -d pcre/m4 ] || mkdir pcre/m4
+		$(CONFIGURE) --prefix=/usr --enable-utf8 --enable-unicode-properties --disable-cpp --disable-pcretest-libreadline --disable-dependency-tracking
+	[ -d $(PCRE_TARGET)/m4 ] || mkdir $(PCRE_TARGET)/m4
 	@touch $@
 
-pcre: pcre/stamp-h1
+$(PCRE_TARGET): $(PCRE_TARGET)/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
-	@$(MAKE) -C $@ DESTDIR=$(TOP)/pcre/staged install
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/$(PCRE_TARGET)/staged install
 
-pcre-install:
-	install -D pcre/.libs/libpcre.so.1 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.13
-	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.13
-	cd $(INSTALLDIR)/pcre/usr/lib/ && \
-		ln -sf libpcre.so.1.2.13 libpcre.so.1
+$(PCRE_TARGET)-install:
+	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre.so.1.2.13 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
+	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre.so.1.2.13 libpcre.so.1 && ln -sf libpcre.so.1.2.13 libpcre.so
 ifeq ($(TCONFIG_BCMARM),y)
-	install -D pcre/.libs/libpcreposix.so.0.0.7 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
-	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
-	cd $(INSTALLDIR)/pcre/usr/lib/ && \
-		ln -sf libpcreposix.so.0.0.7 libpcreposix.so.0
+	install -D $(PCRE_TARGET)/staged/usr/lib/libpcreposix.so.0.0.7 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
+	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcreposix.so.0.0.7
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcreposix.so.0.0.7 libpcreposix.so.0 && ln -sf libpcreposix.so.0.0.7 libpcreposix.so
 endif
 
-pcre-clean:
-	-@$(MAKE) -C pcre clean
-	@rm -f pcre/stamp-h1
-	@rm -rf pcre/staged
-	$(call unpatch_files,pcre)
+$(PCRE_TARGET)-clean:
+	-@$(MAKE) -C $(PCRE_TARGET) clean
+	@rm -f $(PCRE_TARGET)/stamp-h1
+	@rm -rf $(PCRE_TARGET)/staged
+	$(call unpatch_files,$(PCRE_TARGET))
 
 libxml2/stamp-h1:
 	$(call patch_files,libxml2)
@@ -2389,11 +2419,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.12.2 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.2
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.2
+	install -D libxml2/.libs/libxml2.so.2.12.5 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.5
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.5
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.12.2 libxml2.so.2 && \
-		ln -sf libxml2.so.2.12.2 libxml2.so
+		ln -sf libxml2.so.2.12.5 libxml2.so.2 && \
+		ln -sf libxml2.so.2.12.5 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -2417,51 +2447,107 @@ libpng: libpng/stamp-h1
 	@rm -f $(TOP)/libpng/staged/usr/lib/libpng12.la
 
 libpng-install:
-	install -D libpng/.libs/libpng16.so.16.40.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.40.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.40.0
+	install -D libpng/.libs/libpng16.so.16.41.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.41.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.41.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng16.so.16.40.0 libpng16.so && \
-		ln -sf libpng16.so.16.40.0 libpng16.so.16
+		ln -sf libpng16.so.16.41.0 libpng16.so && \
+		ln -sf libpng16.so.16.41.0 libpng16.so.16
 
 libpng-clean:
 	-@$(MAKE) -C libpng clean
 	@rm -f libpng/stamp-h1
 	@rm -rf libpng/staged
 
+libzip/build/Makefile:
+	@rm -rf libzip/build && mkdir -p libzip/build
+	cd libzip/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections $(EXTRACFLAGS) -I$(TOP)/zlib/staged/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -fPIC -pthread" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lz -lssl -lcrypto -lpthread" \
+			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
+			-DENABLE_GNUTLS=FALSE \
+			-DENABLE_COMMONCRYPTO=FALSE \
+			-DENABLE_MBEDTLS=FALSE \
+			-DENABLE_BZIP2=FALSE \
+			-DENABLE_LZMA=FALSE \
+			-DENABLE_ZSTD=FALSE \
+			-DENABLE_WINDOWS_CRYPTO=FALSE \
+			-DENABLE_OPENSSL=TRUE \
+			-DBUILD_TOOLS=FALSE \
+			-DBUILD_REGRESS=FALSE \
+			-DBUILD_EXAMPLES=FALSE \
+			-DBUILD_DOC=FALSE \
+			-DOPENSSL_CRYPTO_LIBRARY="$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libcrypto.so" \
+			-DOPENSSL_SSL_LIBRARY="$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libssl.so" \
+			-DOPENSSL_INCLUDE_DIR="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
+
+libzip: libzip/build/Makefile
+	@$(SEP)
+	@$(MAKE) -C libzip/build all $(PARALLEL_BUILD)
+	@$(MAKE) -C libzip/build DESTDIR=$(TOP)/libzip/staged install
+
+libzip-install:
+	install -D libzip/build/lib/libzip.so.5.5 $(INSTALLDIR)/libzip/usr/lib/libzip.so.5.5
+	cd $(INSTALLDIR)/libzip/usr/lib/ && $(STRIP) libzip.so.5.5 && ln -sf libzip.so.5.5 libzip.so && ln -sf libzip.so.5.5 libzip.so.5
+
+libzip-clean:
+	@rm -rf libzip/build
+	@rm -rf libzip/staged
+
 $(PHP_TARGET)/stamp-h1:
 	$(call patch_files,$(PHP_TARGET))
-	cd $(PHP_TARGET) && \
+	cd $(PHP_TARGET) && touch configure.ac && autoconf && \
 		PKG_CONFIG_LIBDIR="" \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -ffunction-sections -fdata-sections" \
-		LDFLAGS="-L$(TOP)/pcre/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib \
-			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -Wl,--gc-sections" \
-		LIBS="-L$(TOP)/pcre/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/staged/usr/lib \
-			-L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -ljpeg -lssl -lcrypto" \
+		PROF_FLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/libzip/staged/usr/include \
+			$(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/libzip/staged/usr/include \
+			$(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
+		CXXFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED $(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib \
+			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libzip/staged/usr/lib \
+			-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		LIBS="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/staged/usr/lib \
+			-L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libzip/staged/usr/lib \
+			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -ljpeg -lzip -lssl -lcrypto" \
 		ac_cv_func_memcmp_working=yes \
+		ac_cv_c_bigendian_php=no \
+		php_cv_cc_rpath=no \
+		ac_cv_php_xml2_config_path="$(TOP)/libxml2/staged/usr/bin/xml2-config" \
+		ac_cv_u8t_decompose=yes \
+		ac_cv_have_pcre2_jit=no \
+		$(if $(TCONFIG_BCMARM),,ac_cv_header_atomic_h=no) \
 		$(CONFIGURE) --prefix=/usr \
+			--enable-cli \
+			$(if $(TCONFIG_BCMARM),--enable-fpm --disable-cgi,--enable-cgi) \
 			--enable-shared \
 			--disable-static \
 			--disable-rpath \
 			--disable-debug \
+			--disable-phpdbg \
 			--with-config-file-path=/etc \
-			--with-config-file-scan-dir=/etc/php5 \
+			--with-config-file-scan-dir=/jffs/etc \
 			--with-zlib \
 			--with-zlib-dir="$(TOP)/zlib/staged/usr" \
 			--with-jpeg-dir="$(TOP)/libjpeg-turbo/staged/usr" \
+			--with-jpeg="$(TOP)/libjpeg-turbo/staged/usr" \
 			--with-curl="$(TOP)/libcurl/staged/usr" \
 			--with-png-dir="$(TOP)/libpng/staged/usr" \
 			--with-iconv="$(TOP)/libiconv/staged/usr" \
 			--with-iconv-dir="$(TOP)/libiconv/staged/usr" \
-			--with-pcre-dir="$(TOP)/pcre/staged/usr" \
-			--with-pcre-regex="$(TOP)/pcre/staged/usr" \
 			--with-libxml-dir="$(TOP)/libxml2/staged/usr" \
 			--with-pdo-sqlite="$(TOP)/sqlite/staged/usr" \
 			--with-sqlite3="$(TOP)/sqlite/staged/usr" \
-			--enable-cli \
-			--enable-cgi \
+			--with-libzip="$(TOP)/libzip/staged/usr" \
+			--with-pcre-dir="$(TOP)/$(PCRE_TARGET)/staged/usr" \
+			--with-pcre-regex="$(TOP)/$(PCRE_TARGET)/staged/usr" \
 			--enable-ctype \
 			--enable-fileinfo \
 			--enable-dom \
@@ -2478,9 +2564,11 @@ $(PHP_TARGET)/stamp-h1:
 			--enable-xml \
 			--enable-xmlreader \
 			--enable-xmlwriter \
+			--with-zip \
 			--enable-zip \
-			$(if $(TCONFIG_BCMARM),--without-valgrind,) \
 			--with-gd \
+			--enable-gd \
+			--without-valgrind \
 			--without-pear \
 			--disable-short-tags \
 			--disable-phar \
@@ -2493,13 +2581,33 @@ $(PHP_TARGET)/stamp-h1:
 			--disable-pcntl \
 			--without-pdo-pgsql \
 			--without-pgsql \
-			--disable-shmop \
 			--disable-soap \
-			--disable-sockets \
-			--disable-sysvmsg \
-			--disable-sysvsem \
-			--disable-sysvshm \
-			--disable-tokenizer
+			--disable-tokenizer \
+			--with-kerberos=no \
+			--without-freetype-dir \
+			--without-xpm-dir \
+			--disable-intl \
+			--disable-gd-jis-conv \
+			--disable-mbregex \
+			--disable-opcache \
+			--enable-sockets \
+			LIBXML_CFLAGS="$(TOP)/libxml2/staged/usr/include/libxml2" \
+			LIBXML_LIBS="$(TOP)/libxml2/staged/usr/lib -lxml2" \
+			SQLITE_CFLAGS="$(TOP)/sqlite/staged/usr/include" \
+			SQLITE_LIBS="$(TOP)/sqlite/staged/usr/lib -lsqlite3" \
+			ZLIB_CFLAGS="$(TOP)/zlib/staged/usr/include" \
+			ZLIB_LIBS="$(TOP)/zlib/staged/usr/lib -lz" \
+			CURL_CFLAGS="$(TOP)/libcurl/staged/usr/include" \
+			CURL_LIBS="$(TOP)/libcurl/staged/usr/lib -lcurl" \
+			LIBZIP_CFLAGS="$(TOP)/libzip/staged/usr/include" \
+			LIBZIP_LIBS="$(TOP)/libzip/staged/usr/lib -lzip" \
+			JPEG_CFLAGS="$(TOP)/libjpeg-turbo/staged/usr/include" \
+			JPEG_LIBS="$(TOP)/libjpeg-turbo/staged/usr/lib -ljpeg" \
+			PNG_CFLAGS="(TOP)/libpng/staged/usr/include" \
+			PNG_LIBS="$(TOP)/libpng/staged/usr/lib -lpng16" \
+			OPENSSL_CFLAGS="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+			OPENSSL_LIBS="$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lssl -lcrypto" \
+			OPENSSL_LIBDIR="$(TOP)/$(OPENSSLDIR)"
 	@touch $@
 
 $(PHP_TARGET): $(PHP_TARGET)/stamp-h1
@@ -2510,9 +2618,14 @@ $(PHP_TARGET)-install:
 	install -d $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin
 	install -D $(PHP_TARGET)/sapi/cli/php $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli
 	$(STRIP) $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli
+ifeq ($(TCONFIG_BCMARM),y)
+	install -D $(PHP_TARGET)/sapi/fpm/php-fpm $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-fpm && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-fpm
+	$(STRIP) $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-fpm
+else
 	install -D $(PHP_TARGET)/sapi/cgi/php-cgi $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi
-	cd $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin && ln -sf php-cgi php-fcgi
 	$(STRIP) $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi
+	cd $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin && ln -sf php-cgi php-fcgi
+endif
 
 $(PHP_TARGET)-clean:
 	-@$(MAKE) -C $(PHP_TARGET) clean
@@ -2541,20 +2654,21 @@ nginx/stamp-h1:
 	cd nginx && \
 		./configure --crossbuild=Linux::$(ARCH) \
 			--with-cc="$(CC)" \
-			--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -fPIC -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/pcre -I$(TOP)/zlib/staged/usr/include $(if $(TCONFIG_BCMARM),,-I$(TOP)/libatomic_ops/src/$(comma)libs)" \
-			--with-ld-opt="-L$(TOP)/pcre/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib $(if $(TCONFIG_BCMARM),,-L$(TOP)/libatomic_ops/src)" \
+			--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -D_GNU_SOURCE -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/zlib" \
+			--with-ld-opt="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
 			--prefix=/usr \
 			--sbin-path=/usr/sbin \
 			--conf-path=/etc/nginx/nginx.conf \
-			--error-log-path=/tmp/var/log/nginx/error.log \
-			--http-log-path=/tmp/var/log/nginx/access.log \
-			--pid-path=/tmp/var/run/nginx.pid \
-			--lock-path=/tmp/var/run/nginx.lock.accept \
-			--http-client-body-temp-path=/tmp/var/lib/nginx/client \
-			--http-fastcgi-temp-path=/tmp/var/lib/nginx/fastcgi \
-			--http-uwsgi-temp-path=/tmp/var/lib/nginx/uwsgi \
-			--http-scgi-temp-path=/tmp/var/lib/nginx/scgi \
-			--http-proxy-temp-path=/tmp/var/lib/nginx/proxy \
+			--error-log-path=/var/log/nginx/error.log \
+			--http-log-path=/var/log/nginx/access.log \
+			--pid-path=/var/run/nginx.pid \
+			--lock-path=/var/run/nginx.lock \
+			--http-client-body-temp-path=/var/lib/nginx/client \
+			--http-fastcgi-temp-path=/var/lib/nginx/fastcgi \
+			--http-uwsgi-temp-path=/var/lib/nginx/uwsgi \
+			--http-scgi-temp-path=/var/lib/nginx/scgi \
+			--http-proxy-temp-path=/var/lib/nginx/proxy \
+			--with-threads \
 			--with-http_flv_module \
 			--with-http_ssl_module \
 			--with-http_gzip_static_module \
@@ -2566,7 +2680,7 @@ nginx/stamp-h1:
 
 nginx: nginx/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@ $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -D_GNU_SOURCE -ffunction-sections -fdata-sections -I$(TOP)/zlib -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/include" $(PARALLEL_BUILD)
 
 nginx-install:
 	install -D nginx/objs/nginx $(INSTALLDIR)/nginx/usr/sbin/nginx && chmod 0755 $(INSTALLDIR)/nginx/usr/sbin/nginx
@@ -2647,13 +2761,13 @@ mysql/target/Makefile:
 			-DCMAKE_INSTALL_PREFIX=/usr -DINSTALL_MYSQLSHAREDIR=share/mysql \
 			-DCMAKE_BUILD_TYPE=$(if $(TCONFIG_BCMARM),Release,MinSizeRel) -DCMAKE_SKIP_RPATH=TRUE \
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC" \
-			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
+			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
 					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
 			-DDISABLE_SHARED=FALSE \
 			-DHAVE_LIBPTHREAD=TRUE \
 			-DWITH_DEBUG=FALSE \
-			-DSTACK_DIRECTION=1 \
+			-DSTACK_DIRECTION=TRUE \
 			-DWITH_UNIT_TESTS=FALSE \
 			-DWITH_EMBEDDED_SERVER=TRUE \
 			-DWITH_EXAMPLE_STORAGE_ENGINE=FALSE \
@@ -2720,7 +2834,7 @@ mysql-install:
 mysql-clean:
 	-@$(MAKE) -C mysql clean
 	@rm -f mysql/scripts/comp_sql
-	@rm -rf mysql/host mysql/target
+	@rm -rf mysql/host mysql/target mysql/staged
 	$(call unpatch_files,mysql)
 
 lzo/stamp-h1:
@@ -2749,7 +2863,7 @@ lzo-clean:
 	@rm -rf lzo/staged
 
 libcap-ng/stamp-h1:
-	cd libcap-ng && autoreconf -fsi && \
+	cd libcap-ng && ./autogen.sh && \
 		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --bindir=/usr/sbin --libdir=/usr/lib
@@ -2952,7 +3066,7 @@ libevent-clean:
 
 libiconv/stamp-h1:
 	cd libiconv && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --prefix=/usr --disable-nls --enable-static --enable-shared
 	@touch $@
@@ -2983,7 +3097,7 @@ transmission/build/Makefile:
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=TRUE \
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
-			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
+			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
 					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) \
 					-ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600 -fno-exceptions -fno-rtti" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
@@ -3229,7 +3343,7 @@ snmp/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(OPTSIZE_FLAG)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --with-persistent-directory=/tmp/snmp-persist --with-logfile=/var/log/snmpd.log \
-		--disable-debugging --disable-manuals --disable-scripts --disable-applications --disable-privacy \
+		--disable-debugging --disable-manuals --disable-scripts --disable-applications --disable-privacy --disable-developer \
 		--disable-ipv6 --disable-mibs --disable-mib-loading --disable-embedded-perl --with-perl-modules=no --without-opaque-special-types \
 		--without-openssl --without-rsaref --without-kmem-usage --without-rpm \
 		--with-out-transports=UDPIPv6,TCPIPv6,AAL5PVC,IPX,TCP,Unix \
@@ -3527,7 +3641,7 @@ libubox/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libjson-c $(if $(TCONFIG_BCMARM),-DTCONFIG_BCMARM,)" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libjson-c -std=gnu99 -D_GNU_SOURCE $(if $(TCONFIG_BCMARM),-DTCONFIG_BCMARM,)" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
 			-DBUILD_LUA=FALSE \
 			-Djson="$(TOP)/libjson-c/build/libjson-c.a" \
@@ -3652,12 +3766,16 @@ libdaemon-install:
 
 libdaemon-clean:
 	-@$(MAKE) -C libdaemon distclean
+	@rm -rf libdaemon/staged
 	@rm -f libdaemon/stamp-h1
 
 expat/stamp-h1:
+	$(call patch_files,expat)
 	cd expat && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-		$(CONFIGURE) --prefix=/usr
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CXXFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		$(CONFIGURE) --prefix=/usr --without-docbook --without-examples --without-tests --disable-dependency-tracking
 	touch $@
 
 expat: expat/stamp-h1
@@ -3666,19 +3784,21 @@ expat: expat/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/expat/staged install
 
 expat-install:
-	install -D expat/.libs/libexpat.so.1.6.2 $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.6.2
-	$(STRIP) $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.6.2
-	cd $(INSTALLDIR)/expat/usr/lib && ln -sf libexpat.so.1.6.2 libexpat.so.1
+	install -D expat/staged/usr/lib/libexpat.so.1.9.0 $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.9.0
+	$(STRIP) $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.9.0
+	cd $(INSTALLDIR)/expat/usr/lib && ln -sf libexpat.so.1.9.0 libexpat.so.1
 
 expat-clean:
 	-@$(MAKE) -C expat clean
+	@rm -rf expat/staged
 	@rm -f expat/stamp-h1
+	$(call unpatch_files,expat)
 
 avahi/stamp-h1:
 	$(call patch_files,avahi)
 	cd avahi && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/expat/lib" \
-		LDFLAGS="-L$(TOP)/expat/.libs -ldl -lpthread -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/expat/staged/usr/include" \
+		LDFLAGS="-L$(TOP)/expat/staged/usr/lib -ldl -lpthread -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		LIBDAEMON_CFLAGS="-I$(TOP)/libdaemon" \
 		LIBDAEMON_LIBS="-L$(TOP)/libdaemon/libdaemon/.libs -ldaemon $(EXTRALDFLAGS2)" \
 		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc localstatedir=/var --with-distro=none \
@@ -3715,7 +3835,10 @@ avahi-clean:
 	$(call unpatch_files,avahi)
 
 wireguard-tools:
-	WITH_BASHCOMPLETION=no WITH_EMBEDDED=yes WITH_WGQUICK=yes WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" $(MAKE) -C wireguard-tools/src install
+	$(call patch_files,wireguard-tools)
+	WITH_BASHCOMPLETION=no WITH_EMBEDDED=yes WITH_WGQUICK=yes WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" \
+	$(MAKE) -C wireguard-tools/src install
+	@touch wireguard-tools/stamp-h1
 
 wireguard-tools-install:
 	install -D wireguard-tools/staged/bin/wg $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
@@ -3726,8 +3849,9 @@ wireguard-tools-install:
 
 wireguard-tools-clean:
 	-@$(MAKE) -C wireguard-tools/src clean
-	@rm -f $(TOP)/wireguard-tools/staged/bin/wg
-	@rm -f $(TOP)/wireguard-tools/staged/bin/wg-quick
+	@rm -rf wireguard-tools/staged
+	@rm -f wireguard-tools/stamp-h1
+	$(call unpatch_files,wireguard-tools)
 
 gettext-tiny/stamp-h1:
 	$(MAKE) -C gettext-tiny \
@@ -3928,7 +4052,7 @@ conntrack-tools/stamp-h1:
 	cd conntrack-tools && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include \
 			-I$(TOP)/libnetfilter_conntrack/staged/usr/include -I$(TOP)/libnetfilter_log/staged/usr/include -I$(TOP)/libnetfilter_queue/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections 	-L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib \
 			-L$(TOP)/libnetfilter_conntrack/staged/usr/lib -L$(TOP)/libnetfilter_log/staged/usr/lib -L$(TOP)/libnetfilter_queue/staged/usr/lib" \
 		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libmnl:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_log/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_queue/staged/usr/lib/pkgconfig" \
 		$(CONFIGURE) --prefix=/usr --disable-cthelper --disable-cttimeout
@@ -4003,6 +4127,7 @@ libffi-install:
 
 libffi-clean:
 	-@$(MAKE) -C libffi distclean
+	@rm -rf libffi/staged
 	@rm -f libffi/stamp-h1
 
 glib2/stamp-h1:
@@ -4010,12 +4135,12 @@ glib2/stamp-h1:
 	cd glib2 && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/zlib/staged/usr/include \
-			-I$(TOP)/glib2 $(if $(TCONFIG_NGINX),-I$(TOP)/pcre,)" \
-		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/pcre/.libs,) \
+			-I$(TOP)/glib2 $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET)/staged/usr/include,)" \
+		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib,) \
 			-ldl -lpthread -lz -liconv -lffi $(if $(TCONFIG_NGINX),-lpcre,)" \
 		LIBFFI_CFLAGS="-I$(TOP)/libffi/staged/usr/include" \
 		LIBFFI_LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so" \
-		$(if $(TCONFIG_NGINX),PCRE_CFLAGS="-I$(TOP)/pcre" PCRE_LIBS="$(TOP)/pcre/.libs/libpcre.so",) \
+		$(if $(TCONFIG_NGINX),PCRE_CFLAGS="-I$(TOP)/$(PCRE_TARGET)/staged/usr/include" PCRE_LIBS="$(TOP)/$(PCRE_TARGET)/staged/usr/lib/libpcre.so",) \
 		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so" \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --enable-debug=no --enable-man=no $(if $(TCONFIG_NGINX),--with-pcre=system,--with-pcre=internal) \
 			--disable-selinux --disable-fam --with-libiconv=gnu --disable-dependency-tracking
@@ -4037,6 +4162,7 @@ glib2-install: glib2
 
 glib2-clean:
 	-@$(MAKE) -C glib2 distclean
+	@rm -rf glib2/staged
 	@rm -f glib2/stamp-h1
 	$(call unpatch_files,glib2)
 
@@ -4045,9 +4171,9 @@ irqbalance/stamp-h1:
 	cd irqbalance && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include $(if $(TCONFIG_NGINX),-I$(TOP)/pcre,)" \
-		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/pcre/.libs,)" \
-		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so $(if $(TCONFIG_NGINX),$(TOP)/pcre/.libs/libpcre.so,)" \
+			-I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET),) -I$(TOP)/zlib/staged/usr/include" \
+		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/.libs,) -L$(TOP)/zlib/staged/usr/lib" \
+		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so $(if $(TCONFIG_NGINX),$(TOP)/$(PCRE_TARGET)/.libs/libpcre.so,) $(TOP)/zlib/staged/usr/lib/libz.so" \
 		GLIB2_CFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2" \
 		GLIB2_LIBS="-L$(TOP)/glib2/staged/usr/lib -lglib-2.0" \
 		$(CONFIGURE) --prefix=/usr --enable-static=glib2 --with-libcap_ng=no \

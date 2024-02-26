@@ -1408,9 +1408,12 @@ static const nvset_t nvset_list[] = {
 	{"nginx_httpcustom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
 	{"nginx_servercustom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
 	{"nginx_phpconf",		V_TEXT(0, 4096)			},	/* user window to add parameters to php.ini */
-	{"nginx_user",			V_LENGTH(0, 255)		},	/* user used to start nginx and spawn-fcgi */
-	{"nginx_override",		V_01				},
-	{"nginx_overridefile",		V_TEXT(0, 4096)			},
+#ifdef TCONFIG_BCMARM
+	{"nginx_phpfpmconf",		V_TEXT(0, 4096)			},	/* user window to add parameters to php-fpm.conf */
+#endif
+	{"nginx_user",			V_LENGTH(0, 255)		},	/* user used to start nginx and spawn-fcgi/php-fpm */
+	{"nginx_override",		V_01				},	/* use user config */
+	{"nginx_overridefile",		V_TEXT(0, 4096)			},	/* path/to/user/nginx.conf */
 	{"nginx_h5aisupport",		V_01				},	/* enable h5ai support */
 
 /* web-mysql */
@@ -1738,11 +1741,8 @@ static const nvset_t nvset_list[] = {
 	{ "wg0_aip",			V_TEXT(0, 128)			},
 	{ "wg0_dns",			V_NONE				},
 	{ "wg0_ka",			V_01				},
-	{ "wg0_com",			V_NONE				},
-	{ "wg0_lan0",			V_01				},
-	{ "wg0_lan1",			V_01				},
-	{ "wg0_lan2",			V_01				},
-	{ "wg0_lan3",			V_01				},
+	{ "wg0_com",			V_RANGE(0, 3)			},
+	{ "wg0_lan",			V_RANGE(0, 15)			},	/* push LANX for wg0 to peers: bit 0 = LAN0, bit 1 = LAN1, bit 2 = LAN2, bit 3 = WAN3 */
 	{ "wg0_rgw",			V_01				},
 	{ "wg0_route",			V_NONE				},
 	{ "wg0_peer_dns",		V_TEXT(0, 128)			},
@@ -1762,11 +1762,8 @@ static const nvset_t nvset_list[] = {
 	{ "wg1_aip",			V_TEXT(0, 128)			},
 	{ "wg1_dns",			V_NONE				},
 	{ "wg1_ka",			V_01				},
-	{ "wg1_com",			V_NONE				},
-	{ "wg1_lan0",			V_01				},
-	{ "wg1_lan1",			V_01				},
-	{ "wg1_lan2",			V_01				},
-	{ "wg1_lan3",			V_01				},
+	{ "wg1_com",			V_RANGE(0, 3)			},
+	{ "wg1_lan",			V_RANGE(0, 15)			},	/* push LANX for wg1 to peers: bit 0 = LAN0, bit 1 = LAN1, bit 2 = LAN2, bit 3 = WAN3 */
 	{ "wg1_rgw",			V_01				},
 	{ "wg1_route",			V_NONE				},
 	{ "wg1_peer_dns",		V_TEXT(0, 128)			},
@@ -1786,11 +1783,8 @@ static const nvset_t nvset_list[] = {
 	{ "wg2_aip",			V_TEXT(0, 128)			},
 	{ "wg2_dns",			V_NONE				},
 	{ "wg2_ka",			V_01				},
-	{ "wg2_com",			V_NONE				},
-	{ "wg2_lan0",			V_01				},
-	{ "wg2_lan1",			V_01				},
-	{ "wg2_lan2",			V_01				},
-	{ "wg2_lan3",			V_01				},
+	{ "wg2_com",			V_RANGE(0, 3)			},
+	{ "wg2_lan",			V_RANGE(0, 15)			},	/* push LANX for wg2 to peers: bit 0 = LAN0, bit 1 = LAN1, bit 2 = LAN2, bit 3 = WAN3 */
 	{ "wg2_rgw",			V_01				},
 	{ "wg2_route",			V_NONE				},
 	{ "wg2_peer_dns",		V_TEXT(0, 128)			},

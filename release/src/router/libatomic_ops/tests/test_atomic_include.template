@@ -28,13 +28,13 @@ void test_atomicXX(void)
 # if defined(AO_HAVE_double_compare_and_swapXX) \
      || defined(AO_HAVE_double_loadXX) \
      || defined(AO_HAVE_double_storeXX)
-    AO_double_t old_w;
+    static AO_double_t old_w; /* static to avoid misalignment */
     AO_double_t new_w;
 # endif
 # if defined(AO_HAVE_compare_and_swap_doubleXX) \
      || defined(AO_HAVE_compare_double_and_swap_doubleXX) \
      || defined(AO_HAVE_double_compare_and_swapXX)
-    AO_double_t w;
+    static AO_double_t w; /* static to avoid misalignment */
     w.AO_val1 = 0;
     w.AO_val2 = 0;
 # endif
@@ -66,9 +66,9 @@ void test_atomicXX(void)
     MISSING(AO_load);
 # endif
 # if defined(AO_HAVE_test_and_setXX)
-    assert(AO_test_and_setXX(&z) == AO_TS_CLEAR);
-    assert(AO_test_and_setXX(&z) == AO_TS_SET);
-    assert(AO_test_and_setXX(&z) == AO_TS_SET);
+    TA_assert(AO_test_and_setXX(&z) == AO_TS_CLEAR);
+    TA_assert(AO_test_and_setXX(&z) == AO_TS_SET);
+    TA_assert(AO_test_and_setXX(&z) == AO_TS_SET);
     AO_CLEAR(&z);
 # else
     MISSING(AO_test_and_set);
@@ -242,9 +242,12 @@ void test_atomicXX(void)
     MISSING(AO_fetch_compare_and_swap);
     if (x == 25) x = 117;
 # endif
-# if defined(AO_HAVE_double_loadXX)
+# if defined(AO_HAVE_double_loadXX) || defined(AO_HAVE_double_storeXX)
+    /* Initialize old_w even for store to workaround MSan warning.      */
     old_w.AO_val1 = 3316;
     old_w.AO_val2 = 2921;
+# endif
+# if defined(AO_HAVE_double_loadXX)
     new_w = AO_double_loadXX(&old_w);
     TA_assert(new_w.AO_val1 == 3316 && new_w.AO_val2 == 2921);
 # elif !defined(AO_HAVE_double_load) \

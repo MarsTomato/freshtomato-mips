@@ -51,7 +51,7 @@
      ngx_feature_libs=
 --- nginx/auto/endianness
 +++ nginx/auto/endianness
-@@ -26,7 +26,7 @@
+@@ -26,18 +26,18 @@
  
  END
  
@@ -60,6 +60,21 @@
            -o $NGX_AUTOTEST $NGX_AUTOTEST.c $NGX_LD_OPT $ngx_feature_libs"
  
  eval "$ngx_test >> $NGX_AUTOCONF_ERR 2>&1"
+ 
+ if [ -x $NGX_AUTOTEST ]; then
+-    if $NGX_AUTOTEST >/dev/null 2>&1; then
++#    if $NGX_AUTOTEST >/dev/null 2>&1; then
+         echo " little endian"
+         have=NGX_HAVE_LITTLE_ENDIAN . auto/have
+-    else
+-        echo " big endian"
+-    fi
++#    else
++#        echo " big endian"
++#    fi
+ 
+     rm -rf $NGX_AUTOTEST*
+ 
 --- nginx/auto/feature
 +++ nginx/auto/feature
 @@ -39,7 +39,7 @@
@@ -81,6 +96,21 @@
 +ngx_test="$CC $NGX_CC_OPT -o $NGX_AUTOTEST $NGX_AUTOTEST.c"
  
  eval "$ngx_test >> $NGX_AUTOCONF_ERR 2>&1"
+ 
+--- nginx/auto/make
++++ nginx/auto/make
+@@ -21,10 +21,10 @@
+ 
+ cat << END                                                     > $NGX_MAKEFILE
+ 
+-CC =	$CC
++CC =	$CC -ffunction-sections -fdata-sections
+ CFLAGS = $CFLAGS
+ CPP =	$CPP
+-LINK =	$LINK
++LINK =	$LINK $NGX_LD_OPT -ffunction-sections -fdata-sections -Wl,--gc-sections
+ 
+ END
  
 --- nginx/auto/lib/libatomic/conf
 +++ nginx/auto/lib/libatomic/conf
@@ -159,6 +189,15 @@
  ngx_feature_incs="#include <sys/prctl.h>"
  ngx_feature_path=
  ngx_feature_libs=
+@@ -186,7 +186,7 @@
+ 
+ ngx_feature="prctl(PR_SET_KEEPCAPS)"
+ ngx_feature_name="NGX_HAVE_PR_SET_KEEPCAPS"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <sys/prctl.h>"
+ ngx_feature_path=
+ ngx_feature_libs=
 --- nginx/auto/types/sizeof
 +++ nginx/auto/types/sizeof
 @@ -25,8 +25,13 @@
@@ -223,24 +262,6 @@
  ngx_feature_incs="#include <semaphore.h>"
  ngx_feature_path=
  ngx_feature_libs=
---- nginx/conf/nginx.conf
-+++ nginx/conf/nginx.conf
-@@ -1,5 +1,5 @@
- 
--#user  nobody;
-+user nobody nogroup;
- worker_processes  1;
- 
- #error_log  logs/error.log;
-@@ -16,7 +16,7 @@
- 
- http {
-     include       mime.types;
--    default_type  application/octet-stream;
-+    #default_type  application/octet-stream;
- 
-     #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-     #                  '$status $body_bytes_sent "$http_referer" '
 --- nginx/src/os/unix/ngx_errno.c
 +++ nginx/src/os/unix/ngx_errno.c
 @@ -8,6 +8,9 @@
