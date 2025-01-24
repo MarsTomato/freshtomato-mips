@@ -22,7 +22,7 @@
  #ifdef NO_DUMPFILE
  #undef HAVE_DUMPFILE
  #endif
-@@ -430,6 +438,9 @@
+@@ -435,6 +443,9 @@
  "no-"
  #endif
  "nftset "

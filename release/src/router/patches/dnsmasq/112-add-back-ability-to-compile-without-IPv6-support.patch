@@ -349,8 +349,8 @@
      }
    
    if (cache->flags & F_IPV4)
---- dnsmasq/src/config.h	2023-05-18 10:49:27.000000000 +0200
-+++ dnsmasq/src/config.h	2023-05-18 11:36:54.832061024 +0200
+--- dnsmasq/src/config.h
++++ dnsmasq/src/config.h
 @@ -147,6 +147,7 @@
  
  NO_ID
@@ -409,7 +409,7 @@
  #undef HAVE_DHCP6
  #endif
  
-@@ -376,6 +397,9 @@
+@@ -381,6 +402,9 @@
  #ifdef DNSMASQ_COMPILE_OPTS
  
  static char *compile_opts = 
@@ -903,7 +903,7 @@
        
        /* enforce available interface configuration */
        
-@@ -2230,9 +2248,11 @@
+@@ -2242,9 +2260,11 @@
      {
        union all_addr local;
  		      
@@ -915,7 +915,7 @@
  	local.addr4 = local_addr->in.sin_addr;
        
        have_mark = get_incoming_mark(&peer_addr, &local, 1, &mark);
-@@ -2244,6 +2264,7 @@
+@@ -2256,6 +2276,7 @@
      {
        struct addrlist *addr;
  
@@ -923,7 +923,7 @@
        if (peer_addr.sa.sa_family == AF_INET6) 
  	{
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -2252,6 +2273,7 @@
+@@ -2264,6 +2285,7 @@
  	      break;
  	}
        else
@@ -1863,7 +1863,7 @@
  			  ans = 1;	
  			  sec_data = 0;
  			  gotit = 1;
-@@ -2305,8 +2337,11 @@
+@@ -2306,8 +2338,11 @@
  	crecp = NULL;
  	while ((crecp = cache_find_by_name(crecp, rec->target, now, F_IPV4 | F_IPV6)))
  	  {
