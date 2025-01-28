@@ -11,16 +11,14 @@ For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12
 .  
   
 - [**Project page**](https://freshtomato.org/)
-- [**Source code**](https://bitbucket.org/pedro311/freshtomato-mips/commits/all) ([**Mirror**](https://github.com/pedro0311/freshtomato-mips))
-- [**Changelog**](https://bitbucket.org/pedro311/freshtomato-mips/src/mips-master/CHANGELOG)
+- [**Source code**](https://github.com/FreshTomato-Project/freshtomato-mips) ([**Mirror**](https://bitbucket.org/pedro311/freshtomato-mips/commits/all))
+- [**Changelog**](https://github.com/FreshTomato-Project/freshtomato-mips/blob/mips-master/CHANGELOG)
 - [**Downloads**](https://freshtomato.org/downloads)
-- [**Issue tracker**](https://bitbucket.org/pedro311/freshtomato-mips/issues?status=new&status=open)
-- [**Pull Requests**](https://bitbucket.org/pedro311/freshtomato-mips/pull-requests/)
-- [**Forum EN**](https://www.linksysinfo.org/)
+- [**Issue tracker**](https://github.com/FreshTomato-Project/freshtomato-mips/issues)
+- [**Pull Requests**](https://github.com/FreshTomato-Project/freshtomato-mips/pulls)
+- [**Forum EN**](https://www.linksysinfo.org/index.php?forums/tomato-firmware.33/)
 - [**Forum PL**](https://openlinksys.info/forum/)
 - **Donations**: [**PayPal**](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=B4FDH9TH6Z8FU)  or  BTC: **`1JDxBBQvcJ9XxgagJRNVrqC1nysq8F8B1Y`**  
-  
-Note: Please do not use github mirror for Pull Requests because it's not actively monitored!
   
 .  
 **HOW TO PREPARE A WORK ENVIRONMENT FOR FRESHTOMATO COMPILATION (on Debian 12/64bit)**
@@ -67,7 +65,7 @@ Note: Please do not use github mirror for Pull Requests because it's not activel
   
 8. Clone/download repository:
     ```sh
-    $ git clone https://bitbucket.org/pedro311/freshtomato-mips.git
+    $ git clone https://github.com/FreshTomato-Project/freshtomato-mips.git
     ```
   
 9. Reboot system
