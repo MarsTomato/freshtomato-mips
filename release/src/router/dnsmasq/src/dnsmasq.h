@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2024 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2025 Simon Kelley
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define COPYRIGHT "Copyright (c) 2000-2024 Simon Kelley"
+#define COPYRIGHT "Copyright (c) 2000-2025 Simon Kelley"
 
 /* We do defines that influence behavior of stdio.h, so complain
    if included too early. */
@@ -279,7 +279,8 @@ struct event_desc {
 #define OPT_CACHE_RR       71
 #define OPT_LOCALHOST_SERVICE  72
 #define OPT_LOG_PROTO      73
-#define OPT_LAST           74
+#define OPT_NO_0x20        74
+#define OPT_LAST           75
 
 #define OPTION_BITS (sizeof(unsigned int)*8)
 #define OPTION_SIZE ( (OPT_LAST/OPTION_BITS)+((OPT_LAST%OPTION_BITS)!=0) )

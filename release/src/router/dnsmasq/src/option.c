@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2024 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2025 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -193,6 +193,7 @@ struct myoption {
 #define LOPT_MAX_PROCS     384
 #define LOPT_DNSSEC_LIMITS 385
 #define LOPT_PXE_OPT       386
+#define LOPT_NO_ENCODE     387
 
 #ifdef HAVE_GETOPT_LONG
 static const struct option opts[] =  
@@ -247,6 +248,7 @@ static const struct myoption opts[] =
     { "local-ttl", 1, 0, 'T' },
     { "no-negcache", 0, 0, 'N' },
     { "no-round-robin", 0, 0, LOPT_NORR },
+    { "no-0x20-encode", 0, 0, LOPT_NO_ENCODE },
     { "cache-rr", 1, 0, LOPT_CACHE_RR },
     { "addn-hosts", 1, 0, 'H' },
     { "hostsdir", 1, 0, LOPT_HOST_INOTIFY },
@@ -591,6 +593,7 @@ static struct {
   { LOPT_UMBRELLA, ARG_ONE, "[=<optspec>]", gettext_noop("Send Cisco Umbrella identifiers including remote IP."), NULL },
   { LOPT_QUIET_TFTP, OPT_QUIET_TFTP, NULL, gettext_noop("Do not log routine TFTP."), NULL },
   { LOPT_NORR, OPT_NORR, NULL, gettext_noop("Suppress round-robin ordering of DNS records."), NULL },
+  { LOPT_NO_ENCODE, OPT_NO_0x20, NULL, gettext_noop("Suppress DNS bit 0x20 encoding."), NULL },
   { LOPT_NO_IDENT, OPT_NO_IDENT, NULL, gettext_noop("Do not add CHAOS TXT records."), NULL },
   { LOPT_CACHE_RR, ARG_DUP, "<RR-type>", gettext_noop("Cache this DNS resource record type."), NULL },
   { LOPT_MAX_PROCS, ARG_ONE, "<integer>", gettext_noop("Maximum number of concurrent tcp connections."), NULL },
@@ -4043,10 +4046,8 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		      }
 
 		    new_addr = opt_malloc(sizeof(struct addrlist));
-		    new_addr->next = new->addr6;
 		    new_addr->flags = 0;
 		    new_addr->addr.addr6 = in6;
-		    new->addr6 = new_addr;
 		    
 		    if (pref)
 		      {
@@ -4057,7 +4058,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 			    ((((u64)1<<(128-new_addr->prefixlen))-1) & addrpart) != 0)
 			  {
 			    dhcp_config_free(new);
-			    ret_err(_("bad IPv6 prefix"));
+			    ret_err_free(_("bad IPv6 prefix"), new_addr);
 			  }
 			
 			new_addr->flags |= ADDRLIST_PREFIX;
@@ -4071,6 +4072,8 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 		    if (i == 8)
 		      new_addr->flags |= ADDRLIST_WILDCARD;
 		    
+		    new_addr->next = new->addr6;
+		    new->addr6 = new_addr;
 		    new->flags |= CONFIG_ADDR6;
 		  }
 #endif

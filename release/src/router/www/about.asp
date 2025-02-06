@@ -29,7 +29,7 @@ function init() {
 <body onload="init()">
 <table id="container">
 <tr><td colspan="2" id="header">
-	<div class="title">FreshTomato</div>
+	<div class="title"><a href="/">FreshTomato</a></div>
 	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
 </td></tr>
 <tr id="body"><td id="navi"><script>navi()</script></td>
@@ -47,7 +47,7 @@ function init() {
 	<br>
 	<b>FreshTomato project page: </b><a href="https://freshtomato.org" class="new_window"> https://freshtomato.org</a><br>
 	<b>Forums about Tomato</b> - EN: <a href="https://www.linksysinfo.org/index.php?forums/tomato-firmware.33/" class="new_window">https://linksysinfo.org</a> PL: <a href="https://openlinksys.info" class="new_window">https://openlinksys.info</a><br>
-	<b>Source code: </b><a href="https://github.com/FreshTomato-Project/freshtomato-mips" class="new_window"> https://github.com</a><br>
+	<b>Source code: </b><a href="https://github.com/FreshTomato-Project" class="new_window"> https://github.com</a><br>
 	<br>
 	<hr>
 <!-- OPTSIZE-BEGIN -->

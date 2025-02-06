@@ -33,7 +33,7 @@
  #include "mssl.h"
 #endif
 
-#define VERSION			"2.1"
+#define VERSION			"2.2"
 #define AGENT			"Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/109.0"
 #define MAX_OPTION_LENGTH	256
 #define BLOB_SIZE		(4 * 1024)
@@ -49,7 +49,7 @@
 #define M_INVALID_PARAM__S	"Invalid parameter (%s)."
 #define M_TOOSOON		"Update was too soon or too frequent."
 #define M_ERROR_GET_IP		"Error obtaining IP address."
-#define M_ERROR_MEM_STREAM	"Failed to open memory stream, aborting."
+#define M_ERROR_MEM_STREAM	"Failed to open memory stream."
 #define M_SAME_IP		"The IP address is the same."
 #define M_SAME_RECORD		"Record already up-to-date."
 #define M_DOWN			"Server temporarily down or under maintenance."
@@ -59,6 +59,7 @@
 #ifdef USE_LIBCURL
  FILE *curl_dfile = NULL;
  CURL *curl_handle = NULL;
+ struct curl_slist *headers = NULL;
  char errbuf[CURL_ERROR_SIZE];
  char curl_err_str[512];
 #endif
@@ -433,9 +434,9 @@ static void curl_setup(const unsigned int ssl)
 static struct curl_slist *curl_headers(const char *header)
 {
 	char *sub = NULL;
-	struct curl_slist *headers = NULL;
 	struct curl_slist *tmp = NULL;
 	size_t n = strlen(header);
+	headers = NULL;
 
 	if (!header)
 		return NULL;
@@ -474,7 +475,7 @@ static char *curl_resolve_ip(const unsigned int ssl, const char *url, const char
 	CURLcode r;
 	int trys, stop = 0;
 	unsigned int ok = 0;
-	struct curl_slist *headers = NULL;
+	headers = NULL;
 
 	curl_setup(ssl);
 
@@ -508,6 +509,7 @@ static char *curl_resolve_ip(const unsigned int ssl, const char *url, const char
 		logmsg(LOG_DEBUG, "*** %s: error - (%s)", __FUNCTION__, curl_err_str);
 	}
 
+	curl_slist_free_all(headers);
 	curl_cleanup();
 
 	if (stop == 1)
@@ -523,7 +525,6 @@ static long _http_req(const unsigned int ssl, int static_host, const char *host,
 {
 	logmsg(LOG_DEBUG, "*** %s: IN host=[%s] query=[%s] ssl=[%d] header=[%s] auth=[%d] data=[%s] req=[%s] ifname=[%s]", __FUNCTION__, host, query, ssl, header, auth, data, req, ifname);
 #ifdef USE_LIBCURL
-	struct curl_slist *headers = NULL;
 	char url[HALF_BLOB];
 	char ip[INET6_ADDRSTRLEN];
 	char *ip_ret;
@@ -532,6 +533,7 @@ static long _http_req(const unsigned int ssl, int static_host, const char *host,
 	CURLcode r;
 	int trys, stop = 0;
 	long code = -1;
+	headers = NULL;
 
 	if (!static_host)
 		host = get_option_or("server", host);
@@ -542,9 +544,12 @@ static long _http_req(const unsigned int ssl, int static_host, const char *host,
 	memset(ip, 0, INET6_ADDRSTRLEN); /* reset */
 	/* resolve IP to add/remove routes first */
 	if (ifname[0] != '\0') {
+		logmsg(LOG_DEBUG, "*** %s: resolving IP of server %s ...", __FUNCTION__, host);
 		ip_ret = curl_resolve_ip(ssl, url, header);
-		if (strcmp(ip_ret, "0"))
+		if (strcmp(ip_ret, "0")) {
 			strlcpy(ip, ip_ret, INET6_ADDRSTRLEN); /* copy as it will be reused in the next request */
+			logmsg(LOG_DEBUG, "*** %s: IP=[%s] of host=[%s]", __FUNCTION__, ip, host);
+		}
 		else
 			return code; /* couldn't resolve IP */
 	}
@@ -552,7 +557,7 @@ static long _http_req(const unsigned int ssl, int static_host, const char *host,
 	/* open a memory stream to store data */
 	curl_wbuf = fmemopen(blob, BLOB_SIZE, "w");
 	if (curl_wbuf == NULL) {
-		logmsg(LOG_ERR, "failed to open memory stream, aborting ...");
+		logmsg(LOG_ERR, M_ERROR_MEM_STREAM);
 		return -2;
 	}
 	setbuf(curl_wbuf, NULL); /* disable buffering */
@@ -615,8 +620,9 @@ static long _http_req(const unsigned int ssl, int static_host, const char *host,
 	/* del route */
 	route_adddel(ip, 0);
 
-	curl_slist_free_all(headers);
 	curl_easy_getinfo(curl_handle, CURLINFO_RESPONSE_CODE, &code);
+
+	logmsg(LOG_DEBUG, "*** %s: connected, response=[%ld]", __FUNCTION__, code);
 
 	if ((r == CURLE_OK) || (r == CURLE_RECV_ERROR)) /* CURLE_RECV_ERROR needed for clouflare */
 		*body = blob;
@@ -629,12 +635,12 @@ static long _http_req(const unsigned int ssl, int static_host, const char *host,
 	fclose(curl_wbuf);
 	if (curl_rbuf)
 		fclose(curl_rbuf);
-
 	if (curl_dfile) {
 		fputc('\n', curl_dfile);
 		fflush(curl_dfile);
 	}
 
+	curl_slist_free_all(headers);
 	curl_cleanup();
 
 	if (stop == 1)
@@ -874,12 +880,13 @@ static long http_req(const unsigned int ssl, int static_host, const char *host, 
 	return _http_req(ssl, static_host, host, "GET", get, header, auth, NULL, body);
 }
 
-int read_tmaddr(const char *name, long *tm, char *addr)
+static int read_tmaddr(const char *name, long *tm, char *addr)
 {
 	char s[64];
 
 	logmsg(LOG_DEBUG, "*** %s: IN cachename: %s", __FUNCTION__, name);
 
+	memset(s, 0, sizeof(s)); /* reset */
 	if (f_read_string(name, s, sizeof(s)) > 0) {
 		if (sscanf(s, "%ld,%15s", tm, addr) == 2) {
 			logmsg(LOG_DEBUG, "*** %s: s=%s tm=%ld addr=%s", __FUNCTION__, s, *tm, addr);
@@ -890,10 +897,11 @@ int read_tmaddr(const char *name, long *tm, char *addr)
 		else
 			logmsg(LOG_DEBUG, "*** %s: unknown=%s", __FUNCTION__, s);
 	}
+
 	return 0;
 }
 
-const char *get_address(int required)
+static const char *get_address(int required)
 {
 	char *body;
 	struct in_addr ia;
@@ -915,7 +923,7 @@ const char *get_address(int required)
 
 			if (read_tmaddr(cache_name, &et, addr)) {
 				if ((et > ut) && ((et - ut) <= DDNS_IP_CACHE)) {
-					logmsg(LOG_DEBUG, "*** %s: using cached address %s from %s. Expires in %ld seconds", __FUNCTION__, addr, cache_name, (et - ut));
+					logmsg(LOG_DEBUG, "*** %s: OUT using cached address %s from %s. Expires in %ld seconds", __FUNCTION__, addr, cache_name, (et - ut));
 					return addr;
 				}
 			}
@@ -951,8 +959,9 @@ const char *get_address(int required)
 						snprintf(s, sizeof(s), "%ld,%s", ut + DDNS_IP_CACHE, q);
 						f_write_string(cache_name, s, 0, 0);
 
-						logmsg(LOG_DEBUG, "*** %s: used %s service; time,address (%s) saved to %s", __FUNCTION__, services[service_num][0], s, cache_name);
+						logmsg(LOG_DEBUG, "*** %s: OUT used %s service; time,address (%s) saved to %s q=[%s]", __FUNCTION__, services[service_num][0], s, cache_name, q);
 						success_msg("Update successful.", 0); /* do not exit! */
+
 						return q;
 					}
 				}
@@ -984,7 +993,7 @@ const char *get_address(int required)
 }
 
 #ifdef TCONFIG_IPV6
-int get_address6(char *buf, const size_t buf_sz)
+static int get_address6(char *buf, const size_t buf_sz)
 {
 	const char *lanif;
 	int n, ret = 0;
@@ -1551,16 +1560,34 @@ zone_id can be retrieved via
 GET https://api.cloudflare.com/client/v4/zones?name=example.com&status=active
 but this is unimplemented here.
 */
+static char *remove_spaces(const char *body)
+{
+	int length = 0, j = 0;
+	char *copy;
+
+	/* first, count how many non-space characters there are */
+	for (int i = 0; body[i] != '\0'; i++) {
+		if (body[i] != ' ')
+			length++;
+	}
+
+	/* allocate memory for the new string (plus null terminator) */
+	copy = (char *)malloc(length + 1);
+	if (!copy)
+		error("memory allocation failed");
+
+	/* copy non-space characters to the new string */
+	for (int i = 0; body[i] != '\0'; i++) {
+		if (body[i] != ' ')
+			copy[j++] = body[i];
+	}
+	copy[j] = '\0'; /* null-terminate the new string */
+
+	return copy;
+}
+
 static int cloudflare_errorcheck(const int code, const char *req, char *body)
 {
-	unsigned int n = 0, i = 0;
-
-	for (i = 0; i < strlen(body); ++i) {
-		if (body[i] != ' ')
-			body[n++] = body[i];
-	}
-	body[n] = '\0';
-
 	if (code == 200) {
 		if (strstr(body, "\"success\":true") != NULL) {
 			if (strstr(body, "\"total_count\":0") != NULL)
@@ -1568,21 +1595,31 @@ static int cloudflare_errorcheck(const int code, const char *req, char *body)
 
 			return 0;
 		}
-		else
+		else {
+			free(body);
 			error(M_UNKNOWN_RESPONSE__D, -1);
+		}
 	}
-	else if (code == 400 && strstr(body, "\"code\":6003") != NULL)
+	else if (code == 400 && strstr(body, "\"code\":6003") != NULL) {
+		free(body);
 		error(M_INVALID_AUTH);
-	else if (code == 403 && strstr(body, "\"code\":9103") != NULL)
+	}
+	else if (code == 403 && strstr(body, "\"code\":9103") != NULL) {
+		free(body);
 		error(M_INVALID_AUTH);
-	else if (code == 403 && strstr(blob, "\"code\":10000") != NULL)
+	}
+	else if (code == 403 && strstr(body, "\"code\":10000") != NULL) {
+		free(body);
 		error(M_INVALID_AUTH);
+	}
 
+	free(body);
 	error("%s returned HTTP error code %d.", req, code);
 
 	return -1;
 }
 
+/* warning! doesn't work (in libcurl version) with dump enabled! */
 static void update_cloudflare(const unsigned int ssl)
 {
 	char header[HALF_BLOB];
@@ -1593,8 +1630,9 @@ static void update_cloudflare(const unsigned int ssl)
 	long s;
 	const char *addr;
 	int prox, r;
-	const char *find;
+	char *find;
 	char *found;
+	char *body_copy;
 	char data[QUARTER_BLOB];
 
 	/* +opt */
@@ -1612,49 +1650,68 @@ static void update_cloudflare(const unsigned int ssl)
 	else if (s == -2 )
 		error(M_ERROR_MEM_STREAM);
 
-	r = cloudflare_errorcheck(s, "GET", body);
+	body_copy = remove_spaces(body);
+
+	r = cloudflare_errorcheck(s, "GET", body_copy);
 
 	addr = get_address(1);
 	prox = get_option_onoff("wildcard", 0);
 	if (r == 1) {
 		if (get_option_onoff("backmx", 0))
 			snprintf(query, QUARTER_BLOB, "/client/v4/zones/%s/dns_records", zone);
-		else
+		else {
+			free(body_copy);
 			error(M_INVALID_HOST);
+		}
 	}
 	else if (r == 0) {
 		/* check the current IP to see if we actually need to update */
 		find = "\"content\":\"";
-		if ((found = strstr(body, find)) == NULL)
+		if ((found = strstr(body_copy, find)) == NULL) {
+			free(body_copy);
 			error(M_UNKNOWN_RESPONSE__D, -1);
+		}
+
 		found += strlen(find);
 		if (strncmp(addr, found, strlen(addr)) == 0) {
-			if (strstr(body, "\"proxiable\":true") != NULL) {
-				if (strstr(body, "\"proxied\":true") != NULL) {
-					if (prox)
+			if (strstr(body_copy, "\"proxiable\":true") != NULL) {
+				if (strstr(body_copy, "\"proxied\":true") != NULL) {
+					if (prox) {
+						free(body_copy);
 						success_msg(M_SAME_RECORD, 1); /* use success to update the cookie */
+					}
 				}
-				else if (!prox)
+				else if (!prox) {
+					free(body_copy);
 					success_msg(M_SAME_RECORD, 1); /* use success to update the cookie */
+				}
 			}
-			else
+			else {
+				free(body_copy);
 				success_msg(M_SAME_RECORD, 1); /* use success to update the cookie */
+			}
 		}
 
 		find = "\"id\":\"";
-		if ((found = strstr(body, find)) == NULL)
+		if ((found = strstr(body_copy, find)) == NULL) {
+			free(body_copy);
 			error(M_UNKNOWN_RESPONSE__D, -1);
+		}
 
 		found += strlen(find);
 		*strchr(found, '"') = 0; /* assume we can find the closing quote */
 
 		snprintf(query, QUARTER_BLOB, "/client/v4/zones/%s/dns_records/%s", zone, found);
 	}
-	else
+	else {
+		free(body_copy);
 		error(M_UNKNOWN_ERROR__D, r);
+	}
+
+	free(body_copy);
 
 	/* +opt +opt */
-	snprintf(data, QUARTER_BLOB, "{\"type\":\"A\",\"name\":\"%s\",\"content\":\"%s\",\"proxied\":%s}", host, addr, (prox ? "true" : "false"));
+	snprintf(data, QUARTER_BLOB, "{\"content\":\"%s\",\"name\":\"%s\",\"proxied\":%s,\"type\":\"A\"}", addr, host, (prox ? "true" : "false"));
 
 	s = _http_req(ssl, 1, "api.cloudflare.com", "PUT", query, header, 0, data, &body);
 
@@ -1663,7 +1720,11 @@ static void update_cloudflare(const unsigned int ssl)
 	else if (s == -2 )
 		error(M_ERROR_MEM_STREAM);
 
-	r = cloudflare_errorcheck(s, "PUT", body);
+	body_copy = remove_spaces(body);
+
+	r = cloudflare_errorcheck(s, "PUT", body_copy);
+
+	free(body_copy);
 
 	if (r != 0)
 		error(M_UNKNOWN_ERROR__D, r);
@@ -1836,7 +1897,7 @@ static void save_cookie(void)
 	snprintf(s, sizeof(s), "%ld,%s", now, c);
 	f_write_string(cookie, s, FW_NEWLINE, 0);
 
-	logmsg(LOG_DEBUG, "*** %s: cookie=%s", __FUNCTION__, s);
+	logmsg(LOG_DEBUG, "*** %s: OUT cookie=[%s]", __FUNCTION__, s);
 }
 
 int main(int argc, char *argv[])

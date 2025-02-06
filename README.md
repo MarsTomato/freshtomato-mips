@@ -1,14 +1,14 @@
 # **FreshTomato-MIPS** #
-.  
   
-**Forked off from Tomato by Shibby, builds compiled by pedro**
-.  
+  
+**Alternative open source firmware for Broadcom MIPS based routers**
+  
   
 For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12 A1/B1/C1/D1/VP/K/HP, N15U, N16, N53, N66U, AC66U **Netgear** WNR3500LV1, WNR3500LV2, R6300V1, WNDR4500V1, WNDR4500V2, WNDR3400/v2/v3, WNDR3700v3, WNDR4000 **Linksys** WRT54 series, E800, E900, E1000v2/v2.1, E1200V1, E1200V2, E1500, E2000, E2500, E3000, E3200, E4200 **Tenda** W1800R, N80 **D-Link** DIR-320, DIR-865L **Belkin** F5D8235v3, F7D3301, F7D3302, F7D4302, F9K1102v1/v3.  
-.  
+  
   
 ***Disclaimer: I am not responsible for any bricked routers, nor do I encourage other people to flash alternative firmwares on their routers. Use at your own risk!***  
-.  
+  
   
 - [**Project page**](https://freshtomato.org/)
 - [**Source code**](https://github.com/FreshTomato-Project/freshtomato-mips) ([**Mirror**](https://bitbucket.org/pedro311/freshtomato-mips/commits/all))
@@ -20,7 +20,7 @@ For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12
 - [**Forum PL**](https://openlinksys.info/forum/)
 - **Donations**: [**PayPal**](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=B4FDH9TH6Z8FU)  or  BTC: **`1JDxBBQvcJ9XxgagJRNVrqC1nysq8F8B1Y`**  
   
-.  
+  
 **HOW TO PREPARE A WORK ENVIRONMENT FOR FRESHTOMATO COMPILATION (on Debian 12/64bit)**
   
 1. Install Debian via the graphical interface (for simplicity); install the SSH server, choose default [username]; the rest may be the default
@@ -29,74 +29,74 @@ For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12
   
 3. Update system:
     ```sh
-    $ apt-get update
-    $ apt-get dist-upgrade
+    apt-get update
+    apt-get dist-upgrade
     ```
   
 4. Install basic packages:
     ```sh
-    $ apt-get install build-essential net-tools
+    apt-get install build-essential net-tools
     ```
   
 5. Set proper date/time:
     ```sh
-    $ dpkg-reconfigure tzdata
+    dpkg-reconfigure tzdata
     ```
     In case of problems here:
     ```sh
-    $ export PATH=$PATH:/usr/sbin
+    export PATH=$PATH:/usr/sbin
     ```
   
 6. Add your [username] to sudo group:
     ```sh
-    $ apt-get install sudo
-    $ adduser [username] sudo
-    $ reboot
+    apt-get install sudo
+    adduser [username] sudo
+    reboot
     ```
   
 7. Login as [username], install base packages with all dependencies:
     ```sh
-    $ sudo apt-get install autoconf m4 bison flex g++ libtool gcc binutils patch bzip2 make gettext unzip zlib1g-dev libc6 gperf automake groff
-    $ sudo apt-get install lib32stdc++6 libncurses5 libncurses5-dev gawk gitk zlib1g-dev autopoint shtool autogen mtd-utils gcc-multilib lib32z1-dev pkg-config libssl-dev automake1.11
-    $ sudo apt-get install libmnl-dev libxml2-dev intltool libglib2.0-dev libstdc++5 texinfo dos2unix xsltproc libnfnetlink0 libcurl4-openssl-dev libgtk2.0-dev libnotify-dev libevent-dev git
-    $ sudo apt-get install re2c texlive libelf1 nodejs zip mc cmake ninja-build curl libglib2.0-dev-bin sqlite3 dconf-editor python3.11-dev
-    $ sudo apt-get install linux-headers-$(uname -r)
+    sudo apt-get install autoconf m4 bison flex g++ libtool gcc binutils patch bzip2 make gettext unzip zlib1g-dev libc6 gperf automake groff
+    sudo apt-get install lib32stdc++6 libncurses5 libncurses5-dev gawk gitk zlib1g-dev autopoint shtool autogen mtd-utils gcc-multilib lib32z1-dev pkg-config libssl-dev automake1.11
+    sudo apt-get install libmnl-dev libxml2-dev intltool libglib2.0-dev libstdc++5 texinfo dos2unix xsltproc libnfnetlink0 libcurl4-openssl-dev libgtk2.0-dev libnotify-dev libevent-dev git
+    sudo apt-get install re2c texlive libelf1 nodejs zip mc cmake ninja-build curl libglib2.0-dev-bin sqlite3 dconf-editor python3.11-dev
+    sudo apt-get install linux-headers-$(uname -r)
     ```
   
 8. Clone/download repository:
     ```sh
-    $ git clone https://github.com/FreshTomato-Project/freshtomato-mips.git
+    git clone https://github.com/FreshTomato-Project/freshtomato-mips.git
     ```
   
 9. Reboot system
 . 
 10. Add your email address to git config:
     ```sh
-    $ cd freshtomato-mips
-    $ git config --global user.email "[email-address]"
+    cd freshtomato-mips
+    git config --global user.email "[email-address]"
     ```
   
 11. Add your username to git config:
     ```sh
-    $ cd freshtomato-mips
-    $ git config --global user.name [name]
+    cd freshtomato-mips
+    git config --global user.name [name]
     ```
   
-.  
+  
 **HOW TO COMPILE**
   
-1. Change dir to git repository ie: ```$ cd freshtomato-mips```
-2. Before every compilation, use ```$ git clean -fdxq && git reset --hard```, and possibly ```$ git pull``` to pull recent changes from remote
-3. To compile RT image, use: ```$ git checkout mips-master``` then: ```$ cd release/src-rt```, check for possible targets: ```$ make help```, use one (Mini for ie. WRT54G): ```$ make f```
-4. To compile RT-N image, use: ```$ git checkout mips-RT-AC``` then: ```$ cd release/src-rt```, check for possible targets: ```$ make help```, use one (RT-N66U build AIO): ```$ make r64z```
-5. To compile RT-AC image, use: ```$ git checkout mips-RT-AC``` then: ```$ cd release/src-rt-6.x```, check for possible targets: ```$ make help```, use one (RT-AC66U build AIO): ```$ make ac66z```
+1. Change dir to git repository ie: ```cd freshtomato-mips```
+2. Before every compilation, use ```git clean -fdxq && git reset --hard```, and possibly ```git pull``` to pull recent changes from remote
+3. To compile RT image, use: ```git checkout mips-master``` then: ```cd release/src-rt```, check for possible targets: ```make help```, use one (Mini for ie. WRT54G): ```make f```
+4. To compile RT-N image, use: ```git checkout mips-RT-AC``` then: ```cd release/src-rt```, check for possible targets: ```make help```, use one (RT-N66U build AIO): ```make r64z```
+5. To compile RT-AC image, use: ```git checkout mips-RT-AC``` then: ```cd release/src-rt-6.x```, check for possible targets: ```make help```, use one (RT-AC66U build AIO): ```make ac66z```
   
-.  
+  
 **WARNING**
   
 To compile n6, n60, rtn53, e2500, e3200, wndr3400v2 and f9k targets (RT-N), before compilation you have to revert patch to the kernel:  
 ```sh
-$ cd release/src-rt/linux
-$ patch -R -p4 < fix4usbap.patch
+cd release/src-rt/linux
+patch -R -p4 < fix4usbap.patch
 ```
   
