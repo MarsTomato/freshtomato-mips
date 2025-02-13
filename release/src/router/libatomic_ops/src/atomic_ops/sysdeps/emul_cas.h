@@ -43,14 +43,19 @@
 # include "standard_ao_double_t.h"
 #endif
 
-AO_t AO_fetch_compare_and_swap_emulation(volatile AO_t *addr, AO_t old_val,
-                                         AO_t new_val);
+#ifdef __cplusplus
+  extern "C" {
+#endif
 
-int AO_compare_double_and_swap_double_emulation(volatile AO_double_t *addr,
-                                                AO_t old_val1, AO_t old_val2,
-                                                AO_t new_val1, AO_t new_val2);
+AO_API AO_t AO_fetch_compare_and_swap_emulation(volatile AO_t *addr,
+                                                AO_t old_val, AO_t new_val);
 
-void AO_store_full_emulation(volatile AO_t *addr, AO_t val);
+AO_API int
+AO_compare_double_and_swap_double_emulation(volatile AO_double_t *addr,
+                                            AO_t old_val1, AO_t old_val2,
+                                            AO_t new_val1, AO_t new_val2);
+
+AO_API void AO_store_full_emulation(volatile AO_t *addr, AO_t val);
 
 #ifndef AO_HAVE_fetch_compare_and_swap_full
 # define AO_fetch_compare_and_swap_full(addr, old, newval) \
@@ -76,3 +81,7 @@ void AO_store_full_emulation(volatile AO_t *addr, AO_t val);
 #undef AO_HAVE_store_full
 #define AO_store_full(addr, val) AO_store_full_emulation(addr, val)
 #define AO_HAVE_store_full
+
+#ifdef __cplusplus
+  } /* extern "C" */
+#endif

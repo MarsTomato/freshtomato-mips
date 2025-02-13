@@ -2,8 +2,19 @@
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -11,6 +22,8 @@
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void list_atomic(void)
 {
@@ -32,7 +45,7 @@ void list_atomic(void)
     static AO_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_fetch_and_add) || defined(AO_HAVE_and) \
      || defined(AO_HAVE_or) || defined(AO_HAVE_xor)
@@ -48,7 +61,7 @@ void list_atomic(void)
 
 # ifdef AO_HAVE_load
     (void)"AO_load(&val):";
-    AO_load(&val);
+    (void)AO_load(&val);
 # else
     (void)"No AO_load";
 # endif
@@ -60,19 +73,19 @@ void list_atomic(void)
 # endif
 # ifdef AO_HAVE_fetch_and_add
     (void)"AO_fetch_and_add(&val, incr):";
-    AO_fetch_and_add(&val, incr);
+    (void)AO_fetch_and_add(&val, incr);
 # else
     (void)"No AO_fetch_and_add";
 # endif
 # ifdef AO_HAVE_fetch_and_add1
     (void)"AO_fetch_and_add1(&val):";
-    AO_fetch_and_add1(&val);
+    (void)AO_fetch_and_add1(&val);
 # else
     (void)"No AO_fetch_and_add1";
 # endif
 # ifdef AO_HAVE_fetch_and_sub1
     (void)"AO_fetch_and_sub1(&val):";
-    AO_fetch_and_sub1(&val);
+    (void)AO_fetch_and_sub1(&val);
 # else
     (void)"No AO_fetch_and_sub1";
 # endif
@@ -96,7 +109,8 @@ void list_atomic(void)
 # endif
 # ifdef AO_HAVE_compare_and_swap
     (void)"AO_compare_and_swap(&val, oldval, newval):";
-    AO_compare_and_swap(&val, oldval, newval);
+    if (!AO_compare_and_swap(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_compare_and_swap";
 # endif
@@ -104,14 +118,15 @@ void list_atomic(void)
   /* TODO: Add AO_compare_and_swap_double */
 # ifdef AO_HAVE_fetch_compare_and_swap
     (void)"AO_fetch_compare_and_swap(&val, oldval, newval):";
-    AO_fetch_compare_and_swap(&val, oldval, newval);
+    if (AO_fetch_compare_and_swap(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_fetch_compare_and_swap";
 # endif
 
 # if defined(AO_HAVE_test_and_set)
     (void)"AO_test_and_set(&ts):";
-    AO_test_and_set(&ts);
+    (void)AO_test_and_set(&ts);
 # else
     (void)"No AO_test_and_set";
 # endif
@@ -119,8 +134,19 @@ void list_atomic(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -128,6 +154,8 @@ void list_atomic(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void list_atomic_release(void)
 {
@@ -149,7 +177,7 @@ void list_atomic_release(void)
     static AO_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_fetch_and_add_release) || defined(AO_HAVE_and_release) \
      || defined(AO_HAVE_or_release) || defined(AO_HAVE_xor_release)
@@ -165,7 +193,7 @@ void list_atomic_release(void)
 
 # ifdef AO_HAVE_load_release
     (void)"AO_load_release(&val):";
-    AO_load_release(&val);
+    (void)AO_load_release(&val);
 # else
     (void)"No AO_load_release";
 # endif
@@ -177,19 +205,19 @@ void list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_fetch_and_add_release
     (void)"AO_fetch_and_add_release(&val, incr):";
-    AO_fetch_and_add_release(&val, incr);
+    (void)AO_fetch_and_add_release(&val, incr);
 # else
     (void)"No AO_fetch_and_add_release";
 # endif
 # ifdef AO_HAVE_fetch_and_add1_release
     (void)"AO_fetch_and_add1_release(&val):";
-    AO_fetch_and_add1_release(&val);
+    (void)AO_fetch_and_add1_release(&val);
 # else
     (void)"No AO_fetch_and_add1_release";
 # endif
 # ifdef AO_HAVE_fetch_and_sub1_release
     (void)"AO_fetch_and_sub1_release(&val):";
-    AO_fetch_and_sub1_release(&val);
+    (void)AO_fetch_and_sub1_release(&val);
 # else
     (void)"No AO_fetch_and_sub1_release";
 # endif
@@ -213,7 +241,8 @@ void list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_compare_and_swap_release
     (void)"AO_compare_and_swap_release(&val, oldval, newval):";
-    AO_compare_and_swap_release(&val, oldval, newval);
+    if (!AO_compare_and_swap_release(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_compare_and_swap_release";
 # endif
@@ -221,14 +250,15 @@ void list_atomic_release(void)
   /* TODO: Add AO_compare_and_swap_double_release */
 # ifdef AO_HAVE_fetch_compare_and_swap_release
     (void)"AO_fetch_compare_and_swap_release(&val, oldval, newval):";
-    AO_fetch_compare_and_swap_release(&val, oldval, newval);
+    if (AO_fetch_compare_and_swap_release(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_fetch_compare_and_swap_release";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release)
     (void)"AO_test_and_set_release(&ts):";
-    AO_test_and_set_release(&ts);
+    (void)AO_test_and_set_release(&ts);
 # else
     (void)"No AO_test_and_set_release";
 # endif
@@ -236,8 +266,19 @@ void list_atomic_release(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -245,6 +286,8 @@ void list_atomic_release(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void list_atomic_acquire(void)
 {
@@ -266,7 +309,7 @@ void list_atomic_acquire(void)
     static AO_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_fetch_and_add_acquire) || defined(AO_HAVE_and_acquire) \
      || defined(AO_HAVE_or_acquire) || defined(AO_HAVE_xor_acquire)
@@ -282,7 +325,7 @@ void list_atomic_acquire(void)
 
 # ifdef AO_HAVE_load_acquire
     (void)"AO_load_acquire(&val):";
-    AO_load_acquire(&val);
+    (void)AO_load_acquire(&val);
 # else
     (void)"No AO_load_acquire";
 # endif
@@ -294,19 +337,19 @@ void list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_fetch_and_add_acquire
     (void)"AO_fetch_and_add_acquire(&val, incr):";
-    AO_fetch_and_add_acquire(&val, incr);
+    (void)AO_fetch_and_add_acquire(&val, incr);
 # else
     (void)"No AO_fetch_and_add_acquire";
 # endif
 # ifdef AO_HAVE_fetch_and_add1_acquire
     (void)"AO_fetch_and_add1_acquire(&val):";
-    AO_fetch_and_add1_acquire(&val);
+    (void)AO_fetch_and_add1_acquire(&val);
 # else
     (void)"No AO_fetch_and_add1_acquire";
 # endif
 # ifdef AO_HAVE_fetch_and_sub1_acquire
     (void)"AO_fetch_and_sub1_acquire(&val):";
-    AO_fetch_and_sub1_acquire(&val);
+    (void)AO_fetch_and_sub1_acquire(&val);
 # else
     (void)"No AO_fetch_and_sub1_acquire";
 # endif
@@ -330,7 +373,8 @@ void list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_compare_and_swap_acquire
     (void)"AO_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_compare_and_swap_acquire(&val, oldval, newval);
+    if (!AO_compare_and_swap_acquire(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_compare_and_swap_acquire";
 # endif
@@ -338,14 +382,15 @@ void list_atomic_acquire(void)
   /* TODO: Add AO_compare_and_swap_double_acquire */
 # ifdef AO_HAVE_fetch_compare_and_swap_acquire
     (void)"AO_fetch_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_fetch_compare_and_swap_acquire(&val, oldval, newval);
+    if (AO_fetch_compare_and_swap_acquire(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_fetch_compare_and_swap_acquire";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire)
     (void)"AO_test_and_set_acquire(&ts):";
-    AO_test_and_set_acquire(&ts);
+    (void)AO_test_and_set_acquire(&ts);
 # else
     (void)"No AO_test_and_set_acquire";
 # endif
@@ -353,8 +398,19 @@ void list_atomic_acquire(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -362,6 +418,8 @@ void list_atomic_acquire(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void list_atomic_read(void)
 {
@@ -383,7 +441,7 @@ void list_atomic_read(void)
     static AO_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_fetch_and_add_read) || defined(AO_HAVE_and_read) \
      || defined(AO_HAVE_or_read) || defined(AO_HAVE_xor_read)
@@ -399,7 +457,7 @@ void list_atomic_read(void)
 
 # ifdef AO_HAVE_load_read
     (void)"AO_load_read(&val):";
-    AO_load_read(&val);
+    (void)AO_load_read(&val);
 # else
     (void)"No AO_load_read";
 # endif
@@ -411,19 +469,19 @@ void list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_fetch_and_add_read
     (void)"AO_fetch_and_add_read(&val, incr):";
-    AO_fetch_and_add_read(&val, incr);
+    (void)AO_fetch_and_add_read(&val, incr);
 # else
     (void)"No AO_fetch_and_add_read";
 # endif
 # ifdef AO_HAVE_fetch_and_add1_read
     (void)"AO_fetch_and_add1_read(&val):";
-    AO_fetch_and_add1_read(&val);
+    (void)AO_fetch_and_add1_read(&val);
 # else
     (void)"No AO_fetch_and_add1_read";
 # endif
 # ifdef AO_HAVE_fetch_and_sub1_read
     (void)"AO_fetch_and_sub1_read(&val):";
-    AO_fetch_and_sub1_read(&val);
+    (void)AO_fetch_and_sub1_read(&val);
 # else
     (void)"No AO_fetch_and_sub1_read";
 # endif
@@ -447,7 +505,8 @@ void list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_compare_and_swap_read
     (void)"AO_compare_and_swap_read(&val, oldval, newval):";
-    AO_compare_and_swap_read(&val, oldval, newval);
+    if (!AO_compare_and_swap_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_compare_and_swap_read";
 # endif
@@ -455,14 +514,15 @@ void list_atomic_read(void)
   /* TODO: Add AO_compare_and_swap_double_read */
 # ifdef AO_HAVE_fetch_compare_and_swap_read
     (void)"AO_fetch_compare_and_swap_read(&val, oldval, newval):";
-    AO_fetch_compare_and_swap_read(&val, oldval, newval);
+    if (AO_fetch_compare_and_swap_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_fetch_compare_and_swap_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_read)
     (void)"AO_test_and_set_read(&ts):";
-    AO_test_and_set_read(&ts);
+    (void)AO_test_and_set_read(&ts);
 # else
     (void)"No AO_test_and_set_read";
 # endif
@@ -470,8 +530,19 @@ void list_atomic_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -479,6 +550,8 @@ void list_atomic_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void list_atomic_write(void)
 {
@@ -500,7 +573,7 @@ void list_atomic_write(void)
     static AO_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_fetch_and_add_write) || defined(AO_HAVE_and_write) \
      || defined(AO_HAVE_or_write) || defined(AO_HAVE_xor_write)
@@ -516,7 +589,7 @@ void list_atomic_write(void)
 
 # ifdef AO_HAVE_load_write
     (void)"AO_load_write(&val):";
-    AO_load_write(&val);
+    (void)AO_load_write(&val);
 # else
     (void)"No AO_load_write";
 # endif
@@ -528,19 +601,19 @@ void list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_fetch_and_add_write
     (void)"AO_fetch_and_add_write(&val, incr):";
-    AO_fetch_and_add_write(&val, incr);
+    (void)AO_fetch_and_add_write(&val, incr);
 # else
     (void)"No AO_fetch_and_add_write";
 # endif
 # ifdef AO_HAVE_fetch_and_add1_write
     (void)"AO_fetch_and_add1_write(&val):";
-    AO_fetch_and_add1_write(&val);
+    (void)AO_fetch_and_add1_write(&val);
 # else
     (void)"No AO_fetch_and_add1_write";
 # endif
 # ifdef AO_HAVE_fetch_and_sub1_write
     (void)"AO_fetch_and_sub1_write(&val):";
-    AO_fetch_and_sub1_write(&val);
+    (void)AO_fetch_and_sub1_write(&val);
 # else
     (void)"No AO_fetch_and_sub1_write";
 # endif
@@ -564,7 +637,8 @@ void list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_compare_and_swap_write
     (void)"AO_compare_and_swap_write(&val, oldval, newval):";
-    AO_compare_and_swap_write(&val, oldval, newval);
+    if (!AO_compare_and_swap_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_compare_and_swap_write";
 # endif
@@ -572,14 +646,15 @@ void list_atomic_write(void)
   /* TODO: Add AO_compare_and_swap_double_write */
 # ifdef AO_HAVE_fetch_compare_and_swap_write
     (void)"AO_fetch_compare_and_swap_write(&val, oldval, newval):";
-    AO_fetch_compare_and_swap_write(&val, oldval, newval);
+    if (AO_fetch_compare_and_swap_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_fetch_compare_and_swap_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_write)
     (void)"AO_test_and_set_write(&ts):";
-    AO_test_and_set_write(&ts);
+    (void)AO_test_and_set_write(&ts);
 # else
     (void)"No AO_test_and_set_write";
 # endif
@@ -587,8 +662,19 @@ void list_atomic_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -596,6 +682,8 @@ void list_atomic_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void list_atomic_full(void)
 {
@@ -617,7 +705,7 @@ void list_atomic_full(void)
     static AO_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_full)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_fetch_and_add_full) || defined(AO_HAVE_and_full) \
      || defined(AO_HAVE_or_full) || defined(AO_HAVE_xor_full)
@@ -633,7 +721,7 @@ void list_atomic_full(void)
 
 # ifdef AO_HAVE_load_full
     (void)"AO_load_full(&val):";
-    AO_load_full(&val);
+    (void)AO_load_full(&val);
 # else
     (void)"No AO_load_full";
 # endif
@@ -645,19 +733,19 @@ void list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_fetch_and_add_full
     (void)"AO_fetch_and_add_full(&val, incr):";
-    AO_fetch_and_add_full(&val, incr);
+    (void)AO_fetch_and_add_full(&val, incr);
 # else
     (void)"No AO_fetch_and_add_full";
 # endif
 # ifdef AO_HAVE_fetch_and_add1_full
     (void)"AO_fetch_and_add1_full(&val):";
-    AO_fetch_and_add1_full(&val);
+    (void)AO_fetch_and_add1_full(&val);
 # else
     (void)"No AO_fetch_and_add1_full";
 # endif
 # ifdef AO_HAVE_fetch_and_sub1_full
     (void)"AO_fetch_and_sub1_full(&val):";
-    AO_fetch_and_sub1_full(&val);
+    (void)AO_fetch_and_sub1_full(&val);
 # else
     (void)"No AO_fetch_and_sub1_full";
 # endif
@@ -681,7 +769,8 @@ void list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_compare_and_swap_full
     (void)"AO_compare_and_swap_full(&val, oldval, newval):";
-    AO_compare_and_swap_full(&val, oldval, newval);
+    if (!AO_compare_and_swap_full(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_compare_and_swap_full";
 # endif
@@ -689,14 +778,15 @@ void list_atomic_full(void)
   /* TODO: Add AO_compare_and_swap_double_full */
 # ifdef AO_HAVE_fetch_compare_and_swap_full
     (void)"AO_fetch_compare_and_swap_full(&val, oldval, newval):";
-    AO_fetch_compare_and_swap_full(&val, oldval, newval);
+    if (AO_fetch_compare_and_swap_full(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_fetch_compare_and_swap_full";
 # endif
 
 # if defined(AO_HAVE_test_and_set_full)
     (void)"AO_test_and_set_full(&ts):";
-    AO_test_and_set_full(&ts);
+    (void)AO_test_and_set_full(&ts);
 # else
     (void)"No AO_test_and_set_full";
 # endif
@@ -704,8 +794,19 @@ void list_atomic_full(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -713,6 +814,8 @@ void list_atomic_full(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void list_atomic_release_write(void)
 {
@@ -734,7 +837,7 @@ void list_atomic_release_write(void)
     static AO_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_fetch_and_add_release_write) || defined(AO_HAVE_and_release_write) \
      || defined(AO_HAVE_or_release_write) || defined(AO_HAVE_xor_release_write)
@@ -750,7 +853,7 @@ void list_atomic_release_write(void)
 
 # ifdef AO_HAVE_load_release_write
     (void)"AO_load_release_write(&val):";
-    AO_load_release_write(&val);
+    (void)AO_load_release_write(&val);
 # else
     (void)"No AO_load_release_write";
 # endif
@@ -762,19 +865,19 @@ void list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_fetch_and_add_release_write
     (void)"AO_fetch_and_add_release_write(&val, incr):";
-    AO_fetch_and_add_release_write(&val, incr);
+    (void)AO_fetch_and_add_release_write(&val, incr);
 # else
     (void)"No AO_fetch_and_add_release_write";
 # endif
 # ifdef AO_HAVE_fetch_and_add1_release_write
     (void)"AO_fetch_and_add1_release_write(&val):";
-    AO_fetch_and_add1_release_write(&val);
+    (void)AO_fetch_and_add1_release_write(&val);
 # else
     (void)"No AO_fetch_and_add1_release_write";
 # endif
 # ifdef AO_HAVE_fetch_and_sub1_release_write
     (void)"AO_fetch_and_sub1_release_write(&val):";
-    AO_fetch_and_sub1_release_write(&val);
+    (void)AO_fetch_and_sub1_release_write(&val);
 # else
     (void)"No AO_fetch_and_sub1_release_write";
 # endif
@@ -798,7 +901,8 @@ void list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_compare_and_swap_release_write
     (void)"AO_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_compare_and_swap_release_write(&val, oldval, newval);
+    if (!AO_compare_and_swap_release_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_compare_and_swap_release_write";
 # endif
@@ -806,14 +910,15 @@ void list_atomic_release_write(void)
   /* TODO: Add AO_compare_and_swap_double_release_write */
 # ifdef AO_HAVE_fetch_compare_and_swap_release_write
     (void)"AO_fetch_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_fetch_compare_and_swap_release_write(&val, oldval, newval);
+    if (AO_fetch_compare_and_swap_release_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_fetch_compare_and_swap_release_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release_write)
     (void)"AO_test_and_set_release_write(&ts):";
-    AO_test_and_set_release_write(&ts);
+    (void)AO_test_and_set_release_write(&ts);
 # else
     (void)"No AO_test_and_set_release_write";
 # endif
@@ -821,8 +926,19 @@ void list_atomic_release_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -830,6 +946,8 @@ void list_atomic_release_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void list_atomic_acquire_read(void)
 {
@@ -851,7 +969,7 @@ void list_atomic_acquire_read(void)
     static AO_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_fetch_and_add_acquire_read) || defined(AO_HAVE_and_acquire_read) \
      || defined(AO_HAVE_or_acquire_read) || defined(AO_HAVE_xor_acquire_read)
@@ -867,7 +985,7 @@ void list_atomic_acquire_read(void)
 
 # ifdef AO_HAVE_load_acquire_read
     (void)"AO_load_acquire_read(&val):";
-    AO_load_acquire_read(&val);
+    (void)AO_load_acquire_read(&val);
 # else
     (void)"No AO_load_acquire_read";
 # endif
@@ -879,19 +997,19 @@ void list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_fetch_and_add_acquire_read
     (void)"AO_fetch_and_add_acquire_read(&val, incr):";
-    AO_fetch_and_add_acquire_read(&val, incr);
+    (void)AO_fetch_and_add_acquire_read(&val, incr);
 # else
     (void)"No AO_fetch_and_add_acquire_read";
 # endif
 # ifdef AO_HAVE_fetch_and_add1_acquire_read
     (void)"AO_fetch_and_add1_acquire_read(&val):";
-    AO_fetch_and_add1_acquire_read(&val);
+    (void)AO_fetch_and_add1_acquire_read(&val);
 # else
     (void)"No AO_fetch_and_add1_acquire_read";
 # endif
 # ifdef AO_HAVE_fetch_and_sub1_acquire_read
     (void)"AO_fetch_and_sub1_acquire_read(&val):";
-    AO_fetch_and_sub1_acquire_read(&val);
+    (void)AO_fetch_and_sub1_acquire_read(&val);
 # else
     (void)"No AO_fetch_and_sub1_acquire_read";
 # endif
@@ -915,7 +1033,8 @@ void list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_compare_and_swap_acquire_read
     (void)"AO_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (!AO_compare_and_swap_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_compare_and_swap_acquire_read";
 # endif
@@ -923,14 +1042,15 @@ void list_atomic_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_acquire_read */
 # ifdef AO_HAVE_fetch_compare_and_swap_acquire_read
     (void)"AO_fetch_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_fetch_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (AO_fetch_compare_and_swap_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_fetch_compare_and_swap_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire_read)
     (void)"AO_test_and_set_acquire_read(&ts):";
-    AO_test_and_set_acquire_read(&ts);
+    (void)AO_test_and_set_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_acquire_read";
 # endif
@@ -938,8 +1058,19 @@ void list_atomic_acquire_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -947,6 +1078,8 @@ void list_atomic_acquire_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void list_atomic_dd_acquire_read(void)
 {
@@ -968,7 +1101,7 @@ void list_atomic_dd_acquire_read(void)
     static AO_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_fetch_and_add_dd_acquire_read) || defined(AO_HAVE_and_dd_acquire_read) \
      || defined(AO_HAVE_or_dd_acquire_read) || defined(AO_HAVE_xor_dd_acquire_read)
@@ -984,7 +1117,7 @@ void list_atomic_dd_acquire_read(void)
 
 # ifdef AO_HAVE_load_dd_acquire_read
     (void)"AO_load_dd_acquire_read(&val):";
-    AO_load_dd_acquire_read(&val);
+    (void)AO_load_dd_acquire_read(&val);
 # else
     (void)"No AO_load_dd_acquire_read";
 # endif
@@ -996,19 +1129,19 @@ void list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_fetch_and_add_dd_acquire_read
     (void)"AO_fetch_and_add_dd_acquire_read(&val, incr):";
-    AO_fetch_and_add_dd_acquire_read(&val, incr);
+    (void)AO_fetch_and_add_dd_acquire_read(&val, incr);
 # else
     (void)"No AO_fetch_and_add_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_fetch_and_add1_dd_acquire_read
     (void)"AO_fetch_and_add1_dd_acquire_read(&val):";
-    AO_fetch_and_add1_dd_acquire_read(&val);
+    (void)AO_fetch_and_add1_dd_acquire_read(&val);
 # else
     (void)"No AO_fetch_and_add1_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_fetch_and_sub1_dd_acquire_read
     (void)"AO_fetch_and_sub1_dd_acquire_read(&val):";
-    AO_fetch_and_sub1_dd_acquire_read(&val);
+    (void)AO_fetch_and_sub1_dd_acquire_read(&val);
 # else
     (void)"No AO_fetch_and_sub1_dd_acquire_read";
 # endif
@@ -1032,7 +1165,8 @@ void list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_compare_and_swap_dd_acquire_read
     (void)"AO_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (!AO_compare_and_swap_dd_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_compare_and_swap_dd_acquire_read";
 # endif
@@ -1040,14 +1174,15 @@ void list_atomic_dd_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_dd_acquire_read */
 # ifdef AO_HAVE_fetch_compare_and_swap_dd_acquire_read
     (void)"AO_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (AO_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_fetch_compare_and_swap_dd_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
     (void)"AO_test_and_set_dd_acquire_read(&ts):";
-    AO_test_and_set_dd_acquire_read(&ts);
+    (void)AO_test_and_set_dd_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_dd_acquire_read";
 # endif
@@ -1055,8 +1190,19 @@ void list_atomic_dd_acquire_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -1064,6 +1210,8 @@ void list_atomic_dd_acquire_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void char_list_atomic(void)
 {
@@ -1085,7 +1233,7 @@ void char_list_atomic(void)
     static unsigned/**/char newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_char_fetch_and_add) || defined(AO_HAVE_char_and) \
      || defined(AO_HAVE_char_or) || defined(AO_HAVE_char_xor)
@@ -1101,7 +1249,7 @@ void char_list_atomic(void)
 
 # ifdef AO_HAVE_char_load
     (void)"AO_char_load(&val):";
-    AO_char_load(&val);
+    (void)AO_char_load(&val);
 # else
     (void)"No AO_char_load";
 # endif
@@ -1113,19 +1261,19 @@ void char_list_atomic(void)
 # endif
 # ifdef AO_HAVE_char_fetch_and_add
     (void)"AO_char_fetch_and_add(&val, incr):";
-    AO_char_fetch_and_add(&val, incr);
+    (void)AO_char_fetch_and_add(&val, incr);
 # else
     (void)"No AO_char_fetch_and_add";
 # endif
 # ifdef AO_HAVE_char_fetch_and_add1
     (void)"AO_char_fetch_and_add1(&val):";
-    AO_char_fetch_and_add1(&val);
+    (void)AO_char_fetch_and_add1(&val);
 # else
     (void)"No AO_char_fetch_and_add1";
 # endif
 # ifdef AO_HAVE_char_fetch_and_sub1
     (void)"AO_char_fetch_and_sub1(&val):";
-    AO_char_fetch_and_sub1(&val);
+    (void)AO_char_fetch_and_sub1(&val);
 # else
     (void)"No AO_char_fetch_and_sub1";
 # endif
@@ -1149,7 +1297,8 @@ void char_list_atomic(void)
 # endif
 # ifdef AO_HAVE_char_compare_and_swap
     (void)"AO_char_compare_and_swap(&val, oldval, newval):";
-    AO_char_compare_and_swap(&val, oldval, newval);
+    if (!AO_char_compare_and_swap(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_char_compare_and_swap";
 # endif
@@ -1157,14 +1306,15 @@ void char_list_atomic(void)
   /* TODO: Add AO_compare_and_swap_double */
 # ifdef AO_HAVE_char_fetch_compare_and_swap
     (void)"AO_char_fetch_compare_and_swap(&val, oldval, newval):";
-    AO_char_fetch_compare_and_swap(&val, oldval, newval);
+    if (AO_char_fetch_compare_and_swap(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_char_fetch_compare_and_swap";
 # endif
 
 # if defined(AO_HAVE_test_and_set)
     (void)"AO_test_and_set(&ts):";
-    AO_test_and_set(&ts);
+    (void)AO_test_and_set(&ts);
 # else
     (void)"No AO_test_and_set";
 # endif
@@ -1172,8 +1322,19 @@ void char_list_atomic(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -1181,6 +1342,8 @@ void char_list_atomic(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void char_list_atomic_release(void)
 {
@@ -1202,7 +1365,7 @@ void char_list_atomic_release(void)
     static unsigned/**/char newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_char_fetch_and_add_release) || defined(AO_HAVE_char_and_release) \
      || defined(AO_HAVE_char_or_release) || defined(AO_HAVE_char_xor_release)
@@ -1218,7 +1381,7 @@ void char_list_atomic_release(void)
 
 # ifdef AO_HAVE_char_load_release
     (void)"AO_char_load_release(&val):";
-    AO_char_load_release(&val);
+    (void)AO_char_load_release(&val);
 # else
     (void)"No AO_char_load_release";
 # endif
@@ -1230,19 +1393,19 @@ void char_list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_char_fetch_and_add_release
     (void)"AO_char_fetch_and_add_release(&val, incr):";
-    AO_char_fetch_and_add_release(&val, incr);
+    (void)AO_char_fetch_and_add_release(&val, incr);
 # else
     (void)"No AO_char_fetch_and_add_release";
 # endif
 # ifdef AO_HAVE_char_fetch_and_add1_release
     (void)"AO_char_fetch_and_add1_release(&val):";
-    AO_char_fetch_and_add1_release(&val);
+    (void)AO_char_fetch_and_add1_release(&val);
 # else
     (void)"No AO_char_fetch_and_add1_release";
 # endif
 # ifdef AO_HAVE_char_fetch_and_sub1_release
     (void)"AO_char_fetch_and_sub1_release(&val):";
-    AO_char_fetch_and_sub1_release(&val);
+    (void)AO_char_fetch_and_sub1_release(&val);
 # else
     (void)"No AO_char_fetch_and_sub1_release";
 # endif
@@ -1266,7 +1429,8 @@ void char_list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_char_compare_and_swap_release
     (void)"AO_char_compare_and_swap_release(&val, oldval, newval):";
-    AO_char_compare_and_swap_release(&val, oldval, newval);
+    if (!AO_char_compare_and_swap_release(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_char_compare_and_swap_release";
 # endif
@@ -1274,14 +1438,15 @@ void char_list_atomic_release(void)
   /* TODO: Add AO_compare_and_swap_double_release */
 # ifdef AO_HAVE_char_fetch_compare_and_swap_release
     (void)"AO_char_fetch_compare_and_swap_release(&val, oldval, newval):";
-    AO_char_fetch_compare_and_swap_release(&val, oldval, newval);
+    if (AO_char_fetch_compare_and_swap_release(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_char_fetch_compare_and_swap_release";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release)
     (void)"AO_test_and_set_release(&ts):";
-    AO_test_and_set_release(&ts);
+    (void)AO_test_and_set_release(&ts);
 # else
     (void)"No AO_test_and_set_release";
 # endif
@@ -1289,8 +1454,19 @@ void char_list_atomic_release(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -1298,6 +1474,8 @@ void char_list_atomic_release(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void char_list_atomic_acquire(void)
 {
@@ -1319,7 +1497,7 @@ void char_list_atomic_acquire(void)
     static unsigned/**/char newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_char_fetch_and_add_acquire) || defined(AO_HAVE_char_and_acquire) \
      || defined(AO_HAVE_char_or_acquire) || defined(AO_HAVE_char_xor_acquire)
@@ -1335,7 +1513,7 @@ void char_list_atomic_acquire(void)
 
 # ifdef AO_HAVE_char_load_acquire
     (void)"AO_char_load_acquire(&val):";
-    AO_char_load_acquire(&val);
+    (void)AO_char_load_acquire(&val);
 # else
     (void)"No AO_char_load_acquire";
 # endif
@@ -1347,19 +1525,19 @@ void char_list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_char_fetch_and_add_acquire
     (void)"AO_char_fetch_and_add_acquire(&val, incr):";
-    AO_char_fetch_and_add_acquire(&val, incr);
+    (void)AO_char_fetch_and_add_acquire(&val, incr);
 # else
     (void)"No AO_char_fetch_and_add_acquire";
 # endif
 # ifdef AO_HAVE_char_fetch_and_add1_acquire
     (void)"AO_char_fetch_and_add1_acquire(&val):";
-    AO_char_fetch_and_add1_acquire(&val);
+    (void)AO_char_fetch_and_add1_acquire(&val);
 # else
     (void)"No AO_char_fetch_and_add1_acquire";
 # endif
 # ifdef AO_HAVE_char_fetch_and_sub1_acquire
     (void)"AO_char_fetch_and_sub1_acquire(&val):";
-    AO_char_fetch_and_sub1_acquire(&val);
+    (void)AO_char_fetch_and_sub1_acquire(&val);
 # else
     (void)"No AO_char_fetch_and_sub1_acquire";
 # endif
@@ -1383,7 +1561,8 @@ void char_list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_char_compare_and_swap_acquire
     (void)"AO_char_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_char_compare_and_swap_acquire(&val, oldval, newval);
+    if (!AO_char_compare_and_swap_acquire(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_char_compare_and_swap_acquire";
 # endif
@@ -1391,14 +1570,15 @@ void char_list_atomic_acquire(void)
   /* TODO: Add AO_compare_and_swap_double_acquire */
 # ifdef AO_HAVE_char_fetch_compare_and_swap_acquire
     (void)"AO_char_fetch_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_char_fetch_compare_and_swap_acquire(&val, oldval, newval);
+    if (AO_char_fetch_compare_and_swap_acquire(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_char_fetch_compare_and_swap_acquire";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire)
     (void)"AO_test_and_set_acquire(&ts):";
-    AO_test_and_set_acquire(&ts);
+    (void)AO_test_and_set_acquire(&ts);
 # else
     (void)"No AO_test_and_set_acquire";
 # endif
@@ -1406,8 +1586,19 @@ void char_list_atomic_acquire(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -1415,6 +1606,8 @@ void char_list_atomic_acquire(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void char_list_atomic_read(void)
 {
@@ -1436,7 +1629,7 @@ void char_list_atomic_read(void)
     static unsigned/**/char newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_char_fetch_and_add_read) || defined(AO_HAVE_char_and_read) \
      || defined(AO_HAVE_char_or_read) || defined(AO_HAVE_char_xor_read)
@@ -1452,7 +1645,7 @@ void char_list_atomic_read(void)
 
 # ifdef AO_HAVE_char_load_read
     (void)"AO_char_load_read(&val):";
-    AO_char_load_read(&val);
+    (void)AO_char_load_read(&val);
 # else
     (void)"No AO_char_load_read";
 # endif
@@ -1464,19 +1657,19 @@ void char_list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_char_fetch_and_add_read
     (void)"AO_char_fetch_and_add_read(&val, incr):";
-    AO_char_fetch_and_add_read(&val, incr);
+    (void)AO_char_fetch_and_add_read(&val, incr);
 # else
     (void)"No AO_char_fetch_and_add_read";
 # endif
 # ifdef AO_HAVE_char_fetch_and_add1_read
     (void)"AO_char_fetch_and_add1_read(&val):";
-    AO_char_fetch_and_add1_read(&val);
+    (void)AO_char_fetch_and_add1_read(&val);
 # else
     (void)"No AO_char_fetch_and_add1_read";
 # endif
 # ifdef AO_HAVE_char_fetch_and_sub1_read
     (void)"AO_char_fetch_and_sub1_read(&val):";
-    AO_char_fetch_and_sub1_read(&val);
+    (void)AO_char_fetch_and_sub1_read(&val);
 # else
     (void)"No AO_char_fetch_and_sub1_read";
 # endif
@@ -1500,7 +1693,8 @@ void char_list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_char_compare_and_swap_read
     (void)"AO_char_compare_and_swap_read(&val, oldval, newval):";
-    AO_char_compare_and_swap_read(&val, oldval, newval);
+    if (!AO_char_compare_and_swap_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_char_compare_and_swap_read";
 # endif
@@ -1508,14 +1702,15 @@ void char_list_atomic_read(void)
   /* TODO: Add AO_compare_and_swap_double_read */
 # ifdef AO_HAVE_char_fetch_compare_and_swap_read
     (void)"AO_char_fetch_compare_and_swap_read(&val, oldval, newval):";
-    AO_char_fetch_compare_and_swap_read(&val, oldval, newval);
+    if (AO_char_fetch_compare_and_swap_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_char_fetch_compare_and_swap_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_read)
     (void)"AO_test_and_set_read(&ts):";
-    AO_test_and_set_read(&ts);
+    (void)AO_test_and_set_read(&ts);
 # else
     (void)"No AO_test_and_set_read";
 # endif
@@ -1523,8 +1718,19 @@ void char_list_atomic_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -1532,6 +1738,8 @@ void char_list_atomic_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void char_list_atomic_write(void)
 {
@@ -1553,7 +1761,7 @@ void char_list_atomic_write(void)
     static unsigned/**/char newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_char_fetch_and_add_write) || defined(AO_HAVE_char_and_write) \
      || defined(AO_HAVE_char_or_write) || defined(AO_HAVE_char_xor_write)
@@ -1569,7 +1777,7 @@ void char_list_atomic_write(void)
 
 # ifdef AO_HAVE_char_load_write
     (void)"AO_char_load_write(&val):";
-    AO_char_load_write(&val);
+    (void)AO_char_load_write(&val);
 # else
     (void)"No AO_char_load_write";
 # endif
@@ -1581,19 +1789,19 @@ void char_list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_char_fetch_and_add_write
     (void)"AO_char_fetch_and_add_write(&val, incr):";
-    AO_char_fetch_and_add_write(&val, incr);
+    (void)AO_char_fetch_and_add_write(&val, incr);
 # else
     (void)"No AO_char_fetch_and_add_write";
 # endif
 # ifdef AO_HAVE_char_fetch_and_add1_write
     (void)"AO_char_fetch_and_add1_write(&val):";
-    AO_char_fetch_and_add1_write(&val);
+    (void)AO_char_fetch_and_add1_write(&val);
 # else
     (void)"No AO_char_fetch_and_add1_write";
 # endif
 # ifdef AO_HAVE_char_fetch_and_sub1_write
     (void)"AO_char_fetch_and_sub1_write(&val):";
-    AO_char_fetch_and_sub1_write(&val);
+    (void)AO_char_fetch_and_sub1_write(&val);
 # else
     (void)"No AO_char_fetch_and_sub1_write";
 # endif
@@ -1617,7 +1825,8 @@ void char_list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_char_compare_and_swap_write
     (void)"AO_char_compare_and_swap_write(&val, oldval, newval):";
-    AO_char_compare_and_swap_write(&val, oldval, newval);
+    if (!AO_char_compare_and_swap_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_char_compare_and_swap_write";
 # endif
@@ -1625,14 +1834,15 @@ void char_list_atomic_write(void)
   /* TODO: Add AO_compare_and_swap_double_write */
 # ifdef AO_HAVE_char_fetch_compare_and_swap_write
     (void)"AO_char_fetch_compare_and_swap_write(&val, oldval, newval):";
-    AO_char_fetch_compare_and_swap_write(&val, oldval, newval);
+    if (AO_char_fetch_compare_and_swap_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_char_fetch_compare_and_swap_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_write)
     (void)"AO_test_and_set_write(&ts):";
-    AO_test_and_set_write(&ts);
+    (void)AO_test_and_set_write(&ts);
 # else
     (void)"No AO_test_and_set_write";
 # endif
@@ -1640,8 +1850,19 @@ void char_list_atomic_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -1649,6 +1870,8 @@ void char_list_atomic_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void char_list_atomic_full(void)
 {
@@ -1670,7 +1893,7 @@ void char_list_atomic_full(void)
     static unsigned/**/char newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_full)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_char_fetch_and_add_full) || defined(AO_HAVE_char_and_full) \
      || defined(AO_HAVE_char_or_full) || defined(AO_HAVE_char_xor_full)
@@ -1686,7 +1909,7 @@ void char_list_atomic_full(void)
 
 # ifdef AO_HAVE_char_load_full
     (void)"AO_char_load_full(&val):";
-    AO_char_load_full(&val);
+    (void)AO_char_load_full(&val);
 # else
     (void)"No AO_char_load_full";
 # endif
@@ -1698,19 +1921,19 @@ void char_list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_char_fetch_and_add_full
     (void)"AO_char_fetch_and_add_full(&val, incr):";
-    AO_char_fetch_and_add_full(&val, incr);
+    (void)AO_char_fetch_and_add_full(&val, incr);
 # else
     (void)"No AO_char_fetch_and_add_full";
 # endif
 # ifdef AO_HAVE_char_fetch_and_add1_full
     (void)"AO_char_fetch_and_add1_full(&val):";
-    AO_char_fetch_and_add1_full(&val);
+    (void)AO_char_fetch_and_add1_full(&val);
 # else
     (void)"No AO_char_fetch_and_add1_full";
 # endif
 # ifdef AO_HAVE_char_fetch_and_sub1_full
     (void)"AO_char_fetch_and_sub1_full(&val):";
-    AO_char_fetch_and_sub1_full(&val);
+    (void)AO_char_fetch_and_sub1_full(&val);
 # else
     (void)"No AO_char_fetch_and_sub1_full";
 # endif
@@ -1734,7 +1957,8 @@ void char_list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_char_compare_and_swap_full
     (void)"AO_char_compare_and_swap_full(&val, oldval, newval):";
-    AO_char_compare_and_swap_full(&val, oldval, newval);
+    if (!AO_char_compare_and_swap_full(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_char_compare_and_swap_full";
 # endif
@@ -1742,14 +1966,15 @@ void char_list_atomic_full(void)
   /* TODO: Add AO_compare_and_swap_double_full */
 # ifdef AO_HAVE_char_fetch_compare_and_swap_full
     (void)"AO_char_fetch_compare_and_swap_full(&val, oldval, newval):";
-    AO_char_fetch_compare_and_swap_full(&val, oldval, newval);
+    if (AO_char_fetch_compare_and_swap_full(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_char_fetch_compare_and_swap_full";
 # endif
 
 # if defined(AO_HAVE_test_and_set_full)
     (void)"AO_test_and_set_full(&ts):";
-    AO_test_and_set_full(&ts);
+    (void)AO_test_and_set_full(&ts);
 # else
     (void)"No AO_test_and_set_full";
 # endif
@@ -1757,8 +1982,19 @@ void char_list_atomic_full(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -1766,6 +2002,8 @@ void char_list_atomic_full(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void char_list_atomic_release_write(void)
 {
@@ -1787,7 +2025,7 @@ void char_list_atomic_release_write(void)
     static unsigned/**/char newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_char_fetch_and_add_release_write) || defined(AO_HAVE_char_and_release_write) \
      || defined(AO_HAVE_char_or_release_write) || defined(AO_HAVE_char_xor_release_write)
@@ -1803,7 +2041,7 @@ void char_list_atomic_release_write(void)
 
 # ifdef AO_HAVE_char_load_release_write
     (void)"AO_char_load_release_write(&val):";
-    AO_char_load_release_write(&val);
+    (void)AO_char_load_release_write(&val);
 # else
     (void)"No AO_char_load_release_write";
 # endif
@@ -1815,19 +2053,19 @@ void char_list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_char_fetch_and_add_release_write
     (void)"AO_char_fetch_and_add_release_write(&val, incr):";
-    AO_char_fetch_and_add_release_write(&val, incr);
+    (void)AO_char_fetch_and_add_release_write(&val, incr);
 # else
     (void)"No AO_char_fetch_and_add_release_write";
 # endif
 # ifdef AO_HAVE_char_fetch_and_add1_release_write
     (void)"AO_char_fetch_and_add1_release_write(&val):";
-    AO_char_fetch_and_add1_release_write(&val);
+    (void)AO_char_fetch_and_add1_release_write(&val);
 # else
     (void)"No AO_char_fetch_and_add1_release_write";
 # endif
 # ifdef AO_HAVE_char_fetch_and_sub1_release_write
     (void)"AO_char_fetch_and_sub1_release_write(&val):";
-    AO_char_fetch_and_sub1_release_write(&val);
+    (void)AO_char_fetch_and_sub1_release_write(&val);
 # else
     (void)"No AO_char_fetch_and_sub1_release_write";
 # endif
@@ -1851,7 +2089,8 @@ void char_list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_char_compare_and_swap_release_write
     (void)"AO_char_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_char_compare_and_swap_release_write(&val, oldval, newval);
+    if (!AO_char_compare_and_swap_release_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_char_compare_and_swap_release_write";
 # endif
@@ -1859,14 +2098,15 @@ void char_list_atomic_release_write(void)
   /* TODO: Add AO_compare_and_swap_double_release_write */
 # ifdef AO_HAVE_char_fetch_compare_and_swap_release_write
     (void)"AO_char_fetch_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_char_fetch_compare_and_swap_release_write(&val, oldval, newval);
+    if (AO_char_fetch_compare_and_swap_release_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_char_fetch_compare_and_swap_release_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release_write)
     (void)"AO_test_and_set_release_write(&ts):";
-    AO_test_and_set_release_write(&ts);
+    (void)AO_test_and_set_release_write(&ts);
 # else
     (void)"No AO_test_and_set_release_write";
 # endif
@@ -1874,8 +2114,19 @@ void char_list_atomic_release_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -1883,6 +2134,8 @@ void char_list_atomic_release_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void char_list_atomic_acquire_read(void)
 {
@@ -1904,7 +2157,7 @@ void char_list_atomic_acquire_read(void)
     static unsigned/**/char newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_char_fetch_and_add_acquire_read) || defined(AO_HAVE_char_and_acquire_read) \
      || defined(AO_HAVE_char_or_acquire_read) || defined(AO_HAVE_char_xor_acquire_read)
@@ -1920,7 +2173,7 @@ void char_list_atomic_acquire_read(void)
 
 # ifdef AO_HAVE_char_load_acquire_read
     (void)"AO_char_load_acquire_read(&val):";
-    AO_char_load_acquire_read(&val);
+    (void)AO_char_load_acquire_read(&val);
 # else
     (void)"No AO_char_load_acquire_read";
 # endif
@@ -1932,19 +2185,19 @@ void char_list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_char_fetch_and_add_acquire_read
     (void)"AO_char_fetch_and_add_acquire_read(&val, incr):";
-    AO_char_fetch_and_add_acquire_read(&val, incr);
+    (void)AO_char_fetch_and_add_acquire_read(&val, incr);
 # else
     (void)"No AO_char_fetch_and_add_acquire_read";
 # endif
 # ifdef AO_HAVE_char_fetch_and_add1_acquire_read
     (void)"AO_char_fetch_and_add1_acquire_read(&val):";
-    AO_char_fetch_and_add1_acquire_read(&val);
+    (void)AO_char_fetch_and_add1_acquire_read(&val);
 # else
     (void)"No AO_char_fetch_and_add1_acquire_read";
 # endif
 # ifdef AO_HAVE_char_fetch_and_sub1_acquire_read
     (void)"AO_char_fetch_and_sub1_acquire_read(&val):";
-    AO_char_fetch_and_sub1_acquire_read(&val);
+    (void)AO_char_fetch_and_sub1_acquire_read(&val);
 # else
     (void)"No AO_char_fetch_and_sub1_acquire_read";
 # endif
@@ -1968,7 +2221,8 @@ void char_list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_char_compare_and_swap_acquire_read
     (void)"AO_char_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_char_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (!AO_char_compare_and_swap_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_char_compare_and_swap_acquire_read";
 # endif
@@ -1976,14 +2230,15 @@ void char_list_atomic_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_acquire_read */
 # ifdef AO_HAVE_char_fetch_compare_and_swap_acquire_read
     (void)"AO_char_fetch_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_char_fetch_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (AO_char_fetch_compare_and_swap_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_char_fetch_compare_and_swap_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire_read)
     (void)"AO_test_and_set_acquire_read(&ts):";
-    AO_test_and_set_acquire_read(&ts);
+    (void)AO_test_and_set_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_acquire_read";
 # endif
@@ -1991,8 +2246,19 @@ void char_list_atomic_acquire_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -2000,6 +2266,8 @@ void char_list_atomic_acquire_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void char_list_atomic_dd_acquire_read(void)
 {
@@ -2021,7 +2289,7 @@ void char_list_atomic_dd_acquire_read(void)
     static unsigned/**/char newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_char_fetch_and_add_dd_acquire_read) || defined(AO_HAVE_char_and_dd_acquire_read) \
      || defined(AO_HAVE_char_or_dd_acquire_read) || defined(AO_HAVE_char_xor_dd_acquire_read)
@@ -2037,7 +2305,7 @@ void char_list_atomic_dd_acquire_read(void)
 
 # ifdef AO_HAVE_char_load_dd_acquire_read
     (void)"AO_char_load_dd_acquire_read(&val):";
-    AO_char_load_dd_acquire_read(&val);
+    (void)AO_char_load_dd_acquire_read(&val);
 # else
     (void)"No AO_char_load_dd_acquire_read";
 # endif
@@ -2049,19 +2317,19 @@ void char_list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_char_fetch_and_add_dd_acquire_read
     (void)"AO_char_fetch_and_add_dd_acquire_read(&val, incr):";
-    AO_char_fetch_and_add_dd_acquire_read(&val, incr);
+    (void)AO_char_fetch_and_add_dd_acquire_read(&val, incr);
 # else
     (void)"No AO_char_fetch_and_add_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_char_fetch_and_add1_dd_acquire_read
     (void)"AO_char_fetch_and_add1_dd_acquire_read(&val):";
-    AO_char_fetch_and_add1_dd_acquire_read(&val);
+    (void)AO_char_fetch_and_add1_dd_acquire_read(&val);
 # else
     (void)"No AO_char_fetch_and_add1_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_char_fetch_and_sub1_dd_acquire_read
     (void)"AO_char_fetch_and_sub1_dd_acquire_read(&val):";
-    AO_char_fetch_and_sub1_dd_acquire_read(&val);
+    (void)AO_char_fetch_and_sub1_dd_acquire_read(&val);
 # else
     (void)"No AO_char_fetch_and_sub1_dd_acquire_read";
 # endif
@@ -2085,7 +2353,8 @@ void char_list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_char_compare_and_swap_dd_acquire_read
     (void)"AO_char_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_char_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (!AO_char_compare_and_swap_dd_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_char_compare_and_swap_dd_acquire_read";
 # endif
@@ -2093,14 +2362,15 @@ void char_list_atomic_dd_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_dd_acquire_read */
 # ifdef AO_HAVE_char_fetch_compare_and_swap_dd_acquire_read
     (void)"AO_char_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_char_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (AO_char_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_char_fetch_compare_and_swap_dd_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
     (void)"AO_test_and_set_dd_acquire_read(&ts):";
-    AO_test_and_set_dd_acquire_read(&ts);
+    (void)AO_test_and_set_dd_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_dd_acquire_read";
 # endif
@@ -2108,8 +2378,19 @@ void char_list_atomic_dd_acquire_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -2117,6 +2398,8 @@ void char_list_atomic_dd_acquire_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void short_list_atomic(void)
 {
@@ -2138,7 +2421,7 @@ void short_list_atomic(void)
     static unsigned/**/short newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_short_fetch_and_add) || defined(AO_HAVE_short_and) \
      || defined(AO_HAVE_short_or) || defined(AO_HAVE_short_xor)
@@ -2154,7 +2437,7 @@ void short_list_atomic(void)
 
 # ifdef AO_HAVE_short_load
     (void)"AO_short_load(&val):";
-    AO_short_load(&val);
+    (void)AO_short_load(&val);
 # else
     (void)"No AO_short_load";
 # endif
@@ -2166,19 +2449,19 @@ void short_list_atomic(void)
 # endif
 # ifdef AO_HAVE_short_fetch_and_add
     (void)"AO_short_fetch_and_add(&val, incr):";
-    AO_short_fetch_and_add(&val, incr);
+    (void)AO_short_fetch_and_add(&val, incr);
 # else
     (void)"No AO_short_fetch_and_add";
 # endif
 # ifdef AO_HAVE_short_fetch_and_add1
     (void)"AO_short_fetch_and_add1(&val):";
-    AO_short_fetch_and_add1(&val);
+    (void)AO_short_fetch_and_add1(&val);
 # else
     (void)"No AO_short_fetch_and_add1";
 # endif
 # ifdef AO_HAVE_short_fetch_and_sub1
     (void)"AO_short_fetch_and_sub1(&val):";
-    AO_short_fetch_and_sub1(&val);
+    (void)AO_short_fetch_and_sub1(&val);
 # else
     (void)"No AO_short_fetch_and_sub1";
 # endif
@@ -2202,7 +2485,8 @@ void short_list_atomic(void)
 # endif
 # ifdef AO_HAVE_short_compare_and_swap
     (void)"AO_short_compare_and_swap(&val, oldval, newval):";
-    AO_short_compare_and_swap(&val, oldval, newval);
+    if (!AO_short_compare_and_swap(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_short_compare_and_swap";
 # endif
@@ -2210,14 +2494,15 @@ void short_list_atomic(void)
   /* TODO: Add AO_compare_and_swap_double */
 # ifdef AO_HAVE_short_fetch_compare_and_swap
     (void)"AO_short_fetch_compare_and_swap(&val, oldval, newval):";
-    AO_short_fetch_compare_and_swap(&val, oldval, newval);
+    if (AO_short_fetch_compare_and_swap(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_short_fetch_compare_and_swap";
 # endif
 
 # if defined(AO_HAVE_test_and_set)
     (void)"AO_test_and_set(&ts):";
-    AO_test_and_set(&ts);
+    (void)AO_test_and_set(&ts);
 # else
     (void)"No AO_test_and_set";
 # endif
@@ -2225,8 +2510,19 @@ void short_list_atomic(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -2234,6 +2530,8 @@ void short_list_atomic(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void short_list_atomic_release(void)
 {
@@ -2255,7 +2553,7 @@ void short_list_atomic_release(void)
     static unsigned/**/short newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_short_fetch_and_add_release) || defined(AO_HAVE_short_and_release) \
      || defined(AO_HAVE_short_or_release) || defined(AO_HAVE_short_xor_release)
@@ -2271,7 +2569,7 @@ void short_list_atomic_release(void)
 
 # ifdef AO_HAVE_short_load_release
     (void)"AO_short_load_release(&val):";
-    AO_short_load_release(&val);
+    (void)AO_short_load_release(&val);
 # else
     (void)"No AO_short_load_release";
 # endif
@@ -2283,19 +2581,19 @@ void short_list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_short_fetch_and_add_release
     (void)"AO_short_fetch_and_add_release(&val, incr):";
-    AO_short_fetch_and_add_release(&val, incr);
+    (void)AO_short_fetch_and_add_release(&val, incr);
 # else
     (void)"No AO_short_fetch_and_add_release";
 # endif
 # ifdef AO_HAVE_short_fetch_and_add1_release
     (void)"AO_short_fetch_and_add1_release(&val):";
-    AO_short_fetch_and_add1_release(&val);
+    (void)AO_short_fetch_and_add1_release(&val);
 # else
     (void)"No AO_short_fetch_and_add1_release";
 # endif
 # ifdef AO_HAVE_short_fetch_and_sub1_release
     (void)"AO_short_fetch_and_sub1_release(&val):";
-    AO_short_fetch_and_sub1_release(&val);
+    (void)AO_short_fetch_and_sub1_release(&val);
 # else
     (void)"No AO_short_fetch_and_sub1_release";
 # endif
@@ -2319,7 +2617,8 @@ void short_list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_short_compare_and_swap_release
     (void)"AO_short_compare_and_swap_release(&val, oldval, newval):";
-    AO_short_compare_and_swap_release(&val, oldval, newval);
+    if (!AO_short_compare_and_swap_release(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_short_compare_and_swap_release";
 # endif
@@ -2327,14 +2626,15 @@ void short_list_atomic_release(void)
   /* TODO: Add AO_compare_and_swap_double_release */
 # ifdef AO_HAVE_short_fetch_compare_and_swap_release
     (void)"AO_short_fetch_compare_and_swap_release(&val, oldval, newval):";
-    AO_short_fetch_compare_and_swap_release(&val, oldval, newval);
+    if (AO_short_fetch_compare_and_swap_release(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_short_fetch_compare_and_swap_release";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release)
     (void)"AO_test_and_set_release(&ts):";
-    AO_test_and_set_release(&ts);
+    (void)AO_test_and_set_release(&ts);
 # else
     (void)"No AO_test_and_set_release";
 # endif
@@ -2342,8 +2642,19 @@ void short_list_atomic_release(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -2351,6 +2662,8 @@ void short_list_atomic_release(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void short_list_atomic_acquire(void)
 {
@@ -2372,7 +2685,7 @@ void short_list_atomic_acquire(void)
     static unsigned/**/short newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_short_fetch_and_add_acquire) || defined(AO_HAVE_short_and_acquire) \
      || defined(AO_HAVE_short_or_acquire) || defined(AO_HAVE_short_xor_acquire)
@@ -2388,7 +2701,7 @@ void short_list_atomic_acquire(void)
 
 # ifdef AO_HAVE_short_load_acquire
     (void)"AO_short_load_acquire(&val):";
-    AO_short_load_acquire(&val);
+    (void)AO_short_load_acquire(&val);
 # else
     (void)"No AO_short_load_acquire";
 # endif
@@ -2400,19 +2713,19 @@ void short_list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_short_fetch_and_add_acquire
     (void)"AO_short_fetch_and_add_acquire(&val, incr):";
-    AO_short_fetch_and_add_acquire(&val, incr);
+    (void)AO_short_fetch_and_add_acquire(&val, incr);
 # else
     (void)"No AO_short_fetch_and_add_acquire";
 # endif
 # ifdef AO_HAVE_short_fetch_and_add1_acquire
     (void)"AO_short_fetch_and_add1_acquire(&val):";
-    AO_short_fetch_and_add1_acquire(&val);
+    (void)AO_short_fetch_and_add1_acquire(&val);
 # else
     (void)"No AO_short_fetch_and_add1_acquire";
 # endif
 # ifdef AO_HAVE_short_fetch_and_sub1_acquire
     (void)"AO_short_fetch_and_sub1_acquire(&val):";
-    AO_short_fetch_and_sub1_acquire(&val);
+    (void)AO_short_fetch_and_sub1_acquire(&val);
 # else
     (void)"No AO_short_fetch_and_sub1_acquire";
 # endif
@@ -2436,7 +2749,8 @@ void short_list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_short_compare_and_swap_acquire
     (void)"AO_short_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_short_compare_and_swap_acquire(&val, oldval, newval);
+    if (!AO_short_compare_and_swap_acquire(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_short_compare_and_swap_acquire";
 # endif
@@ -2444,14 +2758,15 @@ void short_list_atomic_acquire(void)
   /* TODO: Add AO_compare_and_swap_double_acquire */
 # ifdef AO_HAVE_short_fetch_compare_and_swap_acquire
     (void)"AO_short_fetch_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_short_fetch_compare_and_swap_acquire(&val, oldval, newval);
+    if (AO_short_fetch_compare_and_swap_acquire(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_short_fetch_compare_and_swap_acquire";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire)
     (void)"AO_test_and_set_acquire(&ts):";
-    AO_test_and_set_acquire(&ts);
+    (void)AO_test_and_set_acquire(&ts);
 # else
     (void)"No AO_test_and_set_acquire";
 # endif
@@ -2459,8 +2774,19 @@ void short_list_atomic_acquire(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -2468,6 +2794,8 @@ void short_list_atomic_acquire(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void short_list_atomic_read(void)
 {
@@ -2489,7 +2817,7 @@ void short_list_atomic_read(void)
     static unsigned/**/short newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_short_fetch_and_add_read) || defined(AO_HAVE_short_and_read) \
      || defined(AO_HAVE_short_or_read) || defined(AO_HAVE_short_xor_read)
@@ -2505,7 +2833,7 @@ void short_list_atomic_read(void)
 
 # ifdef AO_HAVE_short_load_read
     (void)"AO_short_load_read(&val):";
-    AO_short_load_read(&val);
+    (void)AO_short_load_read(&val);
 # else
     (void)"No AO_short_load_read";
 # endif
@@ -2517,19 +2845,19 @@ void short_list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_short_fetch_and_add_read
     (void)"AO_short_fetch_and_add_read(&val, incr):";
-    AO_short_fetch_and_add_read(&val, incr);
+    (void)AO_short_fetch_and_add_read(&val, incr);
 # else
     (void)"No AO_short_fetch_and_add_read";
 # endif
 # ifdef AO_HAVE_short_fetch_and_add1_read
     (void)"AO_short_fetch_and_add1_read(&val):";
-    AO_short_fetch_and_add1_read(&val);
+    (void)AO_short_fetch_and_add1_read(&val);
 # else
     (void)"No AO_short_fetch_and_add1_read";
 # endif
 # ifdef AO_HAVE_short_fetch_and_sub1_read
     (void)"AO_short_fetch_and_sub1_read(&val):";
-    AO_short_fetch_and_sub1_read(&val);
+    (void)AO_short_fetch_and_sub1_read(&val);
 # else
     (void)"No AO_short_fetch_and_sub1_read";
 # endif
@@ -2553,7 +2881,8 @@ void short_list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_short_compare_and_swap_read
     (void)"AO_short_compare_and_swap_read(&val, oldval, newval):";
-    AO_short_compare_and_swap_read(&val, oldval, newval);
+    if (!AO_short_compare_and_swap_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_short_compare_and_swap_read";
 # endif
@@ -2561,14 +2890,15 @@ void short_list_atomic_read(void)
   /* TODO: Add AO_compare_and_swap_double_read */
 # ifdef AO_HAVE_short_fetch_compare_and_swap_read
     (void)"AO_short_fetch_compare_and_swap_read(&val, oldval, newval):";
-    AO_short_fetch_compare_and_swap_read(&val, oldval, newval);
+    if (AO_short_fetch_compare_and_swap_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_short_fetch_compare_and_swap_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_read)
     (void)"AO_test_and_set_read(&ts):";
-    AO_test_and_set_read(&ts);
+    (void)AO_test_and_set_read(&ts);
 # else
     (void)"No AO_test_and_set_read";
 # endif
@@ -2576,8 +2906,19 @@ void short_list_atomic_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -2585,6 +2926,8 @@ void short_list_atomic_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void short_list_atomic_write(void)
 {
@@ -2606,7 +2949,7 @@ void short_list_atomic_write(void)
     static unsigned/**/short newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_short_fetch_and_add_write) || defined(AO_HAVE_short_and_write) \
      || defined(AO_HAVE_short_or_write) || defined(AO_HAVE_short_xor_write)
@@ -2622,7 +2965,7 @@ void short_list_atomic_write(void)
 
 # ifdef AO_HAVE_short_load_write
     (void)"AO_short_load_write(&val):";
-    AO_short_load_write(&val);
+    (void)AO_short_load_write(&val);
 # else
     (void)"No AO_short_load_write";
 # endif
@@ -2634,19 +2977,19 @@ void short_list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_short_fetch_and_add_write
     (void)"AO_short_fetch_and_add_write(&val, incr):";
-    AO_short_fetch_and_add_write(&val, incr);
+    (void)AO_short_fetch_and_add_write(&val, incr);
 # else
     (void)"No AO_short_fetch_and_add_write";
 # endif
 # ifdef AO_HAVE_short_fetch_and_add1_write
     (void)"AO_short_fetch_and_add1_write(&val):";
-    AO_short_fetch_and_add1_write(&val);
+    (void)AO_short_fetch_and_add1_write(&val);
 # else
     (void)"No AO_short_fetch_and_add1_write";
 # endif
 # ifdef AO_HAVE_short_fetch_and_sub1_write
     (void)"AO_short_fetch_and_sub1_write(&val):";
-    AO_short_fetch_and_sub1_write(&val);
+    (void)AO_short_fetch_and_sub1_write(&val);
 # else
     (void)"No AO_short_fetch_and_sub1_write";
 # endif
@@ -2670,7 +3013,8 @@ void short_list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_short_compare_and_swap_write
     (void)"AO_short_compare_and_swap_write(&val, oldval, newval):";
-    AO_short_compare_and_swap_write(&val, oldval, newval);
+    if (!AO_short_compare_and_swap_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_short_compare_and_swap_write";
 # endif
@@ -2678,14 +3022,15 @@ void short_list_atomic_write(void)
   /* TODO: Add AO_compare_and_swap_double_write */
 # ifdef AO_HAVE_short_fetch_compare_and_swap_write
     (void)"AO_short_fetch_compare_and_swap_write(&val, oldval, newval):";
-    AO_short_fetch_compare_and_swap_write(&val, oldval, newval);
+    if (AO_short_fetch_compare_and_swap_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_short_fetch_compare_and_swap_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_write)
     (void)"AO_test_and_set_write(&ts):";
-    AO_test_and_set_write(&ts);
+    (void)AO_test_and_set_write(&ts);
 # else
     (void)"No AO_test_and_set_write";
 # endif
@@ -2693,8 +3038,19 @@ void short_list_atomic_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -2702,6 +3058,8 @@ void short_list_atomic_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void short_list_atomic_full(void)
 {
@@ -2723,7 +3081,7 @@ void short_list_atomic_full(void)
     static unsigned/**/short newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_full)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_short_fetch_and_add_full) || defined(AO_HAVE_short_and_full) \
      || defined(AO_HAVE_short_or_full) || defined(AO_HAVE_short_xor_full)
@@ -2739,7 +3097,7 @@ void short_list_atomic_full(void)
 
 # ifdef AO_HAVE_short_load_full
     (void)"AO_short_load_full(&val):";
-    AO_short_load_full(&val);
+    (void)AO_short_load_full(&val);
 # else
     (void)"No AO_short_load_full";
 # endif
@@ -2751,19 +3109,19 @@ void short_list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_short_fetch_and_add_full
     (void)"AO_short_fetch_and_add_full(&val, incr):";
-    AO_short_fetch_and_add_full(&val, incr);
+    (void)AO_short_fetch_and_add_full(&val, incr);
 # else
     (void)"No AO_short_fetch_and_add_full";
 # endif
 # ifdef AO_HAVE_short_fetch_and_add1_full
     (void)"AO_short_fetch_and_add1_full(&val):";
-    AO_short_fetch_and_add1_full(&val);
+    (void)AO_short_fetch_and_add1_full(&val);
 # else
     (void)"No AO_short_fetch_and_add1_full";
 # endif
 # ifdef AO_HAVE_short_fetch_and_sub1_full
     (void)"AO_short_fetch_and_sub1_full(&val):";
-    AO_short_fetch_and_sub1_full(&val);
+    (void)AO_short_fetch_and_sub1_full(&val);
 # else
     (void)"No AO_short_fetch_and_sub1_full";
 # endif
@@ -2787,7 +3145,8 @@ void short_list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_short_compare_and_swap_full
     (void)"AO_short_compare_and_swap_full(&val, oldval, newval):";
-    AO_short_compare_and_swap_full(&val, oldval, newval);
+    if (!AO_short_compare_and_swap_full(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_short_compare_and_swap_full";
 # endif
@@ -2795,14 +3154,15 @@ void short_list_atomic_full(void)
   /* TODO: Add AO_compare_and_swap_double_full */
 # ifdef AO_HAVE_short_fetch_compare_and_swap_full
     (void)"AO_short_fetch_compare_and_swap_full(&val, oldval, newval):";
-    AO_short_fetch_compare_and_swap_full(&val, oldval, newval);
+    if (AO_short_fetch_compare_and_swap_full(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_short_fetch_compare_and_swap_full";
 # endif
 
 # if defined(AO_HAVE_test_and_set_full)
     (void)"AO_test_and_set_full(&ts):";
-    AO_test_and_set_full(&ts);
+    (void)AO_test_and_set_full(&ts);
 # else
     (void)"No AO_test_and_set_full";
 # endif
@@ -2810,8 +3170,19 @@ void short_list_atomic_full(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -2819,6 +3190,8 @@ void short_list_atomic_full(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void short_list_atomic_release_write(void)
 {
@@ -2840,7 +3213,7 @@ void short_list_atomic_release_write(void)
     static unsigned/**/short newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_short_fetch_and_add_release_write) || defined(AO_HAVE_short_and_release_write) \
      || defined(AO_HAVE_short_or_release_write) || defined(AO_HAVE_short_xor_release_write)
@@ -2856,7 +3229,7 @@ void short_list_atomic_release_write(void)
 
 # ifdef AO_HAVE_short_load_release_write
     (void)"AO_short_load_release_write(&val):";
-    AO_short_load_release_write(&val);
+    (void)AO_short_load_release_write(&val);
 # else
     (void)"No AO_short_load_release_write";
 # endif
@@ -2868,19 +3241,19 @@ void short_list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_short_fetch_and_add_release_write
     (void)"AO_short_fetch_and_add_release_write(&val, incr):";
-    AO_short_fetch_and_add_release_write(&val, incr);
+    (void)AO_short_fetch_and_add_release_write(&val, incr);
 # else
     (void)"No AO_short_fetch_and_add_release_write";
 # endif
 # ifdef AO_HAVE_short_fetch_and_add1_release_write
     (void)"AO_short_fetch_and_add1_release_write(&val):";
-    AO_short_fetch_and_add1_release_write(&val);
+    (void)AO_short_fetch_and_add1_release_write(&val);
 # else
     (void)"No AO_short_fetch_and_add1_release_write";
 # endif
 # ifdef AO_HAVE_short_fetch_and_sub1_release_write
     (void)"AO_short_fetch_and_sub1_release_write(&val):";
-    AO_short_fetch_and_sub1_release_write(&val);
+    (void)AO_short_fetch_and_sub1_release_write(&val);
 # else
     (void)"No AO_short_fetch_and_sub1_release_write";
 # endif
@@ -2904,7 +3277,8 @@ void short_list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_short_compare_and_swap_release_write
     (void)"AO_short_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_short_compare_and_swap_release_write(&val, oldval, newval);
+    if (!AO_short_compare_and_swap_release_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_short_compare_and_swap_release_write";
 # endif
@@ -2912,14 +3286,15 @@ void short_list_atomic_release_write(void)
   /* TODO: Add AO_compare_and_swap_double_release_write */
 # ifdef AO_HAVE_short_fetch_compare_and_swap_release_write
     (void)"AO_short_fetch_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_short_fetch_compare_and_swap_release_write(&val, oldval, newval);
+    if (AO_short_fetch_compare_and_swap_release_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_short_fetch_compare_and_swap_release_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release_write)
     (void)"AO_test_and_set_release_write(&ts):";
-    AO_test_and_set_release_write(&ts);
+    (void)AO_test_and_set_release_write(&ts);
 # else
     (void)"No AO_test_and_set_release_write";
 # endif
@@ -2927,8 +3302,19 @@ void short_list_atomic_release_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -2936,6 +3322,8 @@ void short_list_atomic_release_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void short_list_atomic_acquire_read(void)
 {
@@ -2957,7 +3345,7 @@ void short_list_atomic_acquire_read(void)
     static unsigned/**/short newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_short_fetch_and_add_acquire_read) || defined(AO_HAVE_short_and_acquire_read) \
      || defined(AO_HAVE_short_or_acquire_read) || defined(AO_HAVE_short_xor_acquire_read)
@@ -2973,7 +3361,7 @@ void short_list_atomic_acquire_read(void)
 
 # ifdef AO_HAVE_short_load_acquire_read
     (void)"AO_short_load_acquire_read(&val):";
-    AO_short_load_acquire_read(&val);
+    (void)AO_short_load_acquire_read(&val);
 # else
     (void)"No AO_short_load_acquire_read";
 # endif
@@ -2985,19 +3373,19 @@ void short_list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_short_fetch_and_add_acquire_read
     (void)"AO_short_fetch_and_add_acquire_read(&val, incr):";
-    AO_short_fetch_and_add_acquire_read(&val, incr);
+    (void)AO_short_fetch_and_add_acquire_read(&val, incr);
 # else
     (void)"No AO_short_fetch_and_add_acquire_read";
 # endif
 # ifdef AO_HAVE_short_fetch_and_add1_acquire_read
     (void)"AO_short_fetch_and_add1_acquire_read(&val):";
-    AO_short_fetch_and_add1_acquire_read(&val);
+    (void)AO_short_fetch_and_add1_acquire_read(&val);
 # else
     (void)"No AO_short_fetch_and_add1_acquire_read";
 # endif
 # ifdef AO_HAVE_short_fetch_and_sub1_acquire_read
     (void)"AO_short_fetch_and_sub1_acquire_read(&val):";
-    AO_short_fetch_and_sub1_acquire_read(&val);
+    (void)AO_short_fetch_and_sub1_acquire_read(&val);
 # else
     (void)"No AO_short_fetch_and_sub1_acquire_read";
 # endif
@@ -3021,7 +3409,8 @@ void short_list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_short_compare_and_swap_acquire_read
     (void)"AO_short_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_short_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (!AO_short_compare_and_swap_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_short_compare_and_swap_acquire_read";
 # endif
@@ -3029,14 +3418,15 @@ void short_list_atomic_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_acquire_read */
 # ifdef AO_HAVE_short_fetch_compare_and_swap_acquire_read
     (void)"AO_short_fetch_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_short_fetch_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (AO_short_fetch_compare_and_swap_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_short_fetch_compare_and_swap_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire_read)
     (void)"AO_test_and_set_acquire_read(&ts):";
-    AO_test_and_set_acquire_read(&ts);
+    (void)AO_test_and_set_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_acquire_read";
 # endif
@@ -3044,8 +3434,19 @@ void short_list_atomic_acquire_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -3053,6 +3454,8 @@ void short_list_atomic_acquire_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void short_list_atomic_dd_acquire_read(void)
 {
@@ -3074,7 +3477,7 @@ void short_list_atomic_dd_acquire_read(void)
     static unsigned/**/short newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_short_fetch_and_add_dd_acquire_read) || defined(AO_HAVE_short_and_dd_acquire_read) \
      || defined(AO_HAVE_short_or_dd_acquire_read) || defined(AO_HAVE_short_xor_dd_acquire_read)
@@ -3090,7 +3493,7 @@ void short_list_atomic_dd_acquire_read(void)
 
 # ifdef AO_HAVE_short_load_dd_acquire_read
     (void)"AO_short_load_dd_acquire_read(&val):";
-    AO_short_load_dd_acquire_read(&val);
+    (void)AO_short_load_dd_acquire_read(&val);
 # else
     (void)"No AO_short_load_dd_acquire_read";
 # endif
@@ -3102,19 +3505,19 @@ void short_list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_short_fetch_and_add_dd_acquire_read
     (void)"AO_short_fetch_and_add_dd_acquire_read(&val, incr):";
-    AO_short_fetch_and_add_dd_acquire_read(&val, incr);
+    (void)AO_short_fetch_and_add_dd_acquire_read(&val, incr);
 # else
     (void)"No AO_short_fetch_and_add_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_short_fetch_and_add1_dd_acquire_read
     (void)"AO_short_fetch_and_add1_dd_acquire_read(&val):";
-    AO_short_fetch_and_add1_dd_acquire_read(&val);
+    (void)AO_short_fetch_and_add1_dd_acquire_read(&val);
 # else
     (void)"No AO_short_fetch_and_add1_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_short_fetch_and_sub1_dd_acquire_read
     (void)"AO_short_fetch_and_sub1_dd_acquire_read(&val):";
-    AO_short_fetch_and_sub1_dd_acquire_read(&val);
+    (void)AO_short_fetch_and_sub1_dd_acquire_read(&val);
 # else
     (void)"No AO_short_fetch_and_sub1_dd_acquire_read";
 # endif
@@ -3138,7 +3541,8 @@ void short_list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_short_compare_and_swap_dd_acquire_read
     (void)"AO_short_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_short_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (!AO_short_compare_and_swap_dd_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_short_compare_and_swap_dd_acquire_read";
 # endif
@@ -3146,14 +3550,15 @@ void short_list_atomic_dd_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_dd_acquire_read */
 # ifdef AO_HAVE_short_fetch_compare_and_swap_dd_acquire_read
     (void)"AO_short_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_short_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (AO_short_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_short_fetch_compare_and_swap_dd_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
     (void)"AO_test_and_set_dd_acquire_read(&ts):";
-    AO_test_and_set_dd_acquire_read(&ts);
+    (void)AO_test_and_set_dd_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_dd_acquire_read";
 # endif
@@ -3161,8 +3566,19 @@ void short_list_atomic_dd_acquire_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -3170,6 +3586,8 @@ void short_list_atomic_dd_acquire_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void int_list_atomic(void)
 {
@@ -3191,7 +3609,7 @@ void int_list_atomic(void)
     static unsigned newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_int_fetch_and_add) || defined(AO_HAVE_int_and) \
      || defined(AO_HAVE_int_or) || defined(AO_HAVE_int_xor)
@@ -3207,7 +3625,7 @@ void int_list_atomic(void)
 
 # ifdef AO_HAVE_int_load
     (void)"AO_int_load(&val):";
-    AO_int_load(&val);
+    (void)AO_int_load(&val);
 # else
     (void)"No AO_int_load";
 # endif
@@ -3219,19 +3637,19 @@ void int_list_atomic(void)
 # endif
 # ifdef AO_HAVE_int_fetch_and_add
     (void)"AO_int_fetch_and_add(&val, incr):";
-    AO_int_fetch_and_add(&val, incr);
+    (void)AO_int_fetch_and_add(&val, incr);
 # else
     (void)"No AO_int_fetch_and_add";
 # endif
 # ifdef AO_HAVE_int_fetch_and_add1
     (void)"AO_int_fetch_and_add1(&val):";
-    AO_int_fetch_and_add1(&val);
+    (void)AO_int_fetch_and_add1(&val);
 # else
     (void)"No AO_int_fetch_and_add1";
 # endif
 # ifdef AO_HAVE_int_fetch_and_sub1
     (void)"AO_int_fetch_and_sub1(&val):";
-    AO_int_fetch_and_sub1(&val);
+    (void)AO_int_fetch_and_sub1(&val);
 # else
     (void)"No AO_int_fetch_and_sub1";
 # endif
@@ -3255,7 +3673,8 @@ void int_list_atomic(void)
 # endif
 # ifdef AO_HAVE_int_compare_and_swap
     (void)"AO_int_compare_and_swap(&val, oldval, newval):";
-    AO_int_compare_and_swap(&val, oldval, newval);
+    if (!AO_int_compare_and_swap(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_int_compare_and_swap";
 # endif
@@ -3263,14 +3682,15 @@ void int_list_atomic(void)
   /* TODO: Add AO_compare_and_swap_double */
 # ifdef AO_HAVE_int_fetch_compare_and_swap
     (void)"AO_int_fetch_compare_and_swap(&val, oldval, newval):";
-    AO_int_fetch_compare_and_swap(&val, oldval, newval);
+    if (AO_int_fetch_compare_and_swap(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_int_fetch_compare_and_swap";
 # endif
 
 # if defined(AO_HAVE_test_and_set)
     (void)"AO_test_and_set(&ts):";
-    AO_test_and_set(&ts);
+    (void)AO_test_and_set(&ts);
 # else
     (void)"No AO_test_and_set";
 # endif
@@ -3278,8 +3698,19 @@ void int_list_atomic(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -3287,6 +3718,8 @@ void int_list_atomic(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void int_list_atomic_release(void)
 {
@@ -3308,7 +3741,7 @@ void int_list_atomic_release(void)
     static unsigned newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_int_fetch_and_add_release) || defined(AO_HAVE_int_and_release) \
      || defined(AO_HAVE_int_or_release) || defined(AO_HAVE_int_xor_release)
@@ -3324,7 +3757,7 @@ void int_list_atomic_release(void)
 
 # ifdef AO_HAVE_int_load_release
     (void)"AO_int_load_release(&val):";
-    AO_int_load_release(&val);
+    (void)AO_int_load_release(&val);
 # else
     (void)"No AO_int_load_release";
 # endif
@@ -3336,19 +3769,19 @@ void int_list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_int_fetch_and_add_release
     (void)"AO_int_fetch_and_add_release(&val, incr):";
-    AO_int_fetch_and_add_release(&val, incr);
+    (void)AO_int_fetch_and_add_release(&val, incr);
 # else
     (void)"No AO_int_fetch_and_add_release";
 # endif
 # ifdef AO_HAVE_int_fetch_and_add1_release
     (void)"AO_int_fetch_and_add1_release(&val):";
-    AO_int_fetch_and_add1_release(&val);
+    (void)AO_int_fetch_and_add1_release(&val);
 # else
     (void)"No AO_int_fetch_and_add1_release";
 # endif
 # ifdef AO_HAVE_int_fetch_and_sub1_release
     (void)"AO_int_fetch_and_sub1_release(&val):";
-    AO_int_fetch_and_sub1_release(&val);
+    (void)AO_int_fetch_and_sub1_release(&val);
 # else
     (void)"No AO_int_fetch_and_sub1_release";
 # endif
@@ -3372,7 +3805,8 @@ void int_list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_int_compare_and_swap_release
     (void)"AO_int_compare_and_swap_release(&val, oldval, newval):";
-    AO_int_compare_and_swap_release(&val, oldval, newval);
+    if (!AO_int_compare_and_swap_release(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_int_compare_and_swap_release";
 # endif
@@ -3380,14 +3814,15 @@ void int_list_atomic_release(void)
   /* TODO: Add AO_compare_and_swap_double_release */
 # ifdef AO_HAVE_int_fetch_compare_and_swap_release
     (void)"AO_int_fetch_compare_and_swap_release(&val, oldval, newval):";
-    AO_int_fetch_compare_and_swap_release(&val, oldval, newval);
+    if (AO_int_fetch_compare_and_swap_release(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_int_fetch_compare_and_swap_release";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release)
     (void)"AO_test_and_set_release(&ts):";
-    AO_test_and_set_release(&ts);
+    (void)AO_test_and_set_release(&ts);
 # else
     (void)"No AO_test_and_set_release";
 # endif
@@ -3395,8 +3830,19 @@ void int_list_atomic_release(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -3404,6 +3850,8 @@ void int_list_atomic_release(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void int_list_atomic_acquire(void)
 {
@@ -3425,7 +3873,7 @@ void int_list_atomic_acquire(void)
     static unsigned newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_int_fetch_and_add_acquire) || defined(AO_HAVE_int_and_acquire) \
      || defined(AO_HAVE_int_or_acquire) || defined(AO_HAVE_int_xor_acquire)
@@ -3441,7 +3889,7 @@ void int_list_atomic_acquire(void)
 
 # ifdef AO_HAVE_int_load_acquire
     (void)"AO_int_load_acquire(&val):";
-    AO_int_load_acquire(&val);
+    (void)AO_int_load_acquire(&val);
 # else
     (void)"No AO_int_load_acquire";
 # endif
@@ -3453,19 +3901,19 @@ void int_list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_int_fetch_and_add_acquire
     (void)"AO_int_fetch_and_add_acquire(&val, incr):";
-    AO_int_fetch_and_add_acquire(&val, incr);
+    (void)AO_int_fetch_and_add_acquire(&val, incr);
 # else
     (void)"No AO_int_fetch_and_add_acquire";
 # endif
 # ifdef AO_HAVE_int_fetch_and_add1_acquire
     (void)"AO_int_fetch_and_add1_acquire(&val):";
-    AO_int_fetch_and_add1_acquire(&val);
+    (void)AO_int_fetch_and_add1_acquire(&val);
 # else
     (void)"No AO_int_fetch_and_add1_acquire";
 # endif
 # ifdef AO_HAVE_int_fetch_and_sub1_acquire
     (void)"AO_int_fetch_and_sub1_acquire(&val):";
-    AO_int_fetch_and_sub1_acquire(&val);
+    (void)AO_int_fetch_and_sub1_acquire(&val);
 # else
     (void)"No AO_int_fetch_and_sub1_acquire";
 # endif
@@ -3489,7 +3937,8 @@ void int_list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_int_compare_and_swap_acquire
     (void)"AO_int_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_int_compare_and_swap_acquire(&val, oldval, newval);
+    if (!AO_int_compare_and_swap_acquire(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_int_compare_and_swap_acquire";
 # endif
@@ -3497,14 +3946,15 @@ void int_list_atomic_acquire(void)
   /* TODO: Add AO_compare_and_swap_double_acquire */
 # ifdef AO_HAVE_int_fetch_compare_and_swap_acquire
     (void)"AO_int_fetch_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_int_fetch_compare_and_swap_acquire(&val, oldval, newval);
+    if (AO_int_fetch_compare_and_swap_acquire(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_int_fetch_compare_and_swap_acquire";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire)
     (void)"AO_test_and_set_acquire(&ts):";
-    AO_test_and_set_acquire(&ts);
+    (void)AO_test_and_set_acquire(&ts);
 # else
     (void)"No AO_test_and_set_acquire";
 # endif
@@ -3512,8 +3962,19 @@ void int_list_atomic_acquire(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -3521,6 +3982,8 @@ void int_list_atomic_acquire(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void int_list_atomic_read(void)
 {
@@ -3542,7 +4005,7 @@ void int_list_atomic_read(void)
     static unsigned newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_int_fetch_and_add_read) || defined(AO_HAVE_int_and_read) \
      || defined(AO_HAVE_int_or_read) || defined(AO_HAVE_int_xor_read)
@@ -3558,7 +4021,7 @@ void int_list_atomic_read(void)
 
 # ifdef AO_HAVE_int_load_read
     (void)"AO_int_load_read(&val):";
-    AO_int_load_read(&val);
+    (void)AO_int_load_read(&val);
 # else
     (void)"No AO_int_load_read";
 # endif
@@ -3570,19 +4033,19 @@ void int_list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_int_fetch_and_add_read
     (void)"AO_int_fetch_and_add_read(&val, incr):";
-    AO_int_fetch_and_add_read(&val, incr);
+    (void)AO_int_fetch_and_add_read(&val, incr);
 # else
     (void)"No AO_int_fetch_and_add_read";
 # endif
 # ifdef AO_HAVE_int_fetch_and_add1_read
     (void)"AO_int_fetch_and_add1_read(&val):";
-    AO_int_fetch_and_add1_read(&val);
+    (void)AO_int_fetch_and_add1_read(&val);
 # else
     (void)"No AO_int_fetch_and_add1_read";
 # endif
 # ifdef AO_HAVE_int_fetch_and_sub1_read
     (void)"AO_int_fetch_and_sub1_read(&val):";
-    AO_int_fetch_and_sub1_read(&val);
+    (void)AO_int_fetch_and_sub1_read(&val);
 # else
     (void)"No AO_int_fetch_and_sub1_read";
 # endif
@@ -3606,7 +4069,8 @@ void int_list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_int_compare_and_swap_read
     (void)"AO_int_compare_and_swap_read(&val, oldval, newval):";
-    AO_int_compare_and_swap_read(&val, oldval, newval);
+    if (!AO_int_compare_and_swap_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_int_compare_and_swap_read";
 # endif
@@ -3614,14 +4078,15 @@ void int_list_atomic_read(void)
   /* TODO: Add AO_compare_and_swap_double_read */
 # ifdef AO_HAVE_int_fetch_compare_and_swap_read
     (void)"AO_int_fetch_compare_and_swap_read(&val, oldval, newval):";
-    AO_int_fetch_compare_and_swap_read(&val, oldval, newval);
+    if (AO_int_fetch_compare_and_swap_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_int_fetch_compare_and_swap_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_read)
     (void)"AO_test_and_set_read(&ts):";
-    AO_test_and_set_read(&ts);
+    (void)AO_test_and_set_read(&ts);
 # else
     (void)"No AO_test_and_set_read";
 # endif
@@ -3629,8 +4094,19 @@ void int_list_atomic_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -3638,6 +4114,8 @@ void int_list_atomic_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void int_list_atomic_write(void)
 {
@@ -3659,7 +4137,7 @@ void int_list_atomic_write(void)
     static unsigned newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_int_fetch_and_add_write) || defined(AO_HAVE_int_and_write) \
      || defined(AO_HAVE_int_or_write) || defined(AO_HAVE_int_xor_write)
@@ -3675,7 +4153,7 @@ void int_list_atomic_write(void)
 
 # ifdef AO_HAVE_int_load_write
     (void)"AO_int_load_write(&val):";
-    AO_int_load_write(&val);
+    (void)AO_int_load_write(&val);
 # else
     (void)"No AO_int_load_write";
 # endif
@@ -3687,19 +4165,19 @@ void int_list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_int_fetch_and_add_write
     (void)"AO_int_fetch_and_add_write(&val, incr):";
-    AO_int_fetch_and_add_write(&val, incr);
+    (void)AO_int_fetch_and_add_write(&val, incr);
 # else
     (void)"No AO_int_fetch_and_add_write";
 # endif
 # ifdef AO_HAVE_int_fetch_and_add1_write
     (void)"AO_int_fetch_and_add1_write(&val):";
-    AO_int_fetch_and_add1_write(&val);
+    (void)AO_int_fetch_and_add1_write(&val);
 # else
     (void)"No AO_int_fetch_and_add1_write";
 # endif
 # ifdef AO_HAVE_int_fetch_and_sub1_write
     (void)"AO_int_fetch_and_sub1_write(&val):";
-    AO_int_fetch_and_sub1_write(&val);
+    (void)AO_int_fetch_and_sub1_write(&val);
 # else
     (void)"No AO_int_fetch_and_sub1_write";
 # endif
@@ -3723,7 +4201,8 @@ void int_list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_int_compare_and_swap_write
     (void)"AO_int_compare_and_swap_write(&val, oldval, newval):";
-    AO_int_compare_and_swap_write(&val, oldval, newval);
+    if (!AO_int_compare_and_swap_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_int_compare_and_swap_write";
 # endif
@@ -3731,14 +4210,15 @@ void int_list_atomic_write(void)
   /* TODO: Add AO_compare_and_swap_double_write */
 # ifdef AO_HAVE_int_fetch_compare_and_swap_write
     (void)"AO_int_fetch_compare_and_swap_write(&val, oldval, newval):";
-    AO_int_fetch_compare_and_swap_write(&val, oldval, newval);
+    if (AO_int_fetch_compare_and_swap_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_int_fetch_compare_and_swap_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_write)
     (void)"AO_test_and_set_write(&ts):";
-    AO_test_and_set_write(&ts);
+    (void)AO_test_and_set_write(&ts);
 # else
     (void)"No AO_test_and_set_write";
 # endif
@@ -3746,8 +4226,19 @@ void int_list_atomic_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -3755,6 +4246,8 @@ void int_list_atomic_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void int_list_atomic_full(void)
 {
@@ -3776,7 +4269,7 @@ void int_list_atomic_full(void)
     static unsigned newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_full)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_int_fetch_and_add_full) || defined(AO_HAVE_int_and_full) \
      || defined(AO_HAVE_int_or_full) || defined(AO_HAVE_int_xor_full)
@@ -3792,7 +4285,7 @@ void int_list_atomic_full(void)
 
 # ifdef AO_HAVE_int_load_full
     (void)"AO_int_load_full(&val):";
-    AO_int_load_full(&val);
+    (void)AO_int_load_full(&val);
 # else
     (void)"No AO_int_load_full";
 # endif
@@ -3804,19 +4297,19 @@ void int_list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_int_fetch_and_add_full
     (void)"AO_int_fetch_and_add_full(&val, incr):";
-    AO_int_fetch_and_add_full(&val, incr);
+    (void)AO_int_fetch_and_add_full(&val, incr);
 # else
     (void)"No AO_int_fetch_and_add_full";
 # endif
 # ifdef AO_HAVE_int_fetch_and_add1_full
     (void)"AO_int_fetch_and_add1_full(&val):";
-    AO_int_fetch_and_add1_full(&val);
+    (void)AO_int_fetch_and_add1_full(&val);
 # else
     (void)"No AO_int_fetch_and_add1_full";
 # endif
 # ifdef AO_HAVE_int_fetch_and_sub1_full
     (void)"AO_int_fetch_and_sub1_full(&val):";
-    AO_int_fetch_and_sub1_full(&val);
+    (void)AO_int_fetch_and_sub1_full(&val);
 # else
     (void)"No AO_int_fetch_and_sub1_full";
 # endif
@@ -3840,7 +4333,8 @@ void int_list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_int_compare_and_swap_full
     (void)"AO_int_compare_and_swap_full(&val, oldval, newval):";
-    AO_int_compare_and_swap_full(&val, oldval, newval);
+    if (!AO_int_compare_and_swap_full(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_int_compare_and_swap_full";
 # endif
@@ -3848,14 +4342,15 @@ void int_list_atomic_full(void)
   /* TODO: Add AO_compare_and_swap_double_full */
 # ifdef AO_HAVE_int_fetch_compare_and_swap_full
     (void)"AO_int_fetch_compare_and_swap_full(&val, oldval, newval):";
-    AO_int_fetch_compare_and_swap_full(&val, oldval, newval);
+    if (AO_int_fetch_compare_and_swap_full(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_int_fetch_compare_and_swap_full";
 # endif
 
 # if defined(AO_HAVE_test_and_set_full)
     (void)"AO_test_and_set_full(&ts):";
-    AO_test_and_set_full(&ts);
+    (void)AO_test_and_set_full(&ts);
 # else
     (void)"No AO_test_and_set_full";
 # endif
@@ -3863,8 +4358,19 @@ void int_list_atomic_full(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -3872,6 +4378,8 @@ void int_list_atomic_full(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void int_list_atomic_release_write(void)
 {
@@ -3893,7 +4401,7 @@ void int_list_atomic_release_write(void)
     static unsigned newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_int_fetch_and_add_release_write) || defined(AO_HAVE_int_and_release_write) \
      || defined(AO_HAVE_int_or_release_write) || defined(AO_HAVE_int_xor_release_write)
@@ -3909,7 +4417,7 @@ void int_list_atomic_release_write(void)
 
 # ifdef AO_HAVE_int_load_release_write
     (void)"AO_int_load_release_write(&val):";
-    AO_int_load_release_write(&val);
+    (void)AO_int_load_release_write(&val);
 # else
     (void)"No AO_int_load_release_write";
 # endif
@@ -3921,19 +4429,19 @@ void int_list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_int_fetch_and_add_release_write
     (void)"AO_int_fetch_and_add_release_write(&val, incr):";
-    AO_int_fetch_and_add_release_write(&val, incr);
+    (void)AO_int_fetch_and_add_release_write(&val, incr);
 # else
     (void)"No AO_int_fetch_and_add_release_write";
 # endif
 # ifdef AO_HAVE_int_fetch_and_add1_release_write
     (void)"AO_int_fetch_and_add1_release_write(&val):";
-    AO_int_fetch_and_add1_release_write(&val);
+    (void)AO_int_fetch_and_add1_release_write(&val);
 # else
     (void)"No AO_int_fetch_and_add1_release_write";
 # endif
 # ifdef AO_HAVE_int_fetch_and_sub1_release_write
     (void)"AO_int_fetch_and_sub1_release_write(&val):";
-    AO_int_fetch_and_sub1_release_write(&val);
+    (void)AO_int_fetch_and_sub1_release_write(&val);
 # else
     (void)"No AO_int_fetch_and_sub1_release_write";
 # endif
@@ -3957,7 +4465,8 @@ void int_list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_int_compare_and_swap_release_write
     (void)"AO_int_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_int_compare_and_swap_release_write(&val, oldval, newval);
+    if (!AO_int_compare_and_swap_release_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_int_compare_and_swap_release_write";
 # endif
@@ -3965,14 +4474,15 @@ void int_list_atomic_release_write(void)
   /* TODO: Add AO_compare_and_swap_double_release_write */
 # ifdef AO_HAVE_int_fetch_compare_and_swap_release_write
     (void)"AO_int_fetch_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_int_fetch_compare_and_swap_release_write(&val, oldval, newval);
+    if (AO_int_fetch_compare_and_swap_release_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_int_fetch_compare_and_swap_release_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release_write)
     (void)"AO_test_and_set_release_write(&ts):";
-    AO_test_and_set_release_write(&ts);
+    (void)AO_test_and_set_release_write(&ts);
 # else
     (void)"No AO_test_and_set_release_write";
 # endif
@@ -3980,8 +4490,19 @@ void int_list_atomic_release_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -3989,6 +4510,8 @@ void int_list_atomic_release_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void int_list_atomic_acquire_read(void)
 {
@@ -4010,7 +4533,7 @@ void int_list_atomic_acquire_read(void)
     static unsigned newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_int_fetch_and_add_acquire_read) || defined(AO_HAVE_int_and_acquire_read) \
      || defined(AO_HAVE_int_or_acquire_read) || defined(AO_HAVE_int_xor_acquire_read)
@@ -4026,7 +4549,7 @@ void int_list_atomic_acquire_read(void)
 
 # ifdef AO_HAVE_int_load_acquire_read
     (void)"AO_int_load_acquire_read(&val):";
-    AO_int_load_acquire_read(&val);
+    (void)AO_int_load_acquire_read(&val);
 # else
     (void)"No AO_int_load_acquire_read";
 # endif
@@ -4038,19 +4561,19 @@ void int_list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_int_fetch_and_add_acquire_read
     (void)"AO_int_fetch_and_add_acquire_read(&val, incr):";
-    AO_int_fetch_and_add_acquire_read(&val, incr);
+    (void)AO_int_fetch_and_add_acquire_read(&val, incr);
 # else
     (void)"No AO_int_fetch_and_add_acquire_read";
 # endif
 # ifdef AO_HAVE_int_fetch_and_add1_acquire_read
     (void)"AO_int_fetch_and_add1_acquire_read(&val):";
-    AO_int_fetch_and_add1_acquire_read(&val);
+    (void)AO_int_fetch_and_add1_acquire_read(&val);
 # else
     (void)"No AO_int_fetch_and_add1_acquire_read";
 # endif
 # ifdef AO_HAVE_int_fetch_and_sub1_acquire_read
     (void)"AO_int_fetch_and_sub1_acquire_read(&val):";
-    AO_int_fetch_and_sub1_acquire_read(&val);
+    (void)AO_int_fetch_and_sub1_acquire_read(&val);
 # else
     (void)"No AO_int_fetch_and_sub1_acquire_read";
 # endif
@@ -4074,7 +4597,8 @@ void int_list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_int_compare_and_swap_acquire_read
     (void)"AO_int_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_int_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (!AO_int_compare_and_swap_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_int_compare_and_swap_acquire_read";
 # endif
@@ -4082,14 +4606,15 @@ void int_list_atomic_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_acquire_read */
 # ifdef AO_HAVE_int_fetch_compare_and_swap_acquire_read
     (void)"AO_int_fetch_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_int_fetch_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (AO_int_fetch_compare_and_swap_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_int_fetch_compare_and_swap_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire_read)
     (void)"AO_test_and_set_acquire_read(&ts):";
-    AO_test_and_set_acquire_read(&ts);
+    (void)AO_test_and_set_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_acquire_read";
 # endif
@@ -4097,8 +4622,19 @@ void int_list_atomic_acquire_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -4106,6 +4642,8 @@ void int_list_atomic_acquire_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void int_list_atomic_dd_acquire_read(void)
 {
@@ -4127,7 +4665,7 @@ void int_list_atomic_dd_acquire_read(void)
     static unsigned newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_int_fetch_and_add_dd_acquire_read) || defined(AO_HAVE_int_and_dd_acquire_read) \
      || defined(AO_HAVE_int_or_dd_acquire_read) || defined(AO_HAVE_int_xor_dd_acquire_read)
@@ -4143,7 +4681,7 @@ void int_list_atomic_dd_acquire_read(void)
 
 # ifdef AO_HAVE_int_load_dd_acquire_read
     (void)"AO_int_load_dd_acquire_read(&val):";
-    AO_int_load_dd_acquire_read(&val);
+    (void)AO_int_load_dd_acquire_read(&val);
 # else
     (void)"No AO_int_load_dd_acquire_read";
 # endif
@@ -4155,19 +4693,19 @@ void int_list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_int_fetch_and_add_dd_acquire_read
     (void)"AO_int_fetch_and_add_dd_acquire_read(&val, incr):";
-    AO_int_fetch_and_add_dd_acquire_read(&val, incr);
+    (void)AO_int_fetch_and_add_dd_acquire_read(&val, incr);
 # else
     (void)"No AO_int_fetch_and_add_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_int_fetch_and_add1_dd_acquire_read
     (void)"AO_int_fetch_and_add1_dd_acquire_read(&val):";
-    AO_int_fetch_and_add1_dd_acquire_read(&val);
+    (void)AO_int_fetch_and_add1_dd_acquire_read(&val);
 # else
     (void)"No AO_int_fetch_and_add1_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_int_fetch_and_sub1_dd_acquire_read
     (void)"AO_int_fetch_and_sub1_dd_acquire_read(&val):";
-    AO_int_fetch_and_sub1_dd_acquire_read(&val);
+    (void)AO_int_fetch_and_sub1_dd_acquire_read(&val);
 # else
     (void)"No AO_int_fetch_and_sub1_dd_acquire_read";
 # endif
@@ -4191,7 +4729,8 @@ void int_list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_int_compare_and_swap_dd_acquire_read
     (void)"AO_int_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_int_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (!AO_int_compare_and_swap_dd_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_int_compare_and_swap_dd_acquire_read";
 # endif
@@ -4199,14 +4738,15 @@ void int_list_atomic_dd_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_dd_acquire_read */
 # ifdef AO_HAVE_int_fetch_compare_and_swap_dd_acquire_read
     (void)"AO_int_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_int_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (AO_int_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_int_fetch_compare_and_swap_dd_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
     (void)"AO_test_and_set_dd_acquire_read(&ts):";
-    AO_test_and_set_dd_acquire_read(&ts);
+    (void)AO_test_and_set_dd_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_dd_acquire_read";
 # endif
@@ -4214,8 +4754,19 @@ void int_list_atomic_dd_acquire_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -4223,6 +4774,8 @@ void int_list_atomic_dd_acquire_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void double_list_atomic(void)
 {
@@ -4244,7 +4797,7 @@ void double_list_atomic(void)
     static AO_double_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_double_fetch_and_add) || defined(AO_HAVE_double_and) \
      || defined(AO_HAVE_double_or) || defined(AO_HAVE_double_xor)
@@ -4260,7 +4813,7 @@ void double_list_atomic(void)
 
 # ifdef AO_HAVE_double_load
     (void)"AO_double_load(&val):";
-    AO_double_load(&val);
+    (void)AO_double_load(&val);
 # else
     (void)"No AO_double_load";
 # endif
@@ -4272,19 +4825,19 @@ void double_list_atomic(void)
 # endif
 # ifdef AO_HAVE_double_fetch_and_add
     (void)"AO_double_fetch_and_add(&val, incr):";
-    AO_double_fetch_and_add(&val, incr);
+    (void)AO_double_fetch_and_add(&val, incr);
 # else
     (void)"No AO_double_fetch_and_add";
 # endif
 # ifdef AO_HAVE_double_fetch_and_add1
     (void)"AO_double_fetch_and_add1(&val):";
-    AO_double_fetch_and_add1(&val);
+    (void)AO_double_fetch_and_add1(&val);
 # else
     (void)"No AO_double_fetch_and_add1";
 # endif
 # ifdef AO_HAVE_double_fetch_and_sub1
     (void)"AO_double_fetch_and_sub1(&val):";
-    AO_double_fetch_and_sub1(&val);
+    (void)AO_double_fetch_and_sub1(&val);
 # else
     (void)"No AO_double_fetch_and_sub1";
 # endif
@@ -4308,7 +4861,8 @@ void double_list_atomic(void)
 # endif
 # ifdef AO_HAVE_double_compare_and_swap
     (void)"AO_double_compare_and_swap(&val, oldval, newval):";
-    AO_double_compare_and_swap(&val, oldval, newval);
+    if (!AO_double_compare_and_swap(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_double_compare_and_swap";
 # endif
@@ -4316,14 +4870,15 @@ void double_list_atomic(void)
   /* TODO: Add AO_compare_and_swap_double */
 # ifdef AO_HAVE_double_fetch_compare_and_swap
     (void)"AO_double_fetch_compare_and_swap(&val, oldval, newval):";
-    AO_double_fetch_compare_and_swap(&val, oldval, newval);
+    if (AO_double_fetch_compare_and_swap(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_double_fetch_compare_and_swap";
 # endif
 
 # if defined(AO_HAVE_test_and_set)
     (void)"AO_test_and_set(&ts):";
-    AO_test_and_set(&ts);
+    (void)AO_test_and_set(&ts);
 # else
     (void)"No AO_test_and_set";
 # endif
@@ -4331,8 +4886,19 @@ void double_list_atomic(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -4340,6 +4906,8 @@ void double_list_atomic(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void double_list_atomic_release(void)
 {
@@ -4361,7 +4929,7 @@ void double_list_atomic_release(void)
     static AO_double_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_double_fetch_and_add_release) || defined(AO_HAVE_double_and_release) \
      || defined(AO_HAVE_double_or_release) || defined(AO_HAVE_double_xor_release)
@@ -4377,7 +4945,7 @@ void double_list_atomic_release(void)
 
 # ifdef AO_HAVE_double_load_release
     (void)"AO_double_load_release(&val):";
-    AO_double_load_release(&val);
+    (void)AO_double_load_release(&val);
 # else
     (void)"No AO_double_load_release";
 # endif
@@ -4389,19 +4957,19 @@ void double_list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_double_fetch_and_add_release
     (void)"AO_double_fetch_and_add_release(&val, incr):";
-    AO_double_fetch_and_add_release(&val, incr);
+    (void)AO_double_fetch_and_add_release(&val, incr);
 # else
     (void)"No AO_double_fetch_and_add_release";
 # endif
 # ifdef AO_HAVE_double_fetch_and_add1_release
     (void)"AO_double_fetch_and_add1_release(&val):";
-    AO_double_fetch_and_add1_release(&val);
+    (void)AO_double_fetch_and_add1_release(&val);
 # else
     (void)"No AO_double_fetch_and_add1_release";
 # endif
 # ifdef AO_HAVE_double_fetch_and_sub1_release
     (void)"AO_double_fetch_and_sub1_release(&val):";
-    AO_double_fetch_and_sub1_release(&val);
+    (void)AO_double_fetch_and_sub1_release(&val);
 # else
     (void)"No AO_double_fetch_and_sub1_release";
 # endif
@@ -4425,7 +4993,8 @@ void double_list_atomic_release(void)
 # endif
 # ifdef AO_HAVE_double_compare_and_swap_release
     (void)"AO_double_compare_and_swap_release(&val, oldval, newval):";
-    AO_double_compare_and_swap_release(&val, oldval, newval);
+    if (!AO_double_compare_and_swap_release(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_double_compare_and_swap_release";
 # endif
@@ -4433,14 +5002,15 @@ void double_list_atomic_release(void)
   /* TODO: Add AO_compare_and_swap_double_release */
 # ifdef AO_HAVE_double_fetch_compare_and_swap_release
     (void)"AO_double_fetch_compare_and_swap_release(&val, oldval, newval):";
-    AO_double_fetch_compare_and_swap_release(&val, oldval, newval);
+    if (AO_double_fetch_compare_and_swap_release(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_double_fetch_compare_and_swap_release";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release)
     (void)"AO_test_and_set_release(&ts):";
-    AO_test_and_set_release(&ts);
+    (void)AO_test_and_set_release(&ts);
 # else
     (void)"No AO_test_and_set_release";
 # endif
@@ -4448,8 +5018,19 @@ void double_list_atomic_release(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -4457,6 +5038,8 @@ void double_list_atomic_release(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void double_list_atomic_acquire(void)
 {
@@ -4478,7 +5061,7 @@ void double_list_atomic_acquire(void)
     static AO_double_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_double_fetch_and_add_acquire) || defined(AO_HAVE_double_and_acquire) \
      || defined(AO_HAVE_double_or_acquire) || defined(AO_HAVE_double_xor_acquire)
@@ -4494,7 +5077,7 @@ void double_list_atomic_acquire(void)
 
 # ifdef AO_HAVE_double_load_acquire
     (void)"AO_double_load_acquire(&val):";
-    AO_double_load_acquire(&val);
+    (void)AO_double_load_acquire(&val);
 # else
     (void)"No AO_double_load_acquire";
 # endif
@@ -4506,19 +5089,19 @@ void double_list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_double_fetch_and_add_acquire
     (void)"AO_double_fetch_and_add_acquire(&val, incr):";
-    AO_double_fetch_and_add_acquire(&val, incr);
+    (void)AO_double_fetch_and_add_acquire(&val, incr);
 # else
     (void)"No AO_double_fetch_and_add_acquire";
 # endif
 # ifdef AO_HAVE_double_fetch_and_add1_acquire
     (void)"AO_double_fetch_and_add1_acquire(&val):";
-    AO_double_fetch_and_add1_acquire(&val);
+    (void)AO_double_fetch_and_add1_acquire(&val);
 # else
     (void)"No AO_double_fetch_and_add1_acquire";
 # endif
 # ifdef AO_HAVE_double_fetch_and_sub1_acquire
     (void)"AO_double_fetch_and_sub1_acquire(&val):";
-    AO_double_fetch_and_sub1_acquire(&val);
+    (void)AO_double_fetch_and_sub1_acquire(&val);
 # else
     (void)"No AO_double_fetch_and_sub1_acquire";
 # endif
@@ -4542,7 +5125,8 @@ void double_list_atomic_acquire(void)
 # endif
 # ifdef AO_HAVE_double_compare_and_swap_acquire
     (void)"AO_double_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_double_compare_and_swap_acquire(&val, oldval, newval);
+    if (!AO_double_compare_and_swap_acquire(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_double_compare_and_swap_acquire";
 # endif
@@ -4550,14 +5134,15 @@ void double_list_atomic_acquire(void)
   /* TODO: Add AO_compare_and_swap_double_acquire */
 # ifdef AO_HAVE_double_fetch_compare_and_swap_acquire
     (void)"AO_double_fetch_compare_and_swap_acquire(&val, oldval, newval):";
-    AO_double_fetch_compare_and_swap_acquire(&val, oldval, newval);
+    if (AO_double_fetch_compare_and_swap_acquire(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_double_fetch_compare_and_swap_acquire";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire)
     (void)"AO_test_and_set_acquire(&ts):";
-    AO_test_and_set_acquire(&ts);
+    (void)AO_test_and_set_acquire(&ts);
 # else
     (void)"No AO_test_and_set_acquire";
 # endif
@@ -4565,8 +5150,19 @@ void double_list_atomic_acquire(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -4574,6 +5170,8 @@ void double_list_atomic_acquire(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void double_list_atomic_read(void)
 {
@@ -4595,7 +5193,7 @@ void double_list_atomic_read(void)
     static AO_double_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_double_fetch_and_add_read) || defined(AO_HAVE_double_and_read) \
      || defined(AO_HAVE_double_or_read) || defined(AO_HAVE_double_xor_read)
@@ -4611,7 +5209,7 @@ void double_list_atomic_read(void)
 
 # ifdef AO_HAVE_double_load_read
     (void)"AO_double_load_read(&val):";
-    AO_double_load_read(&val);
+    (void)AO_double_load_read(&val);
 # else
     (void)"No AO_double_load_read";
 # endif
@@ -4623,19 +5221,19 @@ void double_list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_double_fetch_and_add_read
     (void)"AO_double_fetch_and_add_read(&val, incr):";
-    AO_double_fetch_and_add_read(&val, incr);
+    (void)AO_double_fetch_and_add_read(&val, incr);
 # else
     (void)"No AO_double_fetch_and_add_read";
 # endif
 # ifdef AO_HAVE_double_fetch_and_add1_read
     (void)"AO_double_fetch_and_add1_read(&val):";
-    AO_double_fetch_and_add1_read(&val);
+    (void)AO_double_fetch_and_add1_read(&val);
 # else
     (void)"No AO_double_fetch_and_add1_read";
 # endif
 # ifdef AO_HAVE_double_fetch_and_sub1_read
     (void)"AO_double_fetch_and_sub1_read(&val):";
-    AO_double_fetch_and_sub1_read(&val);
+    (void)AO_double_fetch_and_sub1_read(&val);
 # else
     (void)"No AO_double_fetch_and_sub1_read";
 # endif
@@ -4659,7 +5257,8 @@ void double_list_atomic_read(void)
 # endif
 # ifdef AO_HAVE_double_compare_and_swap_read
     (void)"AO_double_compare_and_swap_read(&val, oldval, newval):";
-    AO_double_compare_and_swap_read(&val, oldval, newval);
+    if (!AO_double_compare_and_swap_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_double_compare_and_swap_read";
 # endif
@@ -4667,14 +5266,15 @@ void double_list_atomic_read(void)
   /* TODO: Add AO_compare_and_swap_double_read */
 # ifdef AO_HAVE_double_fetch_compare_and_swap_read
     (void)"AO_double_fetch_compare_and_swap_read(&val, oldval, newval):";
-    AO_double_fetch_compare_and_swap_read(&val, oldval, newval);
+    if (AO_double_fetch_compare_and_swap_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_double_fetch_compare_and_swap_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_read)
     (void)"AO_test_and_set_read(&ts):";
-    AO_test_and_set_read(&ts);
+    (void)AO_test_and_set_read(&ts);
 # else
     (void)"No AO_test_and_set_read";
 # endif
@@ -4682,8 +5282,19 @@ void double_list_atomic_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -4691,6 +5302,8 @@ void double_list_atomic_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void double_list_atomic_write(void)
 {
@@ -4712,7 +5325,7 @@ void double_list_atomic_write(void)
     static AO_double_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_double_fetch_and_add_write) || defined(AO_HAVE_double_and_write) \
      || defined(AO_HAVE_double_or_write) || defined(AO_HAVE_double_xor_write)
@@ -4728,7 +5341,7 @@ void double_list_atomic_write(void)
 
 # ifdef AO_HAVE_double_load_write
     (void)"AO_double_load_write(&val):";
-    AO_double_load_write(&val);
+    (void)AO_double_load_write(&val);
 # else
     (void)"No AO_double_load_write";
 # endif
@@ -4740,19 +5353,19 @@ void double_list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_double_fetch_and_add_write
     (void)"AO_double_fetch_and_add_write(&val, incr):";
-    AO_double_fetch_and_add_write(&val, incr);
+    (void)AO_double_fetch_and_add_write(&val, incr);
 # else
     (void)"No AO_double_fetch_and_add_write";
 # endif
 # ifdef AO_HAVE_double_fetch_and_add1_write
     (void)"AO_double_fetch_and_add1_write(&val):";
-    AO_double_fetch_and_add1_write(&val);
+    (void)AO_double_fetch_and_add1_write(&val);
 # else
     (void)"No AO_double_fetch_and_add1_write";
 # endif
 # ifdef AO_HAVE_double_fetch_and_sub1_write
     (void)"AO_double_fetch_and_sub1_write(&val):";
-    AO_double_fetch_and_sub1_write(&val);
+    (void)AO_double_fetch_and_sub1_write(&val);
 # else
     (void)"No AO_double_fetch_and_sub1_write";
 # endif
@@ -4776,7 +5389,8 @@ void double_list_atomic_write(void)
 # endif
 # ifdef AO_HAVE_double_compare_and_swap_write
     (void)"AO_double_compare_and_swap_write(&val, oldval, newval):";
-    AO_double_compare_and_swap_write(&val, oldval, newval);
+    if (!AO_double_compare_and_swap_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_double_compare_and_swap_write";
 # endif
@@ -4784,14 +5398,15 @@ void double_list_atomic_write(void)
   /* TODO: Add AO_compare_and_swap_double_write */
 # ifdef AO_HAVE_double_fetch_compare_and_swap_write
     (void)"AO_double_fetch_compare_and_swap_write(&val, oldval, newval):";
-    AO_double_fetch_compare_and_swap_write(&val, oldval, newval);
+    if (AO_double_fetch_compare_and_swap_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_double_fetch_compare_and_swap_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_write)
     (void)"AO_test_and_set_write(&ts):";
-    AO_test_and_set_write(&ts);
+    (void)AO_test_and_set_write(&ts);
 # else
     (void)"No AO_test_and_set_write";
 # endif
@@ -4799,8 +5414,19 @@ void double_list_atomic_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -4808,6 +5434,8 @@ void double_list_atomic_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void double_list_atomic_full(void)
 {
@@ -4829,7 +5457,7 @@ void double_list_atomic_full(void)
     static AO_double_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_full)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_double_fetch_and_add_full) || defined(AO_HAVE_double_and_full) \
      || defined(AO_HAVE_double_or_full) || defined(AO_HAVE_double_xor_full)
@@ -4845,7 +5473,7 @@ void double_list_atomic_full(void)
 
 # ifdef AO_HAVE_double_load_full
     (void)"AO_double_load_full(&val):";
-    AO_double_load_full(&val);
+    (void)AO_double_load_full(&val);
 # else
     (void)"No AO_double_load_full";
 # endif
@@ -4857,19 +5485,19 @@ void double_list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_double_fetch_and_add_full
     (void)"AO_double_fetch_and_add_full(&val, incr):";
-    AO_double_fetch_and_add_full(&val, incr);
+    (void)AO_double_fetch_and_add_full(&val, incr);
 # else
     (void)"No AO_double_fetch_and_add_full";
 # endif
 # ifdef AO_HAVE_double_fetch_and_add1_full
     (void)"AO_double_fetch_and_add1_full(&val):";
-    AO_double_fetch_and_add1_full(&val);
+    (void)AO_double_fetch_and_add1_full(&val);
 # else
     (void)"No AO_double_fetch_and_add1_full";
 # endif
 # ifdef AO_HAVE_double_fetch_and_sub1_full
     (void)"AO_double_fetch_and_sub1_full(&val):";
-    AO_double_fetch_and_sub1_full(&val);
+    (void)AO_double_fetch_and_sub1_full(&val);
 # else
     (void)"No AO_double_fetch_and_sub1_full";
 # endif
@@ -4893,7 +5521,8 @@ void double_list_atomic_full(void)
 # endif
 # ifdef AO_HAVE_double_compare_and_swap_full
     (void)"AO_double_compare_and_swap_full(&val, oldval, newval):";
-    AO_double_compare_and_swap_full(&val, oldval, newval);
+    if (!AO_double_compare_and_swap_full(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_double_compare_and_swap_full";
 # endif
@@ -4901,14 +5530,15 @@ void double_list_atomic_full(void)
   /* TODO: Add AO_compare_and_swap_double_full */
 # ifdef AO_HAVE_double_fetch_compare_and_swap_full
     (void)"AO_double_fetch_compare_and_swap_full(&val, oldval, newval):";
-    AO_double_fetch_compare_and_swap_full(&val, oldval, newval);
+    if (AO_double_fetch_compare_and_swap_full(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_double_fetch_compare_and_swap_full";
 # endif
 
 # if defined(AO_HAVE_test_and_set_full)
     (void)"AO_test_and_set_full(&ts):";
-    AO_test_and_set_full(&ts);
+    (void)AO_test_and_set_full(&ts);
 # else
     (void)"No AO_test_and_set_full";
 # endif
@@ -4916,8 +5546,19 @@ void double_list_atomic_full(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -4925,6 +5566,8 @@ void double_list_atomic_full(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void double_list_atomic_release_write(void)
 {
@@ -4946,7 +5589,7 @@ void double_list_atomic_release_write(void)
     static AO_double_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_release_write)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_double_fetch_and_add_release_write) || defined(AO_HAVE_double_and_release_write) \
      || defined(AO_HAVE_double_or_release_write) || defined(AO_HAVE_double_xor_release_write)
@@ -4962,7 +5605,7 @@ void double_list_atomic_release_write(void)
 
 # ifdef AO_HAVE_double_load_release_write
     (void)"AO_double_load_release_write(&val):";
-    AO_double_load_release_write(&val);
+    (void)AO_double_load_release_write(&val);
 # else
     (void)"No AO_double_load_release_write";
 # endif
@@ -4974,19 +5617,19 @@ void double_list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_double_fetch_and_add_release_write
     (void)"AO_double_fetch_and_add_release_write(&val, incr):";
-    AO_double_fetch_and_add_release_write(&val, incr);
+    (void)AO_double_fetch_and_add_release_write(&val, incr);
 # else
     (void)"No AO_double_fetch_and_add_release_write";
 # endif
 # ifdef AO_HAVE_double_fetch_and_add1_release_write
     (void)"AO_double_fetch_and_add1_release_write(&val):";
-    AO_double_fetch_and_add1_release_write(&val);
+    (void)AO_double_fetch_and_add1_release_write(&val);
 # else
     (void)"No AO_double_fetch_and_add1_release_write";
 # endif
 # ifdef AO_HAVE_double_fetch_and_sub1_release_write
     (void)"AO_double_fetch_and_sub1_release_write(&val):";
-    AO_double_fetch_and_sub1_release_write(&val);
+    (void)AO_double_fetch_and_sub1_release_write(&val);
 # else
     (void)"No AO_double_fetch_and_sub1_release_write";
 # endif
@@ -5010,7 +5653,8 @@ void double_list_atomic_release_write(void)
 # endif
 # ifdef AO_HAVE_double_compare_and_swap_release_write
     (void)"AO_double_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_double_compare_and_swap_release_write(&val, oldval, newval);
+    if (!AO_double_compare_and_swap_release_write(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_double_compare_and_swap_release_write";
 # endif
@@ -5018,14 +5662,15 @@ void double_list_atomic_release_write(void)
   /* TODO: Add AO_compare_and_swap_double_release_write */
 # ifdef AO_HAVE_double_fetch_compare_and_swap_release_write
     (void)"AO_double_fetch_compare_and_swap_release_write(&val, oldval, newval):";
-    AO_double_fetch_compare_and_swap_release_write(&val, oldval, newval);
+    if (AO_double_fetch_compare_and_swap_release_write(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_double_fetch_compare_and_swap_release_write";
 # endif
 
 # if defined(AO_HAVE_test_and_set_release_write)
     (void)"AO_test_and_set_release_write(&ts):";
-    AO_test_and_set_release_write(&ts);
+    (void)AO_test_and_set_release_write(&ts);
 # else
     (void)"No AO_test_and_set_release_write";
 # endif
@@ -5033,8 +5678,19 @@ void double_list_atomic_release_write(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -5042,6 +5698,8 @@ void double_list_atomic_release_write(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void double_list_atomic_acquire_read(void)
 {
@@ -5063,7 +5721,7 @@ void double_list_atomic_acquire_read(void)
     static AO_double_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_double_fetch_and_add_acquire_read) || defined(AO_HAVE_double_and_acquire_read) \
      || defined(AO_HAVE_double_or_acquire_read) || defined(AO_HAVE_double_xor_acquire_read)
@@ -5079,7 +5737,7 @@ void double_list_atomic_acquire_read(void)
 
 # ifdef AO_HAVE_double_load_acquire_read
     (void)"AO_double_load_acquire_read(&val):";
-    AO_double_load_acquire_read(&val);
+    (void)AO_double_load_acquire_read(&val);
 # else
     (void)"No AO_double_load_acquire_read";
 # endif
@@ -5091,19 +5749,19 @@ void double_list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_double_fetch_and_add_acquire_read
     (void)"AO_double_fetch_and_add_acquire_read(&val, incr):";
-    AO_double_fetch_and_add_acquire_read(&val, incr);
+    (void)AO_double_fetch_and_add_acquire_read(&val, incr);
 # else
     (void)"No AO_double_fetch_and_add_acquire_read";
 # endif
 # ifdef AO_HAVE_double_fetch_and_add1_acquire_read
     (void)"AO_double_fetch_and_add1_acquire_read(&val):";
-    AO_double_fetch_and_add1_acquire_read(&val);
+    (void)AO_double_fetch_and_add1_acquire_read(&val);
 # else
     (void)"No AO_double_fetch_and_add1_acquire_read";
 # endif
 # ifdef AO_HAVE_double_fetch_and_sub1_acquire_read
     (void)"AO_double_fetch_and_sub1_acquire_read(&val):";
-    AO_double_fetch_and_sub1_acquire_read(&val);
+    (void)AO_double_fetch_and_sub1_acquire_read(&val);
 # else
     (void)"No AO_double_fetch_and_sub1_acquire_read";
 # endif
@@ -5127,7 +5785,8 @@ void double_list_atomic_acquire_read(void)
 # endif
 # ifdef AO_HAVE_double_compare_and_swap_acquire_read
     (void)"AO_double_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_double_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (!AO_double_compare_and_swap_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_double_compare_and_swap_acquire_read";
 # endif
@@ -5135,14 +5794,15 @@ void double_list_atomic_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_acquire_read */
 # ifdef AO_HAVE_double_fetch_compare_and_swap_acquire_read
     (void)"AO_double_fetch_compare_and_swap_acquire_read(&val, oldval, newval):";
-    AO_double_fetch_compare_and_swap_acquire_read(&val, oldval, newval);
+    if (AO_double_fetch_compare_and_swap_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_double_fetch_compare_and_swap_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_acquire_read)
     (void)"AO_test_and_set_acquire_read(&ts):";
-    AO_test_and_set_acquire_read(&ts);
+    (void)AO_test_and_set_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_acquire_read";
 # endif
@@ -5150,8 +5810,19 @@ void double_list_atomic_acquire_read(void)
 /*
  * Copyright (c) 2003 by Hewlett-Packard Company.  All rights reserved.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 /* This generates a compilable program.  But it is really meant to be   */
@@ -5159,6 +5830,8 @@ void double_list_atomic_acquire_read(void)
 /* primitives.                                                          */
 
 /* The result will not link or run.                                     */
+
+#include <stdlib.h> /* for exit() */
 
 void double_list_atomic_dd_acquire_read(void)
 {
@@ -5180,7 +5853,7 @@ void double_list_atomic_dd_acquire_read(void)
     static AO_double_t newval /* = 0 */;
 # endif
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
-    AO_TS_t ts;
+    AO_TS_t ts = AO_TS_INITIALIZER;
 # endif
 # if defined(AO_HAVE_double_fetch_and_add_dd_acquire_read) || defined(AO_HAVE_double_and_dd_acquire_read) \
      || defined(AO_HAVE_double_or_dd_acquire_read) || defined(AO_HAVE_double_xor_dd_acquire_read)
@@ -5196,7 +5869,7 @@ void double_list_atomic_dd_acquire_read(void)
 
 # ifdef AO_HAVE_double_load_dd_acquire_read
     (void)"AO_double_load_dd_acquire_read(&val):";
-    AO_double_load_dd_acquire_read(&val);
+    (void)AO_double_load_dd_acquire_read(&val);
 # else
     (void)"No AO_double_load_dd_acquire_read";
 # endif
@@ -5208,19 +5881,19 @@ void double_list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_double_fetch_and_add_dd_acquire_read
     (void)"AO_double_fetch_and_add_dd_acquire_read(&val, incr):";
-    AO_double_fetch_and_add_dd_acquire_read(&val, incr);
+    (void)AO_double_fetch_and_add_dd_acquire_read(&val, incr);
 # else
     (void)"No AO_double_fetch_and_add_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_double_fetch_and_add1_dd_acquire_read
     (void)"AO_double_fetch_and_add1_dd_acquire_read(&val):";
-    AO_double_fetch_and_add1_dd_acquire_read(&val);
+    (void)AO_double_fetch_and_add1_dd_acquire_read(&val);
 # else
     (void)"No AO_double_fetch_and_add1_dd_acquire_read";
 # endif
 # ifdef AO_HAVE_double_fetch_and_sub1_dd_acquire_read
     (void)"AO_double_fetch_and_sub1_dd_acquire_read(&val):";
-    AO_double_fetch_and_sub1_dd_acquire_read(&val);
+    (void)AO_double_fetch_and_sub1_dd_acquire_read(&val);
 # else
     (void)"No AO_double_fetch_and_sub1_dd_acquire_read";
 # endif
@@ -5244,7 +5917,8 @@ void double_list_atomic_dd_acquire_read(void)
 # endif
 # ifdef AO_HAVE_double_compare_and_swap_dd_acquire_read
     (void)"AO_double_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_double_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (!AO_double_compare_and_swap_dd_acquire_read(&val, oldval, newval))
+      exit(1);
 # else
     (void)"No AO_double_compare_and_swap_dd_acquire_read";
 # endif
@@ -5252,14 +5926,15 @@ void double_list_atomic_dd_acquire_read(void)
   /* TODO: Add AO_compare_and_swap_double_dd_acquire_read */
 # ifdef AO_HAVE_double_fetch_compare_and_swap_dd_acquire_read
     (void)"AO_double_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval):";
-    AO_double_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval);
+    if (AO_double_fetch_compare_and_swap_dd_acquire_read(&val, oldval, newval) != oldval)
+      exit(1);
 # else
     (void)"No AO_double_fetch_compare_and_swap_dd_acquire_read";
 # endif
 
 # if defined(AO_HAVE_test_and_set_dd_acquire_read)
     (void)"AO_test_and_set_dd_acquire_read(&ts):";
-    AO_test_and_set_dd_acquire_read(&ts);
+    (void)AO_test_and_set_dd_acquire_read(&ts);
 # else
     (void)"No AO_test_and_set_dd_acquire_read";
 # endif

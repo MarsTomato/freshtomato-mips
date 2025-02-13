@@ -1,8 +1,19 @@
 /*
  * Copyright (c) 2003-2005 Hewlett-Packard Development Company, L.P.
  *
- * This file is covered by the GNU general public license, version 2.
- * see COPYING for details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #if defined(_MSC_VER) || \
@@ -33,12 +44,20 @@
 
 #include "atomic_ops.h"
 
-#if (defined(_WIN32_WCE) || defined(__MINGW32CE__)) && !defined(abort)
+#if !defined(AO_ATOMIC_OPS_H) && !defined(CPPCHECK)
+# error Wrong atomic_ops.h included.
+#endif
+
+#if (defined(_WIN32_WCE) || defined(__MINGW32CE__)) && !defined(AO_HAVE_abort)
 # define abort() _exit(-1) /* there is no abort() in WinCE */
 #endif
 
 #ifndef AO_PTRDIFF_T
 # define AO_PTRDIFF_T ptrdiff_t
+#endif
+
+#ifndef MAX_NTHREADS
+# define MAX_NTHREADS 100
 #endif
 
 typedef void * (* thr_func)(void *);
@@ -51,12 +70,11 @@ void * run_parallel(int nthreads, thr_func f1, test_func t, const char *name);
 void * run_parallel(int nthreads, thr_func f1, test_func t, const char *name)
 {
   pthread_attr_t attr;
-  pthread_t thr[100];
+  pthread_t thr[MAX_NTHREADS];
   int i;
-  int code;
 
   printf("Testing %s\n", name);
-  if (nthreads > 100)
+  if (nthreads > MAX_NTHREADS)
     {
       fprintf(stderr, "run_parallel: requested too many threads\n");
       abort();
@@ -76,7 +94,8 @@ void * run_parallel(int nthreads, thr_func f1, test_func t, const char *name)
 
   for (i = 0; i < nthreads; ++i)
     {
-      if ((code = pthread_create(thr + i, &attr, f1, (void *)(long)i)) != 0)
+      int code = pthread_create(thr + i, &attr, f1, (void *)(long)i);
+      if (code != 0)
       {
         fprintf(stderr, "pthread_create returned %d, thread %d\n", code, i);
         abort();
@@ -84,7 +103,8 @@ void * run_parallel(int nthreads, thr_func f1, test_func t, const char *name)
     }
   for (i = 0; i < nthreads; ++i)
     {
-      if ((code = pthread_join(thr[i], NULL)) != 0)
+      int code = pthread_join(thr[i], NULL);
+      if (code != 0)
       {
         fprintf(stderr, "pthread_join returned %d, thread %d\n", code, i);
         abort();
@@ -106,11 +126,11 @@ void * run_parallel(int nthreads, thr_func f1, test_func t, const char *name)
 #ifdef USE_VXTHREADS
 void * run_parallel(int nthreads, thr_func f1, test_func t, const char *name)
 {
-  int thr[100];
+  int thr[MAX_NTHREADS];
   int i;
 
   printf("Testing %s\n", name);
-  if (nthreads > 100)
+  if (nthreads > MAX_NTHREADS)
     {
       fprintf(stderr, "run_parallel: requested too many threads\n");
       taskSuspend(0);
@@ -161,13 +181,12 @@ DWORD WINAPI tramp(LPVOID param)
 
 void * run_parallel(int nthreads, thr_func f1, test_func t, const char *name)
 {
-  HANDLE thr[100];
-  struct tramp_args args[100];
+  HANDLE thr[MAX_NTHREADS];
+  struct tramp_args args[MAX_NTHREADS];
   int i;
-  DWORD code;
 
   printf("Testing %s\n", name);
-  if (nthreads > 100)
+  if (nthreads > MAX_NTHREADS)
     {
       fprintf(stderr, "run_parallel: requested too many threads\n");
       abort();
@@ -187,7 +206,8 @@ void * run_parallel(int nthreads, thr_func f1, test_func t, const char *name)
     }
   for (i = 0; i < nthreads; ++i)
     {
-      if ((code = WaitForSingleObject(thr[i], INFINITE)) != WAIT_OBJECT_0)
+      DWORD code = WaitForSingleObject(thr[i], INFINITE);
+      if (code != WAIT_OBJECT_0)
       {
         fprintf(stderr, "WaitForSingleObject returned %lu, thread %d\n",
                 (unsigned long)code, i);
