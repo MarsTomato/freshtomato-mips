@@ -1687,7 +1687,7 @@
    /* create default, if not specified */
 --- dnsmasq/src/rfc1035.c
 +++ dnsmasq/src/rfc1035.c
-@@ -243,6 +243,7 @@
+@@ -241,6 +241,7 @@
  
        return F_IPV4;
      }
@@ -1695,7 +1695,7 @@
    else if (hostname_isequal(penchunk, "ip6") && 
  	   (hostname_isequal(lastchunk, "int") || hostname_isequal(lastchunk, "arpa")))
      {
-@@ -287,6 +288,7 @@
+@@ -285,6 +286,7 @@
  	  return F_IPV6;
  	}
      }
@@ -1703,7 +1703,7 @@
    
    return 0;
  }
-@@ -420,6 +422,7 @@
+@@ -418,6 +420,7 @@
      ((ip_addr & 0xFFFFFFFF) == 0xFFFFFFFF)  /* 255.255.255.255/32 (broadcast)*/ ;
  }
  
@@ -1711,7 +1711,7 @@
  static int private_net6(struct in6_addr *a, int ban_localhost)
  {
    /* Block IPv4-mapped IPv6 addresses in private IPv4 address space */
-@@ -438,6 +441,8 @@
+@@ -436,6 +439,8 @@
      ((unsigned char *)a)[0] == 0xfd ||   /* RFC 6303 4.4 */
      ((u32 *)a)[0] == htonl(0x20010db8); /* RFC 6303 4.6 */
  }
@@ -1720,7 +1720,7 @@
  
  int do_doctor(struct dns_header *header, size_t qlen, char *namebuff)
  {
-@@ -836,11 +841,13 @@
+@@ -834,11 +839,13 @@
  	  addrlen = INADDRSZ;
  	  flags |= F_IPV4;
  	}
@@ -1734,7 +1734,7 @@
        else if (qtype != T_CNAME &&
  	       (qtype == T_SRV || rr_on_list(daemon->cache_rr, qtype) || rr_on_list(daemon->cache_rr, T_ANY)))
  	flags |= F_RR;
-@@ -1041,9 +1048,11 @@
+@@ -1039,9 +1046,11 @@
  			  private_net(addr.addr4, !option_bool(OPT_LOCAL_REBIND)))
  			return 1;
  		      
@@ -1746,7 +1746,7 @@
  		    }
  		  
  #ifdef HAVE_IPSET
-@@ -1392,6 +1401,7 @@
+@@ -1390,6 +1399,7 @@
  		if (!baddrp->is6 && is_same_net_prefix(addr, baddrp->addr.addr4, baddrp->prefix))
  		  return 1;
  	    }
@@ -1754,7 +1754,7 @@
  	  else if (qtype == T_AAAA)
  	    {
  	      struct in6_addr addr;
-@@ -1405,6 +1415,7 @@
+@@ -1403,6 +1413,7 @@
  		if (baddrp->is6 && is_same_net6(&addr, &baddrp->addr.addr6, baddrp->prefix))
  		  return 1;
  	    }
@@ -1762,7 +1762,7 @@
  	}
        
        if (!ADD_RDLEN(header, p, qlen, rdlen))
-@@ -1495,12 +1506,14 @@
+@@ -1493,12 +1504,14 @@
    for (; *format; format++)
      switch (*format)
        {
@@ -1777,7 +1777,7 @@
  	
        case '4':
          CHECK_LIMIT(INADDRSZ);
-@@ -1829,6 +1842,7 @@
+@@ -1827,6 +1840,7 @@
  		  while (intr->next && strcmp(intr->intr, intr->next->intr) == 0)
  		    intr = intr->next;
  	      }
@@ -1785,7 +1785,7 @@
  	  else if (is_arpa == F_IPV6)
  	    for (intr = daemon->int_names; intr; intr = intr->next)
  	      {
-@@ -1844,6 +1858,7 @@
+@@ -1842,6 +1856,7 @@
  		  while (intr->next && strcmp(intr->intr, intr->next->intr) == 0)
  		    intr = intr->next;
  	      }
@@ -1793,7 +1793,7 @@
  	  
  	  if (intr)
  	    {
-@@ -1933,7 +1948,11 @@
+@@ -1931,7 +1946,11 @@
  		anscount++;
  	    }
  	  else if (option_bool(OPT_BOGUSPRIV) &&
@@ -1806,7 +1806,7 @@
  		   !lookup_domain(name, F_DOMAINSRV, NULL, NULL))
  	    {
  	      /* if no configured server, not in cache, enabled and private IPV4 address, return NXDOMAIN */
-@@ -1947,9 +1966,16 @@
+@@ -1945,9 +1964,16 @@
        
        for (flag = F_IPV4; flag; flag = (flag == F_IPV4) ? F_IPV6 : 0)
  	{
@@ -1824,7 +1824,7 @@
  	  if (qtype != type && qtype != T_ANY)
  	    continue;
  	  
-@@ -1971,26 +1997,32 @@
+@@ -1969,26 +1995,32 @@
  		for (intr = daemon->int_names; intr; intr = intr->next)
  		  if (hostname_isequal(name, intr->name))
  		    for (addrlist = intr->addr; addrlist; addrlist = addrlist->next)
@@ -1863,7 +1863,7 @@
  			  ans = 1;	
  			  sec_data = 0;
  			  gotit = 1;
-@@ -2361,8 +2393,11 @@
+@@ -2359,8 +2391,11 @@
  	crecp = NULL;
  	while ((crecp = cache_find_by_name(crecp, rec->target, now, F_IPV4 | F_IPV6)))
  	  {
