@@ -2,7 +2,8 @@
  *
  * Tomato Firmware
  * Copyright (C) 2006-2009 Jonathan Zarate
- * Fixes/updates (C) 2018 - 2024 pedro
+ *
+ * Fixes/updates (C) 2018 - 2025 pedro
  *
  */
 
@@ -11,14 +12,14 @@
 #include "tomato_profile.h"
 #include <string.h>
 #ifdef TCONFIG_BCMARM
-#include <stdio.h>
-#include <ctype.h>
-#include <wlioctl.h>
-#include <shared.h>
-#include <shutils.h>
-#include <bcmnvram.h>
+ #include <stdio.h>
+ #include <ctype.h>
+ #include <wlioctl.h>
+ #include <shared.h>
+ #include <shutils.h>
+ #include <bcmnvram.h>
 #else
-#include "defaults.h"
+ #include "defaults.h"
 #endif
 
 const defaults_t rstats_defaults[] = {
@@ -1276,9 +1277,8 @@ const defaults_t defaults[] = {
 
 /* admin-tomatoanon */
 	{ "tomatoanon_enable",		"0"				},
-	{ "tomatoanon_answer",		"0"				},
-	{ "tomatoanon_id",		""				},
 	{ "tomatoanon_notify",		"1"				},
+	{ "tomatoanon_id",		""				},
 
 #ifdef TCONFIG_USB
 /* nas-usb */
