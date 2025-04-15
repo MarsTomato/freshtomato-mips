@@ -2464,9 +2464,15 @@ libxml2: libxml2/static/Makefile libxml2/build/Makefile
 	@$(MAKE) -C libxml2/build DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/staged/usr/lib/libxml2.so.2.13.6 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.6
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.6
-	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.2.13.6 libxml2.so.2 && ln -sf libxml2.so.2.13.6 libxml2.so
+ifeq ($(TCONFIG_BCMARM),y)
+	install -D libxml2/staged/usr/lib/libxml2.so.16.0.1 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.1
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.1
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.0.1 libxml2.so.16 && ln -sf libxml2.so.16.0.1 libxml2.so
+else
+	install -D libxml2/staged/usr/lib/libxml2.so.2.13.7 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.2.13.7 libxml2.so.2 && ln -sf libxml2.so.2.13.7 libxml2.so
+endif
 
 libxml2-clean:
 	@rm -rf libxml2/static
@@ -3015,8 +3021,8 @@ nano/stamp-h1:
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libncurses/staged/usr/include -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libncurses/staged/usr/lib -fPIC" \
 		NCURSES_LIBS="-lncurses" \
-		ac_cv_lib_ncursesw_get_wch=no \
-		$(CONFIGURE) --prefix=/usr --disable-nls --enable-tiny --without-libiconv-prefix --disable-utf8
+		ac_cv_lib_ncursesw_get_wch=no ac_cv_func_strcasecmp=no ac_cv_func_strncasecmp=no \
+		$(CONFIGURE) --prefix=/usr --enable-tiny --disable-color --disable-utf8 --disable-nls --without-libiconv-prefix
 	@touch $@
 
 nano: nano/stamp-h1
@@ -3818,9 +3824,9 @@ expat: expat/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/expat/staged install
 
 expat-install:
-	install -D expat/staged/usr/lib/libexpat.so.1.10.1 $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.10.1
-	$(STRIP) $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.10.1
-	cd $(INSTALLDIR)/expat/usr/lib && ln -sf libexpat.so.1.10.1 libexpat.so.1
+	install -D expat/staged/usr/lib/libexpat.so.1.10.2 $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.10.2
+	$(STRIP) $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.10.2
+	cd $(INSTALLDIR)/expat/usr/lib && ln -sf libexpat.so.1.10.2 libexpat.so.1
 
 expat-clean:
 	-@$(MAKE) -C expat clean

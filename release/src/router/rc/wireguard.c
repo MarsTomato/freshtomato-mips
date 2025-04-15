@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (C) 2023 - 2024 FreshTomato
+ * Copyright (C) 2023 - 2025 FreshTomato
  * https://freshtomato.org/
  *
  * For use with FreshTomato Firmware only.
@@ -37,13 +37,13 @@
 
 #define WG_INTERFACE_MAX	3
 
-/* uncomment to add default routing (also in router/wireguard-tools/src/wg-quick/posix.sh line 519 - 521) after kernel fix */
+/* uncomment to add default routing (also in patches/wireguard-tools/101-tomato-specific.patch line 412 - 414) after kernel fix */
 //#define KERNEL_WG_FIX
 
 
 char port[BUF_SIZE_8];
 
-static void wg_build_firewall(int unit, char *port, char *iface) {
+static void wg_build_firewall(const int unit, const char *port, const char *iface) {
 	FILE *fp;
 	char buffer[BUF_SIZE_64];
 	char *dns;
@@ -189,7 +189,7 @@ static void wg_build_firewall(int unit, char *port, char *iface) {
 	logmsg(LOG_DEBUG, "*** %s: Done", __FUNCTION__);
 }
 
-static int wg_quick_iface(char *iface, char *file, int up)
+static int wg_quick_iface(char *iface, const char *file, const int up)
 {
 	char buffer[BUF_SIZE_32];
 	char *up_down = (up == 1 ? "up" : "down");
@@ -219,7 +219,7 @@ static int wg_quick_iface(char *iface, char *file, int up)
 	return 0;
 }
 
-static void find_port(int unit, char *port)
+static void find_port(const int unit, char *port)
 {
 	char *b;
 
@@ -274,7 +274,7 @@ static int wg_create_iface(char *iface)
 	return 0;
 }
 
-static int wg_set_iface_addr(char *iface, char *addr)
+static int wg_set_iface_addr(char *iface, const char *addr)
 {
 	char *nv, *b;
 
@@ -289,6 +289,9 @@ static int wg_set_iface_addr(char *iface, char *addr)
 	/* Set wireguard interface address(es) */
 	nv = strdup(addr);
 	while ((b = strsep(&nv, ",")) != NULL) {
+
+		logmsg(LOG_DEBUG, "*** %s: iface=[%s] b=[%s] addr=[%s]", __FUNCTION__, iface, b, addr);
+
 		if (eval("ip", "addr", "add", b, "dev", iface)) {
 			logmsg(LOG_WARNING, "unable to add wireguard interface %s address of %s!", iface, addr);
 			return -1;
@@ -315,7 +318,7 @@ static int wg_set_iface_port(char *iface, char *port)
 	return 0;
 }
 
-static int wg_set_iface_privkey(char *iface, char *privkey)
+static int wg_set_iface_privkey(char *iface, const char *privkey)
 {
 	FILE *fp;
 	char buffer[BUF_SIZE];
@@ -381,7 +384,7 @@ static int wg_set_iface_up(char *iface)
 	int retry = 0;
 
 	while (retry < 5) {
-		if (!(eval("ifconfig", iface, "up"))) {
+		if (!(eval("ip", "link", "set", "up", "dev", iface))) {
 			logmsg(LOG_DEBUG, "wireguard interface %s has been brought up", iface);
 			return 0;
 		}
@@ -397,7 +400,7 @@ static int wg_set_iface_up(char *iface)
 	return -1;
 }
 
-static int wg_iface_script(int unit, char *script_name)
+static int wg_iface_script(const int unit, const char *script_name)
 {
 	char *script;
 	char buffer[BUF_SIZE_32];
@@ -445,27 +448,27 @@ static int wg_iface_script(int unit, char *script_name)
 	return 0;
 }
 
-static void wg_iface_pre_up(int unit)
+static void wg_iface_pre_up(const int unit)
 {
 	wg_iface_script(unit, "preup");
 }
 
-static void wg_iface_post_up(int unit)
+static void wg_iface_post_up(const int unit)
 {
 	wg_iface_script(unit, "postup");
 }
 
-static void wg_iface_pre_down(int unit)
+static void wg_iface_pre_down(const int unit)
 {
 	wg_iface_script(unit, "predown");
 }
 
-static void wg_iface_post_down(int unit)
+static void wg_iface_post_down(const int unit)
 {
 	wg_iface_script(unit, "postdown");
 }
 
-static int wg_set_peer_psk(char *iface, char *pubkey, char *presharedkey)
+static int wg_set_peer_psk(char *iface, char *pubkey, const char *presharedkey)
 {
 	FILE *fp;
 	char buffer[BUF_SIZE];
@@ -503,7 +506,7 @@ static int wg_set_peer_keepalive(char *iface, char *pubkey, char *keepalive)
 	return 0;
 }
 
-static int wg_set_peer_endpoint(char *iface, char *pubkey, char *endpoint, char *port)
+static int wg_set_peer_endpoint(char *iface, char *pubkey, const char *endpoint, const char *port)
 {
 	char buffer[BUF_SIZE_64];
 
@@ -558,7 +561,7 @@ static int wg_route_peer_custom(char *iface, char *route, char *table)
 	return 0;
 }
 
-static int wg_route_peer_allowed_ips(char *iface, char *allowed_ips, char *fwmark)
+static int wg_route_peer_allowed_ips(char *iface, const char *allowed_ips, const char *fwmark)
 {
 	char *aip, *b, *table, *rt, *tp, *ip, *nm;
 	int route_type = 1, result = 0;
@@ -606,10 +609,10 @@ static int wg_route_peer_allowed_ips(char *iface, char *allowed_ips, char *fwmar
 	return result;
 }
 
-static int wg_set_peer_allowed_ips(char *iface, char *pubkey, char *allowed_ips, char *fwmark)
+static int wg_set_peer_allowed_ips(char *iface, char *pubkey, char *allowed_ips, const char *fwmark)
 {
 	if (eval("wg", "set", iface, "peer", pubkey, "allowed-ips", allowed_ips)) {
-		logmsg(LOG_WARNING, "unable to add peer %s to wireguard interface %s!", pubkey, iface);
+		logmsg(LOG_WARNING, "unable to add allowed ips %s for peer %s to wireguard interface %s!", allowed_ips, pubkey, iface);
 		return -1;
 	}
 	else
@@ -618,7 +621,7 @@ static int wg_set_peer_allowed_ips(char *iface, char *pubkey, char *allowed_ips,
 	return wg_route_peer_allowed_ips(iface, allowed_ips, fwmark);
 }
 
-static int wg_add_peer(char *iface, char *pubkey, char *allowed_ips, char *presharedkey, char *keepalive, char *endpoint, char *fwmark, char *port)
+static int wg_add_peer(char *iface, char *pubkey, char *allowed_ips, const char *presharedkey, char *keepalive, const char *endpoint, const char *fwmark, const char *port)
 {
 	/* set allowed ips / create peer */
 	wg_set_peer_allowed_ips(iface, pubkey, allowed_ips, fwmark);
@@ -703,7 +706,7 @@ static bool key_from_base64(uint8_t key[static WG_KEY_LEN], const char *base64)
 	return 1 & ((ret - 1) >> 8);
 }
 
-static void wg_pubkey(char *privkey, char *pubkey)
+static void wg_pubkey(const char *privkey, char *pubkey)
 {
 	uint8_t key[WG_KEY_LEN] __attribute__((aligned(sizeof(uintptr_t))));
 
@@ -712,7 +715,7 @@ static void wg_pubkey(char *privkey, char *pubkey)
 	key_to_base64(pubkey, key);
 }
 
-static int wg_add_peer_privkey(char *iface, char *privkey, char *allowed_ips, char *presharedkey, char *keepalive, char *endpoint, char *fwmark)
+static int wg_add_peer_privkey(char *iface, const char *privkey, char *allowed_ips, const char *presharedkey, char *keepalive, const char *endpoint, const char *fwmark)
 {
 	char pubkey[64];
 
@@ -803,7 +806,7 @@ void stop_wg_all(void)
 	modprobe_r("wireguard");
 }
 
-void start_wireguard(int unit)
+void start_wireguard(const int unit)
 {
 	char *nv, *nvp, *rka, *b;
 	char *priv, *name, *key, *psk, *ip, *ka, *aip, *ep;
@@ -869,9 +872,14 @@ void start_wireguard(int unit)
 		/* add stored peers */
 		nvp = nv = strdup(getNVRAMVar("wg%d_peers", unit));
 		if (nv) {
+
+			logmsg(LOG_DEBUG, "*** %s: adding wg%d_peers ...", __FUNCTION__, unit);
+
 			while ((b = strsep(&nvp, ">")) != NULL) {
 				if (vstrsep(b, "<", &priv, &name, &ep, &key, &psk, &ip, &aip, &ka) < 8)
 					continue;
+
+				logmsg(LOG_DEBUG, "*** %s: peer IF=[%i]: priv=[%s] name=[%s] ep=[%s] key=[%s] psk=[%s] ip=[%s] aip=[%s] ka=[%s]", __FUNCTION__, unit, priv, name, ep, key, psk, ip, aip, ka);
 
 				/* build peer allowed ips */
 				memset(buffer, 0, BUF_SIZE);
@@ -881,10 +889,14 @@ void start_wireguard(int unit)
 					snprintf(buffer, BUF_SIZE, "%s,%s", ip, aip);
 
 				/* add peer to interface */
-				if (priv[0] == '1')
+				if (priv[0] == '1') {
+					logmsg(LOG_DEBUG, "*** %s: running wg_add_peer_privkey(): iface=[%s] key=[%s] buffer=[%s] psk=[%s] rka=[%s] ep=[%s] fwmark=[%s]", __FUNCTION__, iface, key, buffer, psk, rka, ep, fwmark);
 					wg_add_peer_privkey(iface, key, buffer, psk, rka, ep, fwmark);
-				else
+				}
+				else {
+					logmsg(LOG_DEBUG, "*** %s: running wg_add_peer(): iface=[%s] key=[%s] buffer=[%s] psk=[%s] rka=[%s] ep=[%s] fwmark=[%s] port=[%s]", __FUNCTION__, iface, key, buffer, psk, rka, ep, fwmark, port);
 					wg_add_peer(iface, key, buffer, psk, rka, ep, fwmark, port);
+				}
 			}
 		}
 		if (nvp)
@@ -918,7 +930,7 @@ out:
 	stop_wireguard(unit);
 }
 
-void stop_wireguard(int unit)
+void stop_wireguard(const int unit)
 {
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];

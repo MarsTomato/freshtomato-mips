@@ -267,7 +267,12 @@ sub fixDyn
 	fixDynDep("nginx", "libpcre2-8.so.0.14.0");
 	fixDynDep("nginx", "libpcre2-posix.so.3.0.6");
 	fixDynDep("nginx", "libwolfssl.so.42.2.0");
-	fixDynDep("php-cgi", "libxml2.so.2.13.6");
+	if ($is_arm ne "y") { # MIPS
+		fixDynDep("php-cgi", "libxml2.so.2.13.7");
+	}
+	else {
+		fixDynDep("php-cgi", "libxml2.so.16.0.1");
+	}
 	fixDynDep("php-cgi", "libpng16.so.16.47.0");
 	fixDynDep("php-cgi", "libiconv.so.2.7.0");
 	fixDynDep("php-cgi", "libsqlite3.so.0.8.6");
@@ -278,7 +283,12 @@ sub fixDyn
 	fixDynDep("php-cgi", "libpcre2-8.so.0.14.0");
 	fixDynDep("php-cgi", "libpcre2-posix.so.3.0.6");
 	fixDynDep("php-cgi", "libzip.so.5.5");
-	fixDynDep("php-cli", "libxml2.so.2.13.6");
+	if ($is_arm ne "y") { # MIPS
+		fixDynDep("php-cli", "libxml2.so.2.13.7");
+	}
+	else {
+		fixDynDep("php-cli", "libxml2.so.16.0.1");
+	}
 	fixDynDep("php-cli", "libpng16.so.16.47.0");
 	fixDynDep("php-cli", "libiconv.so.2.7.0");
 	fixDynDep("php-cli", "libsqlite3.so.0.8.6");
@@ -289,7 +299,12 @@ sub fixDyn
 	fixDynDep("php-cli", "libpcre2-8.so.0.14.0");
 	fixDynDep("php-cli", "libpcre2-posix.so.3.0.6");
 	fixDynDep("php-cli", "libzip.so.5.5");
-	fixDynDep("php-fpm", "libxml2.so.2.13.6");
+	if ($is_arm ne "y") { # MIPS
+		fixDynDep("php-fpm", "libxml2.so.2.13.7");
+	}
+	else {
+		fixDynDep("php-fpm", "libxml2.so.16.0.1");
+	}
 	fixDynDep("php-fpm", "libpng16.so.16.47.0");
 	fixDynDep("php-fpm", "libiconv.so.2.7.0");
 	fixDynDep("php-fpm", "libsqlite3.so.0.8.6");
@@ -350,7 +365,7 @@ sub fixDyn
 # avahi
 	fixDynDep("avahi-daemon", "libavahi-core.so.7.1.0");
 	fixDynDep("avahi-daemon", "libavahi-common.so.3.5.4");
-	fixDynDep("avahi-daemon", "libexpat.so.1.10.1");
+	fixDynDep("avahi-daemon", "libexpat.so.1.10.2");
 	fixDynDep("avahi-daemon", "libdaemon.so.0.5.0");
 
 	fixDynDep("xtables-legacy-multi", "libxtables.so");
@@ -669,7 +684,7 @@ elsif ($openssldir eq "openssl-3.0") {
 #genSO("${root}/usr/lib/libwolfssl.so.42.2.0", "${router}/wolfssl/src/.libs/libwolfssl.a", "${stripshared}");
 
 if ($is_arm ne "y") { # MIPS only (ARM - bigger)
-	genSO("${root}/usr/lib/libexpat.so.1.10.1", "${router}/expat/lib/.libs/libexpat.a", "${stripshared}");
+	genSO("${root}/usr/lib/libexpat.so.1.10.2", "${router}/expat/lib/.libs/libexpat.a", "${stripshared}");
 	genSO("${root}/usr/lib/libid3tag.so.0.16.3", "${router}/libid3tag/static/libid3tag.a", "${stripshared}", "-L${router}/zlib");
 	genSO("${root}/usr/lib/libexif.so.12", "${router}/libexif/libexif/.libs/libexif.a", "${stripshared}");
 	genSO("${root}/usr/lib/libavcodec.so.54", "${router}/ffmpeg//libavcodec/libavcodec.a", "${stripshared}", "-L${router}/ffmpeg/libavutil -L${router}/zlib");
@@ -692,7 +707,12 @@ genSO("${root}/usr/lib/libcurl.so.4.8.0", "${router}/libcurl/lib/.libs/libcurl.a
 genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a", "${stripshared}");
 genSO("${root}/usr/lib/libiconv.so.2.7.0", "${router}/libiconv/lib/.libs/libiconv.a", "${stripshared}");
 genSO("${root}/usr/lib/libpng16.so.16.47.0", "${router}/libpng/staged/usr/lib/libpng16.a", "${stripshared}", "-L${router}/zlib");
-genSO("${root}/usr/lib/libxml2.so.2.13.6", "${router}/libxml2/staged/usr/lib/libxml2.a", "${stripshared}", "-L${router}/zlib");
+if ($is_arm ne "y") { # MIPS
+	genSO("${root}/usr/lib/libxml2.so.2.13.7", "${router}/libxml2/staged/usr/lib/libxml2.a", "${stripshared}", "-L${router}/zlib");
+}
+else {
+	genSO("${root}/usr/lib/libxml2.so.16.0.1", "${router}/libxml2/staged/usr/lib/libxml2.a", "${stripshared}", "-L${router}/zlib");
+}
 genSO("${root}/usr/lib/libpcre.so.1.2.13", "${router}/pcre/.libs/libpcre.a", "${stripshared}");
 genSO("${root}/usr/lib/libpcre2-8.so.0.14.0", "${router}/pcre2/staged/usr/lib/libpcre2-8.a", "${stripshared}");
 #genSO("${root}/usr/lib/libpcre2-posix.so.3.0.6", "${router}/pcre2/staged/usr/lib/libpcre2-posix.a", "${stripshared}"); # (deleted)
