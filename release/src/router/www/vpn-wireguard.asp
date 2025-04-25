@@ -109,6 +109,7 @@ function show() {
 		var e = E('_'+serviceType+i+'_button');
 		var d = isup[serviceType+i];
 
+		E('_'+serviceType+i+'_notice').innerHTML = serviceType+i+' is '+(d ? '<span class="service_up">RUNNING<\/span>' : '<span class="service_down">STOPPED<\/span>');
 		e.value = (d ? 'Stop' : 'Start')+' Now';
 		e.setAttribute('onclick', 'javascript:toggle(\''+serviceType+''+i+'\','+d+');');
 		if (serviceLastUp[i] != d || countButton > 6) {
@@ -149,12 +150,15 @@ function tabSelect(name) {
 	for (var i = 0; i < tabs.length; ++i) {
 		if (name == tabs[i][0]) {
 			elem.display(tabs[i][0]+'-wg-tab', true);
+			elem.display(tabs[i][0]+'-wg-status-button', true);
 			for (var j = 0; j < sections.length; ++j) {
 				elem.display('notes-'+sections[j][0], (E(tabs[i][0]+'-'+sections[j][0]+'-wg-tab').classList.contains('active')));
 			}
 		}
-		else
+		else {
 			elem.display(tabs[i][0]+'-wg-tab', false);
+			elem.display(tabs[i][0]+'-wg-status-button', false);
+		}
 	}
 
 	cookie.set(cprefix+'_tab', name);
@@ -343,6 +347,7 @@ function validateConfig(config) {
 
 function mapConfig(contents) {
 	var lines = contents.split('\n');
+	var unit = event.target.unit;
 	var config = {
 		'interface': {},
 		'peers': []
@@ -440,13 +445,22 @@ function mapConfig(contents) {
 				target.psk = value;
 				break;
 			case 'allowedips':
-				if (!target.allowed_ips)
-					target.allowed_ips = value;
+				if (!target.allowed_ips) {
+					var tmp = value.split(',');
+					for (var j = 0; j < tmp.length; ++j) {
+						if (tmp[j].indexOf(':')) /* we're not IPv6 ready yet */
+							tmp.splice(j, j);
+					}
+					target.allowed_ips = tmp.join(',');
+				}
 				else
 					target.allowed_ips = [target.allowed_ips, value].join(',');
 				break;
 			case 'endpoint':
-				target.endpoint = value.split(':')[0];;
+				if (E('_wg'+unit+'_com').value == 3) /* 'External - VPN Provider' */
+					target.endpoint = value;
+				else
+					target.endpoint = value.split(':')[0];
 				break;
 			case 'persistentkeepalive':
 				target.keepalive = value;
@@ -674,7 +688,7 @@ PeerGrid.prototype.edit = function(cell) {
 	if (interface_port == '')
 		interface_port = (51820 + this.unit);
 
-	E('_f_wg'+this.unit+'_peer_pubkey').disabled = true;
+	E('_f_wg'+this.unit+'_peer_pubkey').disabled = 1;
 
 	alias.value = data[0];
 	endpoint.value = data[1];
@@ -701,7 +715,7 @@ PeerGrid.prototype.edit = function(cell) {
 
 PeerGrid.prototype.insertData = function(at, data) {
 	if (at == -1)
-		at = this.tb.rows.length ;
+		at = this.tb.rows.length;
 
 	var view = this.dataToView(data);
 	var qr = '';
@@ -864,9 +878,13 @@ function verifyPeerFields(unit, require_privkey) {
 	else
 		ferror.clear(psk);
 
-	if (!verifyCIDR(ip.value)) {
-		ferror.set(ip, 'A valid CIDR (IP/MASK) must be provided to generate a configuration file', !result);
-		result = 0;
+	if (E('_wg'+unit+'_com').value != 3) { /* !'External - VPN Provider' */
+		if (!verifyCIDR(ip.value)) {
+			ferror.set(ip, 'A valid CIDR (IP/MASK) must be provided to generate a configuration file', !result);
+			result = 0;
+		}
+		else
+			ferror.clear(ip);
 	}
 	else
 		ferror.clear(ip);
@@ -971,19 +989,29 @@ function clearPeerFields(unit) {
 	E('_f_wg'+unit+'_peer_ep').value = '';
 	E('_f_wg'+unit+'_peer_port').value = port;
 	E('_f_wg'+unit+'_peer_privkey').value = '';
-	E('_f_wg'+unit+'_peer_privkey').disabled = false;
+	E('_f_wg'+unit+'_peer_privkey').disabled = 0;
 	E('_f_wg'+unit+'_peer_pubkey').value = '';
-	E('_f_wg'+unit+'_peer_pubkey').disabled = false;
+	E('_f_wg'+unit+'_peer_pubkey').disabled = 0;
 	E('_f_wg'+unit+'_peer_psk').value = '';
 	E('_f_wg'+unit+'_peer_ip').value = '';
 	E('_f_wg'+unit+'_peer_aip').value = '';
 	E('_f_wg'+unit+'_peer_ka').value = '';
 	E('_f_wg'+unit+'_peer_fwmark').value = '';
+
+	E('wg'+unit+'_peer_add').value = 'Add to Peers';
 }
 
 function addPeer(unit, quiet) {
 	if (!verifyPeerFields(unit))
 		return;
+
+	if (E('_wg'+unit+'_com').value == 3) { /* 'External - VPN Provider' - allow only one peer (us) */
+		var rows = peerTables[unit].getAllData().length;
+		if (rows > 0) {
+			alert('In "External - VPN Provider" mode you can only add one peer (this router)')
+			return;
+		}
+	}
 
 	changed = 1;
 
@@ -1095,9 +1123,9 @@ function generatePeer(unit) {
 
 	/* set fields with generated data */
 	E('_f_wg'+unit+'_peer_privkey').value = keys.privateKey;
-	E('_f_wg'+unit+'_peer_privkey').disabled = false;
+	E('_f_wg'+unit+'_peer_privkey').disabled = 0;
 	E('_f_wg'+unit+'_peer_pubkey').value = keys.publicKey;
-	E('_f_wg'+unit+'_peer_pubkey').disabled = true;
+	E('_f_wg'+unit+'_peer_pubkey').disabled = 1;
 	E('_f_wg'+unit+'_peer_psk').value = psk;
 	E('_f_wg'+unit+'_peer_ip').value = ip+'/'+netmask;
 	E('_f_wg'+unit+'_peer_ka').value = 0;
@@ -1643,6 +1671,13 @@ function verifyFields(focused, quiet) {
 				ferror.clear(ip);
 		}
 
+		if (E('_wg'+i+'_com').value == 3) { /* 'External - VPN Provider' */
+			E('_f_wg'+i+'_peer_ip').value = '';
+			E('_f_wg'+i+'_peer_ip').disabled = 1;
+		}
+		else
+			E('_f_wg'+i+'_peer_ip').disabled = 0;
+
 		/* verify interface dns */
 		var dns = E('_wg'+i+'_dns');
 		if (dns.value != '' && !verifyDNS(dns.value)) {
@@ -1858,6 +1893,24 @@ function init() {
 
 <!-- / / / -->
 
+<div class="section-title">Status</div>
+<div class="section">
+	<div class="fields">
+		<script>
+			for (i = 0; i < tabs.length; ++i) {
+				t = tabs[i][0];
+
+				W('<div id="'+t+'-wg-status-button">');
+				W('<span id="_wireguard'+i+'_notice"><\/span>');
+				W('<input type="button" id="_wireguard'+i+'_button">&nbsp; <img src="spin.gif" alt="" id="spin'+i+'">');
+				W('<\/div>');
+			}
+		</script>
+	</div>
+</div>
+
+<!-- / / / -->
+
 <div class="section-title">Wireguard Configuration</div>
 <div class="section">
 	<script>
@@ -1919,13 +1972,15 @@ function init() {
 			W('<br>');
 
 			W('<div class="section-title">Import Config from File<\/div>');
-			W('<div>Before importing the configuration, set the correct "Type of VPN".<\/div>');
+			W('<div class="fields">');
+			W('<div>Before importing the configuration, set the correct "Type of VPN" above.<\/div>');
+			W('<br>');
 			W('<div class="import-section">');
 			W('<input type="file" class="import-file" id="'+t+'_config_file" accept=".conf" name="Browse File">');
 			W('<input type="button" id="'+t+'_config_import" value="Import" onclick="loadConfig('+i+')" >');
 			W('<\/div>');
 			W('<br>');
-			W('<\/div>');
+			W('<\/div><\/div>');
 			/* config tab stop */
 
 			/* peers tab start */
@@ -1964,7 +2019,7 @@ function init() {
 				{ title: 'VPN Interface IP', name: 'f_'+t+'_peer_ip', type: 'text', placeholder: 'CIDR format', maxlen: 64, size: 64 },
 				{ title: 'Allowed IPs', name: 'f_'+t+'_peer_aip', type: 'text', placeholder: 'CIDR format / comma separated', maxlen: 128, size: 64 },
 				{ title: 'Peer behind NAT', name: 'f_'+t+'_peer_ka', type: 'text', maxlen: 2, size: 4, value: '', suffix: '&nbsp;<small>enables keepalives from this peer towards the other peers (range 0 - 99 secs; 0 to disable)<\/small>' },
-				{ title: '', custom: '<input type="button" value="Add to Peers" onclick="addPeer('+i+')" id="'+t+'_peer_add">' }
+				{ title: '', custom: '<input type="button" value="Add to Peers" onclick="addPeer('+i+')" id="'+t+'_peer_add"> <input type="button" value="Clean" onclick="clearPeerFields('+i+')" id="'+t+'_peer_clean">' }
 			]);
 			W('<\/div>');
 			/* peers tab stop */
@@ -1993,9 +2048,6 @@ function init() {
 			statRefreshes[i].initPage(3000, 0);
 			W('<\/div>');
 			/* status tab end */
-
-			/* start/stop button */
-			W('<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_wireguard'+i+'_button">&nbsp; <img src="spin.gif" alt="" id="spin'+i+'"><\/div>');
 
 			W('<\/div>');
 		}

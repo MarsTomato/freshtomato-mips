@@ -824,6 +824,9 @@ void start_wireguard(const int unit)
 	/* set up directories for later use */
 	wg_setup_dirs();
 
+	/* create firewall script */
+	wg_build_firewall(unit, port, iface);
+
 	/* check if file is specified */
 	if (getNVRAMVar("wg%d_file", unit)[0] != '\0') {
 		if (wg_quick_iface(iface, getNVRAMVar("wg%d_file", unit), 1))
@@ -885,6 +888,8 @@ void start_wireguard(const int unit)
 				memset(buffer, 0, BUF_SIZE);
 				if (aip[0] == '\0')
 					snprintf(buffer, BUF_SIZE, "%s", ip);
+				else if (ip[0] == '\0')
+					snprintf(buffer, BUF_SIZE, "%s", aip);
 				else
 					snprintf(buffer, BUF_SIZE, "%s,%s", ip, aip);
 
@@ -905,9 +910,6 @@ void start_wireguard(const int unit)
 		/* run post up scripts */
 		wg_iface_post_up(unit);
 	}
-
-	/* create firewall script */
-	wg_build_firewall(unit, port, iface);
 
 	/* firewall + dns rules */
 	memset(buffer, 0, BUF_SIZE);
