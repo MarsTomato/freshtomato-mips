@@ -673,7 +673,7 @@
 +#endif /* HAVE_IPV6 */
 --- dnsmasq/src/domain-match.c
 +++ dnsmasq/src/domain-match.c
-@@ -438,8 +438,10 @@
+@@ -439,8 +439,10 @@
  
  	if (srv->flags & SERV_ALL_ZEROS)
  	  memset(&addr, 0, sizeof(addr));
@@ -684,7 +684,7 @@
  	
  	if (add_resource_record(header, limit, &trunc, sizeof(struct dns_header), &p, daemon->local_ttl, NULL, T_AAAA, C_IN, "6", &addr))
  	  anscount++;
-@@ -663,9 +665,12 @@
+@@ -666,9 +668,12 @@
      {
        size_t size;
        
@@ -698,7 +698,7 @@
  	size = sizeof(struct serv_addr4);
        else
  	size = sizeof(struct serv_local);
-@@ -682,8 +687,10 @@
+@@ -685,8 +690,10 @@
        if (flags & SERV_4ADDR)
  	((struct serv_addr4*)serv)->addr = local_addr->addr4;
        
