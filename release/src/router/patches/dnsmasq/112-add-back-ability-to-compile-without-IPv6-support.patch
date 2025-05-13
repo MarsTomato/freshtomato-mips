@@ -281,7 +281,7 @@
  	}
  
        insert_error = 1;
-@@ -1127,7 +1132,11 @@
+@@ -1185,7 +1190,11 @@
  				time_t now, unsigned int prot)
  {
    struct crec *ans;
@@ -293,7 +293,7 @@
    
    if (crecp) /* iterating */
      ans = crecp->next;
-@@ -1322,12 +1331,14 @@
+@@ -1380,12 +1389,14 @@
  	  addrlen = INADDRSZ;
  	  domain_suffix = get_domain(addr.addr4);
  	}
@@ -308,7 +308,7 @@
        else
  	{
  	  my_syslog(LOG_ERR, _("bad address at %s line %d"), filename, lineno); 
-@@ -1503,6 +1514,7 @@
+@@ -1561,6 +1572,7 @@
  	    add_hosts_entry(cache, (union all_addr *)&hr->addr, INADDRSZ, SRC_CONFIG, (struct crec **)daemon->packet, revhashsz);
  	  }
  
@@ -316,7 +316,7 @@
  	if ((hr->flags & HR_6) &&
  	    (cache = whine_malloc(SIZEOF_POINTER_CREC)))
  	  {
-@@ -1511,6 +1523,7 @@
+@@ -1569,6 +1581,7 @@
  	    cache->flags = F_HOSTS | F_IMMORTAL | F_FORWARD | F_REVERSE | F_IPV6 | F_NAMEP | F_CONFIG;
  	    add_hosts_entry(cache, (union all_addr *)&hr->addr6, IN6ADDRSZ, SRC_CONFIG, (struct crec **)daemon->packet, revhashsz);
  	  }
@@ -324,7 +324,7 @@
        }
  	
    if (option_bool(OPT_NO_HOSTS) && !daemon->addn_hosts)
-@@ -1611,11 +1624,13 @@
+@@ -1669,11 +1682,13 @@
    int in_hosts = 0;
    size_t addrlen = sizeof(struct in_addr);
  
@@ -338,7 +338,7 @@
    
    inet_ntop(prot, host_address, daemon->addrbuff, ADDRSTRLEN);
    
-@@ -1959,8 +1974,10 @@
+@@ -2017,8 +2032,10 @@
        a = daemon->addrbuff;
        if (cache->flags & F_IPV4)
  	inet_ntop(AF_INET, &cache->addr, a, ADDRSTRLEN);
@@ -359,9 +359,9 @@
  NO_TFTP
  NO_DHCP
  NO_DHCP6
-@@ -158,8 +159,8 @@
- NO_LOOP
+@@ -159,8 +160,8 @@
  NO_INOTIFY
+ NO_IPSET
     these are available to explicitly disable compile time options which would 
 -   otherwise be enabled automatically or which are enabled  by default 
 -   in the distributed source tree. Building dnsmasq
@@ -370,7 +370,7 @@
     with something like "make COPTS=-DNO_SCRIPT" will do the trick.
  NO_GMP
     Don't use and link against libgmp, Useful if nettle is built with --enable-mini-gmp.
-@@ -316,9 +317,29 @@
+@@ -315,9 +316,29 @@
   
  #endif
  
@@ -400,7 +400,7 @@
  #ifdef NO_TFTP
  #undef HAVE_TFTP
  #endif
-@@ -328,7 +349,7 @@
+@@ -327,7 +348,7 @@
  #undef HAVE_DHCP6
  #endif
  
@@ -409,7 +409,7 @@
  #undef HAVE_DHCP6
  #endif
  
-@@ -382,6 +403,9 @@
+@@ -386,6 +407,9 @@
  #ifdef DNSMASQ_COMPILE_OPTS
  
  static char *compile_opts = 
@@ -459,7 +459,7 @@
  	/* At the end */
 --- dnsmasq/src/dnsmasq.c
 +++ dnsmasq/src/dnsmasq.c
-@@ -2042,11 +2042,11 @@
+@@ -2041,11 +2041,11 @@
  	  indextoname(listener->tcpfd, if_index, intr_name))
  	{
  	  union all_addr addr;
@@ -515,7 +515,7 @@
    struct host_record *next;
  };
  
-@@ -548,7 +552,9 @@
+@@ -549,7 +553,9 @@
  union mysockaddr {
    struct sockaddr sa;
    struct sockaddr_in in;
@@ -525,7 +525,7 @@
  };
  
  /* bits in flag param to IPv6 callbacks from iface_enumerate() */
-@@ -1029,7 +1035,9 @@
+@@ -1030,7 +1036,9 @@
    char *interface;       /* These two set when domain comes from interface. */
    struct addrlist *al;
    struct in_addr start, end;
@@ -535,7 +535,7 @@
    int is6, indexed, prefixlen;
    struct cond_domain *next;
  }; 
-@@ -1390,7 +1398,9 @@
+@@ -1395,7 +1403,9 @@
  
  /* domain.c */
  char *get_domain(struct in_addr addr);
@@ -545,7 +545,7 @@
  int is_name_synthetic(int flags, char *name, union all_addr *addr);
  int is_rev_synth(int flag, union all_addr *addr, char *name);
  
-@@ -1486,9 +1496,11 @@
+@@ -1492,9 +1502,11 @@
  int netmask_length(struct in_addr mask);
  int is_same_net(struct in_addr a, struct in_addr b, struct in_addr mask);
  int is_same_net_prefix(struct in_addr a, struct in_addr b, int prefix);
@@ -557,7 +557,7 @@
  int retry_send(ssize_t rc);
  void prettyprint_time(char *buf, unsigned int t);
  int prettyprint_addr(union mysockaddr *addr, char *buf);
-@@ -1570,7 +1582,9 @@
+@@ -1576,7 +1588,9 @@
  int label_exception(int index, int family, union all_addr *addr);
  int fix_fd(int fd);
  int tcp_interface(int fd, int af);
@@ -835,7 +835,7 @@
  }
  
  static void server_send(struct server *server, int fd,
-@@ -1151,8 +1159,10 @@
+@@ -1154,8 +1163,10 @@
    daemon->srv_save = NULL;
  
    /* Determine the address of the server replying  so that we can mark that as good */
@@ -846,7 +846,7 @@
    
    header = (struct dns_header *)daemon->packet;
  
-@@ -1588,7 +1598,9 @@
+@@ -1591,7 +1601,9 @@
    struct cmsghdr *cmptr;
    union {
      struct cmsghdr align; /* this ensures alignment */
@@ -856,7 +856,7 @@
  #if defined(HAVE_LINUX_NETWORK)
      char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
  #elif defined(IP_RECVDSTADDR) && defined(HAVE_SOLARIS_NETWORK)
-@@ -1652,6 +1664,7 @@
+@@ -1655,6 +1667,7 @@
        if (source_addr.in.sin_port == 0)
  	return;
      }
@@ -864,7 +864,7 @@
    else
      {
        /* Source-port == 0 is an error, we can't send back to that. */
-@@ -1659,12 +1672,14 @@
+@@ -1662,12 +1675,14 @@
  	return;
        source_addr.in6.sin6_flowinfo = 0;
      }
@@ -879,7 +879,7 @@
        if (family == AF_INET6) 
  	{
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -1673,6 +1688,7 @@
+@@ -1676,6 +1691,7 @@
  	      break;
  	}
        else
@@ -887,7 +887,7 @@
  	{
  	  struct in_addr netmask;
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -1742,6 +1758,7 @@
+@@ -1745,6 +1761,7 @@
  	}
  #endif
        
@@ -895,7 +895,7 @@
        if (family == AF_INET6)
  	{
  	  for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-@@ -1757,6 +1774,7 @@
+@@ -1760,6 +1777,7 @@
  		if_index = p.p->ipi6_ifindex;
  	      }
  	}
@@ -903,7 +903,7 @@
        
        /* enforce available interface configuration */
        
-@@ -2383,9 +2401,11 @@
+@@ -2386,9 +2404,11 @@
      {
        union all_addr local;
  		      
@@ -915,7 +915,7 @@
  	local.addr4 = local_addr->in.sin_addr;
        
        have_mark = get_incoming_mark(&peer_addr, &local, 1, &mark);
-@@ -2397,6 +2417,7 @@
+@@ -2400,6 +2420,7 @@
      {
        struct addrlist *addr;
  
@@ -923,7 +923,7 @@
        if (peer_addr.sa.sa_family == AF_INET6) 
  	{
  	  for (addr = daemon->interface_addrs; addr; addr = addr->next)
-@@ -2405,6 +2426,7 @@
+@@ -2408,6 +2429,7 @@
  	      break;
  	}
        else
@@ -1708,7 +1708,7 @@
  }
  
 +#ifdef HAVE_IPV6
- static int private_net6(struct in6_addr *a, int ban_localhost)
+ int private_net6(struct in6_addr *a, int ban_localhost)
  {
    /* Block IPv4-mapped IPv6 addresses in private IPv4 address space */
 @@ -442,6 +445,8 @@
@@ -1744,9 +1744,9 @@
  			return 1;
 +#endif /* HAVE_IPV6 */
  		    }
- 		  
- #ifdef HAVE_IPSET
-@@ -1407,6 +1416,7 @@
+ 
+ 		  if (flags & (F_IPV4 | F_IPV6))
+@@ -1422,6 +1431,7 @@
  		if (!baddrp->is6 && is_same_net_prefix(addr, baddrp->addr.addr4, baddrp->prefix))
  		  return 1;
  	    }
@@ -1754,7 +1754,7 @@
  	  else if (qtype == T_AAAA)
  	    {
  	      struct in6_addr addr;
-@@ -1420,6 +1430,7 @@
+@@ -1435,6 +1445,7 @@
  		if (baddrp->is6 && is_same_net6(&addr, &baddrp->addr.addr6, baddrp->prefix))
  		  return 1;
  	    }
@@ -1762,7 +1762,7 @@
  	}
        
        if (!ADD_RDLEN(header, p, qlen, rdlen))
-@@ -1510,12 +1521,14 @@
+@@ -1525,12 +1536,14 @@
    for (; *format; format++)
      switch (*format)
        {
@@ -1777,7 +1777,7 @@
  	
        case '4':
          CHECK_LIMIT(INADDRSZ);
-@@ -1844,6 +1857,7 @@
+@@ -1859,6 +1872,7 @@
  		  while (intr->next && strcmp(intr->intr, intr->next->intr) == 0)
  		    intr = intr->next;
  	      }
@@ -1785,7 +1785,7 @@
  	  else if (is_arpa == F_IPV6)
  	    for (intr = daemon->int_names; intr; intr = intr->next)
  	      {
-@@ -1859,6 +1873,7 @@
+@@ -1874,6 +1888,7 @@
  		  while (intr->next && strcmp(intr->intr, intr->next->intr) == 0)
  		    intr = intr->next;
  	      }
@@ -1793,7 +1793,7 @@
  	  
  	  if (intr)
  	    {
-@@ -1948,7 +1963,11 @@
+@@ -1963,7 +1978,11 @@
  		anscount++;
  	    }
  	  else if (option_bool(OPT_BOGUSPRIV) &&
@@ -1806,7 +1806,7 @@
  		   !lookup_domain(name, F_DOMAINSRV, NULL, NULL))
  	    {
  	      /* if no configured server, not in cache, enabled and private IPV4 address, return NXDOMAIN */
-@@ -1962,9 +1981,16 @@
+@@ -1977,9 +1996,16 @@
        
        for (flag = F_IPV4; flag; flag = (flag == F_IPV4) ? F_IPV6 : 0)
  	{
@@ -1824,7 +1824,7 @@
  	  if (qtype != type && qtype != T_ANY)
  	    continue;
  	  
-@@ -1986,8 +2012,10 @@
+@@ -2001,8 +2027,10 @@
  		for (intr = daemon->int_names; intr; intr = intr->next)
  		  if (hostname_isequal(name, intr->name))
  		    for (addrlist = intr->addr; addrlist; addrlist = addrlist->next)
@@ -1837,7 +1837,7 @@
  			{
  			  localise = 1;
  			  break;
-@@ -1997,15 +2025,19 @@
+@@ -2012,15 +2040,19 @@
  		if (hostname_isequal(name, intr->name))
  		  {
  		    for (addrlist = intr->addr; addrlist; addrlist = addrlist->next)
@@ -1857,7 +1857,7 @@
  			  ans = 1;	
  			  sec_data = 0;
  			  gotit = 1;
-@@ -2376,8 +2408,11 @@
+@@ -2391,8 +2423,11 @@
  	crecp = NULL;
  	while ((crecp = cache_find_by_name(crecp, rec->target, now, F_IPV4 | F_IPV6)))
  	  {
