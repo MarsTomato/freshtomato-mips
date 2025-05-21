@@ -1721,6 +1721,8 @@ const defaults_t defaults[] = {
 	{"wg0_firewall",		"auto"				},	/* auto, custom */
 	{"wg0_nat",			"1"				},
 	{"wg0_fw",			"1"				},
+	{"wg0_rgwr",			"1"				},
+	{"wg0_routing_val",		""				},
 	{"wg1_enable",			"0"				},
 	{"wg1_poll",			"0"				},
 	{"wg1_file",			""				},
@@ -1746,6 +1748,8 @@ const defaults_t defaults[] = {
 	{"wg1_firewall",		"auto"				},	/* auto, custom */
 	{"wg1_nat",			"1"				},
 	{"wg1_fw",			"1"				},
+	{"wg1_rgwr",			"1"				},
+	{"wg1_routing_val",		""				},
 	{"wg2_enable",			"0"				},
 	{"wg2_poll",			"0"				},
 	{"wg2_file",			""				},
@@ -1771,6 +1775,8 @@ const defaults_t defaults[] = {
 	{"wg2_firewall",		"auto"				},	/* auto, custom */
 	{"wg2_nat",			"1"				},
 	{"wg2_fw",			"1"				},
+	{"wg2_rgwr",			"1"				},
+	{"wg2_routing_val",		""				},
 #endif /* TCONFIG_WIREGUARD */
 
 #ifdef TCONFIG_BT

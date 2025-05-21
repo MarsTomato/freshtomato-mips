@@ -233,7 +233,7 @@ ifneq ($(TCONFIG_USB),y)
 	rm -f $(INSTALLDIR)/www/nas-*.*
 	rm -f $(INSTALLDIR)/www/wwan_parser.js
 	rm -f $(INSTALLDIR)/www/wwan-sms.asp
-	rm -f $(INSTALLDIR)/www/cell.gif
+	rm -f $(INSTALLDIR)/www/cell.svg
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/USB-BEGIN/,/USB-END/d"
@@ -248,7 +248,7 @@ ifeq ($(TCONFIG_REMOVE_USBAPP),y)
 	rm -f $(INSTALLDIR)/www/nas-*.*
 	rm -f $(INSTALLDIR)/www/wwan_parser.js
 	rm -f $(INSTALLDIR)/www/wwan-sms.asp
-	rm -f $(INSTALLDIR)/www/cell.gif
+	rm -f $(INSTALLDIR)/www/cell.svg
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/USB-BEGIN/,/USB-END/d"
@@ -336,6 +336,7 @@ else
 	rm -f $(INSTALLDIR)/www/vpn-server.asp
 	rm -f $(INSTALLDIR)/www/vpn-client.asp
 	rm -f $(INSTALLDIR)/www/vpn.js
+	rm -f $(INSTALLDIR)/www/openvpn.svg
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/OPENVPN-BEGIN/,/OPENVPN-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/OPENVPN-BEGIN/,/OPENVPN-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/OPENVPN-BEGIN/,/OPENVPN-END/d"
@@ -351,6 +352,7 @@ else
 	rm -f $(INSTALLDIR)/www/vpn-pptp-server.asp
 	rm -f $(INSTALLDIR)/www/vpn-pptp-online.asp
 	rm -f $(INSTALLDIR)/www/vpn-pptp.asp
+	rm -f $(INSTALLDIR)/www/pptp.svg
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/PPTPD-BEGIN/,/PPTPD-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/PPTPD-BEGIN/,/PPTPD-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/PPTPD-BEGIN/,/PPTPD-END/d"
@@ -390,6 +392,7 @@ ifneq ($(TCONFIG_TINC),y)
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/TINC-BEGIN/,/TINC-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/TINC-BEGIN/,/TINC-END/d"
 	sed -i $(INSTALLDIR)/www/isup.jsz -e "/TINC-BEGIN/,/TINC-END/d"
+	rm -f $(INSTALLDIR)/www/tinc.svg
 endif
 
 # Only include the dnscrypt option if is compiled in
@@ -550,6 +553,7 @@ endif
 ifneq ($(TCONFIG_WIREGUARD),y)
 	rm -f $(INSTALLDIR)/www/vpn-wireguard.asp
 	rm -f $(INSTALLDIR)/www/cfg-icon.svg
+	rm -f $(INSTALLDIR)/www/wireguard.svg
  ifneq ($(TCONFIG_QRCODE),y)
 	rm -f $(INSTALLDIR)/www/qr-icon.svg
 	rm -f $(INSTALLDIR)/www/html5-qrcode.js

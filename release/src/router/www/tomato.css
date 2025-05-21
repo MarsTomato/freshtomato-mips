@@ -300,6 +300,15 @@ ul.tabs a:hover,
 	border-bottom: 1px solid #f0f0f0;
 }
 
+div.section-title.vpn-title {
+	display: flex;
+	align-items: center;
+}
+
+div.section-title.vpn-title > img {
+	margin-right: 10px;
+}
+
 table.fields {
 	margin: 0;
 	width: 100%
@@ -1658,21 +1667,18 @@ span[id^="note_cktime2_"] {
 }
 
 .service_up {
-	background-color: #32CD32;
-	color: white;
-	padding: 5px 6px;
-	margin-left: 2px;
+	color: black;
+	background-color: #E0F2E0;
+	padding: 4px 22px;
 	border-radius: 4px;
-	font-weight: bold;
+	border: 1px solid #32CD32;
 }
-
 .service_down {
-	background-color: #FF4500;
-	color: white;
-	padding: 5px 6px;
-	margin-left: 2px;
+	color: black;
+	background-color: #F2E0E0;
+	padding: 4px 14px;
 	border-radius: 4px;
-	font-weight: bold;
+	border: 1px solid #FF0000;
 }
 
 span[id$="_notice"] {
@@ -1680,6 +1686,21 @@ span[id$="_notice"] {
 	padding-left: 0;
 	vertical-align: middle;
 	width: 194px;
+}
+
+div[id$="-wg-peers"] > .qrcode {
+	display: grid;
+	justify-items: center;
+	text-align: center;
+	font-size: large;
+	padding: 10px;
+}
+
+div[id^="wg"] td.co5,
+div[id^="wg"] td.co7,
+div[id^="wg"] td.co9,
+div[id^="wg"] td.co10 {
+	display: none;
 }
 
 /* SVG */

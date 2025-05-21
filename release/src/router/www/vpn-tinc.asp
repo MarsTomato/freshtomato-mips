@@ -48,7 +48,7 @@ function show() {
 		countButton = 0;
 	}
 
-	E('_tinc_notice').innerHTML = (d ? '<span class="service_up"><span class="servup_image">▷ <\/span>RUNNING<\/span>' : '<span class="service_down"><span class="servdn_image">⛔ <\/span>STOPPED<\/span>');
+	E('_tinc_notice').innerHTML = (d ? '<span class="service_up"><span class="servup_image">▲ <\/span>Up<\/span>' : '<span class="service_down"><span class="servdn_image">▽ <\/span>Down<\/span>');
 	E('edges').disabled = !d;
 	E('connections').disabled = !d;
 	E('subnets').disabled = !d;
@@ -516,7 +516,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title" id="tinc-title">Tinc Configuration</div>
+<div class="section-title vpn-title" id="tinc-title"><img src="tinc.svg">Tinc Configuration</div>
 <script>
 	tabCreate.apply(this, tabs);
 
