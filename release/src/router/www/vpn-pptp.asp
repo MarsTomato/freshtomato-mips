@@ -129,14 +129,13 @@ function init() {
 <div class="section-title">Status</div>
 <div class="section">
 	<div class="fields">
-		<span id="_pptpclient_notice"></span>
-		<input type="button" id="_pptpclient_button">&nbsp; <img src="spin.gif" alt="" id="spin">
+		<span id="_pptpclient_notice"></span><input type="button" id="_pptpclient_button">&nbsp; <img src="spin.gif" alt="" id="spin">
 	</div>
 </div>
 
 <!-- / / / -->
 
-<div class="section-title">PPTP Client Configuration</div>
+<div class="section-title vpn-title"><img src="pptp.svg" alt="">PPTP Client Configuration</div>
 <div class="section">
 	<script>
 		createFieldTable('', [

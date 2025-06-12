@@ -42,7 +42,7 @@ function show() {
 	var e = E('_sshd_button');
 	e.value = (isup.dropbear ? 'Stop' : 'Start')+' Now';
 	e.setAttribute('onclick', 'javascript:toggle(\'sshd\','+isup.dropbear+');');
-	E('_sshd_notice').innerHTML = (isup.dropbear ? '<span class="service_up">RUNNING<\/span>' : '<span class="service_down">STOPPED<\/span>');
+	E('_sshd_notice').innerHTML = (isup.dropbear ? '<span class="service_up"><span class="servup_image">▲ <\/span>Up<\/span>' : '<span class="service_down"><span class="servdn_image">▽ <\/span>Down<\/span>');
 	countButton += 1;
 	if (serviceLastUp[0] != isup.dropbear || countButton > 6) {
 		serviceLastUp[0] = isup.dropbear;
@@ -54,7 +54,7 @@ function show() {
 	e = E('_telnetd_button');
 	e.value = ((isup.telnetd) ? 'Stop' : 'Start')+' Now';
 	e.setAttribute('onclick', 'javascript:toggle(\'telnetd\','+(isup.telnetd)+');');
-	E('_telnetd_notice').innerHTML = (isup.telnetd ? '<span class="service_up">RUNNING<\/span>' : '<span class="service_down">STOPPED<\/span>');
+	E('_telnetd_notice').innerHTML = (isup.telnetd ? '<span class="service_up"><span class="servup_image">▲ <\/span>Up<\/span>' : '<span class="service_down"><span class="servdn_image">▽ <\/span>Down<\/span>');
 	countButton2 += 1;
 	if (serviceLastUp2[0] != isup.telnetd || countButton2 > 6) {
 		serviceLastUp2[0] = isup.telnetd;
@@ -555,8 +555,7 @@ function init() {
 		]);
 	</script>
 	<div class="fields">
-		<span id="_sshd_notice"></span>
-		<input type="button" id="_sshd_button">&nbsp; <img src="spin.gif" alt="" id="spin">
+		<span id="_sshd_notice"></span><input type="button" id="_sshd_button">&nbsp; <img src="spin.gif" alt="" id="spin">
 	</div>
 </div>
 
@@ -571,8 +570,7 @@ function init() {
 		]);
 	</script>
 	<div class="fields">
-		<span id="_telnetd_notice"></span>
-		<input type="button" id="_telnetd_button">&nbsp; <img src="spin.gif" alt="" id="spin2">
+		<span id="_telnetd_notice"></span><input type="button" id="_telnetd_button">&nbsp; <img src="spin.gif" alt="" id="spin2">
 	</div>
 </div>
 
@@ -612,7 +610,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<i>SSH Daemon (dropbear) also accepts additional configuration in the following files:</i><br>
 	<ul>

@@ -346,6 +346,10 @@ Bogus private reverse lookups. All reverse lookups for private IP ranges (ie 192
 which are not found in /etc/hosts or the DHCP leases file are answered
 with "no such domain" rather than being forwarded upstream. The 
 set of prefixes affected is the list given in RFC6303, for IPv4 and IPv6.
+Enabling this also subtly alters DNSSEC validation for reverse lookups in the
+private ranges such that a non-secure DS record is accepted as proof that
+the range is not signed. This works around behaviour by the public DNS services
+which seem not to return validated proof-of-non-existence for DS records in these domains.
 .TP
 .B \-V, --alias=[<old-ip>]|[<start-ip>-<end-ip>],<new-ip>[,<mask>]
 Modify IPv4 addresses returned from upstream nameservers; old-ip is
@@ -1433,6 +1437,18 @@ information (from \fB--dhcp-boot\fP) out of their dedicated fields into
 DHCP options. This make extra space available in the DHCP packet for
 options but can, rarely, confuse old or broken clients. This flag
 forces "simple and safe" behaviour to avoid problems in such a case.
+.TP
+.B --leasequery[=<addr>[/<prefix>]]
+Enable RFC 4388 leasequery. The dnsmasq DHCP server will answer LEASEQUERY messages from DHCP relays
+when this option is given. If an address or subnet is given, only queries from a relay at that source are allowed. Repeat
+the --leasequery option to specify multiple allowed sources.
+To correctly answer lease queries it is necessary to store extra data in
+the lease database, and this is also enabled by the \fB--leasequery\fP option. The extra fields
+(agent-info and vendorclass) are stored in the leases file in a somewhat backwards compatible manner.
+Enabling and then disabling leasequery will not cause problems; the extra information will be aged
+out of the database. However, enabling leasequery in release 2.92 or later, storing leases
+which come via DHCP relays which add option-82 agent-info data, and then moving back to a pre-2.92 dnsmasq
+binary may cause problems reading the leases file. As of release 2.92, leasequery is only supported for DHCPv4.
 .TP
 .B --dhcp-relay=<local address>[,<server address>[#<server port>]][,<interface]
 Configure dnsmasq to do DHCP relay. The local address is an address

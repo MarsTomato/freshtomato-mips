@@ -830,8 +830,8 @@ function init() {
 	</div>
 	<br>
 	<div id="wl-controls">
-		<table border="0"><tr><td>
-			<label for="freqfilter">Display: </label>
+		<table style="border:none"><tr><td>
+			<label for="freq-filter">Display: </label>
 				<select id="freq-filter" onchange="doit();">
 					<option value="2.4">2.4 GHz</option>
 					<option value="5">5 GHz</option>
@@ -886,7 +886,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<script>

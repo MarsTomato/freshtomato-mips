@@ -42,21 +42,17 @@
 
 
 char port[BUF_SIZE_8];
+char fwmark[BUF_SIZE_16];
 
 static void wg_build_firewall(const int unit, const char *port, const char *iface) {
 	FILE *fp;
 	char buffer[BUF_SIZE_64];
 	char tmp[BUF_SIZE_16];
 	char *dns;
-
-	chains_log_detection();
-
-	logmsg(LOG_DEBUG, "*** %s: building firewall scripts ...", __FUNCTION__);
+	int nvi;
 
 	memset(buffer, 0, BUF_SIZE_64);
 	snprintf(buffer, BUF_SIZE_64, WG_FW_DIR"/%s-fw.sh", iface);
-	memset(tmp, 0, BUF_SIZE_16);
-	snprintf(tmp, BUF_SIZE_16, "%s_com", iface);
 
 	/* script with firewall rules (port, iface) */
 	/* (..., open wireguard port, accept packets from wireguard internal subnet, set up forwarding) */
@@ -64,31 +60,45 @@ static void wg_build_firewall(const int unit, const char *port, const char *ifac
 		fprintf(fp, "#!/bin/sh\n"
 		            "\n# FW\n");
 
-		if (nvram_get_int(tmp) == 3) { /* 'External - VPN Provider' */
+		chains_log_detection();
+
+		nvi = atoi(getNVRAMVar("wg%d_fw", unit));
+
+		/* Handle firewall rules if appropriate */
+		memset(tmp, 0, BUF_SIZE_16);
+		snprintf(tmp, BUF_SIZE_16, "wg%d_firewall", unit);
+		if (atoi(getNVRAMVar("wg%d_com", unit)) == 3 && !nvram_contains_word(tmp, "custom")) { /* 'External - VPN Provider' & auto */
 			fprintf(fp, "iptables -I INPUT -i %s -m state --state NEW -j %s\n"
-			            "iptables -I FORWARD -i %s -m state --state NEW -j DROP\n"
-			            "iptables -I FORWARD -o %s -j ACCEPT\n",
-			            iface, chain_in_drop,
-			            iface,
+			            "iptables -I FORWARD -i %s -m state --state NEW -j %s\n"
+			            "iptables -I FORWARD -o %s -j ACCEPT\n"
+			            "echo 1 > /proc/sys/net/ipv4/conf/all/src_valid_mark\n",
+			            iface, (nvi ? chain_in_drop : chain_in_accept),
+			            iface, (nvi ? "DROP" : "ACCEPT"),
 			            iface);
+
+#ifdef TCONFIG_BCMARM
+			if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
+				fprintf(fp, "iptables -t mangle -I PREROUTING -i %s -j MARK --set-mark 0x01/0x7\n", iface);
+#endif /* TCONFIG_BCMARM */
+
+			/* masquerade all peer outbound traffic regardless of source subnet */
+			if (atoi(getNVRAMVar("wg%d_nat", unit)) == 1)
+				fprintf(fp, "iptables -t nat -I POSTROUTING -o %s -j MASQUERADE\n", iface);
 		}
-		else { /* other */
+		else if (atoi(getNVRAMVar("wg%d_com", unit)) != 3) { /* other */
 			fprintf(fp, "iptables -A INPUT -p udp --dport %s -j %s\n"
 			            "iptables -A INPUT -i %s -j %s\n"
 			            "iptables -A FORWARD -i %s -j ACCEPT\n",
 			            port, chain_in_accept,
 			            iface, chain_in_accept,
 			            iface);
-		}
 
 #ifdef TCONFIG_BCMARM
-		if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
-			fprintf(fp, "iptables -t mangle -I PREROUTING -i %s -j MARK --set-mark 0x01/0x7\n", iface);
+			if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
+				fprintf(fp, "iptables -t mangle -I PREROUTING -i %s -j MARK --set-mark 0x01/0x7\n", iface);
 #endif /* TCONFIG_BCMARM */
 
-		if (nvram_get_int(tmp) == 3) /* 'External - VPN Provider' */
-			/* masquerade all peer outbound traffic regardless of source subnet */
-			fprintf(fp, "iptables -t nat -I POSTROUTING -o %s -j MASQUERADE\n", iface);
+		}
 
 		dns = getNVRAMVar("wg%d_dns", unit);
 		if (getNVRAMVar("wg%d_file", unit)[0] == '\0') { /* only if no optional config file has been added */
@@ -132,82 +142,6 @@ static void wg_build_firewall(const int unit, const char *port, const char *ifac
 		fclose(fp);
 		chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
 	}
-
-	/* script excerpt from wg-quick to route default (iface, route, table) */
-	if ((fp = fopen(WG_SCRIPTS_DIR"/route-default.sh", "w"))) {
-		fprintf(fp, "#!/bin/sh\n"
-		            "table=''\n"
-		            "line=''\n"
-		            "proto=''\n"
-		            "iptables=''\n"
-		            "pf=''\n"
-		            "restore=''\n"
-		            "nftable=''\n"
-		            "nftcmd=''\n"
-		            "cmd() {\n"
-		            "  echo \"[#] $*\" >&2\n"
-		            "  \"$@\"\n"
-		            "}\n\n"
-		            "NL='\n"
-		            "'\n"
-		            "type_p() {\n"
-		            "  type -p \"${@}\"\n"
-		            "}\n"
-		            "interface=\"${1}\"\n"
-		            "route=\"${2}\"\n"
-		            "table=\"${3}\"\n"
-		            "case \"${route}\" in\n"
-		            "  *:*)\n"
-		            "    proto='-6'\n"
-		            "    iptables='ip6tables'\n"
-		            "    pf='ip6'\n"
-		            "    ;;\n"
-		            "  *)\n"
-		            "    proto='-4'\n"
-		            "    iptables='iptables'\n"
-		            "    pf='ip'\n"
-		            "    ;;\n"
-		            "esac\n"
-		            "cmd ip \"${proto}\" rule add not fwmark \"${table}\" table \"${table}\"\n"
-		            "cmd ip \"${proto}\" rule add table main suppress_prefixlength 0\n"
-		            "cmd ip \"${proto}\" route add \"${route}\" dev \"${interface}\" table \"${table}\"\n"
-		            "restore=\"*raw${NL}\"\n"
-		            "nftable=\"wg-quick-${interface}\"\n"
-		            "nftcmd=\"${nftcmd:+${nftcmd}${NL}}add table ${pf} ${nftable}\"\n"
-		            "nftcmd=\"${nftcmd:+${nftcmd}${NL}}add chain ${pf} ${nftable} preraw { type filter hook prerouting priority -300; }\"\n"
-		            "nftcmd=\"${nftcmd:+${nftcmd}${NL}}add chain ${pf} ${nftable} premangle { type filter hook prerouting priority -150; }\"\n"
-		            "nftcmd=\"${nftcmd:+${nftcmd}${NL}}add chain ${pf} ${nftable} postmangle { type filter hook postrouting priority -150; }\"\n"
-		            "ip -o \"${proto}\" addr show dev \"${interface}\" 2>/dev/null | {\n"
-		            "  match=''\n"
-		            "  while read -r line; do\n"
-		            "    match=\"$(\n"
-		            "      printf %s \"${line}\" |\n"
-		            "        sed -ne 's/^.*inet6\\? \\([0-9a-f:.]\\+\\)\\/[0-9]\\+.*$/\\1/; t P; b; : P; p'\n"
-		            "    )\"\n"
-		            "    [ -n \"${match}\" ] ||\n"
-		            "      continue\n"
-		            "    restore=\"${restore:+${restore}${NL}}-I PREROUTING ! -i ${interface} -d ${match} -m addrtype ! --src-type LOCAL -j DROP\"\n"
-		            "    nftcmd=\"${nftcmd:+${nftcmd}${NL}}add rule ${pf} ${nftable} preraw iifname != \"${interface}\" ${pf} daddr ${match} fib saddr type != local drop\"\n"
-		            "  done\n"
-		            "  restore=\"${restore:+${restore}${NL}}COMMIT${NL}*mangle${NL}-I POSTROUTING -m mark --mark ${table} -p udp -j CONNMARK --save-mark${NL}-I PREROUTING -p udp -j CONNMARK --restore-mark${NL}COMMIT\"\n"
-		            "  nftcmd=\"${nftcmd:+${nftcmd}${NL}}add rule ${pf} ${nftable} postmangle meta l4proto udp mark ${table} ct mark set mark\"\n"
-		            "  nftcmd=\"${nftcmd:+${nftcmd}${NL}}add rule ${pf} ${nftable} premangle meta l4proto udp meta mark set ct mark\"\n"
-		            "  ! [ \"${proto}\" = '-4' ] ||\n"
-		            "    echo 1 > /proc/sys/net/ipv4/conf/all/src_valid_mark\n"
-		            "  if type_p nft >/dev/null; then\n"
-		            "    printf '%s\n' \"${nftcmd}\" |\n"
-		            "      cmd nft -f\n"
-		            "  else\n"
-		            "    printf '%s\n' \"${restore}\" |\n"
-		            "      cmd \"${iptables}-restore\" -n\n"
-		            "  fi\n"
-		            "}\n", "%s", "%s", "%s");
-
-		fclose(fp);
-		chmod(WG_SCRIPTS_DIR"/route-default.sh", (S_IRUSR | S_IWUSR | S_IXUSR));
-	}
-
-	logmsg(LOG_DEBUG, "*** %s: Done", __FUNCTION__);
 }
 
 static int wg_quick_iface(char *iface, const char *file, const int up)
@@ -240,7 +174,7 @@ static int wg_quick_iface(char *iface, const char *file, const int up)
 	return 0;
 }
 
-static void find_port(const int unit, char *port)
+static void wg_find_port(const int unit, char *port)
 {
 	char *b;
 
@@ -250,6 +184,23 @@ static void find_port(const int unit, char *port)
 		snprintf(port, BUF_SIZE_8, "%d", 51820 + unit);
 	else
 		snprintf(port, BUF_SIZE_8, "%s", b);
+}
+
+static void wg_find_fwmark(const int unit, char *port, char *fwmark)
+{
+	char *b;
+
+	b = getNVRAMVar("wg%d_fwmark", unit);
+	memset(fwmark, 0, BUF_SIZE_16);
+	if (b[0] == '\0' || b[0] == '0')
+		snprintf(fwmark, BUF_SIZE_16, "%s", port);
+	else
+		snprintf(fwmark, BUF_SIZE_16, "%s", b);
+}
+
+static int wg_if_exist(const char *ifname)
+{
+	return if_nametoindex(ifname) ? 1 : 0;
 }
 
 static void wg_setup_dirs(void) {
@@ -281,33 +232,43 @@ static void wg_cleanup_dirs(void) {
 static void wg_setup_watchdog(const int unit)
 {
 	FILE *fp;
-	char buffer[BUF_SIZE_64], buffer2[BUF_SIZE_32];
-	char taskname[24];
+	char buffer[BUF_SIZE_64], buffer2[BUF_SIZE_64];
+	char taskname[BUF_SIZE_32];
 	int nvi;
 
-	memset(buffer2, 0, BUF_SIZE_32);
-	snprintf(buffer2, BUF_SIZE_32, "wg%d_poll", unit);
-	if ((nvi = nvram_get_int(buffer2)) > 0) {
+	if ((nvi = atoi(getNVRAMVar("wg%d_poll", unit))) > 0) {
 		memset(buffer, 0, BUF_SIZE_64);
 		snprintf(buffer, BUF_SIZE_64, WG_SCRIPTS_DIR"/watchdog%d.sh", unit);
 
 		if ((fp = fopen(buffer, "w"))) {
 			fprintf(fp, "#!/bin/sh\n"
+			            "pingme() {\n"
+			            "[ \"3\" != \"%d\" ] && return 0\n"
+			            " local i=1\n"
+			            " while :; do\n"
+			            "  ping -qc1 -W3 -I wg%d 1.1.1.1 &>/dev/null && return 0\n"
+			            "  [ $((i++)) -ge 3 ] && break || sleep 5\n"
+			            " done\n"
+			            " return 1\n"
+			            "}\n"
 			            "ISUP=$(cat /sys/class/net/wg%d/operstate)\n"
-			            "[ \"$ISUP\" != \"unknown\" -o \"$ISUP\" != \"up\" ] && [ \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
+			            "[ \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
+			            " [ \"$ISUP\" == \"unknown\" -o \"$ISUP\" == \"up\" ] && pingme && exit 0\n"
 			            " logger -t wg-watchdog wg%d stopped? Starting...\n"
 			            " service wireguard%d restart\n"
 			            "}\n",
+			            atoi(getNVRAMVar("wg%d_com", unit)), /* only for 'External' (3) mode */
+			            unit,
 			            unit,
 			            unit,
 			            unit);
 			fclose(fp);
 			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
 
-			memset(taskname, 0, sizeof(taskname));
-			snprintf(taskname, sizeof(taskname),"CheckWireguard%d", unit);
-			memset(buffer2, 0, BUF_SIZE_32);
-			snprintf(buffer2, BUF_SIZE_32, "*/%d * * * * %s", nvi, buffer);
+			memset(taskname, 0, BUF_SIZE_32);
+			snprintf(taskname, BUF_SIZE_32,"CheckWireguard%d", unit);
+			memset(buffer2, 0, BUF_SIZE_64);
+			snprintf(buffer2, BUF_SIZE_64, "*/%d * * * * %s", nvi, buffer);
 			eval("cru", "a", taskname, buffer2);
 		}
 	}
@@ -345,15 +306,12 @@ static int wg_set_iface_addr(char *iface, const char *addr)
 	/* Set wireguard interface address(es) */
 	nv = strdup(addr);
 	while ((b = strsep(&nv, ",")) != NULL) {
-
-		logmsg(LOG_DEBUG, "*** %s: iface=[%s] b=[%s] addr=[%s]", __FUNCTION__, iface, b, addr);
-
 		if (eval("ip", "addr", "add", b, "dev", iface)) {
-			logmsg(LOG_WARNING, "unable to add wireguard interface %s address of %s!", iface, addr);
+			logmsg(LOG_WARNING, "unable to add wireguard interface %s address of %s!", iface, b);
 			return -1;
 		}
 		else
-			logmsg(LOG_DEBUG, "wireguard interface %s has had address %s add to it", iface, addr);
+			logmsg(LOG_DEBUG, "wireguard interface %s has had address %s add to it", iface, b);
 	}
 
 	if (nv)
@@ -562,16 +520,13 @@ static int wg_set_peer_keepalive(char *iface, char *pubkey, char *keepalive)
 	return 0;
 }
 
-static int wg_set_peer_endpoint(char *iface, char *pubkey, const char *endpoint, const char *port)
+static int wg_set_peer_endpoint(int unit, char *iface, char *pubkey, const char *endpoint, const char *port)
 {
 	char buffer[BUF_SIZE_64];
-	char tmp[BUF_SIZE_16];
 
-	memset(tmp, 0, BUF_SIZE_16);
 	memset(buffer, 0, BUF_SIZE_64);
-	snprintf(tmp, BUF_SIZE_16, "%s_com", iface);
 
-	if (nvram_get_int(tmp) == 3) /* 'External - VPN Provider' */
+	if (atoi(getNVRAMVar("wg%d_com", unit)) == 3) /* 'External - VPN Provider' */
 		snprintf(buffer, BUF_SIZE_64, "%s", endpoint);
 	else
 		snprintf(buffer, BUF_SIZE_64, "%s:%s", endpoint, port);
@@ -586,58 +541,142 @@ static int wg_set_peer_endpoint(char *iface, char *pubkey, const char *endpoint,
 	return 0;
 }
 
-#ifdef KERNEL_WG_FIX
-static int wg_route_peer_default(char *iface, char *route, char *fwmark)
+static int wg_route_peer(char *iface, char *route, char *table, int add)
 {
-	if (eval(WG_SCRIPTS_DIR"/route-default.sh", iface, route, fwmark)) {
-		logmsg(LOG_WARNING, "unable to add default route of %s to table %s for wireguard interface %s!", route, fwmark, iface);
-		return -1;
+	if (add == 1) {
+		if (table != NULL) {
+			if (eval("ip", "route", "add", route, "dev", iface, "table", table)) {
+				logmsg(LOG_WARNING, "unable to add route of %s to table %s for wireguard interface %s! When using mask, check if the entry is correct (for the /24-31 mask the last IP octet must be 0, for the /9-16 mask the last two octets must be 0, etc.)", route, table, iface);
+				return -1;
+			}
+			else
+				logmsg(LOG_DEBUG, "wireguard interface %s has had a route added to table %s for %s", iface, table, route);
+		}
+		else {
+			if (eval("ip", "route", "add", route, "dev", iface)) {
+				logmsg(LOG_WARNING, "unable to add route of %s for wireguard interface %s! When using mask, check if the entry is correct (for the /24-31 mask the last IP octet must be 0, for the /9-16 mask the last two octets must be 0, etc.)", route, iface);
+				return -1;
+			}
+			else
+				logmsg(LOG_DEBUG, "wireguard interface %s has had a route added for %s", iface, route);
+		}
 	}
-	else
-		logmsg(LOG_DEBUG, "wireguard interface %s has had a default route added to table %s for %s", iface, fwmark, route);
-
+	else {
+		if (table != NULL) {
+			if (eval("ip", "route", "del", route, "dev", iface, "table", table)) {
+				logmsg(LOG_WARNING, "unable to remove route of %s to table %s for wireguard interface %s!", route, table, iface);
+				return -1;
+			}
+			else
+				logmsg(LOG_DEBUG, "wireguard interface %s has had a route removed to table %s for %s", iface, table, route);
+		}
+		else {
+			if (eval("ip", "route", "del", route, "dev", iface)) {
+				logmsg(LOG_WARNING, "unable to remove route of %s for wireguard interface %s!", route, iface);
+				return -1;
+			}
+			else
+				logmsg(LOG_DEBUG, "wireguard interface %s has had a route removed for %s", iface, route);
+		}
+	}
 	return 0;
 }
+
+static void wg_route_peer_default(char *iface, char *route, char *fwmark, int add)
+{
+#ifndef KERNEL_WG_FIX
+	int i;
+	char cmd[BUF_SIZE];
+	char buffer[BUF_SIZE_32];
+	char filename[BUF_SIZE_32];
+	FILE *fp = NULL;
 #endif
 
-static int wg_route_peer(char *iface, char *route)
-{
-	if (eval("ip", "route", "add", route, "dev", iface)) {
-		logmsg(LOG_WARNING, "unable to add route of %s for wireguard interface %s! When using mask, check if the entry is correct (for the /24-31 mask the last IP octet must be 0, for the /9-16 mask the last two octets must be 0, etc.)", route, iface);
-		return -1;
-	}
-	else
-		logmsg(LOG_DEBUG, "wireguard interface %s has had a route added to it for %s", iface, route);
+	if (add == 1) {
+#ifdef KERNEL_WG_FIX
+		if (wg_route_peer(iface, route, fwmark, 1))
+			logmsg(LOG_WARNING, "unable to add default route of %s to wireguard interface %s!", route, iface);
 
-	return 0;
+		if (eval("ip", "rule", "add", "not", "fwmark", fwmark, "table", fwmark))
+			logmsg(LOG_WARNING, "unable to filter fwmark %s for default route of %s on wireguard interface %s!", fwmark, route, iface);
+
+		if (eval("ip", "rule", "add", "table", "main", "suppress_prefixlength", "0"))
+			logmsg(LOG_WARNING, "unable to suppress prefix length of 0 for default route of %s on wireguard interface %s!", route, iface);
+#else
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			memset(filename, 0, BUF_SIZE_32);
+			snprintf(filename, BUF_SIZE_32, "/tmp/wg%d_route_tmp", i);
+			memset(cmd, 0, BUF_SIZE);
+			snprintf(cmd, BUF_SIZE, "ip route show dev br%d | cut -d' ' -f1 >%s", i, filename);
+			system(cmd);
+			if ((fp = fopen(filename, "r"))) {
+				memset(buffer, 0, BUF_SIZE_32);
+				fgets(buffer, BUF_SIZE_32, fp);
+				buffer[strcspn(buffer, "\n")] = 0;
+				if (strlen(buffer) > 1) {
+					memset(cmd, 0, BUF_SIZE);
+					snprintf(cmd, BUF_SIZE, "ip route add %s dev br%d table %s", buffer, i, fwmark);
+					system(cmd);
+				}
+				fclose(fp);
+			}
+			unlink(filename);
+		}
+
+		if (wg_route_peer(iface, route, fwmark, 1))
+			logmsg(LOG_WARNING, "unable to add default route to table %s for wireguard interface %s!", fwmark, iface);
+
+		if (eval("ip", "rule", "add", "not", "fwmark", fwmark, "table", fwmark))
+			logmsg(LOG_WARNING, "unable to filter fwmark %s for default route of %s on wireguard interface %s!", fwmark, route, iface);
+#endif
+	}
+	else {
+#ifdef KERNEL_WG_FIX
+		if (eval("ip", "rule", "delete", "table", "main", "suppress_prefixlength", "0"))
+			logmsg(LOG_WARNING, "unable to remove suppress prefix length of 0 for default route of %s on wireguard interface %s!", route, iface);
+
+		if (eval("ip", "rule", "delete", "not", "from", "all", "fwmark", fwmark, "lookup", fwmark))
+			logmsg(LOG_WARNING, "unable to remove filter fwmark %s for default route of %s on wireguard interface %s!", fwmark, route, iface);
+
+		if (wg_route_peer(iface, route, fwmark, 0))
+			logmsg(LOG_WARNING, "unable to remove default route of %s from wireguard interface %s!", route, iface);
+#else
+		if (eval("ip", "rule", "delete", "not", "from", "all", "fwmark", fwmark, "lookup", fwmark))
+			logmsg(LOG_WARNING, "unable to remove filter fwmark %s for default route of %s on wireguard interface %s!", fwmark, route, iface);
+
+		if (wg_route_peer(iface, route, fwmark, 0))
+			logmsg(LOG_WARNING, "unable to remove default route to table %s for wireguard interface %s!", fwmark, iface);
+
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			memset(filename, 0, BUF_SIZE_32);
+			snprintf(filename, BUF_SIZE_32, "/tmp/wg%d_route_tmp", i);
+			memset(cmd, 0, BUF_SIZE);
+			snprintf(cmd, BUF_SIZE, "ip route show dev br%d | cut -d' ' -f1 >%s", i, filename);
+			system(cmd);
+			if ((fp = fopen(filename, "r"))) {
+				memset(buffer, 0, BUF_SIZE);
+				fgets(buffer, BUF_SIZE, fp);
+				buffer[strcspn(buffer, "\n")] = 0;
+				if (strlen(buffer) > 1) {
+					memset(cmd, 0, BUF_SIZE);
+					snprintf(cmd, BUF_SIZE, "ip route del %s dev br%d table %s", buffer, i, fwmark);
+					system(cmd);
+				}
+				fclose(fp);
+			}
+			unlink(filename);
+		}
+#endif
+	}
 }
 
-static int wg_route_peer_custom(char *iface, char *route, char *table)
-{
-	if (eval("ip", "route", "add", route, "dev", iface, "table", table)) {
-		logmsg(LOG_WARNING, "unable to add route of %s to table %s for wireguard interface %s! When using mask, check if the entry is correct (for the /24-31 mask the last IP octet must be 0, for the /9-16 mask the last two octets must be 0, etc.)", route, table, iface);
-		return -1;
-	}
-	else
-		logmsg(LOG_DEBUG, "wireguard interface %s has had a route added to table %s for %s", iface, table, route);
-
-	return 0;
-}
-
-static int wg_route_peer_allowed_ips(char *iface, const char *allowed_ips, const char *fwmark)
+static void wg_route_peer_allowed_ips(int unit, char *iface, const char *allowed_ips, const char *fwmark, int add)
 {
 	char *aip, *b, *table, *rt, *tp, *ip, *nm;
-	int route_type = 1, result = 0;
+	int route_type = 1;
 	char buffer[BUF_SIZE_32];
-	char tmp[BUF_SIZE_16];
 
-	/* check which routing type the user specified */
-	memset(buffer, 0, BUF_SIZE_32);
-	memset(tmp, 0, BUF_SIZE_16);
-	snprintf(buffer, BUF_SIZE_32, "%s_route", iface);
-	snprintf(tmp, BUF_SIZE_16, "%s_com", iface);
-
-	tp = b = strdup(nvram_safe_get(buffer));
+	tp = b = strdup(getNVRAMVar("wg%d_route", unit));
 	if (tp) {
 		if (vstrsep(b, "|", &rt, &table) < 3)
 			route_type = atoi(rt);
@@ -652,34 +691,18 @@ static int wg_route_peer_allowed_ips(char *iface, const char *allowed_ips, const
 			memset(buffer, 0, BUF_SIZE_32);
 			snprintf(buffer, BUF_SIZE_32, "%s", b);
 
-			if (vstrsep(b, "/", &ip, &nm) == 2) {
-				if (atoi(nm) == 0) {
-#ifdef KERNEL_WG_FIX
-					wg_route_peer_default(iface, b, fwmark);
-#else
-					logmsg(LOG_WARNING, "unable to add default route of %s to table %s for wireguard interface %s - kernel has to be patched!", b, fwmark, iface);
-#endif
-				}
+			if ((vstrsep(b, "/", &ip, &nm) == 2) && (atoi(nm) == 0)) { /* default route */
+				logmsg(LOG_DEBUG, "*** %s: running wg_route_peer_default() iface=[%s] route=[%s] fwmark=[%s]", __FUNCTION__, iface, buffer, fwmark);
+				wg_route_peer_default(iface, buffer, (char *)fwmark, add);
 			}
-
-			if (nvram_get_int(tmp) != 3) { /* !'External - VPN Provider' */
-				if (route_type == 1) { /* Auto */
-					logmsg(LOG_DEBUG, "*** %s: running wg_route_peer() iface=[%s] route=[%s]", __FUNCTION__, iface, buffer);
-					if (wg_route_peer(iface, buffer))
-						result = -1;
-				}
-				else { /* Custom Table */
-					logmsg(LOG_DEBUG, "*** %s: running wg_route_peer_custom() iface=[%s] route=[%s] table=[%s]", __FUNCTION__, iface, buffer, table);
-					if (wg_route_peer_custom(iface, buffer, table))
-						result = -1;
-				}
+			else { /* std route */
+				logmsg(LOG_DEBUG, "*** %s: running wg_route_peer() iface=[%s] route=[%s] table=[%s]", __FUNCTION__, iface, buffer, table);
+				wg_route_peer(iface, buffer, (route_type == 1 ? NULL : table), add);
 			}
 		}
 		if (aip)
 			free(aip);
 	}
-
-	return result;
 }
 
 static void wg_set_peer_allowed_ips(char *iface, char *pubkey, char *allowed_ips, const char *fwmark)
@@ -690,7 +713,7 @@ static void wg_set_peer_allowed_ips(char *iface, char *pubkey, char *allowed_ips
 		logmsg(LOG_DEBUG, "peer %s for wireguard interface %s has had its allowed ips set to %s", pubkey, iface, allowed_ips);
 }
 
-static void wg_add_peer(char *iface, char *pubkey, char *allowed_ips, const char *presharedkey, char *keepalive, const char *endpoint, const char *fwmark, const char *port)
+static void wg_add_peer(int unit, char *iface, char *pubkey, char *allowed_ips, const char *presharedkey, char *keepalive, const char *endpoint, const char *fwmark, const char *port)
 {
 	/* set allowed ips / create peer */
 	wg_set_peer_allowed_ips(iface, pubkey, allowed_ips, fwmark);
@@ -705,9 +728,10 @@ static void wg_add_peer(char *iface, char *pubkey, char *allowed_ips, const char
 
 	/* set peer endpoint */
 	if (endpoint[0] != '\0')
-		wg_set_peer_endpoint(iface, pubkey, endpoint, port);
+		wg_set_peer_endpoint(unit, iface, pubkey, endpoint, port);
 
-	wg_route_peer_allowed_ips(iface, allowed_ips, fwmark);
+	/* add routes (also default route if any) */
+	wg_route_peer_allowed_ips(unit, iface, allowed_ips, fwmark, 1); /* 1 = add */
 }
 
 static inline int decode_base64(const char src[static 4])
@@ -784,63 +808,170 @@ static void wg_pubkey(const char *privkey, char *pubkey)
 	key_to_base64(pubkey, key);
 }
 
-static void wg_add_peer_privkey(char *iface, const char *privkey, char *allowed_ips, const char *presharedkey, char *keepalive, const char *endpoint, const char *fwmark)
+static void wg_add_peer_privkey(int unit, char *iface, const char *privkey, char *allowed_ips, const char *presharedkey, char *keepalive, const char *endpoint, const char *fwmark)
 {
-	char pubkey[64];
+	char pubkey[BUF_SIZE_64];
 
-	memset(pubkey, 0, sizeof(pubkey));
+	memset(pubkey, 0, BUF_SIZE_64);
 	wg_pubkey(privkey, pubkey);
 
-	wg_add_peer(iface, pubkey, allowed_ips, presharedkey, keepalive, endpoint, fwmark, port);
+	wg_add_peer(unit, iface, pubkey, allowed_ips, presharedkey, keepalive, endpoint, fwmark, port);
 }
-/*
-static int wg_remove_peer(char *iface, char *pubkey)
+
+static void wg_remove_peer(int unit, char *iface, char *pubkey, char *allowed_ips, const char *fwmark)
 {
-	if (eval("wg", "set", iface, "peer", pubkey, "remove")) {
+	if (eval("wg", "set", iface, "peer", pubkey, "remove"))
 		logmsg(LOG_WARNING, "unable to remove peer %s from wireguard interface %s!", iface, pubkey);
-		return -1;
-	}
 	else
 		logmsg(LOG_DEBUG, "peer %s has been removed from wireguard interface %s", iface, pubkey);
 
-	return 0;
+	/* remove routes (also default route if any) */
+	wg_route_peer_allowed_ips(unit, iface, allowed_ips, fwmark, 0); /* 0 = remove */
 }
 
-static int wg_remove_peer_privkey(char *iface, char *privkey)
+static void wg_remove_peer_privkey(int unit, char *iface, char *privkey, char *allowed_ips, const char *fwmark)
 {
-	char pubkey[64];
-	memset(pubkey, 0, sizeof(pubkey));
+	char pubkey[BUF_SIZE_64];
+	memset(pubkey, 0, BUF_SIZE_64);
 
 	wg_pubkey(privkey, pubkey);
 
-	return wg_remove_peer(iface, pubkey);
+	wg_remove_peer(unit, iface, pubkey, allowed_ips, fwmark);
 }
-*/
+
 static int wg_remove_iface(char *iface)
 {
 	/* check if interface exists */
-	if (eval("ip", "addr", "show", "dev", iface))
-		logmsg(LOG_DEBUG, "no such interface: %s", iface);
-	else {
+	if (wg_if_exist(iface)) {
 		/* delete wireguard interface */
-		if (eval("ip", "link", "delete", iface)) {
+		if (eval("ip", "link", "del", "dev", iface)) {
 			logmsg(LOG_WARNING, "unable to delete wireguard interface %s!", iface);
 			return -1;
 		}
 		else
 			logmsg(LOG_DEBUG, "wireguard interface %s has been deleted", iface);
 	}
+	else
+		logmsg(LOG_DEBUG, "no such interface: %s", iface);
 
 	return 0;
+}
+
+static void wg_kill_switch(void)
+{
+	unsigned int unit, br, rules_count;
+	int policy_type;
+	int wan_unit, mwan_num;
+	char *enable, *type, *value, *kswitch;
+	char *nv, *nvp, *b, *c;
+	char wan_prefix[] = "wanXX";
+	char buf[BUF_SIZE_64], buf2[BUF_SIZE_64], val[BUF_SIZE_64], wan_if[BUF_SIZE_16];
+
+	mwan_num = nvram_get_int("mwan_num");
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+		mwan_num = 1;
+
+	for (unit = 0; unit < WG_INTERFACE_MAX; ++unit) {
+		rules_count = 0;
+		nv = nvp = strdup(getNVRAMVar("wg%d_routing_val", unit));
+
+		while (nvp && (b = strsep(&nvp, ">")) != NULL) {
+			enable = type = value = kswitch = NULL;
+
+			/* enable<type<domain_or_IP<kill_switch> */
+			if ((vstrsep(b, "<", &enable, &type, &value, &kswitch)) < 4)
+				continue;
+
+			/* check if rule is enabled and kill switch is active and IP/domain is set */
+			if ((atoi(enable) != 1) || (atoi(kswitch) != 1) || (*value == '\0'))
+				continue;
+
+			policy_type = atoi(type);
+			rules_count++;
+
+			/* check all active WANs */
+			for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+				get_wan_prefix(wan_unit, wan_prefix);
+
+				/* find WAN IF */
+				memset(wan_if, 0, BUF_SIZE_16); /* reset */
+				snprintf(wan_if, BUF_SIZE_16, "%s", get_wanface(wan_prefix));
+				if ((!*wan_if) || (strcmp(wan_if, "") == 0))
+					continue;
+
+				memset(val, 0, BUF_SIZE_64); /* reset */
+				snprintf(val, BUF_SIZE_64, "%s", value); /* copy IP/domain to buffer */
+
+				/* "From Source IP" */
+				if (policy_type == 1) {
+					/* find correct bridge for given IP */
+					for (br = 0; br < BRIDGE_COUNT; br++) {
+						memset(buf, 0, BUF_SIZE_64); /* reset */
+						snprintf(buf, BUF_SIZE_64, (br == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), br);
+
+						char *lan_ip = nvram_safe_get(buf);
+						if (strcmp(lan_ip, "") != 0) { /* only for active */
+							memset(buf, 0, BUF_SIZE_64); /* reset */
+							snprintf(buf, BUF_SIZE_64, "%s", val);
+							if ((c = strchr(buf, '/')) != NULL)
+								*c = 0; /* with mask? get IP */
+
+							memset(buf, 0, BUF_SIZE_64); /* reset */
+							snprintf(buf, BUF_SIZE_64, "%s", val);
+							if ((c = strrchr(buf, '.')) != NULL)
+								*(c + 1) = 0; /* get first 3 octets from value */
+
+							memset(buf2, 0, BUF_SIZE_64); /* reset */
+							snprintf(buf2, BUF_SIZE_64, "%s", lan_ip);
+							if ((c = strrchr(buf2, '.')) != NULL)
+								*(c + 1) = 0; /* get first 3 octets from lan IP */
+
+							if (strcmp(buf, buf2) == 0) {
+								memset(buf2, 0, BUF_SIZE_64); /* reset */
+								snprintf(buf2, BUF_SIZE_64, "br%d", br); /* copy brX to buffer */
+
+								eval("iptables", "-I", "FORWARD", "-i", buf2, "-s", val, "-o", wan_if, "-j", "REJECT");
+							}
+						}
+					}
+				}
+				/* "To Destination IP" / "To Domain" */
+				else if ((policy_type == 2) || (policy_type == 3)) {
+					memset(buf, 0, BUF_SIZE_64); /* reset */
+					snprintf(buf, BUF_SIZE_64, "wg%d", unit); /* find the appropriate IF */
+
+					/* xstart - do not wait when WAN in not up! */
+					xstart("iptables", "-I", "FORWARD", "!", "-o", buf, "-d", val, "-j", "REJECT");
+					xstart("iptables", "-I", "FORWARD", "-o", wan_if, "-d", val, "-j", "REJECT");
+				}
+
+			}
+		}
+		if (nv)
+			free(nv);
+
+		if (rules_count > 0)
+			logmsg(LOG_INFO, "Kill-Switch: added %d rules to firewall for wg%d", rules_count, unit);
+	}
 }
 
 void start_wg_eas(void)
 {
 	int unit;
+	int external_mode = 0;
 
 	for (unit = 0; unit < WG_INTERFACE_MAX; unit++) {
 		if (atoi(getNVRAMVar("wg%d_enable", unit)) == 1) {
-			start_wireguard(unit);
+			if (atoi(getNVRAMVar("wg%d_com", unit)) == 3) { /* check for 'External - VPN Provider' mode on this unit */
+				if (external_mode == 0) { /* no previous unit is in this mode - allow */
+					start_wireguard(unit);
+					external_mode++;
+				}
+				else
+					logmsg(LOG_WARNING, "only one wireguard instance can be run in 'External - VPN Provider' mode (currently up: wg%d)! Aborting ...", unit);
+			}
+			else
+				start_wireguard(unit);
 		}
 	}
 }
@@ -850,9 +981,7 @@ void stop_wg_eas(void)
 	int unit;
 
 	for (unit = 0; unit < WG_INTERFACE_MAX; unit++) {
-		if (atoi(getNVRAMVar("wg%d_enable", unit)) == 1) {
-			stop_wireguard(unit);
-		}
+		stop_wireguard(unit);
 	}
 }
 */
@@ -864,10 +993,10 @@ void stop_wg_all(void)
 	for (unit = 0; unit < WG_INTERFACE_MAX; unit++) {
 		memset(iface, 0, IF_SIZE);
 		snprintf(iface, IF_SIZE, "wg%d", unit);
-		if (eval("ip", "addr", "show", "dev", iface))
-			logmsg(LOG_DEBUG, "no such wg instance to stop: %s", iface);
-		else
+		if (wg_if_exist(iface))
 			stop_wireguard(unit);
+		else
+			logmsg(LOG_DEBUG, "no such wg instance to stop: %s", iface);
 	}
 	wg_cleanup_dirs();
 
@@ -881,21 +1010,19 @@ void start_wireguard(const int unit)
 	char *priv, *name, *key, *psk, *ip, *ka, *aip, *ep;
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
-	char fwmark[BUF_SIZE_16];
-	char peer_ka[BUF_SIZE_16];
+	int mode;
+
+	/* TODO: serialize_restart */
 
 	/* determine interface */
 	memset(iface, 0, IF_SIZE);
 	snprintf(iface, IF_SIZE, "wg%d", unit);
 
 	/* prepare port value */
-	find_port(unit, port);
+	wg_find_port(unit, port);
 
 	/* set up directories for later use */
 	wg_setup_dirs();
-
-	/* create firewall script & DNS rules */
-	wg_build_firewall(unit, port, iface);
 
 	/* check if file is specified */
 	if (getNVRAMVar("wg%d_file", unit)[0] != '\0') {
@@ -920,13 +1047,7 @@ void start_wireguard(const int unit)
 			goto out;
 
 		/* set interface fwmark */
-		b = getNVRAMVar("wg%d_fwmark", unit);
-		memset(fwmark, 0, BUF_SIZE_16);
-		if (b[0] == '\0' || b[0] == '0')
-			snprintf(fwmark, BUF_SIZE_16, "%s", port);
-		else
-			snprintf(fwmark, BUF_SIZE_16, "%s", b);
-
+		wg_find_fwmark(unit, port, fwmark);
 		if (wg_set_iface_fwmark(iface, fwmark))
 			goto out;
 
@@ -945,16 +1066,11 @@ void start_wireguard(const int unit)
 		/* add stored peers */
 		nvp = nv = strdup(getNVRAMVar("wg%d_peers", unit));
 		if (nv) {
-			memset(peer_ka, 0, BUF_SIZE_16);
-			snprintf(peer_ka, BUF_SIZE_16, "%s_com", iface);
-
-			logmsg(LOG_DEBUG, "*** %s: adding wg%d_peers ...", __FUNCTION__, unit);
+			mode = atoi(getNVRAMVar("wg%d_com", unit));
 
 			while ((b = strsep(&nvp, ">")) != NULL) {
 				if (vstrsep(b, "<", &priv, &name, &ep, &key, &psk, &ip, &aip, &ka) < 8)
 					continue;
-
-				logmsg(LOG_DEBUG, "*** %s: peer IF=[%i]: priv=[%s] name=[%s] ep=[%s] key=[%s] psk=[%s] ip=[%s] aip=[%s] ka=[%s]", __FUNCTION__, unit, priv, name, ep, key, psk, ip, aip, ka);
 
 				/* build peer allowed ips */
 				memset(buffer, 0, BUF_SIZE);
@@ -965,23 +1081,24 @@ void start_wireguard(const int unit)
 				else
 					snprintf(buffer, BUF_SIZE, "%s,%s", ip, aip);
 
-				/* add peer to interface */
-				if (priv[0] == '1') { /* peer has private key? */
-					logmsg(LOG_DEBUG, "*** %s: running wg_add_peer_privkey(): iface=[%s] key=[%s] buffer=[%s] psk=[%s] rka=[%s] ep=[%s] fwmark=[%s]", __FUNCTION__, iface, key, buffer, psk, (nvram_get_int(peer_ka) == 3 ? ka : rka), ep, fwmark);
-					wg_add_peer_privkey(iface, key, buffer, psk, (nvram_get_int(peer_ka) == 3 ? ka : rka), ep, fwmark);
-				}
-				else {
-					logmsg(LOG_DEBUG, "*** %s: running wg_add_peer(): iface=[%s] key=[%s] buffer=[%s] psk=[%s] rka=[%s] ep=[%s] fwmark=[%s] port=[%s]", __FUNCTION__, iface, key, buffer, psk, (nvram_get_int(peer_ka) == 3 ? ka : rka), ep, fwmark, port);
-					wg_add_peer(iface, key, buffer, psk, (nvram_get_int(peer_ka) == 3 ? ka : rka), ep, fwmark, port);
-				}
+				/* add peer to interface (and route) */
+				if (priv[0] == '1') /* peer has private key? */
+					wg_add_peer_privkey(unit, iface, key, buffer, psk, (mode == 3 ? ka : rka), ep, fwmark);
+				else
+					wg_add_peer(unit, iface, key, buffer, psk, (mode == 3 ? ka : rka), ep, fwmark, port);
 			}
 		}
 		if (nvp)
 			free(nvp);
 
+		eval("ip", "route", "flush", "cache");
+
 		/* run post up scripts */
 		wg_iface_post_up(unit);
 	}
+
+	/* create firewall script & DNS rules */
+	wg_build_firewall(unit, port, iface);
 
 	/* firewall + dns rules */
 	memset(buffer, 0, BUF_SIZE);
@@ -1008,26 +1125,66 @@ out:
 
 void stop_wireguard(const int unit)
 {
+	char *nv, *nvp, *b;
+	char *priv, *name, *key, *psk, *ip, *ka, *aip, *ep;
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
 	int is_dev;
 
+	/* TODO: serialize_restart */
+
 	/* remove cron job */
 	memset(buffer, 0, BUF_SIZE);
-	snprintf(buffer, sizeof(buffer), "CheckWireguard%d", unit);
+	snprintf(buffer, BUF_SIZE, "CheckWireguard%d", unit);
 	eval("cru", "d", buffer);
 
 	/* determine interface */
 	memset(iface, 0, IF_SIZE);
 	snprintf(iface, IF_SIZE, "wg%d", unit);
 
-	is_dev = eval("ip", "addr", "show", "dev", iface);
+	is_dev = wg_if_exist(iface);
 
 	if (getNVRAMVar("wg%d_file", unit)[0] != '\0')
 		wg_quick_iface(iface, getNVRAMVar("wg%d_file", unit), 0);
 	else {
-		/* remove interface */
+		/* prepare port value */
+		wg_find_port(unit, port);
+
+		/* prepare fwmark value */
+		wg_find_fwmark(unit, port, fwmark);
+
 		wg_iface_pre_down(unit);
+
+		/* remove peers */
+		nvp = nv = strdup(getNVRAMVar("wg%d_peers", unit));
+		if (nv) {
+			while ((b = strsep(&nvp, ">")) != NULL) {
+				if (vstrsep(b, "<", &priv, &name, &ep, &key, &psk, &ip, &aip, &ka) < 8)
+					continue;
+
+				/* build peer allowed ips */
+				memset(buffer, 0, BUF_SIZE);
+				if (aip[0] == '\0')
+					snprintf(buffer, BUF_SIZE, "%s", ip);
+				else if (ip[0] == '\0')
+					snprintf(buffer, BUF_SIZE, "%s", aip);
+				else
+					snprintf(buffer, BUF_SIZE, "%s,%s", ip, aip);
+
+				/* remove peer from interface (and route) */
+				if (priv[0] == '1') /* peer has private key? */
+					wg_remove_peer_privkey(unit, iface, key, buffer, fwmark);
+				else
+					wg_remove_peer(unit, iface, key, buffer, fwmark);
+			}
+		}
+		if (nvp)
+			free(nvp);
+
+		eval("ip", "route", "flush", "table", fwmark);
+		eval("ip", "route", "flush", "cache");
+
+		/* remove interface */
 		wg_remove_iface(iface);
 		wg_iface_post_down(unit);
 	}
@@ -1037,7 +1194,7 @@ void stop_wireguard(const int unit)
 	snprintf(buffer, BUF_SIZE, WG_FW_DIR"/%s-fw.sh", iface);
 	run_del_firewall_script(buffer, WG_DIR_DEL_SCRIPT);
 
-	if (!is_dev)
+	if (is_dev)
 		logmsg(LOG_INFO, "wireguard (%s) stopped", iface);
 }
 
@@ -1049,12 +1206,12 @@ void run_wg_firewall_scripts(void)
 	char *fa;
 	char buffer[BUF_SIZE_64];
 
+	wg_kill_switch();
+
 	if (chdir(WG_FW_DIR))
 		return;
 
 	dir = opendir(WG_FW_DIR);
-
-	logmsg(LOG_DEBUG, "*** %s: beginning all firewall scripts...", __FUNCTION__);
 
 	while ((file = readdir(dir)) != NULL) {
 		fa = file->d_name;
@@ -1079,7 +1236,6 @@ void run_wg_firewall_scripts(void)
 		else
 			logmsg(LOG_DEBUG, "*** %s: skipping firewall script (not executable): %s", __FUNCTION__, buffer);
 	}
-	logmsg(LOG_DEBUG, "*** %s: done with all firewall scripts...", __FUNCTION__);
 
 	closedir(dir);
 }

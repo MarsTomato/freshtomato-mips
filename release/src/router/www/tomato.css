@@ -300,6 +300,15 @@ ul.tabs a:hover,
 	border-bottom: 1px solid #f0f0f0;
 }
 
+div.section-title.vpn-title {
+	display: flex;
+	align-items: center;
+}
+
+div.section-title.vpn-title > img {
+	margin-right: 10px;
+}
+
 table.fields {
 	margin: 0;
 	width: 100%
@@ -309,9 +318,13 @@ table.fields {
 	padding: 2px 0;
 }
 
+.fields td.title {
+	width: 153px;
+}
+
 .fields td.title.indent1 {
 	width: 160px;
-	padding: 1px 15px 1px 0px;
+	padding: 1px 15px 1px 7px;
 }
 
 .fields td.title.indent2 {
@@ -331,7 +344,7 @@ table.fields {
 }
 
 .fields td.content {
-	width: 585px;
+	width: 550px;
 	vertical-align: top;
 }
 
@@ -893,6 +906,7 @@ div[id$="peers-grid"] .co4,
 }
 
 #survey-controls,
+#adblock-controls,
 .log-controls {
 	text-align: right;
 }
@@ -1654,28 +1668,68 @@ span[id^="note_cktime2_"] {
 }
 
 .service_up {
-	background-color: #32CD32;
-	color: white;
-	padding: 5px 6px;
-	margin-left: 6px;
+	color: black;
+	background-color: #E0F2E0;
+	padding: 4px 22px;
 	border-radius: 4px;
-	font-weight: bold;
+	border: 1px solid #32CD32;
 }
-
 .service_down {
-	background-color: #FF4500;
-	color: white;
-	padding: 5px 6px;
-	margin-left: 6px;
+	color: black;
+	background-color: #F2E0E0;
+	padding: 4px 14px;
 	border-radius: 4px;
-	font-weight: bold;
+	border: 1px solid #FF0000;
 }
 
 span[id$="_notice"] {
 	display: inline-block;
 	padding-left: 0;
 	vertical-align: middle;
-	width: 177px;
+	width: 194px;
+}
+
+div[id$="-wg-peers"] > .qrcode {
+	display: grid;
+	justify-items: center;
+	text-align: center;
+	font-size: large;
+	padding: 10px;
+}
+
+div[id^="wg"] td.co5,
+div[id^="wg"] td.co7,
+div[id^="wg"] td.co9,
+div[id^="wg"] td.co10 {
+	display: none;
+}
+
+.status-result {
+	font-family: monospace !important;
+	font-size: 11px;
+	line-height: 14px;
+}
+
+table.adblock-status-table {
+	padding: 5px;
+	border: none;
+	width: 100%;
+}
+
+td.adblock-td1 {
+	width: 145px;
+}
+
+#adblock-status {
+	text-align: left;
+	padding-left: 30px;
+	padding-top: 10px;
+	height: 270px;
+	border: 1px solid #AAAAAA;
+}
+
+.adblock-status-table tr > td > input[type="button"] {
+	width: 120px;
 }
 
 /* SVG */

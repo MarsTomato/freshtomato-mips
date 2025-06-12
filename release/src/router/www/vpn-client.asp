@@ -35,7 +35,7 @@ RouteGrid.prototype = new TomatoGrid;
 
 var tabs =  [];
 for (i = 1; i <= unitCount; ++i)
-	tabs.push(['client'+i,'Client '+i]);
+	tabs.push(['client'+i,'<span id="'+serviceType+i+'_tabicon" style="font-size:9px">▽ <\/span><span class="tabname">Client '+i+'<\/span>']);
 var sections = [['basic','Basic'],['advanced','Advanced'],['keys','Keys'],['policy','Routing Policy'],['status','Status']];
 
 var routingTables = [];
@@ -345,10 +345,14 @@ function save() {
 		if (E('_f_vpn_'+t+'_eas').checked)
 			fom.vpn_client_eas.value += ''+(i + 1)+',';
 
-		var routedata = routingTables[i].getAllData();
 		var routing = '';
-		for (j = 0; j < routedata.length; ++j)
-			routing += routedata[j].join('<')+'>';
+		if ((E('_vpn_'+t+'_rgw').value == 2) || (E('_vpn_'+t+'_rgw').value == 3)) { /* only in routing policy mode */
+			var routedata = routingTables[i].getAllData();
+			for (j = 0; j < routedata.length; ++j)
+				routing += routedata[j].join('<')+'>';
+		}
+		else /* otherwise, remove all data */
+			routingTables[i].removeAllData();
 
 		E('vpn_'+t+'_bridge').value = E('_f_vpn_'+t+'_bridge').checked ? 1 : 0;
 		E('vpn_'+t+'_nat').value = E('_f_vpn_'+t+'_nat').checked ? 1 : 0;
@@ -448,7 +452,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">OpenVPN Client Configuration</div>
+<div class="section-title vpn-title"><img src="openvpn.svg" alt="">OpenVPN Client Configuration</div>
 <div class="section">
 	<script>
 		tabCreate.apply(this, tabs);
@@ -480,8 +484,8 @@ function init() {
 					{ name: 'vpn_'+t+'_addr', type: 'text', maxlen: 60, size: 17, value: nvram['vpn_'+t+'_addr'] },
 					{ name: 'vpn_'+t+'_port', type: 'text', maxlen: 5, size: 7, value: nvram['vpn_'+t+'_port'] } ] },
 				{ title: 'Firewall', name: 'vpn_'+t+'_firewall', type: 'select', options: [['auto','Automatic'],['custom','Custom']], value: nvram['vpn_'+t+'_firewall'] },
-				{ title: 'Create NAT on tunnel', name: 'f_vpn_'+t+'_nat', type: 'checkbox', value: nvram['vpn_'+t+'_nat'] != 0, suffix: ' <small id="'+t+'_nat_warn_text">routes must be configured manually<\/small>' },
-				{ title: 'Inbound Firewall', name: 'f_vpn_'+t+'_fw', type: 'checkbox', value: nvram['vpn_'+t+'_fw'] != 0 },
+				{ title: 'Create NAT on tunnel', indent: 2, name: 'f_vpn_'+t+'_nat', type: 'checkbox', value: nvram['vpn_'+t+'_nat'] != 0, suffix: ' <small id="'+t+'_nat_warn_text">routes must be configured manually<\/small>' },
+				{ title: 'Inbound Firewall', indent: 2, name: 'f_vpn_'+t+'_fw', type: 'checkbox', value: nvram['vpn_'+t+'_fw'] != 0 },
 				{ title: 'Authorization Mode', name: 'vpn_'+t+'_crypt', type: 'select', options: [['tls','TLS'],['secret','Static Key'],['custom','Custom']], value: nvram['vpn_'+t+'_crypt'],
 					suffix: ' <small id="'+t+'_custom_crypto_text">must be configured manually<\/small>' },
 				{ title: 'TLS control channel security <small>(tls-auth/tls-crypt)<\/small>', name: 'vpn_'+t+'_hmac', type: 'select', options: [[-1,'Disabled'],[2,'Bi-directional Auth'],[0,'Incoming Auth (0)'],[1,'Outgoing Auth (1)'],[3,'Encrypt Channel']

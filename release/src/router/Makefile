@@ -1871,11 +1871,11 @@ sqlite: sqlite/Makefile
 
 sqlite-install:
 ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
-	install -D sqlite/staged/usr/lib/libsqlite3.so.3.49.2 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.49.2
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.49.2
+	install -D sqlite/staged/usr/lib/libsqlite3.so.3.50.0 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.0
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.0
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
-		ln -sf libsqlite3.so.3.49.2 libsqlite3.so.0 && \
-		ln -sf libsqlite3.so.3.49.2 libsqlite3.so
+		ln -sf libsqlite3.so.3.50.0 libsqlite3.so.0 && \
+		ln -sf libsqlite3.so.3.50.0 libsqlite3.so
 endif
 	@true
 
@@ -2465,9 +2465,9 @@ libxml2: libxml2/static/Makefile libxml2/build/Makefile
 
 libxml2-install:
 ifeq ($(TCONFIG_BCMARM),y)
-	install -D libxml2/staged/usr/lib/libxml2.so.16.0.2 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.2
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.2
-	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.0.2 libxml2.so.16 && ln -sf libxml2.so.16.0.2 libxml2.so
+	install -D libxml2/staged/usr/lib/libxml2.so.16.0.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.3
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.3
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.0.3 libxml2.so.16 && ln -sf libxml2.so.16.0.3 libxml2.so
 else
 	install -D libxml2/staged/usr/lib/libxml2.so.2.13.7 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
 	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
@@ -3760,11 +3760,11 @@ sd-idle-clean:
 iperf/stamp-h1:
 	$(call patch_files,iperf)
 	cd iperf && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURCE -fPIC" \
 		LIBS="-lgcc_s" \
 		ac_cv_func_clock_gettime="no" \
 		ac_cv_func_daemon="no" \
-		$(CONFIGURE) --prefix=/usr --disable-profiling --without-openssl
+		$(CONFIGURE) --prefix=/usr --disable-profiling --without-openssl --without-sctp
 	@touch $@
 
 iperf: iperf/stamp-h1

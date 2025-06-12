@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
 	Tomato GUI
-	Copyright (C) 2007-2022 FreshTomato
+	Copyright (C) 2007-2025 FreshTomato
 	ver="v2.72b - 04/23" # rs232
 	https://www.freshtomato.org/
 	For use with Tomato Firmware only.
@@ -108,11 +108,9 @@ function save() {
 }
 
 function init() {
+	var c;
 	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, 'notes');
-
-	if (((c = cookie.get(cprefix+'_advanced_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'advanced');
 
 	adblockg.recolor();
 	adblockStatus();
@@ -131,7 +129,7 @@ function adblockMe(command) {
 }
 
 function displayStatus() {
-	elem.setInnerHTML(E('status'), cmdresult);
+	elem.setInnerHTML(E('adblock-status'), cmdresult);
 	cmdresult = '';
 }
 
@@ -165,12 +163,11 @@ function determineDelimiter(inputString) {
 			continue;
 		}
 		const units = trimmedLine.split(' ');
-		if (units.length > 1) {
+		if (units.length > 1)
 			return ' ';
-		}
-		else if (i > 1) {
+		else if (i > 1)
 			return '\n';
-		}
+
 	i += 1;
 	}
 }
@@ -182,11 +179,11 @@ function sortDomains(element) {
 	var splitDomains = textarea.value.split(delimiter).map((domain) => domain.trim().split(".").reverse());
 	const regex = /[%!#+\s]/g
 	splitDomains.sort((a, b) => {
-		const aList = a.map(item => item.replace(regex, ''));
-		const bList = b.map(item => item.replace(regex, ''));
+		var aList = a.map(item => item.replace(regex, ''));
+		var bList = b.map(item => item.replace(regex, ''));
 		var aSeg = aList[1], bSeg = bList[1];
 
-		if ( aSeg === undefined || bSeg === undefined) { return 0; }
+		if (aSeg === undefined || bSeg === undefined) { return 0; }
 		if (a.length > 2 && aList[0].length === 2 && aSeg.length <= 3)
 			aSeg = aList[2];
 
@@ -203,15 +200,12 @@ function sortDomains(element) {
 		while ( true ) {
 			var aSeg = aList[i], bSeg = bList[i];
 
-			if (aSeg === undefined && bSeg === undefined) {
+			if (aSeg === undefined && bSeg === undefined)
 				return 0;
-			}
-			else if (aSeg === undefined) {
+			else if (aSeg === undefined)
 				return -1;
-			}
-			else if (bSeg === undefined) {
+			else if (bSeg === undefined)
 				return 1;
-			}
 
 			var subCompare = aSeg.toLowerCase().localeCompare(bSeg.toLowerCase());
 			if (subCompare !== 0) return subCompare;
@@ -251,7 +245,6 @@ function sortDomains(element) {
 
 <div class="section-title">Adblock (DNS filtering) - Settings</div>
 <div class="section">
-<div class="section">
 	<script>
 		createFieldTable('', [
 			{ title: 'Enable', name: 'f_adblock_enable', type: 'checkbox', value: nvram.adblock_enable != '0' },
@@ -271,7 +264,7 @@ function sortDomains(element) {
 
 <!-- / / / -->
 
-<div class="section-title">Domain blacklist custom</div><input type="button" value="Sort domains backward a-z ↓" onclick="sortDomains('domain-blacklist')" id="sort-button-blacklist" style="float: right;">
+<div class="section-title">Domain blacklist custom</div><input type="button" value="Sort domains backward a-z ↓" onclick="sortDomains('domain-blacklist')" id="sort-button-blacklist" style="float:right">
 <div class="section">
 	<script>
 		createFieldTable('', [
@@ -295,34 +288,36 @@ function sortDomains(element) {
 
 <!-- / / / -->
 
-<div class="section-title">Advanced</div>
+<div class="section-title">Adblock Controls / Status</div>
 <div class="section">
-	<table cellspacing="1" cellpadding="2" border="0">
-	<tr><td>Controls -</td><td>Status -</td></tr>
-	<tr><td>&nbsp;</td>
-	<th rowspan="10" valign="top" style="text-align: left;padding-left:30px;padding-top:5px;font-size:9px;width:100%;border:1px solid #aaaaaa"><div id="status"><wbr></div></th></tr>
-	<tr><td><input type="button" style="width:130px" value="▶️ Load " id="adblock-start" onclick="adblockMe('start');"></td></tr>
-	<tr><td><input type="button" style="width:130px" value="⏏️ Unload" id="adblock-stop" onclick="adblockMe('stop');"></td></tr>
-	<tr><td><input type="button" style="width:130px" value="🔄 Update" id="adblock-update" onclick="adblockMe('update');"></td></tr>
-	<tr><td><input type="button" style="width:130px" value="♻️ Reset limit" id="adblock-reset" onclick="adblockMe('reset');"></td></tr>
-	<tr><td><input type="button" style="width:130px" value="🧹 Clear all files" id="adblock-clear" onclick="adblockMe('clear');"></td></tr>
-	<tr><td><input type="button" style="width:130px" value="📷 Snapshot" id="adblock-snapshot" onclick="adblockMe('snapshot');"></td></tr>
-	<tr><td><input type="button" style="width:130px" value="☑️ Enable only" id="adblock-enable" onclick="adblockMe('enable');"></td></tr>
-	<tr><td><input type="button" style="width:130px" value="⬜ Disable only" id="adblock-disable" onclick="adblockMe('disable');"></td></tr>
-	<tr><td>&nbsp;</td>
-	<tr><th colspan="2">
-	<div id="survey-controls">
-		<img src="spin.gif" alt="" id="refresh-spinner">
-		<small>Status - </small><script>genStdTimeList('refresh-time', 'One off', 5);</script>
-		<input type="button" value="Refresh" onclick="ref.toggle()" id="refresh-button">
-	</div>
-	</div></th></tr>
-	</table></div>
+<div class="fields">
+	<table class="adblock-status-table">
+			<td class="adblock-td1">&nbsp;</td>
+			<td class="adblock-td2" rowspan="10"><pre id="adblock-status" class="status-result"></pre></td>
+		</tr>
+
+		<tr><td><input type="button" value="▶️ Load" id="adblock-start" onclick="adblockMe('start');"></td></tr>
+		<tr><td><input type="button" value="⏏️ Unload" id="adblock-stop" onclick="adblockMe('stop');"></td></tr>
+		<tr><td><input type="button" value="🔄 Update" id="adblock-update" onclick="adblockMe('update');"></td></tr>
+		<tr><td><input type="button" value="♻️ Reset limit" id="adblock-reset" onclick="adblockMe('reset');"></td></tr>
+		<tr><td><input type="button" value="🧹 Clear all files" id="adblock-clear" onclick="adblockMe('clear');"></td></tr>
+		<tr><td><input type="button" value="📷 Snapshot" id="adblock-snapshot" onclick="adblockMe('snapshot');"></td></tr>
+		<tr><td><input type="button" value="☑️ Enable only" id="adblock-enable" onclick="adblockMe('enable');"></td></tr>
+		<tr><td><input type="button" value="⬜ Disable only" id="adblock-disable" onclick="adblockMe('disable');"></td></tr>
+		<tr><td>&nbsp;</td></tr>
+
+		<tr><td colspan="2">
+			<div id="adblock-controls">
+				<script>genStdRefresh(1,5,'ref.toggle()')</script>
+			</div>
+		</td></tr>
+	</table>
+</div>
 </div>
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href='javascript:toggleVisibility(cprefix,"notes");'><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<li><b>Updated information on tested adblock lists can be found at <a href="https://wiki.freshtomato.org/doku.php/adblock_dns_filtering" class="new_window">this page</a></b></li>
@@ -343,7 +338,7 @@ function sortDomains(element) {
 <div id="footer">
 	<span id="footer-msg"></span>
 	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
+	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage()">
 </div>
 </td></tr>
 </table>

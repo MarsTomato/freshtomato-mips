@@ -204,6 +204,10 @@ function earlyInit() {
 }
 
 function init() {
+	var c;
+	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
+		toggleVisibility(cprefix, 'notes');
+
 	eventHandler();
 	up.initPage(250, 5);
 }
@@ -250,8 +254,7 @@ function init() {
 <div class="section-title">Status</div>
 <div class="section">
 	<div class="fields">
-		<span id="_transmission_notice"></span>
-		<input type="button" id="_transmission_button" value="">
+		<span id="_transmission_notice"></span><input type="button" id="_transmission_button" value="">
 		<input type="button" id="_transmission_status" value="Open Transmission GUI in new tab" class="new_window" onclick="window.open('http://'+location.hostname+':'+nvram.bt_port_gui+'')">
 		&nbsp; <img src="spin.gif" alt="" id="spin">
 	</div>
@@ -376,7 +379,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<li><b>Enable on Start</b> - Caution! If your router only has 32MB of RAM, you'll have to use swap.</li>

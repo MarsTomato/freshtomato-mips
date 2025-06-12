@@ -48,7 +48,7 @@ function show() {
 		countButton = 0;
 	}
 
-	E('_tinc_notice').innerHTML = (d ? '<span class="service_up">RUNNING<\/span>' : '<span class="service_down">STOPPED<\/span>');
+	E('_tinc_notice').innerHTML = (d ? '<span class="service_up"><span class="servup_image">▲ <\/span>Up<\/span>' : '<span class="service_down"><span class="servdn_image">▽ <\/span>Down<\/span>');
 	E('edges').disabled = !d;
 	E('connections').disabled = !d;
 	E('subnets').disabled = !d;
@@ -83,9 +83,9 @@ function toggle(service, isup) {
 	E('_'+service+'_button').disabled = 1;
 	E('spin').style.display = 'inline';
 
-	elem.display(E('result'), !isup);
+	elem.display(E('status-result'), !isup);
 	if (!isup)
-		elem.setInnerHTML(E('result'), '');
+		elem.setInnerHTML(E('status-result'), '');
 
 	var fom = E('t_fom');
 	fom._service.value = service+(isup ? '-stop' : '-start');
@@ -272,13 +272,13 @@ function generateKeys() {
 }
 
 function displayStatus() {
-	elem.setInnerHTML(E('result'), '<tt>'+escapeText(cmdresult)+'<\/tt>');
+	elem.setInnerHTML(E('status-result'), escapeText(cmdresult));
 	cmdresult = '';
 	spin(0, 'statusWait');
 }
 
 function updateStatus(type) {
-	elem.setInnerHTML(E('result'), '');
+	elem.setInnerHTML(E('status-result'), '');
 	spin(1, 'statusWait');
 
 	cmd = new XmlHttp();
@@ -510,14 +510,13 @@ function init() {
 <div class="section-title">Status</div>
 <div class="section">
 	<div class="fields">
-		<span id="_tinc_notice"></span>
-		<input type="button" id="_tinc_button">&nbsp; <img src="spin.gif" alt="" id="spin">
+		<span id="_tinc_notice"></span><input type="button" id="_tinc_button">&nbsp; <img src="spin.gif" alt="" id="spin">
 	</div>
 </div>
 
 <!-- / / / -->
 
-<div class="section-title" id="tinc-title">Tinc Configuration</div>
+<div class="section-title vpn-title" id="tinc-title"><img src="tinc.svg" alt="">Tinc Configuration</div>
 <script>
 	tabCreate.apply(this, tabs);
 
@@ -558,7 +557,7 @@ function init() {
 	W('<small><b style="font-size: 1.5em">*<\/b> Only required to create legacy connections with tinc1.0 nodes.<\/small>');
 	W('<\/div>');
 
-	W('<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,\'hosts\');"><span id="sesdiv_hosts_showhide">(Show)<\/span><\/a><\/i><\/small><\/div>');
+	W('<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,\'hosts\');" id="toggleLink-hosts"><span id="sesdiv_hosts_showhide">(Show)<\/span><\/a><\/i><\/small><\/div>');
 	W('<div class="section" id="sesdiv_hosts" style="display:none">');
 	W('<ul>');
 	W('<li><b>ConnectTo<\/b> - Tinc will try to establish a meta-connection to the host. Requires the Address field.');
@@ -624,7 +623,7 @@ function init() {
 
 	W('<div class="section">');
 	W('<div><input type="button" value="Info" onclick="updateStatus(\'info\')" id="info" style="min-width:85px"> <select id="hostselect" style="min-width:85px"><\/select><\/div>');
-	W('<pre id="result" class="status-result"><\/pre>');
+	W('<pre id="status-result" class="status-result"><\/pre>');
 	W('<\/div>');
 	W('<\/div><\/div>');
 	/* -------- END KEY TAB ----------- */
