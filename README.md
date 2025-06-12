@@ -11,7 +11,7 @@ For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12
   
   
 - [**Project page**](https://freshtomato.org/)
-- [**Source code**](https://github.com/FreshTomato-Project/freshtomato-mips) ([**Mirror**](https://bitbucket.org/pedro311/freshtomato-mips/commits/all))
+- [**Source code**](https://github.com/FreshTomato-Project/freshtomato-mips) ([**Mirror**](https://gitlab.com/pedro311/freshtomato-mips))
 - [**Changelog**](https://github.com/FreshTomato-Project/freshtomato-mips/blob/mips-master/CHANGELOG)
 - [**Downloads**](https://freshtomato.org/downloads)
 - [**Issue tracker**](https://github.com/FreshTomato-Project/freshtomato-mips/issues)

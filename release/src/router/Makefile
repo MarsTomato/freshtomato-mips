@@ -821,6 +821,7 @@ ifneq ($(TCONFIG_BCMARM),y)
 	$(if $(TCONFIG_USB),@cp -f,$(if $(TCONFIG_SDHC),@cp -f,@mv)) $(TARGETDIR)/lib/modules/*/kernel/fs/nls_*.*o $(PLATFORMDIR)/extras/ || true
 endif
 	$(if $(TCONFIG_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/*.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(TCONFIG_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/cdrom/*.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/scsi/*.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/leds/*.*o $(PLATFORMDIR)/extras/ || true
 ifneq ($(TCONFIG_BCMARM),y)
@@ -1807,9 +1808,9 @@ dropbear/config.h:
 dropbear: dropbear/config.h
 	@$(SEP)
 ifneq ($(TCONFIG_ZEBRA)$(TCONFIG_BCMARM),)
-	@$(MAKE) -C $@ PROGRAMS="dropbear dbclient dropbearkey scp" MULTI=1 $(PARALLEL_BUILD)
+	$(MAKE) -C $@ PROGRAMS="dropbear dropbearkey scp dbclient" MULTI=1 $(PARALLEL_BUILD)
 else
-	@$(MAKE) -C $@ PROGRAMS="dropbear dropbearkey $(if $(TCONFIG_OPTIMIZE_SIZE),,scp)" MULTI=1 $(PARALLEL_BUILD)
+	$(MAKE) -C $@ PROGRAMS="dropbear dropbearkey $(if $(TCONFIG_OPTIMIZE_SIZE),,scp)" MULTI=1 $(PARALLEL_BUILD)
 endif
 
 dropbear-install:
@@ -1818,9 +1819,17 @@ dropbear-install:
 	cd $(INSTALLDIR)/dropbear/usr/bin && \
 	ln -sf dropbearmulti dropbear && \
 	ln -sf dropbearmulti dropbearkey && \
+	ln -sf dropbearmulti ssh
+ifneq ($(TCONFIG_ZEBRA)$(TCONFIG_BCMARM),)
+	cd $(INSTALLDIR)/dropbear/usr/bin && \
 	ln -sf dropbearmulti dbclient && \
-	ln -sf dropbearmulti ssh && \
 	ln -sf dropbearmulti scp
+else
+ ifneq ($(TCONFIG_OPTIMIZE_SIZE),y)
+	cd $(INSTALLDIR)/dropbear/usr/bin && \
+	ln -sf dropbearmulti scp
+ endif
+endif
 
 dropbear-clean:
 	-@$(MAKE) -C dropbear clean
@@ -3708,6 +3717,7 @@ uqmi/build/Makefile:
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -lm -L$(TOP)/libubox/build" \
 			-DBUILD_STATIC=TRUE \
+			-DBUILD_UQMID=FALSE \
 			-Djson_include_dir="$(TOP)/libjson-c/staged/usr/include" \
 			-Djson_library="$(TOP)/libjson-c/staged/usr/lib/libjson-c.a" \
 			-Dblobmsg_json_include_dir="$(TOP)" \
