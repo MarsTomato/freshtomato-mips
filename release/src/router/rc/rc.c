@@ -2,7 +2,7 @@
  *
  * Tomato Firmware
  * Copyright (C) 2006-2009 Jonathan Zarate
- * Fixes/updates (C) 2018 - 2023 pedro
+ * Fixes/updates (C) 2018 - 2025 pedro
  *
  */
 
@@ -141,6 +141,7 @@ int serialize_restart(char *service, int start)
 	pid_t pid, pid_rc = getpid();
 
 	/* replace '-' with '_' otherwise exec_service() will fail */
+	memset(s, 0, sizeof(s)); /* reset */
 	strlcpy(s, service, sizeof(s));
 	if ((pos = strstr(s, "-")) != NULL) {
 		index = pos - s;
@@ -160,6 +161,17 @@ int serialize_restart(char *service, int start)
 			logmsg(LOG_WARNING, "service: %s already running; its PID: %d", s, pid);
 			return 1;
 		}
+#ifdef TCONFIG_WIREGUARD
+		/* special case: wireguard */
+		if (strncmp(service, "wireguard", 9) == 0) {
+			memset(s, 0, sizeof(s)); /* reset */
+			snprintf(s, sizeof(s), "wg%d", atoi(&service[9]));
+			if (if_nametoindex(s)) {
+				logmsg(LOG_WARNING, "service: %s already running; interface %s is up", service, s);
+				return 1;
+			}
+		}
+#endif
 	}
 	else {
 		if (pid_rc != 1) {
@@ -173,18 +185,17 @@ int serialize_restart(char *service, int start)
 }
 
 /* replace -A, -I and -N in the FW script with -D */
-void run_del_firewall_script(char *infile, char *outfile)
+void run_del_firewall_script(const char *infile, char *outfile)
 {
 	FILE *ifp, *ofp;
-	char read[128], temp[128];
-	char *pos;
-	int index = 0;
+	char line[128];
+	char *p;
 
 	ifp = fopen(infile, "r");
 	ofp = fopen(outfile, "w+");
-	if ((ifp == NULL) || (ofp == NULL)) {
-		if (ifp != NULL) fclose(ifp);
-		if (ofp != NULL) {
+	if (!ifp || !ofp) {
+		if (ifp) fclose(ifp);
+		if (ofp) {
 			fclose(ofp);
 			unlink(outfile);
 		}
@@ -192,17 +203,13 @@ void run_del_firewall_script(char *infile, char *outfile)
 		return;
 	}
 
-	while (fgets(read, sizeof(read), ifp) != NULL) {
-		if ((strstr(read, "-A") != NULL) || (strstr(read, "-I") != NULL) || (strstr(read, "-N") != NULL)) {
-			while (((pos = strstr(read, "-A")) != NULL) || ((pos = strstr(read, "-I")) != NULL) || ((pos = strstr(read, "-N")) != NULL)) {
-				strlcpy(temp, read, sizeof(temp));
-				index = pos - read;
-				read[index] = '\0';
-				strlcat(read, "-D", sizeof(read));
-				strlcat(read, temp + index + 2, sizeof(read));
+	while (fgets(line, sizeof(line), ifp)) {
+		for (p = line; *p; ++p) {
+			if (*p == '-' && (p[1] == 'A' || p[1] == 'I' || p[1] == 'N')) {
+				p[1] = 'D';
 			}
 		}
-		fputs(read, ofp);
+		fputs(line, ofp);
 	}
 	fclose(ifp);
 	fclose(ofp);

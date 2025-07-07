@@ -15,6 +15,7 @@ RUN apt-get update \
   flex \
   g++ \
   libtool \
+  libltdl-dev \
   sqlite3 \
   gcc \
   binutils \

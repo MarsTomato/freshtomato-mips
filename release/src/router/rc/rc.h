@@ -105,7 +105,7 @@ extern void chains_log_detection(void);
 extern void fix_chain_in_drop(void);
 extern int env2nv(char *env, char *nv);
 extern int serialize_restart(char *service, int start);
-extern void run_del_firewall_script(char *infile, char *outfile);
+extern void run_del_firewall_script(const char *infile, char *outfile);
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
@@ -197,7 +197,10 @@ extern void stop_wireless(void);
 extern void start_wireless(void);
 extern void restart_wireless(void);
 extern void start_wl(void);
-extern int disabled_wl(int idx, int unit, int subunit, void *param);
+extern int disabled_wl_vif(int idx, int unit, int subunit, void *param);
+#if defined(TCONFIG_AC3200) && !defined(TCONFIG_BCM714) /* only add for SDK7 */
+extern int enabled_wl_vif(int idx, int unit, int subunit, void *param);
+#endif /* defined(TCONFIG_AC3200) && !defined(TCONFIG_BCM714) */
 extern void unload_wl(void);
 extern void load_wl(void);
 #ifdef TCONFIG_IPV6

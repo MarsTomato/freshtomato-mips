@@ -821,6 +821,7 @@ ifneq ($(TCONFIG_BCMARM),y)
 	$(if $(TCONFIG_USB),@cp -f,$(if $(TCONFIG_SDHC),@cp -f,@mv)) $(TARGETDIR)/lib/modules/*/kernel/fs/nls_*.*o $(PLATFORMDIR)/extras/ || true
 endif
 	$(if $(TCONFIG_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/*.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(TCONFIG_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/cdrom/*.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/scsi/*.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_USB),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/leds/*.*o $(PLATFORMDIR)/extras/ || true
 ifneq ($(TCONFIG_BCMARM),y)
@@ -1471,7 +1472,9 @@ iproute2-3.x:
 	@$(SEP)
 	$(call patch_files,iproute2-3.x)
 	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
-		EXTRACFLAGS="$(EXTRACFLAGS)" \
+		EXTRA_CCOPTS="$(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-Wl,--gc-sections" \
+		SHARED_LIBS="" \
 		PKG_CONFIG_PATH="$(TOP)/$(IPTABLES_TARGET)/iptables" \
 		IPT_LIB_DIR="/usr/lib/xtables" \
 		$(PARALLEL_BUILD)
@@ -1807,9 +1810,9 @@ dropbear/config.h:
 dropbear: dropbear/config.h
 	@$(SEP)
 ifneq ($(TCONFIG_ZEBRA)$(TCONFIG_BCMARM),)
-	@$(MAKE) -C $@ PROGRAMS="dropbear dbclient dropbearkey scp" MULTI=1 $(PARALLEL_BUILD)
+	$(MAKE) -C $@ PROGRAMS="dropbear dropbearkey scp dbclient" MULTI=1 $(PARALLEL_BUILD)
 else
-	@$(MAKE) -C $@ PROGRAMS="dropbear dropbearkey $(if $(TCONFIG_OPTIMIZE_SIZE),,scp)" MULTI=1 $(PARALLEL_BUILD)
+	$(MAKE) -C $@ PROGRAMS="dropbear dropbearkey $(if $(TCONFIG_OPTIMIZE_SIZE),,scp)" MULTI=1 $(PARALLEL_BUILD)
 endif
 
 dropbear-install:
@@ -1818,9 +1821,17 @@ dropbear-install:
 	cd $(INSTALLDIR)/dropbear/usr/bin && \
 	ln -sf dropbearmulti dropbear && \
 	ln -sf dropbearmulti dropbearkey && \
+	ln -sf dropbearmulti ssh
+ifneq ($(TCONFIG_ZEBRA)$(TCONFIG_BCMARM),)
+	cd $(INSTALLDIR)/dropbear/usr/bin && \
 	ln -sf dropbearmulti dbclient && \
-	ln -sf dropbearmulti ssh && \
 	ln -sf dropbearmulti scp
+else
+ ifneq ($(TCONFIG_OPTIMIZE_SIZE),y)
+	cd $(INSTALLDIR)/dropbear/usr/bin && \
+	ln -sf dropbearmulti scp
+ endif
+endif
 
 dropbear-clean:
 	-@$(MAKE) -C dropbear clean
@@ -1871,11 +1882,11 @@ sqlite: sqlite/Makefile
 
 sqlite-install:
 ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
-	install -D sqlite/staged/usr/lib/libsqlite3.so.3.50.0 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.0
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.0
+	install -D sqlite/staged/usr/lib/libsqlite3.so.3.50.2 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.2
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.2
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
-		ln -sf libsqlite3.so.3.50.0 libsqlite3.so.0 && \
-		ln -sf libsqlite3.so.3.50.0 libsqlite3.so
+		ln -sf libsqlite3.so.3.50.2 libsqlite3.so.0 && \
+		ln -sf libsqlite3.so.3.50.2 libsqlite3.so
 endif
 	@true
 
@@ -2208,25 +2219,36 @@ ebtables-clean:
 	rm -f ebtables/stamp-h1
 	$(call unpatch_files,ebtables)
 
-spawn-fcgi/stamp-h1:
+spawn-fcgi/build:
 	$(call patch_files,spawn-fcgi)
-	cd spawn-fcgi && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --prefix=/usr $(if $(TCONFIG_IPV6),,--disable-ipv6)
-	@touch $@
+	cd spawn-fcgi && \
+		$(call meson_CrossOptions, meson-cross.txt) && \
+		$(TOP)/meson/meson.py setup build \
+		--cross-file meson-cross.txt \
+		--prefix=/usr \
+		-Dsysconfdir=/etc \
+		-Dlocalstatedir=/var \
+		-Dc_std=$(if $(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73),gnu11,gnu99) \
+		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		-Dc_link_args="-Wl,--gc-sections" \
+		-Doptimization=s \
+		-Dbuildtype=minsize \
+		-Ddebug=false \
+		-Dwarning_level=1 \
+		-Dextra-warnings=false \
+		-Dipv6=$(if $(TCONFIG_IPV6),true,false)
 
-spawn-fcgi: spawn-fcgi/stamp-h1
+spawn-fcgi: spawn-fcgi/build
 	@$(SEP)
-	@$(MAKE) -C $@
+	$(TOP)/meson/meson.py compile -C $@/build $(PARALLEL_BUILD)
 
 spawn-fcgi-install:
-	install -D spawn-fcgi/src/spawn-fcgi $(INSTALLDIR)/spawn-fcgi/usr/bin/spawn-fcgi
+	install -D spawn-fcgi/build/src/spawn-fcgi $(INSTALLDIR)/spawn-fcgi/usr/bin/spawn-fcgi
 	$(STRIP) -s $(INSTALLDIR)/spawn-fcgi/usr/bin/spawn-fcgi
 
 spawn-fcgi-clean:
-	-@$(MAKE) -C spawn-fcgi clean
-	@rm -f spawn-fcgi/stamp-h1
+	@rm -rf spawn-fcgi/build
+	@rm -f spawn-fcgi/meson-cross.txt
 	$(call unpatch_files,spawn-fcgi)
 
 glib/stamp-h1:
@@ -2465,9 +2487,9 @@ libxml2: libxml2/static/Makefile libxml2/build/Makefile
 
 libxml2-install:
 ifeq ($(TCONFIG_BCMARM),y)
-	install -D libxml2/staged/usr/lib/libxml2.so.16.0.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.3
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.3
-	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.0.3 libxml2.so.16 && ln -sf libxml2.so.16.0.3 libxml2.so
+	install -D libxml2/staged/usr/lib/libxml2.so.16.0.4 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.4
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.4
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.0.4 libxml2.so.16 && ln -sf libxml2.so.16.0.4 libxml2.so
 else
 	install -D libxml2/staged/usr/lib/libxml2.so.2.13.7 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
 	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
@@ -2506,9 +2528,9 @@ libpng: libpng/build/Makefile
 	@$(MAKE) -C libpng/build DESTDIR=$(TOP)/libpng/staged install
 
 libpng-install:
-	install -D libpng/build/libpng16.so.16.48.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.48.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.48.0
-	cd $(INSTALLDIR)/libpng/usr/lib && ln -sf libpng16.so.16.48.0 libpng16.so && ln -sf libpng16.so.16.48.0 libpng16.so.16
+	install -D libpng/build/libpng16.so.16.50.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.50.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.50.0
+	cd $(INSTALLDIR)/libpng/usr/lib && ln -sf libpng16.so.16.50.0 libpng16.so && ln -sf libpng16.so.16.50.0 libpng16.so.16
 
 libpng-clean:
 	@rm -rf libpng/build
@@ -3708,6 +3730,7 @@ uqmi/build/Makefile:
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -lm -L$(TOP)/libubox/build" \
 			-DBUILD_STATIC=TRUE \
+			-DBUILD_UQMID=FALSE \
 			-Djson_include_dir="$(TOP)/libjson-c/staged/usr/include" \
 			-Djson_library="$(TOP)/libjson-c/staged/usr/lib/libjson-c.a" \
 			-Dblobmsg_json_include_dir="$(TOP)" \
@@ -4180,9 +4203,9 @@ libffi: libffi/stamp-h1
 
 libffi-install:
 ifeq ($(TCONFIG_IRQBALANCE),y)
-	install -D $(TOP)/libffi/.libs/libffi.so.8.1.4 $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.4
-	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.4
-	cd $(INSTALLDIR)/libffi/usr/lib && ln -sf libffi.so.8.1.4 libffi.so.8 && ln -sf libffi.so.8.1.4 libffi.so
+	install -D $(TOP)/libffi/.libs/libffi.so.8.2.0 $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.2.0
+	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.2.0
+	cd $(INSTALLDIR)/libffi/usr/lib && ln -sf libffi.so.8.2.0 libffi.so.8 && ln -sf libffi.so.8.2.0 libffi.so
 endif
 	@true
 
