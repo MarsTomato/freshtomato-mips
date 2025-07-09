@@ -31,6 +31,7 @@
 #include <arpa/inet.h>
 #include <sys/sysinfo.h>
 #include <time.h>
+#include <dirent.h>
 
 #include <bcmnvram.h>
 #include <shutils.h>
@@ -82,6 +83,29 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 #define IPT_ANY_AF		(IPT_V4 | IPT_V6)
 #define IPT_AF_IS_EMPTY(f)	((f & IPT_ANY_AF) == 0)
 
+#if defined(TCONFIG_OPENVPN) || defined(TCONFIG_WIREGUARD)
+/* wireguard max count */
+#define WG_INTERFACE_MAX	3
+/* OpenVPN clients/servers count */
+#define OVPN_SERVER_MAX		2
+#if defined(TCONFIG_BCMARM)
+#define OVPN_CLIENT_MAX		3
+#else
+#define OVPN_CLIENT_MAX		2
+#endif
+#define OVPN_DIR		"/etc/openvpn"
+#define OVPN_FW_DIR		OVPN_DIR"/fw"
+#define OVPN_DEL_SCRIPT		"clear-fw-tmp.sh"
+#define OVPN_DIR_DEL_SCRIPT	OVPN_DIR"/fw/"OVPN_DEL_SCRIPT
+#define WG_DIR			"/etc/wireguard"
+#define WG_DNS_DIR		WG_DIR"/dns"
+#define WG_SCRIPTS_DIR		WG_DIR"/scripts"
+#define WG_KEYS_DIR		WG_DIR"/keys"
+#define WG_FW_DIR		WG_DIR"/fw"
+#define WG_DEL_SCRIPT		"clear-fw-tmp.sh"
+#define WG_DIR_DEL_SCRIPT	WG_FW_DIR"/"WG_DEL_SCRIPT
+#endif /* TCONFIG_OPENVPN || TCONFIG_WIREGUARD */
+
 const char *chain_in_drop;
 const char *chain_in_accept;
 const char *chain_out_drop;
@@ -106,6 +130,10 @@ extern void fix_chain_in_drop(void);
 extern int env2nv(char *env, char *nv);
 extern int serialize_restart(char *service, int start);
 extern void run_del_firewall_script(const char *infile, char *outfile);
+#if defined(TCONFIG_OPENVPN) || defined(TCONFIG_WIREGUARD)
+extern void kill_switch(const char *type);
+extern void run_vpn_firewall_scripts(const char *kind);
+#endif
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
