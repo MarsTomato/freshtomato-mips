@@ -52,12 +52,7 @@
 #define REDIAL		1
 #define CONNECTING	2
 
-#define PPPOEWAN	0
-#define PPPOEWAN2	1
-#ifdef TCONFIG_MULTIWAN
-#define PPPOEWAN3	2
-#define PPPOEWAN4	3
-#endif
+#define PPPOEWAN(n)	((n) - 1)
 
 /* see init.c - used for /proc/sys/vm/min_free_kbytes */
 #define TOMATO_RAM_HIGH_END	(200 * 1024)
@@ -376,12 +371,7 @@ extern void notify_nas(const char *ifname);
 
 /* firewall.c */
 typedef void (*_tf_ipt_write)(const char *format, ... );
-extern wanface_list_t wanfaces;
-extern wanface_list_t wan2faces;
-#ifdef TCONFIG_MULTIWAN
-extern wanface_list_t wan3faces;
-extern wanface_list_t wan4faces;
-#endif
+extern wanface_list_t wanfaces[MWAN_MAX];
 extern char lanaddr[BRIDGE_COUNT][32];
 extern char lanmask[BRIDGE_COUNT][32];
 extern char lanface[BRIDGE_COUNT][IFNAMSIZ + 1];
