@@ -1882,11 +1882,11 @@ sqlite: sqlite/Makefile
 
 sqlite-install:
 ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
-	install -D sqlite/staged/usr/lib/libsqlite3.so.3.50.2 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.2
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.2
+	install -D sqlite/staged/usr/lib/libsqlite3.so.3.50.3 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.3
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.3
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
-		ln -sf libsqlite3.so.3.50.2 libsqlite3.so.0 && \
-		ln -sf libsqlite3.so.3.50.2 libsqlite3.so
+		ln -sf libsqlite3.so.3.50.3 libsqlite3.so.0 && \
+		ln -sf libsqlite3.so.3.50.3 libsqlite3.so
 endif
 	@true
 
@@ -2487,9 +2487,9 @@ libxml2: libxml2/static/Makefile libxml2/build/Makefile
 
 libxml2-install:
 ifeq ($(TCONFIG_BCMARM),y)
-	install -D libxml2/staged/usr/lib/libxml2.so.16.0.4 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.4
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.4
-	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.0.4 libxml2.so.16 && ln -sf libxml2.so.16.0.4 libxml2.so
+	install -D libxml2/staged/usr/lib/libxml2.so.16.0.5 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.5
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.5
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.0.5 libxml2.so.16 && ln -sf libxml2.so.16.0.5 libxml2.so
 else
 	install -D libxml2/staged/usr/lib/libxml2.so.2.13.7 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
 	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
