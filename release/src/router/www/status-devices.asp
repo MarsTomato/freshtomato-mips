@@ -39,7 +39,7 @@ var clear2 = (discovery_clear === 1) ? 'clear' : '';
 var discovery_limit = cookie.get(cprefix+'_discovery_limit') || '60';
 var discovery_target = cookie.get(cprefix+'_discovery_target') || 'lan';
 var discovery_mode = cookie.get(cprefix+'_discovery_mode') || 'off';
-var show_wan_entries = cookie.get(cprefix+'_show_wan_entries') || 'disabled';
+var show_wan_entries = cookie.get(cprefix+'_show_wan_entries') || '0';
 var wait = gc_time;
 var time_o;
 /* DISCOVERY-END */
@@ -450,36 +450,49 @@ dg.populate = function() {
 
 		f = '';
 		if (e.freq != '') {
-			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.svg"'+((e.mode == 'wet' || e.mode == 'sta' || e.mode == 'psta' || (e.mode == 'wds' && e.proto == 'disabled')) ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
+			f = '<span class="wl'+(e.freq == '5 GHz' ? '50' : '24')+'svg" '+((e.mode == 'wet' || e.mode == 'sta' || e.mode == 'psta' || (e.mode == 'wds' && e.proto == 'disabled')) ? 'style="filter:invert(1)"' : '')+' title="'+e.freq+'">&nbsp;</span>';
 			e.media = (e.freq == '5 GHz' ? 1 : 2);
 		}
 		else if (e.ifname != '' && mode != 'wet') {
 			c = (e.wan != '' ? 'style="filter:invert(1)"' : '');
 /* USB-BEGIN */
 			if ((e.proto == 'lte') || (e.proto == 'ppp3g')) {
-				f = '<img src="cell.svg"'+c+' alt="" title="LTE / 3G">';
+				f = '<span class="cellsvg"'+c+' title="LTE / 3G">&nbsp;</span>';
 				e.media = 3;
 			}
 			else
 /* USB-END */
 			     if (e.rssi != 1) {
-				f = '<img src="eth.svg"'+c+' alt="" title="Ethernet">';
+				f = '<span class="ethsvg"'+c+' title="Ethernet">&nbsp;</span>';
 				e.media = 4;
 			}
 		}
 		if (e.rssi == 1) {
 			if (e.mac.match(/^(..):(..):(..)/))
-				f = '<a href="javascript:wake('+i+')" class="status_devices"><img src="dis.svg"'+c+' alt="" title="Click to wake up"><\/a>';
+				f = '<a href="javascript:wake('+i+')" class="status_devices"><span class="dissvg"'+c+' title="Click to wake up">&nbsp;</span><\/a>';
 			else
-				f = '<img src="dis.svg"'+c+' alt="" title="Disconnected">';
+				f = '<span class="dissvg"'+c+' title="Disconnected">&nbsp;</span>';
 
 			e.media = 5;
 		}
 
-		if ((show_wan_entries == 'enabled') || (!a.includes("WAN"))) {
-			this.insert(-1, e, [ a, '<div id="media_'+i+'">'+f+'<\/div>', b, (e.mode == 'wds' ? '' : e.ip), e.name, (e.rssi < 0 ? e.rssi+' <small>dBm<\/small>' : ''),
-			                     (e.qual < 0 ? '' : '<small>'+e.qual+'<\/small> <img src="bar'+MIN(MAX(Math.floor(e.qual / 12), 1), 6)+'.gif" id="bar_'+i+'" alt="">'),
-			                     e.txrx, e.lease], false);
+		var showWanEntriesNum = Number(show_wan_entries);
+		var isWan = a.includes("WAN");
+		if (
+			(showWanEntriesNum === 0 && !isWan) ||	/* 0 (Disabled): Show if not a WAN */
+			showWanEntriesNum === 1 ||		/* 1 (Show ALL WANs/non-WANs): Always show */
+			(showWanEntriesNum === 2 && isWan)	/* 2 (Show ONLY WANs): Show if it IS a WAN */
+		) {
+			this.insert(-1, e, [ a,
+			                     '<div id="media_'+i+'">'+f+'<\/div>',
+			                     b,
+			                     (e.mode === 'wds' ? '' : e.ip),
+			                     e.name,
+			                     (e.rssi < 0 ? e.rssi+' <small>dBm<\/small>' : ''),
+			                     (e.qual < 0 ? '' : '<small>'+e.qual+'<\/small> <img src="bar'+Math.min(Math.max(Math.floor(e.qual / 12), 1), 6)+'.gif" id="bar_'+i+'" alt="">'),
+			                     e.txrx,
+			                     e.lease
+			], false);
 		}
 	}
 }
@@ -738,6 +751,12 @@ function earlyInit() {
 /* DISCOVERY-BEGIN */
 	E('_discovery_clear').checked = (discovery_clear === 1);
 /* DISCOVERY-END */
+	addEvent(document, 'DOMContentLoaded', function() {
+		var sel = E('_show_wan_entries');
+		sel && addEvent(sel, 'change', function() {
+			ref.initPage(0, 3);
+		});
+	});
 }
 
 function init() {
@@ -794,7 +813,7 @@ function init() {
 			{ title: 'Max Probes', name: 'discovery_limit', type: 'text', maxlen: 3, size: 3, value: discovery_limit,  placeholder: '60', suffix: '<\/span>&nbsp;<small> 5 - 200<\/small>' },
 			{ title: 'Scan Target', name: 'discovery_target', type: 'select', options: [['lan','LANs *'],['wan','WANs'],['both','LANs & WANs']], value: discovery_target },
 			{ title: 'Scan Mode', name: 'discovery_mode', type: 'select', options: [['off','Off *'],['arping','arping (preferred)'],['traceroute','traceroute'],['nc','netcat'],['all','all (round-robin)']], suffix: '&nbsp; <img src="spin.gif" alt="" id="spin"><div id="wait"><\/div>', value: discovery_mode },
-			{ title: 'Show WAN Entries', name: 'show_wan_entries', type: 'select', options: [['disabled','disabled'],['enabled','enabled']], value: show_wan_entries }
+			{ title: 'Display Mode', name: 'show_wan_entries', type: 'select', options: [['1','LANs & WANs'],['0','LANs'],['2','WANs']], value: show_wan_entries }
 		]);
 	</script>
 </div>

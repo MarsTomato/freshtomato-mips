@@ -120,14 +120,14 @@ function toggle(service, up) {
 	if (changed && !confirm('There are unsaved changes. Continue anyway?'))
 		return;
 
-	/* check for active 'External - VPN Provider' mode */
-	var external_mode = 0;
+	/* check for active 'External - VPN Provider' + 'Redirect Internet traffic' set to 'All' */
+	var externalall_mode_active = 0;
 	for (var i = 0; i < WG_INTERFACE_COUNT; i++) {
-		if (isup['wireguard'+i] && E('_wg'+i+'_com').value == 3) /* active */
-			external_mode++;
+		if (isup['wireguard'+i] && E('_wg'+i+'_com').value == 3 && E('_wg'+i+'_rgwr').value == 1) /* active */
+			externalall_mode_active++;
 	}
-	if (external_mode && !up && E('_wg'+(service.substr(9, 1))+'_com').value == 3) {
-		alert('Only one wireguard instance can be run in "External - VPN Provider" mode!');
+	if (externalall_mode_active && !up && E('_wg'+service.substr(9, 1)+'_com').value == 3 && E('_wg'+service.substr(9, 1)+'_rgwr').value == 1) {
+		alert('Only one wireguard instance can be run in "External - VPN Provider" mode with "Redirect Internet traffic" set to "All"!');
 		return;
 	}
 
@@ -141,6 +141,7 @@ function toggle(service, up) {
 	var fom = E('t_fom');
 	var bup = fom._service.value;
 	fom._service.value = service+(up ? '-stop' : '-start');
+	fom._nofootermsg.value = 1;
 
 	form.submit(fom, 1, 'service.cgi');
 	fom._service.value = bup;
@@ -197,7 +198,7 @@ function updateForm(num, fw) {
 		fom._service.value += 'firewall-restart';
 	}
 
-	if (isup['wireguard'+num] && fom._service.value.indexOf('wg'+num) < 0) {
+	if (isup['wireguard'+num] && fom._service.value.indexOf('wireguard'+num) < 0) {
 		if (fom._service.value != '')
 			fom._service.value += ',';
 
@@ -734,12 +735,9 @@ PeerGrid.prototype.insertData = function(at, data) {
 		at = this.tb.rows.length;
 
 	var view = this.dataToView(data);
-	var qr = '';
 	var cfg = '';
-	if (data[2] != '') {
-		qr = '<img src="qr-icon.svg" alt="" title="Display QR Code" height="16" onclick="genPeerGridConfigQR(event,'+this.unit+','+at+')">';
-		cfg = '<img src="cfg-icon.svg" alt="" title="Download Config File" height="16" onclick="genPeerGridConfigFile(event,'+this.unit+','+at+')">';
-	}
+	var qr = '<span class="qriconsvg" title="Display QR Code" onclick="genPeerGridConfigQR(event,'+this.unit+','+at+')">&nbsp;<\/span>';
+	if (data[2] != '') cfg = '<span class="cfgiconsvg" title="Download Config File" onclick="genPeerGridConfigFile(event,'+this.unit+','+at+',\'cfg\')">&nbsp;<\/span>';
 	view.unshift(qr, cfg);
 	view[5] = view[5].substring(0,8)+' ... '+view[5].slice(-8);
 
@@ -1183,13 +1181,13 @@ function genPeerGridConfigQR(event, unit, row) {
 	event.stopPropagation();
 }
 
-function genPeerGridConfigFile(event, unit, row) {
+function genPeerGridConfigFile(event, unit, row, type) {
 	if (changed) {
 		alert('Changes have been made. You need to save before continue!');
 		return;
 	}
 
-	var content = genPeerGridConfig(unit, row);
+	var content = genPeerGridConfig(unit, row, type);
 	if (content != false) {
 		var filename = 'peer'+row+'.conf';
 		var alias = peerTables[unit].tb.rows[row]._data[0];
@@ -1200,7 +1198,7 @@ function genPeerGridConfigFile(event, unit, row) {
 	event.stopPropagation();
 }
 
-function genPeerGridConfig(unit, row) {
+function genPeerGridConfig(unit, row, type) {
 	var port = E('_f_wg'+unit+'_peer_port');
 	var fwmark = E('_f_wg'+unit+'_peer_fwmark');
 	var row_data = peerTables[unit].tb.rows[row]._data;
@@ -1208,7 +1206,7 @@ function genPeerGridConfig(unit, row) {
 
 	clearPeerFields(unit);
 
-	if (!row_data[2]) {
+	if (type == 'cfg' && !row_data[2]) {
 		alert('The selected peer does not have a private key stored, which is require for configuration generation');
 		result = false;
 	}
@@ -1672,6 +1670,7 @@ function verifyFWMark(fwmark) {
 function verifyFields(focused, quiet) {
 	var ok = 1;
 	tgHideIcons();
+	var externalall_mode_enabled = -1;
 
 	/* When settings change, make sure we restart the right services */
 	if (focused) {
@@ -1690,17 +1689,22 @@ function verifyFields(focused, quiet) {
 
 				fom._service.value += 'dnsmasq-restart';
 			}
+			/* check for active 'External - VPN Provider' + 'Redirect Internet traffic' set to 'All' + 'Enable On Start' in focused */
+			if (E('_wg'+num+'_com').value == 3 && E('_wg'+num+'_rgwr').value == 1 && E('_f_wg'+num+'_enable').checked) /* enabled */
+				externalall_mode_enabled = num;
 		}
 	}
 
-	/* check for active 'External - VPN Provider' mode */
-	var external_mode = 0;
 	for (var i = 0; i < WG_INTERFACE_COUNT; i++) {
-		if (isup['wireguard'+i] && E('_wg'+i+'_com').value == 3) /* active */
-			external_mode++;
-	}
+		/* check for active 'External - VPN Provider' + 'Redirect Internet traffic' set to 'All' + 'Enable On Start' */
+		if (E('_wg'+i+'_com').value == 3 && E('_wg'+i+'_rgwr').value == 1 && E('_f_wg'+i+'_enable').checked) { /* enabled */
+			if (externalall_mode_enabled != -1 && externalall_mode_enabled != i) {
+				alert('Only one wireguard instance can be run on router start ("Enable on Start" option) in "External - VPN Provider" mode with "Redirect Internet traffic" set to "All"!');
+				E('_f_wg'+externalall_mode_enabled+'_enable').checked = 0;
+				return;
+			}
+		}
 
-	for (var i = 0; i < WG_INTERFACE_COUNT; i++) {
 		if (!v_range('_wg'+i+'_poll', quiet || !ok, 0, 30))
 			ok = 0;
 
@@ -1771,10 +1775,6 @@ function verifyFields(focused, quiet) {
 			else
 				ferror.clear(ip);
 		}
-
-		/* allow only one instance in 'External - VPN Provider' mode - disable option 3 in others */
-		if (external_mode && !isup['wireguard'+i])
-			E('_wg'+i+'_com').lastChild.disabled = 1;
 
 		var fw = E('_wg'+i+'_firewall').value;
 		var nat = E('_f_wg'+i+'_nat').checked;
@@ -1913,6 +1913,9 @@ function save(nomsg) {
 	E('wg_adns').value = '';
 	var fom = E('t_fom');
 	for (var i = 0; i < WG_INTERFACE_COUNT; i++) {
+		if (routingTables[i].isEditing())
+			return;
+
 		var privkey = E('_wg'+i+'_key').value;
 		nvram['wg'+i+'_key'] = privkey;
 
@@ -1978,6 +1981,7 @@ function save(nomsg) {
 			displayQRCode(content, i, row);
 		}
 	}
+	fom._nofootermsg.value = 0;
 
 	form.submit(fom, 1);
 
@@ -2043,6 +2047,7 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_service" value="">
+<input type="hidden" name="_nofootermsg">
 <input type="hidden" name="wg_adns" id="wg_adns">
 
 <!-- / / / -->
@@ -2065,7 +2070,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title vpn-title"><img src="wireguard.svg" alt="">Wireguard Configuration</div>
+<div class="section-title"><span class="wireguardsvg">&nbsp;</span>Wireguard Configuration</div>
 <div class="section">
 	<script>
 		tabCreate.apply(this, tabs);
@@ -2249,7 +2254,7 @@ function init() {
 				<li><b>Public Key</b> - Public key calculated from the Private Key field. This is not user editable and only provided as a convenience.</li>
 				<li><b>VPN Interface IP</b> - IP and Netmask to use for the wireguard interface. Must be in CIDR format.</li>
 				<li><b>DNS Servers</b> - Comma separated list of DNS servers to use for the wireguard interface.</li>
-				<li><b>FWMark</b> - The value of the FWMark to use for routing. If left as 0, it will the default value.</li>
+				<li><b>FWMark</b> - The value of the FWMark to use for routing. If left as 0, it will use Port value.</li>
 				<li><b>MTU</b> - The maximum transmission unit for the wireguard interface.</li>
 				<li><b>Respond to DNS</b> - If checked, this interface will respond to DNS requests using the router's dnsmasq service. This is usually wanted for a site-to-site scenario.</li>
 				<li><b>Routing Mode</b> - The routing mode to use when setting up the wireguard interface

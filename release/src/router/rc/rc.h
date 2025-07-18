@@ -31,6 +31,7 @@
 #include <arpa/inet.h>
 #include <sys/sysinfo.h>
 #include <time.h>
+#include <dirent.h>
 
 #include <bcmnvram.h>
 #include <shutils.h>
@@ -51,12 +52,7 @@
 #define REDIAL		1
 #define CONNECTING	2
 
-#define PPPOEWAN	0
-#define PPPOEWAN2	1
-#ifdef TCONFIG_MULTIWAN
-#define PPPOEWAN3	2
-#define PPPOEWAN4	3
-#endif
+#define PPPOEWAN(n)	((n) - 1)
 
 /* see init.c - used for /proc/sys/vm/min_free_kbytes */
 #define TOMATO_RAM_HIGH_END	(200 * 1024)
@@ -82,6 +78,29 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 #define IPT_ANY_AF		(IPT_V4 | IPT_V6)
 #define IPT_AF_IS_EMPTY(f)	((f & IPT_ANY_AF) == 0)
 
+#if defined(TCONFIG_OPENVPN) || defined(TCONFIG_WIREGUARD)
+/* wireguard max count */
+#define WG_INTERFACE_MAX	3
+/* OpenVPN clients/servers count */
+#define OVPN_SERVER_MAX		2
+#if defined(TCONFIG_BCMARM)
+#define OVPN_CLIENT_MAX		3
+#else
+#define OVPN_CLIENT_MAX		2
+#endif
+#define OVPN_DIR		"/etc/openvpn"
+#define OVPN_FW_DIR		OVPN_DIR"/fw"
+#define OVPN_DEL_SCRIPT		"clear-fw-tmp.sh"
+#define OVPN_DIR_DEL_SCRIPT	OVPN_DIR"/fw/"OVPN_DEL_SCRIPT
+#define WG_DIR			"/etc/wireguard"
+#define WG_DNS_DIR		WG_DIR"/dns"
+#define WG_SCRIPTS_DIR		WG_DIR"/scripts"
+#define WG_KEYS_DIR		WG_DIR"/keys"
+#define WG_FW_DIR		WG_DIR"/fw"
+#define WG_DEL_SCRIPT		"clear-fw-tmp.sh"
+#define WG_DIR_DEL_SCRIPT	WG_FW_DIR"/"WG_DEL_SCRIPT
+#endif /* TCONFIG_OPENVPN || TCONFIG_WIREGUARD */
+
 const char *chain_in_drop;
 const char *chain_in_accept;
 const char *chain_out_drop;
@@ -105,7 +124,11 @@ extern void chains_log_detection(void);
 extern void fix_chain_in_drop(void);
 extern int env2nv(char *env, char *nv);
 extern int serialize_restart(char *service, int start);
-extern void run_del_firewall_script(char *infile, char *outfile);
+extern void run_del_firewall_script(const char *infile, char *outfile);
+#if defined(TCONFIG_OPENVPN) || defined(TCONFIG_WIREGUARD)
+extern void kill_switch(const char *type);
+extern void run_vpn_firewall_scripts(const char *kind);
+#endif
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
@@ -197,7 +220,10 @@ extern void stop_wireless(void);
 extern void start_wireless(void);
 extern void restart_wireless(void);
 extern void start_wl(void);
-extern int disabled_wl(int idx, int unit, int subunit, void *param);
+extern int disabled_wl_vif(int idx, int unit, int subunit, void *param);
+#if defined(TCONFIG_AC3200) && !defined(TCONFIG_BCM714) /* only add for SDK7 */
+extern int enabled_wl_vif(int idx, int unit, int subunit, void *param);
+#endif /* defined(TCONFIG_AC3200) && !defined(TCONFIG_BCM714) */
 extern void unload_wl(void);
 extern void load_wl(void);
 #ifdef TCONFIG_IPV6
@@ -345,12 +371,7 @@ extern void notify_nas(const char *ifname);
 
 /* firewall.c */
 typedef void (*_tf_ipt_write)(const char *format, ... );
-extern wanface_list_t wanfaces;
-extern wanface_list_t wan2faces;
-#ifdef TCONFIG_MULTIWAN
-extern wanface_list_t wan3faces;
-extern wanface_list_t wan4faces;
-#endif
+extern wanface_list_t wanfaces[MWAN_MAX];
 extern char lanaddr[BRIDGE_COUNT][32];
 extern char lanmask[BRIDGE_COUNT][32];
 extern char lanface[BRIDGE_COUNT][IFNAMSIZ + 1];
