@@ -25,7 +25,7 @@
 <!-- USB-END -->
 
 <script>
-
+//	<% jsdefaults(); %>
 var wmo = {'ap':'Access Point','sta':'Wireless Client','wet':'Wireless Ethernet Bridge','wds':'WDS'
 /* BCMWL6-BEGIN */
 	   ,'psta':'Media Bridge'
@@ -38,7 +38,6 @@ var bgmo = {'disabled':'-','mixed':'Auto','b-only':'B Only','g-only':'G Only','b
 	    ,'nac-mixed':'N/AC Mixed','ac-only':'AC Only'
 /* BCMWL6-END */
 };
-
 var updateWWANTimers = [], customStatusTimers = [], show_dhcpc = [], show_codi = [], show_radio = [];
 </script>
 
