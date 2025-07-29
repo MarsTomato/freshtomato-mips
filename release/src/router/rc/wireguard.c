@@ -31,14 +31,6 @@
 /* uncomment to add default routing (also in patches/wireguard-tools/101-tomato-specific.patch line 412 - 414) after kernel fix */
 //#define KERNEL_WG_FIX
 
-/* wireguard routing policy modes (rgwr) */
-enum {
-	WG_RGW_NONE = 0,
-	WG_RGW_ALL,
-	WG_RGW_POLICY,
-	WG_RGW_POLICY_STRICT
-};
-
 /* interfaces that we want to ignore in standard PRB mode */
 static const char *vpn_ifaces[] = { "wg0", 
                                     "wg1",
@@ -158,14 +150,11 @@ static void wg_build_firewall(const int unit, const char *port) {
 			            unit, (nvi ? "DROP" : "ACCEPT"),
 			            unit);
 
-			if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
-				fprintf(fp, "iptables -t mangle -I PREROUTING -i wg%d -j MARK --set-mark 0x01/0x7\n", unit);
-
 			/* masquerade all peer outbound traffic regardless of source subnet */
 			if (atoi(getNVRAMVar("wg%d_nat", unit)) == 1)
 				fprintf(fp, "iptables -t nat -I POSTROUTING -o wg%d -j MASQUERADE\n", unit);
 
-			if (atoi(getNVRAMVar("wg%d_rgwr", unit)) >= WG_RGW_POLICY) {
+			if (atoi(getNVRAMVar("wg%d_rgwr", unit)) >= VPN_RGW_POLICY) {
 				/* Disable rp_filter when in policy mode */
 				fprintf(fp, "echo 0 > /proc/sys/net/ipv4/conf/wg%d/rp_filter\n"
 				            "echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter\n",
@@ -179,9 +168,19 @@ static void wg_build_firewall(const int unit, const char *port) {
 			            port, chain_in_accept,
 			            unit, chain_in_accept,
 			            unit);
+		}
 
-			if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
-				fprintf(fp, "iptables -t mangle -I PREROUTING -i wg%d -j MARK --set-mark 0x01/0x7\n", unit);
+		if (!nvram_get_int("ctf_disable")) { /* bypass CTF if enabled */
+			fprintf(fp, "iptables -t mangle -I PREROUTING -i wg%d -j MARK --set-mark 0x01/0x7\n"
+			            "iptables -t mangle -I POSTROUTING -o wg%d -j MARK --set-mark 0x01/0x7\n",
+			            unit, unit);
+#ifdef TCONFIG_IPV6
+			if (ipv6_enabled()) {
+				fprintf(fp, "ip6tables -t mangle -I PREROUTING -i wg%d -j MARK --set-mark 0x01/0x7\n"
+				            "ip6tables -t mangle -I POSTROUTING -o wg%d -j MARK --set-mark 0x01/0x7\n",
+				            unit, unit);
+			}
+#endif
 		}
 
 		dns = getNVRAMVar("wg%d_dns", unit);
@@ -811,7 +810,7 @@ static void wg_init_table(char *iface, char *fwmark)
 	logmsg(LOG_INFO, "creating wireguard (wg%d) routing table (mode %d)", atoi(&iface[2]), routing);
 
 	/* strict - copy routes from main routing table only for this interface */
-	if (routing == WG_RGW_POLICY_STRICT) {
+	if (routing == VPN_RGW_POLICY_STRICT) {
 		memset(cmd, 0, BUF_SIZE_64);
 		snprintf(cmd, BUF_SIZE_64, "ip route show table main dev %s", iface);
 
@@ -825,7 +824,7 @@ static void wg_init_table(char *iface, char *fwmark)
 		}
 	}
 	/* standard - copy routes from main routing table (exclude vpns and all default gateways) */
-	else if (routing == WG_RGW_POLICY) {
+	else if (routing == VPN_RGW_POLICY) {
 		if ((fp = popen("ip route show table main", "r")) != NULL) {
 			n_ifaces = ASIZE(vpn_ifaces);
 
@@ -972,7 +971,7 @@ static void wg_route_peer_allowed_ips(const int unit, char *iface, const char *a
 			snprintf(buffer, BUF_SIZE_32, "%s", b);
 
 			if ((vstrsep(b, "/", &ip, &nm) == 2) && (atoi(nm) == 0)) { /* default route */
-				if (atoi(getNVRAMVar("wg%d_rgwr", unit)) >= WG_RGW_POLICY) { /* routing policy+ */
+				if (atoi(getNVRAMVar("wg%d_rgwr", unit)) >= VPN_RGW_POLICY) { /* routing policy+ */
 					/* we don't want to mark packets for PBR */
 					if (add)
 						wg_set_iface_fwmark(iface, "0");
@@ -1169,7 +1168,7 @@ void start_wg_eas(void)
 
 	for (unit = 0; unit < WG_INTERFACE_MAX; unit++) {
 		if (atoi(getNVRAMVar("wg%d_enable", unit)) == 1) {
-			if (atoi(getNVRAMVar("wg%d_com", unit)) == 3 && atoi(getNVRAMVar("wg%d_rgwr", unit)) == WG_RGW_ALL) { /* check for 'External - VPN Provider' mode with "Redirect Internet traffic" set to "All" on this unit */
+			if (atoi(getNVRAMVar("wg%d_com", unit)) == 3 && atoi(getNVRAMVar("wg%d_rgwr", unit)) == VPN_RGW_ALL) { /* check for 'External - VPN Provider' mode with "Redirect Internet traffic" set to "All" on this unit */
 				if (externalall_mode == 0) { /* no previous unit is in this mode - allow */
 					start_wireguard(unit);
 					externalall_mode++;
