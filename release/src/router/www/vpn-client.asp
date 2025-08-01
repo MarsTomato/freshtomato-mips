@@ -192,8 +192,14 @@ RouteGrid.prototype.verifyFields = function(row, quiet) {
 }
 
 function verifyFields(focused, quiet) {
-	var ok = 1;
+	var i, ok = 1;
+	var restart = 1;
 	tgHideIcons();
+
+	for (i = 1; i <= unitCount; ++i) {
+		if (focused && focused == E('_f_vpn_client'+i+'_eas')) /* except on/off */
+			restart = 0;
+	}
 
 	/* When settings change, make sure we restart the right client */
 	if (focused) {
@@ -209,12 +215,13 @@ function verifyFields(focused, quiet) {
 			else if (stripped == 'f_vpn_client_local')
 				E('_vpn_client'+clientnum+'_local').value = focused.value;
 
-			updateForm(clientnum, 0);
+			if (restart) /* except on/off */
+				updateForm(clientnum, 0);
 		}
 	}
 
 	/* Element varification */
-	for (var i = 0; i < tabs.length; ++i) {
+	for (i = 0; i < tabs.length; ++i) {
 		var t = tabs[i][0];
 
 		if (!v_range('_vpn_'+t+'_poll', quiet || !ok, 0, 30))
@@ -345,14 +352,10 @@ function save() {
 		if (E('_f_vpn_'+t+'_eas').checked)
 			fom.vpn_client_eas.value += ''+(i + 1)+',';
 
+		var routedata = routingTables[i].getAllData();
 		var routing = '';
-		if ((E('_vpn_'+t+'_rgw').value == 2) || (E('_vpn_'+t+'_rgw').value == 3)) { /* only in routing policy mode */
-			var routedata = routingTables[i].getAllData();
-			for (j = 0; j < routedata.length; ++j)
-				routing += routedata[j].join('<')+'>';
-		}
-		else /* otherwise, remove all data */
-			routingTables[i].removeAllData();
+		for (j = 0; j < routedata.length; ++j)
+			routing += routedata[j].join('<')+'>';
 
 		E('vpn_'+t+'_bridge').value = E('_f_vpn_'+t+'_bridge').checked ? 1 : 0;
 		E('vpn_'+t+'_nat').value = E('_f_vpn_'+t+'_nat').checked ? 1 : 0;
@@ -542,7 +545,7 @@ function init() {
 			W('<li><b>Type -> From Source IP<\/b> - Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24".<\/li>');
 			W('<li><b>Type -> To Destination IP<\/b> - Ex: "1.2.3.4" or "1.2.3.0/24".<\/li>');
 			W('<li><b>Type -> To Domain<\/b> - Ex: "domain.com". Please enter one domain per line.<\/li>');
-			W('<li><b>IMPORTANT!<\/b> - Kill Switch IPs from all clients are applied to each active client, not just the client to which they are entered (so-called strict Kill Switch).<\/li>');
+			W('<li><b>IMPORTANT!<\/b> - Kill Switch: iptables rules (if \'KS\' for given entry is enabled) are always applied even if client is down but in PBR mode (so-called strict Kill Switch).<\/li>');
 			W('<\/ul>');
 			W('<\/div>');
 			W('<\/div>');
