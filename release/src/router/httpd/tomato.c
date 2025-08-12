@@ -419,6 +419,7 @@ static const nvset_t nvset_list[] = {
 	{ "stubby_resolvers",		V_LENGTH(0, 1024)		},
 	{ "stubby_force_tls13",		V_01				},	/* 0=TLS1.2, 1=TLS1.3 */
 	{ "stubby_log",			V_RANGE(0, 7)			},
+	{ "stubby_custom",		V_TEXT(0, 4096)			},
 #endif
 
 	/* LAN */
@@ -1624,6 +1625,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client1_routing_val",	V_NONE				},
 	{ "vpn_client1_fw",		V_01				},
+	{ "vpn_client1_prio",		V_NONE				},
 	{ "vpn_client2_poll",		V_RANGE(0, 30)			},
 	{ "vpn_client2_if",		V_TEXT(3, 3)			},	/* tap, tun */
 	{ "vpn_client2_bridge",		V_01				},
@@ -1661,6 +1663,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client2_routing_val",	V_NONE				},
 	{ "vpn_client2_fw",		V_01				},
+	{ "vpn_client2_prio",		V_NONE				},
 #ifdef TCONFIG_BCMARM
 	{ "vpn_client3_poll",		V_RANGE(0, 30)			},
 	{ "vpn_client3_if",		V_TEXT(3, 3)			},	/* tap, tun */
@@ -1699,6 +1702,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client3_routing_val",	V_NONE				},
 	{ "vpn_client3_fw",		V_01				},
+	{ "vpn_client3_prio",		V_NONE				},
 #endif
 #endif /* TCONFIG_OPENVPN */
 
@@ -1806,6 +1810,7 @@ static const nvset_t nvset_list[] = {
 	{ "wg0_fw",			V_01				},
 	{ "wg0_rgwr",			V_RANGE(1, 3)			},
 	{ "wg0_routing_val",		V_NONE				},
+	{ "wg0_prio",			V_NONE				},
 	{ "wg1_enable",			V_01				},
 	{ "wg1_poll",			V_RANGE(0, 30)			},
 	{ "wg1_file",			V_TEXT(0, 64)			},
@@ -1833,6 +1838,7 @@ static const nvset_t nvset_list[] = {
 	{ "wg1_fw",			V_01				},
 	{ "wg1_rgwr",			V_RANGE(1, 3)			},
 	{ "wg1_routing_val",		V_NONE				},
+	{ "wg1_prio",			V_NONE				},
 	{ "wg2_enable",			V_01				},
 	{ "wg2_poll",			V_RANGE(0, 30)			},
 	{ "wg2_file",			V_TEXT(0, 64)			},
@@ -1860,6 +1866,7 @@ static const nvset_t nvset_list[] = {
 	{ "wg2_fw",			V_01				},
 	{ "wg2_rgwr",			V_RANGE(1, 3)			},
 	{ "wg2_routing_val",		V_NONE				},
+	{ "wg2_prio",			V_NONE				},
 #endif
 
 	{ NULL }
