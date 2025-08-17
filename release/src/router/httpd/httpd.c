@@ -83,6 +83,13 @@
 #define SERVER_NAME		"httpd"
 #define PROTOCOL		"HTTP/1.0"
 #define RFC1123FMT		"%a, %d %b %Y %H:%M:%S GMT"
+#ifdef TCONFIG_BCMARM
+ #define MAX_CONN_ACCEPT	128
+#else
+ #define MAX_CONN_ACCEPT	64
+#endif
+ #define MAX_CONN_TIMEOUT	30
+
 /* needed by logmsg() */
 #define LOGMSG_DISABLE		0
 #define LOGMSG_NVDEBUG		"httpd_debug"
@@ -96,7 +103,7 @@ int connfd = -1;
 FILE *connfp = NULL;
 struct sockaddr_storage clientsai;
 int header_sent;
-char pidfile[32] = "/var/run/httpd.pid";
+char pidfile[] = "/var/run/httpd.pid";
 
 #ifdef TCONFIG_IPV6
 char client_addr[INET6_ADDRSTRLEN];
@@ -115,6 +122,7 @@ typedef struct {
 
 static listeners_t listeners;
 static int maxfd = -1;
+const int int_1 = 1;
 
 typedef enum {
 	AUTH_NONE,
@@ -735,7 +743,7 @@ void check_id(const char *url)
 
 static void add_listen_socket(const char *addr, int server_port, int do_ipv6, int do_ssl)
 {
-	int listenfd, n;
+	int listenfd;
 	struct sockaddr_storage sai_stor;
 
 #ifdef TCONFIG_IPV6
@@ -760,8 +768,7 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 	}
 	fcntl(listenfd, F_SETFD, FD_CLOEXEC);
 
-	n = 1;
-	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (char*)&n, sizeof(n));
+	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &int_1, sizeof(int_1));
 
 #ifdef TCONFIG_IPV6
 	if (do_ipv6) {
@@ -772,8 +779,8 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 			inet_pton(HTTPD_FAMILY, addr, &(sai->sin6_addr));
 		else
 			sai->sin6_addr = in6addr_any;
-		n = 1;
-		setsockopt(listenfd, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&n, sizeof(n));
+
+		setsockopt(listenfd, IPPROTO_IPV6, IPV6_V6ONLY, &int_1, sizeof(int_1));
 	} else
 #endif /* TCONFIG_IPV6 */
 	{
@@ -789,7 +796,7 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 		return;
 	}
 
-	if (listen(listenfd, 64) < 0) {
+	if (listen(listenfd, MAX_CONN_ACCEPT) < 0) {
 		logmsg(LOG_ERR, "listen: %m");
 		close(listenfd);
 		return;
@@ -939,8 +946,9 @@ int main(int argc, char **argv)
 	FILE *pid_fp;
 	int c;
 	fd_set rfdset;
-	int i, n;
+	int i;
 	struct sockaddr_storage sai;
+	socklen_t sz;
 	char bind[128];
 	char *port = NULL;
 #ifdef TCONFIG_IPV6
@@ -1042,9 +1050,9 @@ int main(int argc, char **argv)
 				continue;
 
 			do_ssl = 0;
-			n = sizeof(sai);
+			sz = sizeof(sai);
 
-			connfd = accept(listeners.listener[i].listenfd, (struct sockaddr *)&sai, (socklen_t *) &n);
+			connfd = accept(listeners.listener[i].listenfd, (struct sockaddr *)&sai, &sz);
 			if (connfd < 0) {
 				continue;
 			}
@@ -1064,13 +1072,15 @@ int main(int argc, char **argv)
 					exit(0);
 
 				struct timeval tv;
-				tv.tv_sec = 60;
+				tv.tv_sec = MAX_CONN_TIMEOUT;
 				tv.tv_usec = 0;
+
+				/* set receive/send timeouts */
 				setsockopt(connfd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 				setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-				n = 1;
-				setsockopt(connfd, IPPROTO_TCP, TCP_NODELAY, (char *)&n, sizeof(n));
+				/* set the KEEPALIVE option to cull dead connections */
+				setsockopt(connfd, SOL_SOCKET, SO_KEEPALIVE, &int_1, sizeof(int_1));
 
 				fcntl(connfd, F_SETFD, FD_CLOEXEC);
 
