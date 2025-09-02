@@ -535,7 +535,7 @@
    int is6, indexed, prefixlen;
    struct cond_domain *next;
  }; 
-@@ -1404,7 +1412,9 @@
+@@ -1406,7 +1414,9 @@
  
  /* domain.c */
  char *get_domain(struct in_addr addr);
@@ -545,7 +545,7 @@
  int is_name_synthetic(int flags, char *name, union all_addr *addr);
  int is_rev_synth(int flag, union all_addr *addr, char *name);
  
-@@ -1501,9 +1511,11 @@
+@@ -1503,9 +1513,11 @@
  int netmask_length(struct in_addr mask);
  int is_same_net(struct in_addr a, struct in_addr b, struct in_addr mask);
  int is_same_net_prefix(struct in_addr a, struct in_addr b, int prefix);
@@ -557,7 +557,7 @@
  int retry_send(ssize_t rc);
  void prettyprint_time(char *buf, unsigned int t);
  int prettyprint_addr(union mysockaddr *addr, char *buf);
-@@ -1585,7 +1597,9 @@
+@@ -1587,7 +1599,9 @@
  int label_exception(int index, int family, union all_addr *addr);
  int fix_fd(int fd);
  int tcp_interface(int fd, int af);
@@ -1653,7 +1653,7 @@
  	else
  	  ret_err(gen_err);
  	
-@@ -4923,8 +4958,10 @@
+@@ -4926,8 +4961,10 @@
  	  {
  	    if (strcmp(comma, "4") == 0)
  	      new->flags &= ~IN6;
@@ -1664,7 +1664,7 @@
  	    else
  	      ret_err_free(gen_err, new);
  	  }
-@@ -5270,11 +5307,13 @@
+@@ -5273,11 +5310,13 @@
  		new->addr = addr.addr4;
  		new->flags |= HR_4;
  	      }
@@ -1678,7 +1678,7 @@
  	    else
  	      {
  		char *canon = canonicalise_opt(arg);
-@@ -6119,8 +6158,10 @@
+@@ -6122,8 +6161,10 @@
  	  {
  	    if (tmp->source_addr.sa.sa_family == AF_INET)
  	      tmp->source_addr.in.sin_port = htons(daemon->query_port);
@@ -1689,7 +1689,7 @@
  	  }
      } 
    
-@@ -6181,8 +6222,10 @@
+@@ -6184,8 +6225,10 @@
        for(tmp = daemon->if_addrs; tmp; tmp = tmp->next)
  	if (tmp->addr.sa.sa_family == AF_INET)
  	  tmp->addr.in.sin_port = htons(daemon->port);
@@ -1967,7 +1967,7 @@
  
    /* May reuse struct transfer from abandoned transfer in single port mode. */
    if (!transfer && !(transfer = whine_malloc(sizeof(struct tftp_transfer))))
-@@ -346,8 +358,10 @@
+@@ -348,8 +360,10 @@
  		{ 
  		  if (family == AF_INET)
  		    addr.in.sin_port = htons(port);
