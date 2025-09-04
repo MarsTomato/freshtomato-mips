@@ -446,6 +446,24 @@ class LinuxlikeTests(BasePlatformTests):
         libdir = self.installdir + os.path.join(self.prefix, self.libdir)
         self._test_soname_impl(libdir, True)
 
+    @skip_if_not_base_option('b_sanitize')
+    def test_c_link_args_and_env(self):
+        '''
+        Test that the CFLAGS / CXXFLAGS environment variables are
+        included on the linker command line when c_link_args is
+        set but c_args is not.
+        '''
+        if is_cygwin():
+            raise SkipTest('asan not available on Cygwin')
+        if is_openbsd():
+            raise SkipTest('-fsanitize=address is not supported on OpenBSD')
+
+        testdir = os.path.join(self.common_test_dir, '1 trivial')
+        env = {'CFLAGS': '-fsanitize=address'}
+        self.init(testdir, extra_args=['-Dc_link_args="-L/usr/lib"'],
+                  override_envvars=env)
+        self.build()
+
     def test_compiler_check_flags_order(self):
         '''
         Test that compiler check flags override all other flags. This can't be
@@ -1875,7 +1893,7 @@ class LinuxlikeTests(BasePlatformTests):
         self.assertIn('build t13-e1: c_LINKER t13-e1.p/main.c.o | libt12-s1.a libt13-s3.a\n', content)
 
     def test_top_options_in_sp(self):
-        testdir = os.path.join(self.unit_test_dir, '125 pkgsubproj')
+        testdir = os.path.join(self.unit_test_dir, '126 pkgsubproj')
         self.init(testdir)
 
     def test_unreadable_dir_in_declare_dep(self):
@@ -1954,7 +1972,7 @@ class LinuxlikeTests(BasePlatformTests):
             self.check_has_flag(compdb, sub2src, '-O2')
 
     def test_sanitizers(self):
-        testdir = os.path.join(self.unit_test_dir, '127 sanitizers')
+        testdir = os.path.join(self.unit_test_dir, '128 sanitizers')
 
         with self.subTest('no b_sanitize value'):
             try:

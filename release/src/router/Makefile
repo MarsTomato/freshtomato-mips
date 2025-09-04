@@ -329,10 +329,9 @@ ifeq ($(TCONFIG_OPENVPN),y)
  obj-y				+= openvpn_plugin_auth_nvram
 endif
 
-obj-y				+= $(SSL_TARGET) mssl httpd
+obj-y				+= $(SSL_TARGET) mssl httpd dropbear
 obj-y				+= $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_BBT),$(TCONFIG_NGINX)),zlib libcurl,) mdu
 obj-y				+= $(if $(TCONFIG_DNSSEC),$(if $(TCONFIG_HTTPS),gmp nettle)) dnsmasq
-obj-$(TCONFIG_SSH)		+= dropbear
 obj-$(TCONFIG_DNSCRYPT)		+= zlib libsodium dnscrypt
 obj-$(TCONFIG_STUBBY)		+= $(SSL_TARGET) libyaml getdns
 obj-$(TCONFIG_FTP)		+= $(if $(TCONFIG_FTP_SSL),$(SSL_TARGET)) vsftpd
@@ -1882,11 +1881,11 @@ sqlite: sqlite/Makefile
 
 sqlite-install:
 ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
-	install -D sqlite/staged/usr/lib/libsqlite3.so.3.50.3 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.3
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.3
+	install -D sqlite/staged/usr/lib/libsqlite3.so.3.50.4 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.4
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.4
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
-		ln -sf libsqlite3.so.3.50.3 libsqlite3.so.0 && \
-		ln -sf libsqlite3.so.3.50.3 libsqlite3.so
+		ln -sf libsqlite3.so.3.50.4 libsqlite3.so.0 && \
+		ln -sf libsqlite3.so.3.50.4 libsqlite3.so
 endif
 	@true
 

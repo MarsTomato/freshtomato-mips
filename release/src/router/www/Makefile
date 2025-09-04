@@ -67,6 +67,7 @@ ifneq ($(TCONFIG_CIFS),y)
 	sed -i $(INSTALLDIR)/www/admin-iptraffic.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/nas-media.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/nas-bittorrent.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
+	sed -i $(INSTALLDIR)/www/isup.jsz -e "/CIFS-BEGIN/,/CIFS-END/d"
 endif
 
 # Only include the JFFS pages if JFFS is configured in. Distinguish JFFS2 and BRCMNAND.
@@ -307,11 +308,6 @@ ifneq ($(TCONFIG_ROAM),y)
 	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/ROAM-BEGIN/,/ROAM-END/d"
 endif
 
-# Only include SSH stuff when needed
-ifneq ($(TCONFIG_SSH),y)
-	sed -i $(INSTALLDIR)/www/isup.jsz -e "/SSH-BEGIN/,/SSH-END/d"
-endif
-
 # Add "beta" tag if needed
 ifeq ($(TOMATO_EXPERIMENTAL),1)
 	cd $(INSTALLDIR)/www && \
@@ -325,6 +321,7 @@ endif
 # Remove AES ciphers from the GUI if openssl doesn't have an AES directory
 ifeq ($(TCONFIG_OPENVPN),y)
 	test -d ../$(OPENSSLDIR)/crypto/aes || sed -i $(INSTALLDIR)/www/vpn.js -e "/AES-BEGIN/,/AES-END/d"
+	# remove tags
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/VPN-BEGIN/d" -e "/VPN-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/VPN-BEGIN/d" -e "/VPN-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/VPN-BEGIN/d" -e "/VPN-END/d"
@@ -341,6 +338,7 @@ endif
 
 # Only include the PPTPD pages if PPTPD is compiled in
 ifeq ($(TCONFIG_PPTPD),y)
+	# remove tags
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/VPN-BEGIN/d" -e "/VPN-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/VPN-BEGIN/d" -e "/VPN-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/VPN-BEGIN/d" -e "/VPN-END/d"
@@ -383,7 +381,12 @@ ifneq ($(TCONFIG_DNSSEC),y)
 endif
 
 # Only include the Tinc page if it is compiled in
-ifneq ($(TCONFIG_TINC),y)
+ifeq ($(TCONFIG_TINC),y)
+	# remove tags
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/VPN-BEGIN/d" -e "/VPN-END/d"
+	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/VPN-BEGIN/d" -e "/VPN-END/d"
+	sed -i $(INSTALLDIR)/www/about.asp -e "/VPN-BEGIN/d" -e "/VPN-END/d"
+else
 	rm -f $(INSTALLDIR)/www/vpn-tinc.asp
 	sed -i $(INSTALLDIR)/www/tomato.css -e "/TINC-BEGIN/,/TINC-END/d"
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/TINC-BEGIN/,/TINC-END/d"
@@ -546,7 +549,12 @@ ifneq ($(TCONFIG_USB_EXTRAS),y)
 endif
 
 # Only include wireguard page if it is compiled in
-ifneq ($(TCONFIG_WIREGUARD),y)
+ifeq ($(TCONFIG_WIREGUARD),y)
+	# remove tags
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/VPN-BEGIN/d" -e "/VPN-END/d"
+	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/VPN-BEGIN/d" -e "/VPN-END/d"
+	sed -i $(INSTALLDIR)/www/about.asp -e "/VPN-BEGIN/d" -e "/VPN-END/d"
+else
 	rm -f $(INSTALLDIR)/www/vpn-wireguard.asp
 	sed -i $(INSTALLDIR)/www/tomato.css -e "/WIREGUARD-BEGIN/,/WIREGUARD-END/d"
  ifneq ($(TCONFIG_QRCODE),y)
@@ -648,7 +656,6 @@ endif
 		-e "/SIZEOPTMORE-NO-BEGIN/d" -e "/SIZEOPTMORE-NO-END/d" \
 		-e "/IPERF-BEGIN/d"	-e "/IPERF-END/d" \
 		-e "/ADVTHEMES-BEGIN/d"	-e "/ADVTHEMES-END/d" \
-		-e "/SSH-BEGIN/d"	-e "/SSH-END/d" \
 		-e "/DISCOVERY-BEGIN/d"	-e "/DISCOVERY-END/d" \
 		-e "/MDNS-BEGIN/d"	-e "/MDNS-END/d" \
 		-e "/ZFS-BEGIN/d"	-e "/ZFS-END/d" \

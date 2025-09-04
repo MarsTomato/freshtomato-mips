@@ -83,26 +83,19 @@
 #define SERVER_NAME		"httpd"
 #define PROTOCOL		"HTTP/1.0"
 #define RFC1123FMT		"%a, %d %b %Y %H:%M:%S GMT"
+#ifdef TCONFIG_BCMARM
+ #define MAX_CONN_ACCEPT	128
+#else
+ #define MAX_CONN_ACCEPT	64
+#endif
+#define MAX_CONN_TIMEOUT	30
+#define USER_DEFAULT		"root"
+#define PASS_DEFAULT		"admin"
+
 /* needed by logmsg() */
 #define LOGMSG_DISABLE		0
 #define LOGMSG_NVDEBUG		"httpd_debug"
 
-
-int disable_maxage = 0;
-int do_ssl;
-int http_port;
-int post;
-int connfd = -1;
-FILE *connfp = NULL;
-struct sockaddr_storage clientsai;
-int header_sent;
-char pidfile[32] = "/var/run/httpd.pid";
-
-#ifdef TCONFIG_IPV6
-char client_addr[INET6_ADDRSTRLEN];
-#else
-char client_addr[INET_ADDRSTRLEN];
-#endif
 
 typedef struct {
 	int count;
@@ -113,24 +106,35 @@ typedef struct {
 	} listener[HTTP_MAX_LISTENERS];
 } listeners_t;
 
-static listeners_t listeners;
-static int maxfd = -1;
-
 typedef enum {
 	AUTH_NONE,
 	AUTH_OK,
 	AUTH_BAD
 } auth_t;
 
+struct sockaddr_storage clientsai;
+static listeners_t listeners;
+FILE *connfp = NULL;
+int disable_maxage = 0;
+int do_ssl;
+int http_port;
+int post;
+int connfd = -1;
+int header_sent;
+static int maxfd = -1;
+const int int_1 = 1;
+char authinfo[512];
+#ifdef TCONFIG_IPV6
+char client_addr[INET6_ADDRSTRLEN];
+#else
+char client_addr[INET_ADDRSTRLEN];
+#endif
+const char pidfile[] = "/var/run/httpd.pid";
 const char mime_html[] = "text/html; charset=utf-8";
 const char mime_plain[] = "text/plain";
 const char mime_javascript[] = "text/javascript";
 const char mime_binary[] = "application/tomato-binary-file"; /* instead of "application/octet-stream" to make browser just "save as" and prevent automatic detection weirdness */
 const char mime_octetstream[] = "application/octet-stream";
-
-static int match(const char* pattern, const char* string);
-static int match_one(const char* pattern, int patternlen, const char* string);
-static void handle_request(void);
 
 static const char *http_status_desc(int status)
 {
@@ -258,6 +262,15 @@ static void send_authenticate(void)
 	send_error(401, header, NULL);
 }
 
+static void auth_fail(int clen)
+{
+	if (post)
+		web_eat(clen);
+
+	eat_garbage();
+	send_authenticate();
+}
+
 static void get_client_addr(void)
 {
 	void *addr = NULL;
@@ -274,46 +287,46 @@ static void get_client_addr(void)
 
 static auth_t auth_check(const char *authorization)
 {
-	char authinfo[512];
 	const char *u, *p;
 	char* pass;
 	int len;
 
-	if ((authorization != NULL) && (strncmp(authorization, "Basic ", 6) == 0)) {
-		if (base64_decoded_len(strlen(authorization + 6)) <= sizeof(authinfo)) {
-			len = base64_decode(authorization + 6, (unsigned char *) authinfo, strlen(authorization) - 6);
-			authinfo[len] = '\0';
-			/* split into user and password. */
-			if ((pass = strchr(authinfo, ':')) != NULL) {
-				*pass++ = 0;
+	/* basic authorization info? */
+	if ((!authorization) || (strncmp(authorization, "Basic ", 6) != 0))
+		return AUTH_NONE;
 
-				if (((u = nvram_get("http_username")) == NULL) || (*u == 0)) /* special case: empty username => root */
-					u = "root";
-
-				if (strcmp(authinfo, u) == 0) {
-					if (((p = nvram_get("http_passwd")) == NULL) || (*p == 0)) /* special case: empty password => admin */
-						p = "admin";
-
-					if (strcmp(pass, p) == 0)
-						return AUTH_OK;
-				}
-			}
-		}
+	/* something's wrong */
+	if (base64_decoded_len(strlen(authorization + 6)) > sizeof(authinfo))
 		return AUTH_BAD;
+
+	/* decode it */
+	len = base64_decode(authorization + 6, (unsigned char *)authinfo, strlen(authorization) - 6);
+	authinfo[len] = '\0';
+
+	/* split into user and password */
+	pass = strchr(authinfo, ':');
+	if (pass == (char*)0) {
+		/* no colon? bogus auth info */
+		return AUTH_NONE;
+	}
+	*pass++ = 0;
+
+	/* is this the right user and password? */
+	if (((u = nvram_get("http_username")) == NULL) || (*u == 0)) /* special case: empty username */
+		u = USER_DEFAULT;
+
+	if (((p = nvram_get("http_passwd")) == NULL) || (*p == 0)) /* special case: empty password */
+		p = PASS_DEFAULT;
+
+	if (strcmp(authinfo, u) == 0 && strcmp(pass, p) == 0) {
+		return AUTH_OK;
+	}
+	else {
+		/* failed login msg to syslog */
+		logmsg(LOG_WARNING, "login '%s' failed (GUI) from %s:%d", authinfo, client_addr, http_port);
 	}
 
-	return AUTH_NONE;
-}
-
-static void auth_fail(int clen, int show)
-{
-	if (post)
-		web_eat(clen);
-
-	eat_garbage();
-	send_authenticate();
-	if (show == 1)
-		logmsg(LOG_WARNING, "bad password attempt (GUI) from: %s", client_addr);
+	return AUTH_BAD;
 }
 
 static int check_wif(int idx, int unit, int subunit, void *param)
@@ -346,59 +359,108 @@ static int check_wlaccess(void)
 	return 1;
 }
 
-static int match_one(const char* pattern, int patternlen, const char* string)
+/*
+ * Match a single pattern against a string.
+ * Supports ?, *, and ** wildcards.
+ * This implementation is fully NON-RECURSIVE.
+ */
+static int match_single(const char *pattern, int patternlen, const char *string)
 {
-	const char* p;
+	const char *p = pattern; /* current position in pattern */
+	const char *s = string; /* current position in string */
 
-	for (p = pattern; p - pattern < patternlen; ++p, ++string) {
-		if (*p == '?' && *string != '\0')
-			continue;
+	const char *last_star_pat = NULL; /* position in pattern after last '*' */
+	const char *last_star_str = NULL; /* position in string corresponding to that '*' */
+	int double_star = 0; /* flag for '**' */
 
-		if (*p == '*') {
-			int i, pl;
+	while (1) {
+		/* handle '*' and '**' wildcards */
+		if (p - pattern < patternlen && *p == '*') {
 			++p;
-			if (*p == '*') { /* double-wildcard matches anything */
+			double_star = 0;
+			if (p - pattern < patternlen && *p == '*') {
 				++p;
-				i = strlen(string);
+				double_star = 1; /* double-wildcard matches across '/' */
 			}
-			else /* single-wildcard matches anything but slash */
-				i = strcspn(string, "/");
 
-			pl = patternlen - (p - pattern);
+			/* save positions for possible backtracking */
+			last_star_pat = p;
+			last_star_str = s;
 
-			for (; i >= 0; --i)
-				if (match_one(p, pl, &(string[i])))
-					return 1;
+			/* if '*' at the end of pattern, it matches everything */
+			if (p - pattern >= patternlen)
+				return 1;
 
-			return 0;
+			continue;
 		}
 
-		if (*p != *string)
-			return 0;
-	}
+		/* handle '?' wildcard (matches any single char except end of string) */
+		if (p - pattern < patternlen && *p == '?') {
+			if (*s == '\0')
+				goto backtrack;
 
-	if (*string == '\0')
-		return 1;
+			++p; ++s;
+			continue;
+		}
 
-	return 0;
-}
+		/* direct character match */
+		if (p - pattern < patternlen && *p == *s) {
+			if (*s == '\0')
+				return 0; /* string ended but pattern did not */
 
-/* Simple shell-style filename matcher.  Only does ? * and **, and multiple
- * patterns separated by |.  Returns 1 or 0.
- */
-static int match(const char* pattern, const char* string)
-{
-	const char* p;
+			++p; ++s;
+			continue;
+		}
 
-	for (;;) {
-		p = strchr(pattern, '|');
-		if (p == NULL)
-			return match_one(pattern, strlen(pattern), string);
-		if (match_one(pattern, p - pattern, string))
+		/* if both pattern and string are fully consumed => success */
+		if (p - pattern >= patternlen && *s == '\0')
 			return 1;
 
-		pattern = p + 1;
+		/* attempt to backtrack if mismatch occurs */
+backtrack:
+		if (last_star_pat) {
+			/* advance string by one char from last saved star position */
+			if (*last_star_str == '\0')
+				return 0; /* nothing left to consume */
+
+			/* for single '*' we cannot cross '/' */
+			if (!double_star && *last_star_str == '/')
+				return 0;
+
+			++last_star_str;
+			p = last_star_pat;
+			s = last_star_str;
+			continue;
+		}
+
+		return 0; /* no backtrack available -> failure */
 	}
+}
+
+/*
+ * Match string against multiple patterns separated by '|'.
+ * Also fully NON-RECURSIVE.
+ */
+static int match(const char *pattern, const char *string)
+{
+	const char *start = pattern;
+	const char *sep;
+	int len;
+
+	for (;;) {
+		sep = strchr(start, '|'); /* find '|' separator */
+		len = (sep ? sep - start : (int)strlen(start));
+
+		if (match_single(start, len, string))
+			return 1; /* match success */
+
+		if (!sep)
+			break; /* no more patterns */
+
+		start = sep + 1;
+	}
+
+	return 0; /* none of the patterns matched */
 }
 
 void do_file(char *path)
@@ -455,7 +517,8 @@ static void handle_request(void)
 		return;
 	}
 
-	if ((strcasecmp(method, "get") != 0) && (strcasecmp(method, "post") != 0)) {
+	post = (strcasecmp(method, "post") == 0);
+	if ((strcasecmp(method, "get") != 0) && !post) {
 		send_error(501, NULL, NULL);
 		return;
 	}
@@ -502,7 +565,7 @@ static void handle_request(void)
 			cur = cp + strlen(cp) + 1;
 			logmsg(LOG_DEBUG, "*** %s: httpd authorization: %s", __FUNCTION__, authorization);
 		}
-		else if (strncasecmp( cur, "User-Agent:", 11) == 0) {
+		else if (strncasecmp(cur, "User-Agent:", 11) == 0) {
 			cp = &cur[11];
 			cp += strspn(cp, " \t");
 			useragent = cp;
@@ -527,40 +590,20 @@ static void handle_request(void)
 		}
 	}
 
-	post = (strcasecmp(method, "post") == 0);
 	get_client_addr();
 	auth = auth_check(authorization);
 
-	if (strcmp(file, "logout") == 0) { /* special case */
-		wi_generic(file, cl, boundary);
-		eat_garbage();
-
-		if (strstr(useragent, "Chrome/") != NULL) {
-			if (auth != AUTH_BAD) {
-				send_authenticate();
-				return;
-			}
-		}
-		else {
-			if (auth == AUTH_OK) {
-				send_authenticate();
-				return;
-			}
-		}
-
-		send_error(404, NULL, "Goodbye");
-		return;
-	}
-
 	if (auth == AUTH_BAD) {
-		auth_fail(cl, 1);
+		auth_fail(cl);
 		return;
 	}
 
 	for (handler = &mime_handlers[0]; handler->pattern; handler++) {
+		logmsg(LOG_DEBUG, "*** %s: handler->pattern: [%s] file: [%s]", __FUNCTION__, handler->pattern, file);
+
 		if (match(handler->pattern, file)) {
 			if ((handler->auth) && (auth != AUTH_OK)) {
-				auth_fail(cl, 0);
+				auth_fail(cl);
 				return;
 			}
 
@@ -580,11 +623,22 @@ static void handle_request(void)
 	}
 
 	if (auth != AUTH_OK) {
-		auth_fail(cl, (auth == AUTH_NONE ? 0 : 1));
+		auth_fail(cl);
 		return;
 	}
 
-	send_error(404, NULL, NULL);
+	if (strcmp(file, "logout") == 0) { /* special case */
+		wi_generic(file, cl, boundary);
+		eat_garbage();
+		send_authenticate();
+
+		/* send logout msg to syslog */
+		logmsg(LOG_INFO, "logout '%s' successful (GUI) %s:%d", authinfo, client_addr, http_port);
+		send_error(404, NULL, "Goodbye");
+		return;
+	}
+
+	send_error(404, NULL, NULL); /* not found */
 }
 
 #ifdef TCONFIG_HTTPS
@@ -611,7 +665,6 @@ static void erase_cert(void)
 static void start_ssl(void)
 {
 	int i, lock, ok, retry, save;
-	unsigned long long sn;
 	char t[32];
 
 	lock = file_lock("httpd");
@@ -661,10 +714,7 @@ static void start_ssl(void)
 				logmsg(LOG_INFO, "generating SSL certificate...");
 
 				/* browsers seem to like this when the ip address moves... */
-				f_read("/dev/urandom", &sn, sizeof(sn));
-
-				memset(t, 0, sizeof(t));
-				snprintf(t, sizeof(t), "%llu", sn & 0x7FFFFFFFFFFFFFFFULL);
+				gen_urandom(t, NULL, sizeof(t), 0);
 				eval("gencert.sh", t);
 			}
 		}
@@ -692,13 +742,9 @@ static void start_ssl(void)
 static void init_id(void)
 {
 	char s[128];
-	unsigned long long n;
 
 	if (strncmp(nvram_safe_get("http_id"), "TID", 3) != 0) {
-		f_read("/dev/urandom", &n, sizeof(n));
-
-		memset(s, 0, sizeof(s));
-		snprintf(s, sizeof(s), "TID%llx", n);
+		gen_urandom(s, NULL, sizeof(s), 1);
 		nvram_set("http_id", s);
 	}
 
@@ -735,7 +781,7 @@ void check_id(const char *url)
 
 static void add_listen_socket(const char *addr, int server_port, int do_ipv6, int do_ssl)
 {
-	int listenfd, n;
+	int listenfd;
 	struct sockaddr_storage sai_stor;
 
 #ifdef TCONFIG_IPV6
@@ -760,8 +806,7 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 	}
 	fcntl(listenfd, F_SETFD, FD_CLOEXEC);
 
-	n = 1;
-	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (char*)&n, sizeof(n));
+	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &int_1, sizeof(int_1));
 
 #ifdef TCONFIG_IPV6
 	if (do_ipv6) {
@@ -772,8 +817,8 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 			inet_pton(HTTPD_FAMILY, addr, &(sai->sin6_addr));
 		else
 			sai->sin6_addr = in6addr_any;
-		n = 1;
-		setsockopt(listenfd, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&n, sizeof(n));
+
+		setsockopt(listenfd, IPPROTO_IPV6, IPV6_V6ONLY, &int_1, sizeof(int_1));
 	} else
 #endif /* TCONFIG_IPV6 */
 	{
@@ -789,7 +834,7 @@ static void add_listen_socket(const char *addr, int server_port, int do_ipv6, in
 		return;
 	}
 
-	if (listen(listenfd, 64) < 0) {
+	if (listen(listenfd, MAX_CONN_ACCEPT) < 0) {
 		logmsg(LOG_ERR, "listen: %m");
 		close(listenfd);
 		return;
@@ -939,8 +984,9 @@ int main(int argc, char **argv)
 	FILE *pid_fp;
 	int c;
 	fd_set rfdset;
-	int i, n;
+	int i;
 	struct sockaddr_storage sai;
+	socklen_t sz;
 	char bind[128];
 	char *port = NULL;
 #ifdef TCONFIG_IPV6
@@ -1042,9 +1088,9 @@ int main(int argc, char **argv)
 				continue;
 
 			do_ssl = 0;
-			n = sizeof(sai);
+			sz = sizeof(sai);
 
-			connfd = accept(listeners.listener[i].listenfd, (struct sockaddr *)&sai, (socklen_t *) &n);
+			connfd = accept(listeners.listener[i].listenfd, (struct sockaddr *)&sai, &sz);
 			if (connfd < 0) {
 				continue;
 			}
@@ -1064,13 +1110,15 @@ int main(int argc, char **argv)
 					exit(0);
 
 				struct timeval tv;
-				tv.tv_sec = 60;
+				tv.tv_sec = MAX_CONN_TIMEOUT;
 				tv.tv_usec = 0;
+
+				/* set receive/send timeouts */
 				setsockopt(connfd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
 				setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-				n = 1;
-				setsockopt(connfd, IPPROTO_TCP, TCP_NODELAY, (char *)&n, sizeof(n));
+				/* set the KEEPALIVE option to cull dead connections */
+				setsockopt(connfd, SOL_SOCKET, SO_KEEPALIVE, &int_1, sizeof(int_1));
 
 				fcntl(connfd, F_SETFD, FD_CLOEXEC);
 
