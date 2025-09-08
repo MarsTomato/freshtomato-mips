@@ -292,7 +292,13 @@ const defaults_t bsd_defaults[] = {
 	{ "dhcpd" #i "_startip",	"" 				}, \
 	{ "dhcpd" #i "_endip",		"" 				}, \
 	{ "dhcpd" #i "_ostatic",	"0"				}, /* ignore DHCP requests from unknown devices on LANX */ \
-	{ "dhcp" #i "_lease",		"1440"				},
+	{ "dhcp" #i "_lease",		"1440"				}, \
+	{ "bwl_br" #i "_enable",	"0"				}, \
+	{ "bwl_br" #i "_dlc",		""				}, \
+	{ "bwl_br" #i "_ulc",		""				}, \
+	{ "bwl_br" #i "_dlr",		""				}, \
+	{ "bwl_br" #i "_ulr",		""				}, \
+	{ "bwl_br" #i "_prio",		"2"				},
 #ifdef TCONFIG_OPENVPN
  #define BRIDGE_BLOCK_OPENVPN(i) \
 	{ "vpn_server1_plan" #i,	"0"				}, \
@@ -1794,24 +1800,6 @@ const defaults_t defaults[] = {
 	{ "bwl_br0_tcp",		"0"				},	/* unlimited */
 	{ "bwl_br0_udp",		"0"				},	/* unlimited */
 	{ "bwl_br0_prio",		"3"				},
-	{ "bwl_br1_enable",		"0"				},
-	{ "bwl_br1_dlc",		""				},
-	{ "bwl_br1_ulc",		""				},
-	{ "bwl_br1_dlr",		""				},
-	{ "bwl_br1_ulr",		""				},
-	{ "bwl_br1_prio",		"2"				},
-	{ "bwl_br2_enable",		"0"				},
-	{ "bwl_br2_dlc",		""				},
-	{ "bwl_br2_ulc",		""				},
-	{ "bwl_br2_dlr",		""				},
-	{ "bwl_br2_ulr",		""				},
-	{ "bwl_br2_prio",		"2"				},
-	{ "bwl_br3_enable",		"0"				},
-	{ "bwl_br3_dlc",		""				},
-	{ "bwl_br3_ulc",		""				},
-	{ "bwl_br3_dlr",		""				},
-	{ "bwl_br3_ulr",		""				},
-	{ "bwl_br3_prio",		"2"				},
 
 #ifdef TCONFIG_NOCAT
 	{ "NC_enable",			"0"				},	/* enable NoCatSplash */

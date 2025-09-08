@@ -37,7 +37,7 @@
  *
  * Modified for Tomato Firmware
  * Portions, Copyright (C) 2006-2009 Jonathan Zarate
- * Fixes/updates (C) 2018 - 2023 pedro
+ * Fixes/updates (C) 2018 - 2025 pedro
  *
  */
 
@@ -235,7 +235,8 @@ static void set_lan_hostname(const char *wan_hostname)
 {
 	const char *s;
 	char *lan_hostname;
-	char hostname[16];
+	char buf[16], buf2[8];
+	int i;
 	FILE *f;
 
 	nvram_set("lan_hostname", wan_hostname);
@@ -243,13 +244,14 @@ static void set_lan_hostname(const char *wan_hostname)
 		/* derive from et0 mac address */
 		s = nvram_get("lan_hwaddr");
 		if (s && strlen(s) >= 17) {
-			snprintf(hostname, sizeof(hostname), "FT-%c%c%c%c%c%c%c%c%c%c%c%c", s[0], s[1], s[3], s[4], s[6], s[7], s[9], s[10], s[12], s[13], s[15], s[16]);
+			memset(buf, 0, sizeof(buf));
+			snprintf(buf, sizeof(buf), "FT-%c%c%c%c%c%c%c%c%c%c%c%c", s[0], s[1], s[3], s[4], s[6], s[7], s[9], s[10], s[12], s[13], s[15], s[16]);
 
 			if ((f = fopen("/proc/sys/kernel/hostname", "w"))) {
-				fputs(hostname, f);
+				fputs(buf, f);
 				fclose(f);
 			}
-			nvram_set("lan_hostname", hostname);
+			nvram_set("lan_hostname", buf);
 		}
 	}
 
@@ -257,14 +259,15 @@ static void set_lan_hostname(const char *wan_hostname)
 	if ((f = fopen("/etc/hosts", "w"))) {
 		fprintf(f, "127.0.0.1 localhost\n");
 
-		if ((s = nvram_get("lan_ipaddr")) && (*s))
-			fprintf(f, "%s %s %s-lan\n", s, lan_hostname, lan_hostname);
-		if ((s = nvram_get("lan1_ipaddr")) && (*s) && (strcmp(s, "") != 0))
-			fprintf(f, "%s %s-lan1\n", s, lan_hostname);
-		if ((s = nvram_get("lan2_ipaddr")) && (*s) && (strcmp(s, "") != 0))
-			fprintf(f, "%s %s-lan2\n", s, lan_hostname);
-		if ((s = nvram_get("lan3_ipaddr")) && (*s) && (strcmp(s, "") != 0))
-			fprintf(f, "%s %s-lan3\n", s, lan_hostname);
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			memset(buf, 0, sizeof(buf));
+			snprintf(buf, sizeof(buf), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+			if ((s = nvram_get(buf)) && (*s)) {
+				memset(buf2, 0, sizeof(buf2));
+				snprintf(buf2, sizeof(buf2), "%d", i);
+				fprintf(f, "%s %s %s-lan%s\n", s, (i == 0 ? lan_hostname : ""), lan_hostname, (i == 0 ? "" : buf2));
+			}
+		}
 #ifdef TCONFIG_IPV6
 		if (ipv6_enabled()) {
 			fprintf(f, "::1 localhost ip6-localhost ip6-loopback\n");
@@ -1948,8 +1951,8 @@ void do_static_routes(int add)
 {
 	char *buf;
 	char *p, *q;
-	char *dest, *mask, *gateway, *metric, *ifname;
-	int r;
+	char *dest, *mask, *gateway, *metric, *if_tmp, *ifname = NULL;
+	int r, found_lan;
 	unsigned int i;
 	char name[8], ip[16], proto_key[16], ip_key[32], if_key[16];
 	char *modem_ip, *end;
@@ -1965,20 +1968,49 @@ void do_static_routes(int add)
 
 	p = buf;
 	while ((q = strsep(&p, ">")) != NULL) {
-		if (vstrsep(q, "<", &dest, &gateway, &mask, &metric, &ifname) < 5)
+		if (vstrsep(q, "<", &dest, &gateway, &mask, &metric, &if_tmp) < 5)
 			continue;
 
-		ifname = nvram_safe_get(((strcmp(ifname, "LAN") == 0) ? "lan_ifname" :
-					((strcmp(ifname, "LAN1") == 0) ? "lan1_ifname" :
-					((strcmp(ifname, "LAN2") == 0) ? "lan2_ifname" :
-					((strcmp(ifname, "LAN3") == 0) ? "lan3_ifname" :
-					((strcmp(ifname, "WAN2") == 0) ? "wan2_iface" :
-					((strcmp(ifname, "WAN3") == 0) ? "wan3_iface" :
-					((strcmp(ifname, "WAN4") == 0) ? "wan4_iface" :
-					((strcmp(ifname, "MAN2") == 0) ? "wan2_ifname" :
-					((strcmp(ifname, "MAN3") == 0) ? "wan3_ifname" :
-					((strcmp(ifname, "MAN4") == 0) ? "wan4_ifname" :
-					((strcmp(ifname, "WAN") == 0) ? "wan_iface" : "wan_ifname"))))))))))));
+		found_lan = 0;
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			/* LAN, LAN1, LAN2, LAN3 set in advanced-routing.asp */
+			memset(name, 0, sizeof(name));
+			snprintf(name, sizeof(name), (i == 1 ? "LAN" : "LAN%u"), i);
+			if (strcmp(if_tmp, name) == 0) {
+				memset(if_key, 0, sizeof(if_key));
+				snprintf(if_key, sizeof(if_key), (i == 0 ? "lan_ifname" : "lan%u_ifname"), i);
+				ifname = nvram_safe_get(if_key); /* set */
+				found_lan = 1;
+				break;
+			}
+		}
+		if (!found_lan) {
+			/*
+			 * wan_iface = WAN
+			 * wan_ifname = MAN
+			 */
+			for (i = 1; i <= MWAN_MAX; i++) {
+				/* WAN, WAN2, WAN3, WAN4 set in advanced-routing.asp */
+				memset(name, 0, sizeof(name));
+				snprintf(name, sizeof(name), (i == 1 ? "WAN" : "WAN%u"), i);
+				if (strcmp(if_tmp, name) == 0) {
+					memset(if_key, 0, sizeof(if_key));
+					snprintf(if_key, sizeof(if_key), (i == 1 ? "wan_iface" : "wan%u_iface"), i);
+					ifname = nvram_safe_get(if_key); /* set */
+					break;
+				}
+				/* MAN, MAN2, MAN3, MAN4 set in advanced-routing.asp */
+				memset(name, 0, sizeof(name));
+				snprintf(name, sizeof(name), (i == 1 ? "MAN" : "MAN%u"), i);
+				if (strcmp(if_tmp, name) == 0) {
+					memset(if_key, 0, sizeof(if_key));
+					snprintf(if_key, sizeof(if_key), (i == 1 ? "wan_ifname" : "wan%u_ifname"), i);
+					ifname = nvram_safe_get(if_key); /* set */
+					break;
+				}
+			}
+		}
+
 		logmsg(LOG_WARNING, "Static route %s: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", (add ? "added" : "deleted"), ifname, metric, dest, gateway, mask);
 
 		if (add) {
