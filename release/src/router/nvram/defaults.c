@@ -293,12 +293,12 @@ const defaults_t bsd_defaults[] = {
 	{ "dhcpd" #i "_endip",		"" 				}, \
 	{ "dhcpd" #i "_ostatic",	"0"				}, /* ignore DHCP requests from unknown devices on LANX */ \
 	{ "dhcp" #i "_lease",		"1440"				}, \
-	{ "bwl_br" #i "_enable",	"0"				}, \
-	{ "bwl_br" #i "_dlc",		""				}, \
-	{ "bwl_br" #i "_ulc",		""				}, \
-	{ "bwl_br" #i "_dlr",		""				}, \
-	{ "bwl_br" #i "_ulr",		""				}, \
-	{ "bwl_br" #i "_prio",		"2"				},
+	{ "bwl_lan" #i "_enable",	"0"				}, \
+	{ "bwl_lan" #i "_dlc",		""				}, \
+	{ "bwl_lan" #i "_ulc",		""				}, \
+	{ "bwl_lan" #i "_dlr",		""				}, \
+	{ "bwl_lan" #i "_ulr",		""				}, \
+	{ "bwl_lan" #i "_prio",		"2"				},
 #ifdef TCONFIG_OPENVPN
  #define BRIDGE_BLOCK_OPENVPN(i) \
 	{ "vpn_server1_plan" #i,	"0"				}, \
@@ -955,7 +955,7 @@ const defaults_t defaults[] = {
 #ifdef TCONFIG_USB_EXTRAS
 	{ "dnsmasq_tftp",		"0"				},
 	{ "dnsmasq_tftp_path",		""				},
-	{ "dnsmasq_pxelan0",		"0"				},
+	{ "dnsmasq_pxelan",		"0"				},
 #endif
 #ifdef TCONFIG_MDNS
 	{ "mdns_enable",		"0"				},
@@ -1792,14 +1792,14 @@ const defaults_t defaults[] = {
 /* bwlimit */
 	{ "bwl_enable",			"0"				},
 	{ "bwl_rules",			""				},
-	{ "bwl_br0_enable",		"0"				},
-	{ "bwl_br0_dlc",		""				},
-	{ "bwl_br0_ulc",		""				},
-	{ "bwl_br0_dlr",		""				},
-	{ "bwl_br0_ulr",		""				},
-	{ "bwl_br0_tcp",		"0"				},	/* unlimited */
-	{ "bwl_br0_udp",		"0"				},	/* unlimited */
-	{ "bwl_br0_prio",		"3"				},
+	{ "bwl_lan_enable",		"0"				},
+	{ "bwl_lan_dlc",		""				},
+	{ "bwl_lan_ulc",		""				},
+	{ "bwl_lan_dlr",		""				},
+	{ "bwl_lan_ulr",		""				},
+	{ "bwl_lan_tcp",		"0"				},	/* unlimited */
+	{ "bwl_lan_udp",		"0"				},	/* unlimited */
+	{ "bwl_lan_prio",		"3"				},
 
 #ifdef TCONFIG_NOCAT
 	{ "NC_enable",			"0"				},	/* enable NoCatSplash */
