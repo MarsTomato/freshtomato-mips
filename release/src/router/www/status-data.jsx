@@ -1,11 +1,15 @@
 /*
-	Tomato GUI
-	Copyright (C) 2006-2010 Jonathan Zarate
-	http://www.polarcloud.com/tomato/
-
-	For use with Tomato Firmware only.
-	No part of this file may be used without permission.
-*/
+ * Tomato GUI
+ * Copyright (C) 2006-2010 Jonathan Zarate
+ * http://www.polarcloud.com/tomato/
+ *
+ * For use with Tomato Firmware only.
+ * No part of this file may be used without permission.
+ *
+ * Fixes/updates (C) 2018 - 2025 pedro
+ * https://freshtomato.org/
+ *
+ */
 
 //	<% nvram("router_name,wan_domain,wan_hostname,wan_dns,lan_hwaddr,lan_proto,lan_ipaddr,dhcpd_startip,dhcpd_endip,lan_netmask,wl_security_mode,wl_crypto,wl_mode,wl_wds_enable,wl_hwaddr,wl_net_mode,wl_radio,wl_channel,lan_gateway,wl_ssid,wl_closed,wl_nband,t_model_name,t_features,lan_ifname,lan_ifnames,wan_ifnames,tomatoanon_enable,tomatoanon_answer,lan_desc,wan_ppp_get_ip,wan_pptp_dhcp,wan_pptp_server_ip,wan_ipaddr_buf,wan_gateway,wan_gateway_get,wan_get_domain,wan_hwaddr,wan_ipaddr,wan_netmask,wan_proto,wan_run_mtu,wan_sta,mwan_num,wan_modem_type,wan_hilink_ip,wan_status_script,mwan_cktime,wan_weight,wan_ck_pause,dnscrypt_proxy,dnscrypt_priority,stubby_proxy,stubby_priority"); %>
 //	<% nvstat(); %>
@@ -26,6 +30,13 @@ function setColor(n) {
 stats = { };
 
 var a, b, i;
+
+stats.time = '<% time(); %>';
+stats.wanlease = [<% dhcpc_time(); %>];
+stats.wanuptime = [<% link_uptime(); %>];
+stats.wanup = [<% wanup(); %>];
+stats.dns = [<% dns(); %>];
+stats.wanstatus = [<% wanstatus(); %>];
 
 stats.anon_enable = nvram.tomatoanon_enable;
 stats.anon_answer = nvram.tomatoanon_answer;
@@ -57,21 +68,6 @@ if (sysinfo.totalswap > 0) {
 	stats.swap = scaleSize(a - b)+' / '+scaleSize(a)+' <small>('+((a - b) / a * 100.0).toFixed(2)+'%)</small><div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(((a - b) / a * 100.0).toFixed(2))+';width:'+((a - b) / a * 100.0).toFixed(2)+'%"></div></div></div>';
 } else
 	stats.swap = '';
-
-stats.time = '<% time(); %>';
-
-/* DUALWAN-BEGIN */
-stats.wanup = [<% wanup("wan"); %>,<% wanup("wan2"); %>];
-stats.wanuptime = ['<% link_uptime("wan"); %>','<% link_uptime("wan2"); %>'];
-stats.wanlease = ['<% dhcpc_time("wan"); %>','<% dhcpc_time("wan2"); %>'];
-stats.dns = [<% dns("wan"); %>,<% dns("wan2"); %>];
-/* DUALWAN-END */
-/* MULTIWAN-BEGIN */
-stats.wanup = [<% wanup("wan"); %>,<% wanup("wan2"); %>,<% wanup("wan3"); %>,<% wanup("wan4"); %>];
-stats.wanuptime = ['<% link_uptime("wan"); %>','<% link_uptime("wan2"); %>','<% link_uptime("wan3"); %>','<% link_uptime("wan4"); %>'];
-stats.wanlease = ['<% dhcpc_time("wan"); %>','<% dhcpc_time("wan2"); %>','<% dhcpc_time("wan3"); %>','<% dhcpc_time("wan4"); %>'];
-stats.dns = [<% dns("wan"); %>,<% dns("wan2"); %>,<% dns("wan3"); %>,<% dns("wan4"); %>];
-/* MULTIWAN-END */
 
 /* check for stubby/dnscrypt_proxy */
 var dns = [];
@@ -145,17 +141,7 @@ stats.ip6_lan3 = ((typeof(sysinfo.ip6_lan3) != 'undefined') ? sysinfo.ip6_lan3 :
 stats.ip6_lan3_ll = ((typeof(sysinfo.ip6_lan3_ll) != 'undefined') ? sysinfo.ip6_lan3_ll : '')+'';
 /* IPV6-END */
 
-/* DUALWAN-BEGIN */
-stats.wanstatus = ['<% wanstatus("wan"); %>','<% wanstatus("wan2"); %>'];
-/* DUALWAN-END */
-/* MULTIWAN-BEGIN */
-stats.wanstatus = ['<% wanstatus("wan"); %>','<% wanstatus("wan2"); %>','<% wanstatus("wan3"); %>','<% wanstatus("wan4"); %>'];
-/* MULTIWAN-END */
-
-for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx)
-	if (stats.wanstatus[uidx - 1] != 'Connected')
-		stats.wanstatus[uidx - 1] = '<b>'+stats.wanstatus[uidx - 1]+'</b>';
-
+/* WL stats */
 stats.channel = [];
 stats.interference = [];
 stats.qual = [];
