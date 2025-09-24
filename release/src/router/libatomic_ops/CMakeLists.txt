@@ -20,9 +20,9 @@
 # SOFTWARE.
 ##
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
-set(PACKAGE_VERSION 7.8.2)
+set(PACKAGE_VERSION 7.8.4)
 # Version must match that in AC_INIT of configure.ac and that in README.
 # Version must conform to: [0-9]+[.][0-9]+[.][0-9]+
 
@@ -146,6 +146,7 @@ set(SRC src/atomic_ops.c)
 
 if (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
   # SunCC compiler on SunOS (Solaris).
+  enable_language(ASM)
   set(SRC ${SRC} src/atomic_ops_sysdeps.S)
 endif()
 
