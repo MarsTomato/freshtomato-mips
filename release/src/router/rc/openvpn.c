@@ -5,6 +5,7 @@
  * No part of this file may be used without permission.
  *
  * Fixes/updates (C) 2018 - 2025 pedro
+ * https://freshtomato.org/
  *
  */
 
@@ -22,7 +23,6 @@
 #define BUF_SIZE_32		32
 #define BUF_SIZE_64		64
 #define IF_SIZE			8
-#define OVPN_FW_STR		"s/-A/-D/g"
 
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
@@ -606,10 +606,12 @@ void start_ovpn_client(int unit)
 		snprintf(buffer, BUF_SIZE, OVPN_DIR"/fw/client%d-fw.sh", unit);
 
 		/* first remove existing firewall rule(s) */
+		simple_lock("firewall");
 		run_del_firewall_script(buffer, OVPN_DIR_DEL_SCRIPT);
 
 		/* then add firewall rule(s) */
 		eval(buffer);
+		simple_unlock("firewall");
 	}
 
 	/* In case of openvpn unexpectedly dies and leaves it added - flush tun IF, otherwise openvpn will not re-start (required by iproute2) */
@@ -669,10 +671,13 @@ void stop_ovpn_client(int unit)
 	/* Remove firewall rules after VPN exit */
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, BUF_SIZE, OVPN_DIR"/fw/client%d-fw.sh", unit);
+
+	simple_lock("firewall");
 	run_del_firewall_script(buffer, OVPN_DIR_DEL_SCRIPT);
 
 	/* Delete all files for this client */
 	ovpn_cleanup_dirs(OVPN_TYPE_CLIENT, unit);
+	simple_unlock("firewall");
 
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, BUF_SIZE, "vpn_client%d", unit);
@@ -1219,10 +1224,12 @@ void start_ovpn_server(int unit)
 		snprintf(buffer, BUF_SIZE, OVPN_DIR"/fw/server%d-fw.sh", unit);
 
 		/* first remove existing firewall rule(s) */
+		simple_lock("firewall");
 		run_del_firewall_script(buffer, OVPN_DIR_DEL_SCRIPT);
 
 		/* then add firewall rule(s) */
 		eval(buffer);
+		simple_unlock("firewall");
 	}
 
 	/* Start the VPN server */
@@ -1279,10 +1286,13 @@ void stop_ovpn_server(int unit)
 	/* Remove firewall rules */
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, BUF_SIZE, OVPN_DIR"/fw/server%d-fw.sh", unit);
+
+	simple_lock("firewall");
 	run_del_firewall_script(buffer, OVPN_DIR_DEL_SCRIPT);
 
 	/* Delete all files for this server */
 	ovpn_cleanup_dirs(OVPN_TYPE_SERVER, unit);
+	simple_unlock("firewall");
 
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, BUF_SIZE, "vpn_server%d", unit);
@@ -1400,20 +1410,20 @@ void stop_ovpn_all()
 
 void write_ovpn_dnsmasq_config(FILE* f)
 {
+	DIR *dir;
+	struct dirent *file;
 	char nv[BUF_SIZE_16];
 	char buf[BUF_SIZE_32];
 	char *pos, *fn, ch;
-	int cur;
-	DIR *dir;
-	struct dirent *file;
+	int num;
 
 	strlcpy(buf, nvram_safe_get("vpn_server_dns"), BUF_SIZE_32);
 	for (pos = strtok(buf, ","); pos != NULL; pos = strtok(NULL, ",")) {
-		cur = atoi(pos);
-		if (cur) {
-			logmsg(LOG_DEBUG, "*** %s: adding server %d interface to dns config", __FUNCTION__, cur);
-			snprintf(nv, BUF_SIZE_16, "vpn_server%d_if", cur);
-			fprintf(f, "interface=%s%d\n", nvram_safe_get(nv), (OVPN_SERVER_BASEIF + cur));
+		num = atoi(pos);
+		if (num) {
+			logmsg(LOG_DEBUG, "*** %s: adding server %d interface to dns config", __FUNCTION__, num);
+			snprintf(nv, BUF_SIZE_16, "vpn_server%d_if", num);
+			fprintf(f, "interface=%s%d\n", nvram_safe_get(nv), (OVPN_SERVER_BASEIF + num));
 		}
 	}
 
@@ -1424,17 +1434,17 @@ void write_ovpn_dnsmasq_config(FILE* f)
 			if (fn[0] == '.')
 				continue;
 
-			if (sscanf(fn, "client%d.resol%c", &cur, &ch) == 2) {
-				logmsg(LOG_DEBUG, "*** %s: checking ADNS settings for client %d", __FUNCTION__, cur);
-				snprintf(buf, BUF_SIZE_32, "vpn_client%d_adns", cur);
+			if (sscanf(fn, "client%d.resol%c", &num, &ch) == 2) {
+				logmsg(LOG_DEBUG, "*** %s: checking ADNS settings for client %d", __FUNCTION__, num);
+				snprintf(buf, BUF_SIZE_32, "vpn_client%d_adns", num);
 				if (nvram_get_int(buf) == 2) {
-					logmsg(LOG_INFO, "adding strict-order to dnsmasq config for client %d", cur);
+					logmsg(LOG_INFO, "adding strict-order to dnsmasq config for client %d", num);
 					fprintf(f, "strict-order\n");
 					break;
 				}
 			}
 
-			if (sscanf(fn, "client%d.con%c", &cur, &ch) == 2) {
+			if (sscanf(fn, "client%d.con%c", &num, &ch) == 2) {
 				logmsg(LOG_INFO, "adding Dnsmasq config from %s", fn);
 				fappend(f, fn);
 			}
@@ -1447,10 +1457,9 @@ int write_ovpn_resolv(FILE* f)
 {
 	DIR *dir;
 	struct dirent *file;
-	char *fn, ch, num, buf[BUF_SIZE_32];
-	FILE *dnsf;
-	int exclusive = 0;
-	int adns = 0;
+	char  buf[BUF_SIZE_32];
+	char *fn, ch;
+	int num, exclusive = 0;
 
 	if (chdir(OVPN_DIR"/dns"))
 		return 0;
@@ -1463,16 +1472,14 @@ int write_ovpn_resolv(FILE* f)
 		if (fn[0] == '.')
 			continue;
 
-		if (sscanf(fn, "client%c.resol%c", &num, &ch) == 2) {
-			snprintf(buf, BUF_SIZE_32, "vpn_client%c_adns", num);
-			adns = nvram_get_int(buf);
-			if ((dnsf = fopen(fn, "r")) == NULL)
+		if (sscanf(fn, "client%d.resol%c", &num, &ch) == 2) {
+			if (fappend(f, fn) == -1)
 				continue;
 
-			logmsg(LOG_INFO, "adding DNS entries from %s", fn);
-			fappend(f, fn);
+			logmsg(LOG_INFO, "%s: adding DNS entries from %s", __FUNCTION__, fn);
 
-			if (adns == 3)
+			snprintf(buf, BUF_SIZE_32, "vpn_client%d_adns", num);
+			if (nvram_get_int(buf) == 3)
 				exclusive = 1;
 		}
 	}

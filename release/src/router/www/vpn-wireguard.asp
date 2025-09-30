@@ -37,7 +37,7 @@ RouteGrid.prototype = new TomatoGrid;
 var tabs =  [];
 for (i = 0; i < WG_INTERFACE_COUNT; ++i)
 	tabs.push(['wg'+i,'<span id="'+serviceType+i+'_tabicon" style="font-size:9px">▽ <\/span><span class="tabname">wg'+i+'<\/span>']);
-var sections = [['wg-config','Config'],['wg-peers','Peers'],['wg-scripts','Scripts'],['wg-policy','Routing Policy'],['wg-status','Status']];
+var sections = [['wg-config','Config'],['wg-peersp','Peers Params'],['wg-peers','Peers'],['wg-scripts','Scripts'],['wg-policy','Routing Policy'],['wg-status','Status']];
 
 var routingTables = [];
 for (i = 0; i < tabs.length; ++i) routingTables.push(new RouteGrid());
@@ -156,9 +156,6 @@ function tabSelect(name) {
 		if (name == tabs[i][0]) {
 			elem.display(tabs[i][0]+'-wg-tab', true);
 			elem.display(tabs[i][0]+'-wg-status-button', true);
-			for (var j = 0; j < sections.length; ++j) {
-				elem.display('notes-'+sections[j][0], (E(tabs[i][0]+'-'+sections[j][0]+'-wg-tab').classList.contains('active')));
-			}
 		}
 		else {
 			elem.display(tabs[i][0]+'-wg-tab', false);
@@ -176,12 +173,10 @@ function sectSelect(tab, section) {
 		if (section == sections[i][0]) {
 			elem.addClass(tabs[tab][0]+'-'+sections[i][0]+'-wg-tab', 'active');
 			elem.display(tabs[tab][0]+'-'+sections[i][0], true);
-			elem.display('notes-'+sections[i][0], true);
 		}
 		else {
 			elem.removeClass(tabs[tab][0]+'-'+sections[i][0]+'-wg-tab', 'active');
 			elem.display(tabs[tab][0]+'-'+sections[i][0], false);
-			elem.display('notes-'+sections[i][0], false);
 		}
 	}
 
@@ -1808,8 +1803,6 @@ function verifyFields(focused, quiet) {
 		if (ext) E('_f_wg'+i+'_peer_ip').value = '';
 		if (ext) E('_f_wg'+i+'_route').value = '1';
 		E('_f_wg'+i+'_peer_ip').disabled = ext;
-		elem.display('wg'+i+'-peer-param-title', !ext);
-		elem.display('wg'+i+'-peer-param', !ext);
 		elem.display('wg'+i+'-peers-download', !ext);
 		elem.display('wg'+i+'-peers-generate-title', !ext);
 		elem.display('wg'+i+'-peers-generate', !ext);
@@ -2043,10 +2036,6 @@ function earlyInit() {
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
-
 	eventHandler();
 	addEvent(window, 'beforeunload', mayClose);
 
@@ -2144,12 +2133,16 @@ function init() {
 				null,
 				{ title: 'Type of VPN', name: t+'_com', type: 'select', options: [['0','Internal - Hub (this device) and Spoke (peers)'],['1','Internal - Full Mesh (defined Endpoint only)'],['2','Internal - Full Mesh'],['3','External - VPN Provider']], value: nvram[t+'_com'] || 0 },
 				{ title: 'Redirect Internet traffic', name: t+'_rgwr', type: 'select', options: [[1,'All'],[2,'Routing Policy'],[3,'Routing Policy (strict)']], value: nvram[t+'_rgwr'] },
-				{ title: 'Priority', indent: 2, name: t+'_prio', type: 'text', maxlen: 3, size: 10, placeholder: (100 + i), value: nvram[t+'_prio'] }
+				{ title: 'Priority', indent: 2, name: t+'_prio', type: 'text', maxlen: 3, size: 10, placeholder: (100 + i), value: nvram[t+'_prio'] },
+				{ title: 'Import Config from File', custom: '<input type="file" class="import-file" id="'+t+'_config_file" accept=".conf" name="Browse File"><input type="button" id="'+t+'_config_import" value="Import" onclick="loadConfig('+i+')">' },
+				{ title: '', custom: '<div>Note: before importing the configuration, set the correct "Type of VPN" above.<\/div>' }
 			]);
-			W('<br>');
+			W('<br><\/div>');
+			/* config tab stop */
 
-			W('<div class="section-title" id="'+t+'-peer-param-title">Peer Parameters <span style="font-size:0.7em">(used to generate peer config files)<\/span><\/div>');
-			W('<div id="'+t+'-peer-param">');
+			/* peers params tab start */
+			W('<div id="'+t+'-wg-peersp">');
+			W('<div class="section-title">Peers Parameters <span style="font-size:0.7em">(used only to generate peer config files)<\/span><\/div>');
 			createFieldTable('', [
 				{ title: 'Router behind NAT', name: t+'_ka', type: 'text', maxlen: 2, size: 4, suffix: '&nbsp;<small>configures keepalive interval from this router towards the defined peers (0=disable/no NAT, 10-99s range, 25 is a common setting)<\/small>', value: nvram[t+'_ka'] },
 				{ title: 'Endpoint', name: 'f_'+t+'_endpoint', type: 'select', options: [['0','FQDN'],['1','WAN IP'],['2','Custom Endpoint']], value: nvram[t+'_endpoint'][0] || 0, suffix: '&nbsp;<input type="text" name="f_'+t+'_custom_endpoint" value="'+(nvram[t+'_endpoint'].split('|', 2)[1] || '')+'" onchange="verifyFields(this, 1)" id="_f_'+t+'_custom_endpoint" maxlength="64" size="46">' },
@@ -2161,20 +2154,8 @@ function init() {
 				{ title: 'Push LAN3 (br3) to peers', name: 'f_'+t+'_lan3', type: 'checkbox', value: (nvram[t+'_lan'] & 0x08) },
 				{ title: 'Forward all peer traffic', name: 'f_'+t+'_rgw', type: 'checkbox', value: nvram[t+'_rgw'] == 1 }
 			]);
-			W('<br>');
-			W('<\/div>');
-
-			W('<div class="section-title">Import Config from File<\/div>');
-			W('<div class="fields">');
-			W('<div>Note: before importing the configuration, set the correct "Type of VPN" above.<\/div>');
-			W('<br>');
-			W('<div class="import-section">');
-			W('<input type="file" class="import-file" id="'+t+'_config_file" accept=".conf" name="Browse File">');
-			W('<input type="button" id="'+t+'_config_import" value="Import" onclick="loadConfig('+i+')" >');
-			W('<\/div>');
-			W('<br>');
-			W('<\/div><\/div>');
-			/* config tab stop */
+			W('<br><\/div>');
+			/* peers params tab stop */
 
 			/* peers tab start */
 			W('<div id="'+t+'-wg-peers">');
@@ -2195,8 +2176,7 @@ function init() {
 				{ title: 'Port', name: 'f_'+t+'_peer_port', type: 'text', maxlen: 5, size: 10, value: nvram[t+'_port'] == '' ? (51820 + i) : nvram[t+'_port'], hidden: 1 },
 				{ title: 'FWMark', name: 'f_'+t+'_peer_fwmark', type: 'text', maxlen: 8, size: 8, value: '0', hidden: 1 }
 			]);
-			W('<\/div>');
-			W('<br>');
+			W('<\/div><br>');
 
 			W('<div class="section-title" id="'+t+'-peers-generate-title">Peer Generation<\/div>');
 			W('<div id="'+t+'-peers-generate">');
@@ -2204,8 +2184,7 @@ function init() {
 				{ title: 'Generate PSK', name: 'f_'+t+'_peer_psk_gen', type: 'checkbox', value: true, suffix: '&nbsp;<small>strenghten encyption with PresharedKey<\/small>' },
 				{ title: '', custom: '<input type="button" value="Generate Peer" onclick="generatePeer('+i+')" id="'+t+'_peer_gen">' }
 			]);
-			W('<br>');
-			W('<\/div>');
+			W('<br><\/div>');
 
 			W('<div class="section-title">Peer\'s Parameters<\/div>');
 			createFieldTable('', [
@@ -2261,151 +2240,13 @@ function init() {
 
 <!-- / / / -->
 
-<!-- start notes sections -->
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
-<div class="section" id="sesdiv_notes" style="display:none">
-
-	<!-- config notes start -->
-	<div id="notes-wg-config" style="display:none">
-		<ul>
-			<li><b>Interface</b> - Settings directly related to the wireguard interface on this device.
-			<ul>
-				<li><b>Enable on Start</b> - Enabling this will start the wireguard device when the router starts up.</li>
-				<li><b>Config file</b> - File path to wg-quick compatible configuration file. If this is specified all other settings will be ignored.</li>
-				<li><b>Port</b> - Port to use for the wireguard interface.</li>
-				<li><b>Private Key</b> - Private key to use for the wireguard interface. Can be generated by pressing the <b>Generate</b> button.</li>
-				<li><b>Public Key</b> - Public key calculated from the Private Key field. This is not user editable and only provided as a convenience.</li>
-				<li><b>VPN Interface IP</b> - IP and Netmask to use for the wireguard interface. Must be in CIDR format.</li>
-				<li><b>DNS Servers</b> - Comma separated list of DNS servers to use for the wireguard interface.</li>
-				<li><b>FWMark</b> - The value of the FWMark to use for routing. If left as 0, it will use Port value.</li>
-				<li><b>MTU</b> - The maximum transmission unit for the wireguard interface.</li>
-				<li><b>Respond to DNS</b> - If checked, this interface will respond to DNS requests using the router's dnsmasq service. This is usually wanted for a site-to-site scenario.</li>
-				<li><b>Routing Mode</b> - The routing mode to use when setting up the wireguard interface
-					<ul>
-					<li><b>Off</b> - Will not add routing rules for the wireguard interface.</li>
-					<li><b>Auto</b> - The wireguard interface will be routed using the default table (the same number as the interface port)</li>
-					<li><b>Custom Table</b> - Will route the wireguard interface using a custom table number. If specified, you must also include the table number in the additional field.</li>
-					</ul>
-				</li>
-				<li><b>Type of VPN</b> - This field defines how peers interact.
-					<ul>
-					<li><b>Internal - Hub (this device) and Spoke (peers)</b> - Peers will only communicate with the router, and not each other. Implies /32 netmask for the peers</li>
-					<li><b>Internal - Full Mesh (defined Endpoint only)</b> - Peers will communicate with any peer with an endpoint. Implies /24 netmask for the peers. Peers with endpoints will communicate with all peers.</li>
-					<li><b>Internal - Full Mesh</b> - All peers are added to each other's configuration regardless of the endpoint field being congigured or not. Implies /24 netmask for the peers.</li>
-					<li><b>External - VPN Provider</b> - This VPN Access the Internet via a 3rd party VPN provider.</li>
-					</ul>
-				</li>
-				<li><b>Redirect Internet traffic</b> - Available only in 'External - VPN Provider' mode.
-					<ul>
-					<li><b>All</b> - Redirects all internet traffic, regardless of destination or type.</li>
-					<li><b>Routing Policy</b> - Redirects traffic based on predefined rules, such as specific destinations or source, allowing selective rerouting.</li>
-					<li><b>Routing Policy (strict)</b> - Enforces stricter rules for redirection, only allowing traffic that explicitly matches the defined policy, blocking or ignoring non-matching traffic.</li>
-					</ul>
-				</li>
-				<li><b>Priority</b> - Available only in 'External - VPN Provider' with 'Routing Policy' active. Allows you to set the right priority for a given instance (1 - 255).
-				</li>
-			</ul></li>
-		</ul>
-		<ul>
-			<li><b>Peer Parameters</b> - Settings related to peer configuration generation on the Peers page (not available in 'External - VPN Provider' mode).
-			<ul>
-				<li><b>Router behind NAT</b> - If enabled, Keepalives will be sent from the router to peers.</li>
-				<li><b>Endpoint</b> - What to use for the endpoint of the router in configuration files generated on the Peers tab.
-					<ul>
-						<li><b>FQDN</b> - Will use the hostname and domain name set up on the Identification page.</li>
-						<li><b>WAN IP</b> - Will use the WAN IP address of the router.</li>
-						<li><b>Custom Endpoint</b> - Will use a user specified endpoint. If selected, you must also include the custom endpoint in the addition field.</li>
-					</ul>
-				</li>
-				<li><b>Allowed IPs</b> - A list of additional CIDRs to attach to the router peer for configuration files generated on the peers tab.</li>
-				<li><b>DNS Servers for Peers</b> - DNS Servers to use in the Interface section of configuration files generated on the peers tab.</li>
-				<li><b>Push LAN0 (br0) to peers</b> - Allows the peers access to LAN0</li>
-				<li><b>Push LAN1 (br1) to peers</b> - Allows the peers access to LAN1</li>
-				<li><b>Push LAN2 (br2) to peers</b> - Allows the peers access to LAN2</li>
-				<li><b>Push LAN3 (br3) to peers</b> - Allows the peers access to LAN3</li>
-				<li><b>Forward all peer traffic</b> - Ensure all traffic from the peer is tunneled through the router's wireguard interface by adding an Allowed IP of 0.0.0.0/0</li>
-			</ul></li>
-		</ul>
-		<ul>
-			<li><b>Import Config from File</b> - This section can be used to parse fields from a wg-quick compatible configuration file and automatically populate the relevant fields. Using this will wipe your existing settings.</li>
-		</ul>
-	</div>
-	<!-- config notes stop -->
-
-	<!-- peers notes start -->
-	<div id="notes-wg-peers" style="display:none">
-		<ul>
-			<li><b>Peers Grid</b> - Each row represents a peer in the network. Peers are added through the Peer's Parameters subsection. Peers can also be edited by clicking on the row. The columns represent the following:
-			<ul>
-				<li><b>QR</b> - Click the button to generate and display a QR code of this peer's configuration. Click again to hide it.</li>
-				<li><b>Cfg</b> - Click the button to generate and download this peer's configuration file.</li>
-				<li><b>Alias</b> - A custom name for this peer.</li>
-				<li><b>Endpoint</b> - Endpoint of this peer's wireguard interface.</li>
-				<li><b>Public Key</b> - The public key for this peer's wireguard interface.</li>
-				<li><b>VPN Interface IP</b> - The IP address of this peer's wireguard interface.</li>
-			</ul></li>
-			<li><b>Download All Configs</b> - This button will generate and download the configuration files for all the peers in the table (not available in 'External - VPN Provider' mode).</li>
-		</ul>
-		<ul>
-			<li><b>Peer Generation (not available in 'External - VPN Provider' mode)</b>
-			<ul>
-				<li><b>Generate PSK</b> - If checked, will generate a PresharedKey for this network and assign the very same to each peer when <i>Generate Peer</i> is clicked.</li>
-				<li><b>Generate Peer</b> - This button will generate a new peer and populate the basic fields of the Peer's Parameters subsection.</li>
-			</ul></li>
-		</ul>
-		<ul>
-			<li><b>Peer's Parameters</b> - A subsection for adding and editing peers.
-			<ul>
-				<li><b>Alias</b> - A custom name for this peer.</li>
-				<li><b>Endpoint</b> - Endpoint of this peer's wireguard interface.</li>
-				<li><b>Private Key</b> - The private key of this peer. Either this or the public key must be specified.</li>
-				<li><b>Public Key</b> - The public key of this peer. Either this or the public key must be specified.</li>
-				<li><b>Preshared Key</b> - The PSK to use for this peer.</li>
-				<li><b>VPN Interface IP</b> - The IP and Netmask to use for this peer. Must be in CIDR format.</li>
-				<li><b>Allowed IPs</b> - Additional Allowed IPs to use for this Peer. Must be in CIDR format. Can be a list of comma separated values.</li>
-				<li><b>Peer behind NAT</b> - If enabled, this peer will send Keepalives to all other peers.</li>
-				<li><b>Add/Save to Peers</b> - Click to add a peer or save changes to an edited peer.</li>
-			</ul></li>
-		</ul>
-	</div>
-	<!-- peers notes stop -->
-
-	<!-- routing policy start -->
-	<div id="notes-wg-policy" style="display:none">
-		<ul>
-			<li><b>Routing Policy</b> - defines rules that determine how network traffic is routed through the VPN tunnel, based on factors such as source or destination.
-			<ul>
-				<li><b>Type -> From Source IP</b> - Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24".</li>
-				<li><b>Type -> To Destination IP</b> - Ex: "1.2.3.4" or "1.2.3.0/24".</li>
-				<li><b>Type -> To Domain</b> - Ex: "domain.com". Please enter one domain per line.</li>
-				<li><b>IMPORTANT!</b> - Kill Switch: iptables rules (if 'KS' for given entry is enabled) are always applied even if instance is down but in PBR mode (so-called strict Kill Switch).
-			</ul></li>
-		</ul>
-	</div>
-	<!-- routing policy notes stop -->
-
-	<!-- scripts notes start -->
-	<div id="notes-wg-scripts" style="display:none">
-		<ul>
-			<li><b>Custom Interface Scripts</b> - Custom bash scripts to be run at defined events.
-			<ul>
-				<li><b>Pre-Up Script</b> - Will be run before the interface is brought up.</li>
-				<li><b>Post-Up Script</b> - Will be run after the interface is brought up.</li>
-				<li><b>Pre-Down Script</b> - Will be run before the interface is brought down.</li>
-				<li><b>Post-Down Script</b> - Will be run after the interface is brought down.</li>
-				<li><b>Note:</b> "<i>%i</i>" will be replaced with the actual name of the wireguard interface.</li>
-			</ul></li>
-		</ul>
-	</div>
-	<!-- scripts notes stop -->
-
-	<!-- status notes start -->
-	<div id="notes-wg-status" style="display:none">
-	</div>
-	<!-- status notes stop -->
-
+<div class="section-title">Notes</div>
+<div class="section" id="sesdiv_notes">
+	<ul>
+		<li><b>Do not change (and save)</b> the settings when wireguard <b>is running</b> - you may end up with a downed firewall or broken routing table!</li>
+		<li>For help, click the link in the upper right corner to the dedicated wiki page.</li>
+	</ul>
 </div>
-<!-- end notes sections -->
 
 <!-- / / / -->
 
