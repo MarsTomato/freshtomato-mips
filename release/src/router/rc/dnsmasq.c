@@ -44,6 +44,7 @@ const char dmwarning[]    = "Warning! Dnsmasq Custom configuration contains a di
 const char resolvcfg[]    = "/etc/resolv.conf";
 const char resolvcfgrom[] = "/rom/etc/resolv.conf";
 
+pid_t pid_dnsmasq = -1;
 static void start_dnsmasq_wet(void);
 
 static int check_bridge_modes(void) {
@@ -590,7 +591,7 @@ static void write_tftp_config(FILE *f)
 		for (i = 0; i < BRIDGE_COUNT; i++) {
 			memset(key, 0, sizeof(key));
 			memset(lan_ifname, 0, sizeof(lan_ifname));
-			snprintf(key, sizeof(key), "dnsmasq_pxelan%u", i);
+			snprintf(key, sizeof(key), (i == 0 ? "dnsmasq_pxelan" : "dnsmasq_pxelan%u"), i);
 			snprintf(lan_ifname, sizeof(lan_ifname), (i == 0 ? "lan_ifname" : "lan%u_ifname"), i);
 
 			if (nvram_get_int(key) && strlen(nvram_safe_get(lan_ifname)) > 0) {
@@ -743,8 +744,8 @@ void start_dnsmasq(void) {
 	/* default to some values we like, but allow the user to override them */
 	eval("dnsmasq", "-c", "4096", "--log-async");
 
-//	if (!nvram_contains_word("debug_norestart", "dnsmasq"))
-//		pid_dnsmasq = -2;
+	if (!nvram_contains_word("debug_norestart", "dnsmasq"))
+		pid_dnsmasq = -2;
 }
 
 void stop_dnsmasq(void)
@@ -752,7 +753,7 @@ void stop_dnsmasq(void)
 	if (serialize_restart("dnsmasq", 0))
 		return;
 
-//	pid_dnsmasq = -1;
+	pid_dnsmasq = -1;
 
 	unlink(resolvcfg);
 	symlink(dmresolv, resolvcfg);
@@ -770,7 +771,7 @@ void stop_dnsmasq(void)
 void reload_dnsmasq(void)
 {
 	/* notify dnsmasq */
-	killall("dnsmasq", SIGINT);
+	killall("dnsmasq", SIGHUP);
 }
 
 void clear_resolv(void)

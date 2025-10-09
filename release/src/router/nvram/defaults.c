@@ -292,7 +292,13 @@ const defaults_t bsd_defaults[] = {
 	{ "dhcpd" #i "_startip",	"" 				}, \
 	{ "dhcpd" #i "_endip",		"" 				}, \
 	{ "dhcpd" #i "_ostatic",	"0"				}, /* ignore DHCP requests from unknown devices on LANX */ \
-	{ "dhcp" #i "_lease",		"1440"				},
+	{ "dhcp" #i "_lease",		"1440"				}, \
+	{ "bwl_lan" #i "_enable",	"0"				}, \
+	{ "bwl_lan" #i "_dlc",		""				}, \
+	{ "bwl_lan" #i "_ulc",		""				}, \
+	{ "bwl_lan" #i "_dlr",		""				}, \
+	{ "bwl_lan" #i "_ulr",		""				}, \
+	{ "bwl_lan" #i "_prio",		"2"				},
 #ifdef TCONFIG_OPENVPN
  #define BRIDGE_BLOCK_OPENVPN(i) \
 	{ "vpn_server1_plan" #i,	"0"				}, \
@@ -943,13 +949,14 @@ const defaults_t defaults[] = {
 	{ "dnsmasq_gen_names",		"0"				},
 	{ "dnsmasq_edns_size",		"1232"				},	/* dnsmasq EDNS packet size */
 	{ "dnsmasq_safe",		"0"				},	/* should dnsmasq starts in safe mode? (without custom config and /etc/dnsmasq.custom file */
+	{ "dnsmasq_norestart",		"0"				},	/* to disable periodic checking if dnsmasq is up via check_services() */
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	"0"				},
 #endif
 #ifdef TCONFIG_USB_EXTRAS
 	{ "dnsmasq_tftp",		"0"				},
 	{ "dnsmasq_tftp_path",		""				},
-	{ "dnsmasq_pxelan0",		"0"				},
+	{ "dnsmasq_pxelan",		"0"				},
 #endif
 #ifdef TCONFIG_MDNS
 	{ "mdns_enable",		"0"				},
@@ -1786,32 +1793,14 @@ const defaults_t defaults[] = {
 /* bwlimit */
 	{ "bwl_enable",			"0"				},
 	{ "bwl_rules",			""				},
-	{ "bwl_br0_enable",		"0"				},
-	{ "bwl_br0_dlc",		""				},
-	{ "bwl_br0_ulc",		""				},
-	{ "bwl_br0_dlr",		""				},
-	{ "bwl_br0_ulr",		""				},
-	{ "bwl_br0_tcp",		"0"				},	/* unlimited */
-	{ "bwl_br0_udp",		"0"				},	/* unlimited */
-	{ "bwl_br0_prio",		"3"				},
-	{ "bwl_br1_enable",		"0"				},
-	{ "bwl_br1_dlc",		""				},
-	{ "bwl_br1_ulc",		""				},
-	{ "bwl_br1_dlr",		""				},
-	{ "bwl_br1_ulr",		""				},
-	{ "bwl_br1_prio",		"2"				},
-	{ "bwl_br2_enable",		"0"				},
-	{ "bwl_br2_dlc",		""				},
-	{ "bwl_br2_ulc",		""				},
-	{ "bwl_br2_dlr",		""				},
-	{ "bwl_br2_ulr",		""				},
-	{ "bwl_br2_prio",		"2"				},
-	{ "bwl_br3_enable",		"0"				},
-	{ "bwl_br3_dlc",		""				},
-	{ "bwl_br3_ulc",		""				},
-	{ "bwl_br3_dlr",		""				},
-	{ "bwl_br3_ulr",		""				},
-	{ "bwl_br3_prio",		"2"				},
+	{ "bwl_lan_enable",		"0"				},
+	{ "bwl_lan_dlc",		""				},
+	{ "bwl_lan_ulc",		""				},
+	{ "bwl_lan_dlr",		""				},
+	{ "bwl_lan_ulr",		""				},
+	{ "bwl_lan_tcp",		"0"				},	/* unlimited */
+	{ "bwl_lan_udp",		"0"				},	/* unlimited */
+	{ "bwl_lan_prio",		"3"				},
 
 #ifdef TCONFIG_NOCAT
 	{ "NC_enable",			"0"				},	/* enable NoCatSplash */

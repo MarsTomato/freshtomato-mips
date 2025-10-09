@@ -349,6 +349,7 @@ extern void del_upnp_defaults(void);
 extern void add_bsd_defaults(void);
 extern void del_bsd_defaults(void);
 #endif /* TCONFIG_BCMBSD */
+extern void restart_firewall(void);
 
 /* usb.c */
 #ifdef TCONFIG_USB
@@ -536,14 +537,14 @@ extern void start_pptp_client(void);
 extern void stop_pptp_client(void);
 extern void start_pptp_client_eas(void);
 extern void stop_pptp_client_eas(void);
-extern int write_pptp_client_resolv(FILE*);
+extern int write_pptpc_resolv(FILE*);
 extern int pptpc_ipup_main(int argc, char **argv);
 extern int pptpc_ipdown_main(int argc, char **argv);
-extern void pptp_client_firewall(const char *table, const char *opt, _tf_ipt_write table_writer);
+extern void pptpc_firewall(const char *table, const char *opt, _tf_ipt_write table_writer);
 #else
 static inline void start_pptp_client_eas(void) {};
 static inline void stop_pptp_client_eas(void) {};
-#define write_pptp_client_resolv(f) (0)
+#define write_pptpc_resolv(f) (0)
 #endif
 
 /* nvram */
@@ -693,5 +694,6 @@ extern void clear_resolv(void);
 extern const char dmhosts[];
 extern const char dmresolv[];
 extern const char dmipset[];
+extern pid_t pid_dnsmasq;
 
 #endif /* __RC_H__ */

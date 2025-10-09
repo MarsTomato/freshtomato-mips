@@ -38,9 +38,20 @@ body {
 	position: relative;
 	height: 100%;
 	width: 100%;
-	filter: brightness(80%) sepia(10%);
 	background-color: black;
 	background-image: none;
+}
+
+@media screen {
+	.alt-mode {
+		filter: brightness(80%) sepia(10%);
+	}
+}
+
+@media print {
+	.alt-mode {
+		filter: none;
+	}
 }
 
 a {
@@ -790,7 +801,6 @@ div[id$="peers-grid"] .co6,
 	margin-bottom: 12px;
 }
 
-.import-section,
 .section-centered,
 .note-warning,
 #bwm-h-ctrl,
@@ -1107,13 +1117,16 @@ img[id^="barnoise_"] {
 	width: 23%;
 }
 
-.upgrade-file{
+.upgrade-file {
 	width: 90%;
 	overflow: auto;
 	white-space: nowrap;
 }
 
-.import-file,
+.import-file {
+	width: 80%;
+}
+
 #qos-cl-grid .x2c {
 	width: 41%;
 }

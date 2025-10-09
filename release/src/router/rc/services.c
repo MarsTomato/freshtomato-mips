@@ -32,6 +32,7 @@
  * Modified for Tomato Firmware
  * Portions, Copyright (C) 2006-2009 Jonathan Zarate
  * Fixes/updates (C) 2018 - 2025 pedro
+ * https://freshtomato.org/
  *
  */
 
@@ -88,7 +89,6 @@ const char avahicfgalt[] = "/etc/avahi/avahi-daemon_alt.conf";
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
 /* Pop an alarm to reap zombies */
 static const struct itimerval zombie_tv = { {0, 0}, {307, 0} };
-//static pid_t pid_dnsmasq = -1;
 static pid_t pid_crond = -1;
 static pid_t pid_hotplug2 = -1;
 static pid_t pid_igmp = -1;
@@ -286,6 +286,12 @@ void del_bsd_defaults(void)
 	}
 }
 #endif /* TCONFIG_BCMBSD */
+
+void restart_firewall(void)
+{
+	stop_firewall();
+	start_firewall();
+}
 
 #ifdef TCONFIG_DNSCRYPT
 void start_dnscrypt(void)
@@ -715,7 +721,7 @@ void dns_to_resolv(void)
 		if ((f = fopen(dmresolv, (append == 1) ? "w" : "a")) != NULL) { /* write / append */
 			if (append == 1)
 				/* check for VPN DNS entries */
-				exclusive = (write_pptp_client_resolv(f)
+				exclusive = (write_pptpc_resolv(f)
 #ifdef TCONFIG_OPENVPN
 				             || write_ovpn_resolv(f)
 #endif
@@ -724,9 +730,10 @@ void dns_to_resolv(void)
 			logmsg(LOG_DEBUG, "*** %s: exclusive: %d", __FUNCTION__, exclusive);
 			if (!exclusive) { /* exclusive check */
 #ifdef TCONFIG_IPV6
-				if ((write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_dns"), "\n", 0) == 0) || (nvram_get_int("wan_addget"))) /* addget only for the first WAN */
+				if ((write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_dns"), "\n", 0) == 0) || (nvram_get_int("wan_addget"))) { /* addget only for the first WAN */
 					if (append == 1) /* only once */
 						write_ipv6_dns_servers(f, "nameserver ", nvram_safe_get("ipv6_get_dns"), "\n", 0);
+				}
 #endif
 				dns = get_dns(wan_prefix); /* static buffer */
 				if (dns->count == 0) {
@@ -741,7 +748,7 @@ void dns_to_resolv(void)
 								 * defeating the purpose of specifying a bogus DNS server in order to trigger Connect On Demand.
 								 * An IP address from TEST-NET-2 block was chosen here, as RFC 5737 explicitly states this address block
 								 * should be non-routable over the public internet. In effect since January 2010.
-								 * Further info: http://linksysinfo.org/index.php?threads/tomato-using-1-1-1-1-for-pppoe-connect-on-demand.74102
+								 * Further info: https://linksysinfo.org/index.php?threads/tomato-using-1-1-1-1-for-pppoe-connect-on-demand.74102/
 								 * Also add possibility to change that IP (198.51.100.1) in GUI by the user
 								 */
 								trig_ip = nvram_safe_get(strlcat_r(wan_prefix, "_ppp_demand_dnsip", tmp, sizeof(tmp)));
@@ -1759,9 +1766,9 @@ void start_ntpd(void)
 {
 	FILE *f;
 	char *servers, *ptr;
-	int servers_len = 0, ntp_updates_int = 0, index = 2, ret;
+	int servers_len = 0, ntp_updates_int = 0, index = 2, off, i;
 	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL, NULL, NULL }; /* -ddddddd -q -S /sbin/ntpd_synced -l */
-	pid_t pid;
+	char cmd[256];
 
 	if (serialize_restart("ntpd", 1))
 		return;
@@ -1774,7 +1781,7 @@ void start_ntpd(void)
 	/* this is the nvram var defining how the server should be run / how often to sync */
 	ntp_updates_int = nvram_get_int("ntp_updates");
 
-	/* the Tomato GUI allows the user to select an NTP Server region, and then string concats 1. 2. and 3. as prefix
+	/* the FreshTomato GUI allows the user to select an NTP Server region, and then string concats 1. 2. and 3. as prefix
 	 * therefore, the nvram variable contains a string of 3 NTP servers - This code separates them and passes them to
 	 * ntpd as separate parameters. this code should continue to work if GUI is changed to only store 1 value in the NVRAM var
 	 */
@@ -1820,15 +1827,22 @@ void start_ntpd(void)
 				ntpd_argv[index++] = "-l";
 		}
 
-		ret = _eval(ntpd_argv, NULL, 0, &pid);
+		memset(cmd, 0, sizeof(cmd)); /* reset */
+		off = snprintf(cmd, sizeof(cmd), "sh -c 'ulimit -c 0 -e 15 -r 15 -l 64 -m 4096 -n 512 -s 4096 -u 2 -v 4096; %s", ntpd_argv[0]);
+		for (i = 1; ntpd_argv[i]; ++i)
+			off += snprintf(cmd + off, sizeof(cmd) - off, " %s", ntpd_argv[i]);
+
+		snprintf(cmd + off, sizeof(cmd) - off, "'");
+		system(cmd);
 
 		if (!nvram_contains_word("debug_norestart", "ntpd"))
 			pid_ntpd = -2;
 
-		if (ret)
-			logmsg(LOG_ERR, "starting ntpd failed ...");
-		else
+		sleep(1);
+		if (pidof("ntpd") > 0)
 			logmsg(LOG_INFO, "ntpd is started");
+		else
+			logmsg(LOG_ERR, "starting ntpd failed ...");
 	}
 }
 
@@ -2257,9 +2271,13 @@ void check_services(void)
 	/* do not restart if upgrading/rebooting */
 	if (!nvram_get_int("g_upgrade") && !nvram_get_int("g_reboot")) {
 		_check(pid_hotplug2, "hotplug2", start_hotplug2);
-//		_check(pid_dnsmasq, "dnsmasq", start_dnsmasq);
+
+		if (!nvram_get_int("dnsmasq_norestart"))
+			_check(pid_dnsmasq, "dnsmasq", start_dnsmasq);
+
 		_check(pid_crond, "crond", start_cron);
 		_check(pid_igmp, "igmpproxy", start_igmp_proxy);
+
 		if (nvram_get_int("ntp_updates") >= 1)
 			_check(pid_ntpd, "ntpd", start_ntpd);
 	}
@@ -2620,14 +2638,13 @@ TOP:
 			stop_nocat();
 #endif
 		}
-		stop_firewall();
-		start_firewall(); /* always restarted */
 		if (act_start) {
 			start_bwlimit();
 #ifdef TCONFIG_NOCAT
 			start_nocat();
 #endif
 		}
+		restart_firewall(); /* always restart */
 		goto CLEAR;
 	}
 
@@ -2639,8 +2656,6 @@ TOP:
 				stop_qos(buffer2);
 			}
 		}
-		stop_firewall();
-		start_firewall(); /* always restarted */
 		if (act_start) {
 			for (i = 1; i <= MWAN_MAX; i++) {
 				memset(buffer2, 0, sizeof(buffer2));
@@ -2651,14 +2666,14 @@ TOP:
 			if (nvram_get_int("qos_reset"))
 				f_write_string("/proc/net/clear_marks", "1", 0, 0);
 		}
+		restart_firewall(); /* always restart */
 		goto CLEAR;
 	}
 
 	if ((strcmp(service, "upnp") == 0) || (strcmp(service, "miniupnpd") == 0)) {
 		if (act_stop) stop_upnp();
-		stop_firewall();
-		start_firewall(); /* always restarted */
 		if (act_start) start_upnp();
+		restart_firewall(); /* always restart */
 		goto CLEAR;
 	}
 
@@ -2695,8 +2710,6 @@ TOP:
 			stop_telnetd();
 			stop_httpd();
 		}
-		stop_firewall();
-		start_firewall(); /* always restarted */
 		if (act_start) {
 			stop_httpd();
 			start_httpd();
@@ -2707,6 +2720,7 @@ TOP:
 			if (nvram_get_int("sshd_eas") && (!(strcmp(service, "adminnosshd") == 0)))
 				start_sshd();
 		}
+		restart_firewall(); /* always restart */
 		goto CLEAR;
 	}
 
@@ -2729,8 +2743,7 @@ TOP:
 			/* always restarted except from "service" command */
 			stop_cron();
 			start_cron();
-			stop_firewall();
-			start_firewall();
+			restart_firewall();
 		}
 		goto CLEAR;
 	}
@@ -2862,8 +2875,6 @@ TOP:
 					eval("brctl", "stp", nvram_safe_get(buffer2), "0");
 			}
 		}
-		stop_firewall();
-		start_firewall();
 		if (act_start) {
 			do_static_routes(1); /* add new */
 #ifdef TCONFIG_ZEBRA
@@ -2879,14 +2890,14 @@ TOP:
 				}
 			}
 		}
+		restart_firewall(); /* always restart */
 		goto CLEAR;
 	}
 
 	if (strcmp(service, "ctnf") == 0) {
 		if (act_start) {
 			setup_conntrack();
-			stop_firewall();
-			start_firewall();
+			restart_firewall(); /* always restart */
 		}
 		goto CLEAR;
 	}
@@ -3053,9 +3064,8 @@ TOP:
 #ifdef TCONFIG_TOR
 	if (strcmp(service, "tor") == 0) {
 		if (act_stop) stop_tor();
-		stop_firewall();
-		start_firewall(); /* always restarted */
 		if (act_start) start_tor(1); /* force (re)start */
+		restart_firewall(); /* always restart */
 		goto CLEAR;
 	}
 #endif

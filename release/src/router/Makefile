@@ -2486,9 +2486,9 @@ libxml2: libxml2/static/Makefile libxml2/build/Makefile
 
 libxml2-install:
 ifeq ($(TCONFIG_BCMARM),y)
-	install -D libxml2/staged/usr/lib/libxml2.so.16.0.5 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.5
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.0.5
-	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.0.5 libxml2.so.16 && ln -sf libxml2.so.16.0.5 libxml2.so
+	install -D libxml2/staged/usr/lib/libxml2.so.16.1.0 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.0
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.0
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.1.0 libxml2.so.16 && ln -sf libxml2.so.16.1.0 libxml2.so
 else
 	install -D libxml2/staged/usr/lib/libxml2.so.2.13.7 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
 	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
@@ -3832,45 +3832,77 @@ libdaemon-clean:
 	@rm -rf libdaemon/staged
 	@rm -f libdaemon/stamp-h1
 
-expat/stamp-h1:
-	cd expat && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		CXXFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --without-docbook --without-examples --without-tests --disable-dependency-tracking
-	touch $@
+expat/static/Makefile:
+	@rm -rf expat/static && mkdir -p expat/static
+	cd expat/static && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections" \
+			-DCMAKE_CXX_FLAGS="-Wall $(EXTRA_CXXFLAGS) -DNDEBUG -ffunction-sections -fdata-sections" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
+			-DEXPAT_BUILD_TOOLS=OFF \
+			-DEXPAT_BUILD_EXAMPLES=OFF \
+			-DEXPAT_BUILD_TESTS=OFF \
+			-DEXPAT_BUILD_DOCS=OFF \
+			-DEXPAT_DTD=OFF \
+			-DEXPAT_NS=OFF \
+			-DEXPAT_MIN_SIZE=ON \
+			-DEXPAT_SHARED_LIBS=OFF \
+			..
 
-expat: expat/stamp-h1
+expat/build/Makefile:
+	@rm -rf expat/build && mkdir -p expat/build
+	cd expat/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections" \
+			-DCMAKE_CXX_FLAGS="-Wall $(EXTRA_CXXFLAGS) -DNDEBUG -ffunction-sections -fdata-sections" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
+			-DEXPAT_BUILD_TOOLS=OFF \
+			-DEXPAT_BUILD_EXAMPLES=OFF \
+			-DEXPAT_BUILD_TESTS=OFF \
+			-DEXPAT_BUILD_DOCS=OFF \
+			-DEXPAT_DTD=OFF \
+			-DEXPAT_NS=OFF \
+			-DEXPAT_MIN_SIZE=ON \
+			..
+
+expat: expat/static/Makefile expat/build/Makefile
 	@$(SEP)
-	@$(MAKE) -C $@ $(PARALLEL_BUILD)
-	@$(MAKE) -C $@ DESTDIR=$(TOP)/expat/staged install
+	@$(MAKE) -C expat/static all $(PARALLEL_BUILD)
+	@$(MAKE) -C expat/build all $(PARALLEL_BUILD)
+	@$(MAKE) -C expat/build DESTDIR=$(TOP)/expat/staged install
 
 expat-install:
-	install -D expat/staged/usr/lib/libexpat.so.1.10.2 $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.10.2
-	$(STRIP) $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.10.2
-	cd $(INSTALLDIR)/expat/usr/lib && ln -sf libexpat.so.1.10.2 libexpat.so.1
+	install -D expat/build/libexpat.so.1.11.1 $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.11.1
+	cd $(INSTALLDIR)/expat/usr/lib && $(STRIP) libexpat.so.1.11.1 && ln -sf libexpat.so.1.11.1 libexpat.so.1
 
 expat-clean:
-	-@$(MAKE) -C expat clean
+	@rm -rf expat/static
+	@rm -rf expat/build
 	@rm -rf expat/staged
-	@rm -f expat/stamp-h1
 
 avahi/stamp-h1:
 	$(call patch_files,avahi)
 	cd avahi && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/expat/staged/usr/include" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -DNDEBUG -DDISABLE_SYSTEMD -I$(TOP)/expat/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/expat/staged/usr/lib -ldl -lpthread" \
 		LIBDAEMON_CFLAGS="-I$(TOP)/libdaemon" \
 		LIBDAEMON_LIBS="-L$(TOP)/libdaemon/libdaemon/.libs -ldaemon" \
 		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc localstatedir=/var --with-distro=none \
-			--enable-introspection=no \
+			--disable-introspection \
 			--disable-nls --disable-glib --disable-libevent --disable-gobject \
 			--disable-qt3 --disable-qt4 --disable-qt5 --disable-gtk --disable-gtk3 \
 			--disable-dbus --disable-gdbm --disable-python --disable-python-dbus \
-			--disable-mono --disable-monodoc --disable-autoipd \
-			--disable-doxygen-doc --disable-manpages --disable-xmltoman \
+			--disable-dbm --disable-mono --disable-monodoc --disable-autoipd --disable-tests \
+			--disable-manpages --disable-xmltoman --disable-doxygen-doc --disable-doxygen-dot \
+			--disable-doxygen-man --disable-doxygen-rtf --disable-doxygen-xml --disable-doxygen-chm \
+			--disable-doxygen-chi --disable-doxygen-html --disable-doxygen-ps --disable-doxygen-pdf \
 			--with-xml=expat \
-			--with-avahi-user="nobody" --with-avahi-group="nobody" \
+			--with-avahi-user=nobody --with-avahi-group=nobody \
+			--with-autoipd-user=nobody --with-autoipd-group=nobody /
 			--disable-stack-protector \
 			--disable-dependency-tracking \
 			avahi_runtime_dir=/var/run servicedir=/etc/avahi/services

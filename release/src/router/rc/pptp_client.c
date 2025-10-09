@@ -2,7 +2,8 @@
  * PPTP CLIENT start/stop and configuration for Tomato
  * by Jean-Yves Avenard (c) 2008-2011
  *
- * Fixes/updates (C) 2018 - 2022 pedro
+ * Fixes/updates (C) 2018 - 2025 pedro
+ * https://freshtomato.org/
  *
  */
 
@@ -20,6 +21,7 @@
 #define PPTPC_CLIENT		PPTPC_DIR"/pptpclient"
 #define PPTPC_UP_SCRIPT		PPTPC_DIR"/pptpc_ip-up"
 #define PPTPC_DOWN_SCRIPT	PPTPC_DIR"/pptpc_ip-down"
+#define PPTPC_RESOLV_FILE	PPTPC_TMP_DIR"/resolv.conf"
 
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
@@ -221,7 +223,7 @@ void stop_pptp_client(void)
 	/* Delete all files for this client */
 	unlink(PPTPC_CLIENT"_connecting");
 	memset(buffer, 0, BUF_SIZE);
-	snprintf(buffer, BUF_SIZE, "rm -rf "PPTPC_CLIENT" "PPTPC_DOWN_SCRIPT" "PPTPC_UP_SCRIPT" "PPTPC_OPTIONS" "PPTPC_TMP_DIR"/resolv.conf");
+	snprintf(buffer, BUF_SIZE, "rm -rf "PPTPC_CLIENT" "PPTPC_DOWN_SCRIPT" "PPTPC_UP_SCRIPT" "PPTPC_OPTIONS" "PPTPC_RESOLV_FILE);
 	for (argv[argc = 0] = strtok(buffer, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
 	_eval(argv, NULL, 0, NULL);
 
@@ -244,7 +246,7 @@ void stop_pptp_client_eas(void)
 		stop_pptp_client();
 }
 
-void pptp_client_firewall(const char *table, const char *opt, _tf_ipt_write ipt_writer)
+void pptpc_firewall(const char *table, const char *opt, _tf_ipt_write ipt_writer)
 {
 	char *pptpcface = nvram_safe_get("pptp_client_iface");
 	char *srvsub = nvram_safe_get("pptp_client_srvsub");
@@ -275,31 +277,24 @@ void pptp_client_firewall(const char *table, const char *opt, _tf_ipt_write ipt_
 	}
 }
 
-int write_pptp_client_resolv(FILE* f)
+int write_pptpc_resolv(FILE* f)
 {
-	FILE *dnsf;
 	int usepeer;
-	int ch;
 
 	if ((usepeer = nvram_get_int("pptp_client_peerdns")) <= 0)
 		return 0;
 
 	if (pidof("pptpclient") > 0) { /* write DNS only for active client */
-		if (!(dnsf = fopen(PPTPC_TMP_DIR"/resolv.conf", "r" )))
+		if (fappend(f, PPTPC_RESOLV_FILE) == -1)
 			return 0;
 
-		fputs("# pptp client dns:\n", f);
-		while (!feof(dnsf)) {
-			ch = fgetc(dnsf);
-			fputc(ch == EOF ? '\n' : ch, f);
-		}
-		fclose(dnsf);
+		logmsg(LOG_INFO, "%s: adding DNS entries from %s", __FUNCTION__, PPTPC_RESOLV_FILE);
 	}
 
 	return (usepeer == 2) ? 1 : 0;
 }
 
-static void pptp_client_add_route(void)
+static void pptpc_add_route(void)
 {
 	if (nvram_get_int("pptp_client_dfltroute") == 1) {
 		char buffer[BUF_SIZE];
@@ -309,7 +304,7 @@ static void pptp_client_add_route(void)
 	}
 }
 
-static void pptp_client_del_route(void)
+static void pptpc_del_route(void)
 {
 	char buffer[BUF_SIZE];
 	char pmw[] = "wanXX";
@@ -353,7 +348,7 @@ static void pptp_client_del_route(void)
 	}
 }
 
-static void pptp_client_del_table(void)
+static void pptpc_del_table(void)
 {
 	char buffer[BUF_SIZE];
 
@@ -380,7 +375,7 @@ static void pptp_client_del_table(void)
 }
 
 /* set pptp_client ip route table & ip rule table */
-static void pptp_client_add_table(void)
+static void pptpc_add_table(void)
 {
 	int mwan_num, i, wanid, proto;
 	char buffer[BUF_SIZE];
@@ -394,7 +389,7 @@ static void pptp_client_add_table(void)
 	char *pptp_client_iface = nvram_safe_get("pptp_client_iface");
 	const dns_list_t *pptp_dns = get_dns("pptp_client");
 
-	pptp_client_del_table();
+	pptpc_del_table();
 
 	mwan_num = nvram_get_int("mwan_num");
 
@@ -551,11 +546,10 @@ int pptpc_ipup_main(int argc, char **argv)
 
 	env2nv("IPREMOTE", "pptp_client_gateway");
 
-	pptp_client_add_table();
-	pptp_client_add_route();
+	pptpc_add_table();
+	pptpc_add_route();
 
-	stop_firewall();
-	start_firewall();
+	restart_firewall();
 
 	stop_dnsmasq();
 	dns_to_resolv();
@@ -569,8 +563,8 @@ int pptpc_ipdown_main(int argc, char **argv)
 	if (!wait_action_idle(10))
 		return -1;
 
-	pptp_client_del_table();
-	pptp_client_del_route();
+	pptpc_del_table();
+	pptpc_del_route();
 
 	unlink(PPTPC_CLIENT"_link");
 	unlink(PPTPC_CLIENT"_time");
@@ -581,8 +575,7 @@ int pptpc_ipdown_main(int argc, char **argv)
 	nvram_set("pptp_client_netmask", "0.0.0.0");
 	nvram_set("pptp_client_gateway", "0.0.0.0");
 
-	stop_firewall();
-	start_firewall();
+	restart_firewall();
 
 	stop_dnsmasq();
 	dns_to_resolv();

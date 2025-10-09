@@ -126,7 +126,7 @@ const aspapi_t aspapi[] = {
 	{ "rrule",			asp_rrule			},
 	{ "statfs",			asp_statfs			},
 	{ "sysinfo",			asp_sysinfo			},
-#ifdef TCONFIG_BCMARM
+#if 0
 	{ "jiffies",			asp_jiffies			},
 #endif
 	{ "time",			asp_time			},
@@ -265,7 +265,13 @@ const aspapi_t aspapi[] = {
 	{ "dhcpd" #i "_endip",		V_LENGTH(0, 15)			}, \
 	{ "dhcpd" #i "_ostatic",	V_01				}, /* ignore DHCP requests from unknown devices on LANX */ \
 	{ "dhcp" #i "_lease",		V_LENGTH(0, 5)			}, \
-	{ "upnp_lan" #i "",		V_01				},
+	{ "upnp_lan" #i,		V_01				}, \
+	{ "bwl_lan" #i "_enable",	V_01				}, \
+	{ "bwl_lan" #i "_dlc",		V_RANGE(0, 99999999)		}, \
+	{ "bwl_lan" #i "_ulc",		V_RANGE(0, 99999999)		}, \
+	{ "bwl_lan" #i "_dlr",		V_RANGE(0, 99999999)		}, \
+	{ "bwl_lan" #i "_ulr",		V_RANGE(0, 99999999)		}, \
+	{ "bwl_lan" #i "_prio",		V_RANGE(0, 5)			},
 #ifdef TCONFIG_OPENVPN
  #define BRIDGE_BLOCK_OPENVPN(i) \
 	{ "vpn_server1_plan" #i,	V_01				}, \
@@ -613,13 +619,14 @@ static const nvset_t nvset_list[] = {
 	{ "dnsmasq_gen_names",		V_01				},	/* generate a name for DHCP clients which do not otherwise have one */
 	{ "dnsmasq_edns_size",		V_RANGE(512, 4096)		},	/* dnsmasq EDNS packet size (default 1280) */
 	{ "dnsmasq_safe",		V_01				},	/* should dnsmasq starts in safe mode? (without custom config and /etc/dnsmasq.custom file */
+	{ "dnsmasq_norestart",		V_01				},	/* to disable periodic checking if dnsmasq is up via check_services() */
 #ifdef TCONFIG_TOR
 	{ "dnsmasq_onion_support",	V_01				},
 #endif
 #ifdef TCONFIG_USB_EXTRAS
 	{ "dnsmasq_tftp",		V_01				},
 	{ "dnsmasq_tftp_path",		V_TEXT(0, 128)			},
-	{ "dnsmasq_pxelan0",		V_01				},
+	{ "dnsmasq_pxelan",		V_01				},
 #endif
 #ifdef TCONFIG_MDNS
 	{ "mdns_enable",		V_01				},
@@ -1233,32 +1240,14 @@ static const nvset_t nvset_list[] = {
 /* bwlimit */
 	{ "bwl_enable",			V_01				},
 	{ "bwl_rules",			V_LENGTH(0, 4096)		},
-	{ "bwl_br0_enable",		V_01				},
-	{ "bwl_br0_dlc",		V_RANGE(0, 99999999)		},
-	{ "bwl_br0_ulc",		V_RANGE(0, 99999999)		},
-	{ "bwl_br0_dlr",		V_RANGE(0, 99999999)		},
-	{ "bwl_br0_ulr",		V_RANGE(0, 99999999)		},
-	{ "bwl_br0_tcp",		V_RANGE(0, 1000)		},
-	{ "bwl_br0_udp",		V_RANGE(0, 100)			},
-	{ "bwl_br0_prio",		V_RANGE(0, 5)			},
-	{ "bwl_br1_enable",		V_01				},
-	{ "bwl_br1_dlc",		V_RANGE(0, 99999999)		},
-	{ "bwl_br1_ulc",		V_RANGE(0, 99999999)		},
-	{ "bwl_br1_dlr",		V_RANGE(0, 99999999)		},
-	{ "bwl_br1_ulr",		V_RANGE(0, 99999999)		},
-	{ "bwl_br1_prio",		V_RANGE(0, 5)			},
-	{ "bwl_br2_enable",		V_01				},
-	{ "bwl_br2_dlc",		V_RANGE(0, 99999999)		},
-	{ "bwl_br2_ulc",		V_RANGE(0, 99999999)		},
-	{ "bwl_br2_dlr",		V_RANGE(0, 99999999)		},
-	{ "bwl_br2_ulr",		V_RANGE(0, 99999999)		},
-	{ "bwl_br2_prio",		V_RANGE(0, 5)			},
-	{ "bwl_br3_enable",		V_01				},
-	{ "bwl_br3_dlc",		V_RANGE(0, 99999999)		},
-	{ "bwl_br3_ulc",		V_RANGE(0, 99999999)		},
-	{ "bwl_br3_dlr",		V_RANGE(0, 99999999)		},
-	{ "bwl_br3_ulr",		V_RANGE(0, 99999999)		},
-	{ "bwl_br3_prio",		V_RANGE(0, 5)			},
+	{ "bwl_lan_enable",		V_01				},
+	{ "bwl_lan_dlc",		V_RANGE(0, 99999999)		},
+	{ "bwl_lan_ulc",		V_RANGE(0, 99999999)		},
+	{ "bwl_lan_dlr",		V_RANGE(0, 99999999)		},
+	{ "bwl_lan_ulr",		V_RANGE(0, 99999999)		},
+	{ "bwl_lan_tcp",		V_RANGE(0, 1000)		},
+	{ "bwl_lan_udp",		V_RANGE(0, 100)			},
+	{ "bwl_lan_prio",		V_RANGE(0, 5)			},
 
 #ifdef TCONFIG_BT
 /* nas-transmission */
@@ -2561,7 +2550,6 @@ const struct mime_handler mime_handlers[] = {
 	{ "**.png",			"image/png",				12,	wi_generic_noid,	do_file,		1 },
 	{ "**.js",			mime_javascript,			12,	wi_generic_noid,	do_file,		1 },
 	{ "**.jsx",			mime_javascript,			0,	wi_generic,		wo_asp,			1 },
-	{ "**.jsz",			mime_javascript,			0,	wi_generic_noid,	wo_asp,			1 },
 	{ "**.svg",			"image/svg+xml",			0,	wi_generic_noid,	wo_asp,			1 },
 	{ "**.txt",			mime_plain,				2,	wi_generic_noid,	do_file,		1 },
 	{ "**.bin",			mime_binary,				0,	wi_generic_noid,	do_file,		1 },

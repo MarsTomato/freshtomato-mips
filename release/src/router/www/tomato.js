@@ -3029,7 +3029,7 @@ function toggleTheme() {
 
 }
 
-var up = new TomatoRefresh('isup.jsz', '', 5);
+var up = new TomatoRefresh('isup.jsx', '', 5);
 up.refresh = function(text) {
 	isup = {};
 	try {

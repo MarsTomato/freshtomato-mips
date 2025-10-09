@@ -13,13 +13,13 @@
 <title>[<% ident(); %>] NAS: Media Server</title>
 <link rel="stylesheet" type="text/css" href="tomato.css?rel=<% version(); %>">
 <% css(); %>
-<script src="isup.jsz?rel=<% version(); %>"></script>
+<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
 <script src="isup.js?rel=<% version(); %>"></script>
 <script src="tomato.js?rel=<% version(); %>"></script>
 
 <script>
 
-//	<% nvram("ms_enable,ms_port,ms_dirs,ms_dbdir,ms_ifname,ms_tivo,ms_stdlna,ms_sas,ms_autoscan,ms_custom,cifs1,cifs2,jffs2_on,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_ipaddr,lan1_ipaddr,lan2_ipaddr,lan3_ipaddr"); %>
+//	<% nvram("ms_enable,ms_port,ms_dirs,ms_dbdir,ms_ifname,ms_tivo,ms_stdlna,ms_sas,ms_autoscan,ms_custom,cifs1,cifs2,jffs2_on,lan_ifname,lan_ipaddr"); %>
 
 var changed = 0;
 var reinit = 0;
