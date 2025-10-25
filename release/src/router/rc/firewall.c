@@ -984,7 +984,7 @@ static void filter_input(void)
 
 		ipt_write("-N wwwlimit\n"
 		          "-A wwwlimit -m recent --set --name www\n"
-		          "-A wwwlimit -m recent --update --hitcount 30 --seconds 5 --name www -j %s\n",
+		          "-A wwwlimit -m recent --update --hitcount 20 --seconds 3 --name www -j %s\n",
 		          chain_in_drop);
 
 		if (nvram_get_int("dmz_enable") && nvram_get_int("dmz_ra"))
@@ -1297,6 +1297,14 @@ static void filter_forward(void)
 		}
 	}
 
+#if defined(TCONFIG_OPENVPN) || defined(TCONFIG_WIREGUARD)
+#ifdef TCONFIG_IPV6
+	kill_switch(ipt_write, ip6t_write);
+#else
+	kill_switch(ipt_write);
+#endif
+#endif
+
 #ifdef TCONFIG_PPTPD
 	/* Add for pptp client */
 	pptpc_firewall("FORWARD", "", ipt_write);
@@ -1471,7 +1479,7 @@ static void filter6_input(void)
 
 		ip6t_write("-N wwwlimit\n"
 		           "-A wwwlimit -m recent --set --name www\n"
-		           "-A wwwlimit -m recent --update --hitcount 30 --seconds 5 --name www -j %s\n",
+		           "-A wwwlimit -m recent --update --hitcount 20 --seconds 3 --name www -j %s\n",
 		           chain_in_drop);
 
 		if (nvram_get_int("dmz_enable") && nvram_get_int("dmz_ra"))
@@ -1792,7 +1800,7 @@ int start_firewall(void)
 	}
 
 	if ((ipt_file = fopen(ipt_fname, "w")) == NULL) {
-		notice_set("iptables", "Unable to create iptables restore file");
+		notice_set("iptables", "Unable to create iptables restore file!");
 		simple_unlock("firewall");
 		return 0;
 	}
@@ -1800,7 +1808,7 @@ int start_firewall(void)
 #ifdef TCONFIG_IPV6
 	if (ipv6_enabled) {
 		if ((ip6t_file = fopen(ip6t_fname, "w")) == NULL) {
-			notice_set("ip6tables", "Unable to create ip6tables restore file");
+			notice_set("ip6tables", "Unable to create ip6tables restore file!");
 			simple_unlock("firewall");
 			return 0;
 		}
@@ -1932,10 +1940,6 @@ int start_firewall(void)
 
 	unlink("/var/webmon/domain");
 	unlink("/var/webmon/search");
-
-#if defined(TCONFIG_OPENVPN) || defined(TCONFIG_WIREGUARD)
-	kill_switch();
-#endif
 
 #ifdef TCONFIG_PPTPD
 	run_pptpd_firewall_script();
