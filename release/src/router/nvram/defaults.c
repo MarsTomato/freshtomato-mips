@@ -82,9 +82,11 @@ const defaults_t snmp_defaults[] = {
 	{ "snmp_port",			"161"				},
 	{ "snmp_remote",		"0"				},
 	{ "snmp_remote_sip",		""				},
-	{ "snmp_location",		"router"			},
-	{ "snmp_contact",		"admin@tomato"			},
-	{ "snmp_ro",			"rocommunity"			},
+	{ "snmp_location",		""				},
+	{ "snmp_contact",		""				},
+	{ "snmp_ro",			""				},
+	{ "snmp_name",			""				},
+	{ "snmp_descr",			""				},
 	{ NULL, NULL }
 };
 #endif /* TCONFIG_SNMP */
