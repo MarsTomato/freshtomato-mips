@@ -20,7 +20,7 @@
 	June 2014 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - 27-10-2025 - pedro **
+	** Last Updated - May 15 2024 - pedro **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -159,8 +159,8 @@ switch (nvram['t_model_name']) {
 	case 'Netgear WNR3500L v2':
 	case 'Tenda N60':
 	case 'Linksys WRT160N': /* WRT160Nv3 */
-	case 'Linksys E3000':
 	case 'Linksys E2000':
+	case 'Linksys E3000':
 		COL_P0N = '0';
 		COL_P1N = '4';
 		COL_P2N = '3';
