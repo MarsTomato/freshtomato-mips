@@ -21,6 +21,11 @@
 #define LOGMSG_NVDEBUG	"rc_debug"
 
 
+#if defined(TCONFIG_OPENVPN) || defined(TCONFIG_WIREGUARD)
+ const char ks_dir[]      = "/tmp/kill-switch";
+ const char ks_fqdns_fn[] = "fqdns";
+#endif
+
 #ifdef DEBUG_RCTEST
 /* used for various testing */
 static int rctest_main(int argc, char *argv[])
@@ -484,8 +489,9 @@ void kill_switch(_tf_ipt_write ipt_write, _tf_ip6t_write ip6t_write)
 void kill_switch(_tf_ipt_write ipt_write)
 #endif
 {
-	unsigned int unit, br, rules_count, kd, type1_count;
-	int policy_type, wan_unit, mwan_num, ret;
+	FILE *fp = NULL;
+	unsigned int unit, br, rules_count, kd, type1_added, type3_exist = 0, type3_err = 0, type3_ok_fp = 0;
+	int policy_type, wan_unit, mwan_num, ret, res;
 	char *enable, *type, *value, *kswitch;
 	char *nv, *nvp, *b, *c, *lan_ip;
 	char wan_prefix[] = "wanXX";
@@ -493,6 +499,8 @@ void kill_switch(_tf_ipt_write ipt_write)
 	static char sip[64];
 	size_t n, i, j, dots, count;
 	const char *routing_key, *rgw_key, *iface_fmt;
+
+	/* note: this will be eliminated with a global kill-switch */
 	const char* kind[] = {
 #ifdef TCONFIG_OPENVPN
 	                       "ovpn"
@@ -506,6 +514,15 @@ void kill_switch(_tf_ipt_write ipt_write)
 	};
 	n = ASIZE(kind);
 
+	/* create kill-switch dir */
+	mkdir_if_none(ks_dir);
+
+	/* open FQDN file for writing */
+	memset(buf, 0, sizeof(buf)); /* reset */
+	snprintf(buf, sizeof(buf), "%s/%s", ks_dir, ks_fqdns_fn);
+	fp = fopen(buf, "w");
+
+	/* proceed routing_val */
 	for (i = 0; i < n; i++) {
 		kd = (strcmp(kind[i], "wg") == 0 ? 0 : 1);
 		routing_key = (kd ? "vpn_client%u_routing_val" : "wg%u_routing_val");
@@ -568,7 +585,7 @@ void kill_switch(_tf_ipt_write ipt_write)
 					/* "From Source IP" */
 					if (policy_type == 1) {
 						/* find correct bridge for given IP */
-						type1_count = 0;
+						type1_added = 0;
 						for (br = 0; br < BRIDGE_COUNT; br++) {
 							memset(buf, 0, sizeof(buf)); /* reset */
 							snprintf(buf, sizeof(buf), (br == 0 ? "lan_ipaddr" : "lan%u_ipaddr"), br);
@@ -612,11 +629,11 @@ void kill_switch(_tf_ipt_write ipt_write)
 									logmsg(LOG_INFO, "Kill-Switch: type: %d - add '%s'", policy_type, sip);
 
 									ipt_write("-I FORWARD %s -i %s -o %s -j REJECT --reject-with icmp-port-unreachable\n", buf2, buf, wan_if); /* sip! */
-									type1_count = 1;
+									type1_added = 1;
 								}
 							}
 						}
-						if (type1_count == 1)
+						if (type1_added == 1)
 							rules_count++;
 					}
 
@@ -630,15 +647,35 @@ void kill_switch(_tf_ipt_write ipt_write)
 
 						/* it's FQDN, so no 'sip' */
 						if (!ret) {
+							/* set the flag that type 3 is present */
+							type3_exist = 1;
+
+							/* warn about problem with FQDN file */
+							if (!fp)
+								logmsg(LOG_WARNING, "Kill-Switch: cannot open FQDN file for writing. IP of domain '%s' will not be refreshed periodically", val);
+
 							/* resolve FQDN */
 							ip_addr *addrs = NULL;
 							count = 0;
-							if (resolve_fqdn(val, &addrs, &count, 500) != 0) { /* timeout: 500ms */
+							res = resolve_fqdn(val, &addrs, &count, 500); /* timeout: 500ms */
+							if (res != 0) {
 								logmsg(LOG_WARNING, "Kill-Switch: type: %d - can't resolve '%s' (are all WANs down, or did you enter the wrong domain?)", policy_type, val);
+								/* set the flag that an error occurred */
+								type3_err = 1;
+
+								/* add FQDN, VPN IF, WAN IF and FLAG to file */
+								if (fp)
+									fprintf(fp, "%s %s %s 1\n", val, buf, wan_if); /* FLAG=1: add domain (only for add mode) */
+
 								continue;
-								/* TODO: these FQDNs have to be added ASAP with some script */
+							}
+							else {
+								/* add FQDN, VPN IF, WAN IF and FLAG to file */
+								if (fp)
+									fprintf(fp, "%s %s %s 0\n", val, buf, wan_if); /* FLAG=0: omit domain (only for add mode) */
 							}
 
+							/* OK to add */
 							logmsg(LOG_INFO, "Kill-Switch: type: %d - add '%s'", policy_type, val);
 
 							/* add every resolved IP */
@@ -674,6 +711,37 @@ void kill_switch(_tf_ipt_write ipt_write)
 			if (rules_count > 0)
 				logmsg(LOG_INFO, "Kill-Switch: added %u rules to firewall for %s%u", rules_count, (kd ? "openvpn-client" : "wireguard"), unit);
 		}
+	}
+	/* close FQDN file */
+	if (fp) {
+		fclose(fp);
+		type3_ok_fp = 1;
+	}
+
+	/* proceed FQDNs */
+	if (type3_exist) {
+		if (type3_ok_fp) {
+			/* run ks helper 12 minutes past every 2nd hour */
+			logmsg(LOG_INFO, "Kill-Switch: add cron job for FQDNs (type 3)");
+			eval("cru", "a", "kscheck", "12 */2 * * * ks_helper.sh update");
+
+			if (type3_err) {
+				/* run ks helper in special mode to add these FQDNs to FW ASAP */
+				logmsg(LOG_WARNING, "Kill-Switch: add KS-helper to add FQDNs (type 3) to firewall ASAP");
+				xstart("ks_helper.sh", "add");
+			}
+			else {
+				/* if every FQDN is added, kill script */
+				killall("ks_helper.sh", SIGTERM);
+			}
+		}
+		else if (!type3_ok_fp && type3_err)
+			logmsg(LOG_ERR, "Kill-Switch: cannot add FQDNs (type 3) to firewall!");
+	}
+	else {
+		/* if there is no type 3, remove cron and helper (if running) */
+		eval("cru", "d", "kscheck");
+		killall("ks_helper.sh", SIGTERM);
 	}
 }
 
