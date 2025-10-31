@@ -286,7 +286,7 @@ function toggleHWKeyHelper() {
 
 <!-- / / / -->
 
-<div id="wait">Please wait...&nbsp; <img src="spin.gif" alt="" id="spin"></div>
+<div id="wait">Please wait...&nbsp; <img src="spin.svg" alt="" id="spin"></div>
 <!-- TERMLIB0-BEGIN -->
 <pre id="result"></pre>
 <!-- TERMLIB0-END -->

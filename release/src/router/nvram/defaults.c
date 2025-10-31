@@ -82,9 +82,11 @@ const defaults_t snmp_defaults[] = {
 	{ "snmp_port",			"161"				},
 	{ "snmp_remote",		"0"				},
 	{ "snmp_remote_sip",		""				},
-	{ "snmp_location",		"router"			},
-	{ "snmp_contact",		"admin@tomato"			},
-	{ "snmp_ro",			"rocommunity"			},
+	{ "snmp_location",		""				},
+	{ "snmp_contact",		""				},
+	{ "snmp_ro",			""				},
+	{ "snmp_name",			""				},
+	{ "snmp_descr",			""				},
 	{ NULL, NULL }
 };
 #endif /* TCONFIG_SNMP */
@@ -1609,23 +1611,23 @@ const defaults_t defaults[] = {
 #endif /* TCONFIG_OPENVPN */
 
 #ifdef TCONFIG_PPTPD
-	{ "pptp_client_eas",		"0"				},
-	{ "pptp_client_usewan",		"none"				},
-	{ "pptp_client_peerdns",	"0"				},
-	{ "pptp_client_mtuenable",	"0"				},
-	{ "pptp_client_mtu",		"1400"				},
-	{ "pptp_client_mruenable",	"0"				},
-	{ "pptp_client_mru",		"1400"				},
-	{ "pptp_client_nat",		"0"				},
-	{ "pptp_client_srvip",		""				},
-	{ "pptp_client_srvsub",		"10.0.0.0"			},
-	{ "pptp_client_srvsubmsk",	"255.0.0.0"			},
-	{ "pptp_client_username",	""				},
-	{ "pptp_client_passwd",		""				},
-	{ "pptp_client_crypt",		"0"				},
-	{ "pptp_client_custom",		""				},
-	{ "pptp_client_dfltroute",	"0"				},
-	{ "pptp_client_stateless",	"1"				},
+	{ "pptpc_eas",			"0"				},
+	{ "pptpc_usewan",		"none"				},
+	{ "pptpc_peerdns",		"0"				},
+	{ "pptpc_mtuenable",		"0"				},
+	{ "pptpc_mtu",			"1400"				},
+	{ "pptpc_mruenable",		"0"				},
+	{ "pptpc_mru",			"1400"				},
+	{ "pptpc_nat",			"0"				},
+	{ "pptpc_srvip",		""				},
+	{ "pptpc_srvsub",		"10.0.0.0"			},
+	{ "pptpc_srvsubmsk",		"255.0.0.0"			},
+	{ "pptpc_username",		""				},
+	{ "pptpc_passwd",		""				},
+	{ "pptpc_crypt",		"0"				},
+	{ "pptpc_custom",		""				},
+	{ "pptpc_dfltroute",		"0"				},
+	{ "pptpc_stateless",		"1"				},
 	{ "pptpd_chap",			"0"				},	/* 0/1/2 (Auto/MS-CHAPv1/MS-CHAPv2) */
 #endif /* TCONFIG_PPTPD */
 

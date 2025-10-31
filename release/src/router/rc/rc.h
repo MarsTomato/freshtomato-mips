@@ -89,9 +89,10 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 #define OVPN_CLIENT_MAX		2
 #endif
 #define OVPN_DIR		"/etc/openvpn"
+#define OVPN_DNS_DIR		OVPN_DIR"/dns"
 #define OVPN_FW_DIR		OVPN_DIR"/fw"
 #define OVPN_DEL_SCRIPT		"clear-fw-tmp.sh"
-#define OVPN_DIR_DEL_SCRIPT	OVPN_DIR"/fw/"OVPN_DEL_SCRIPT
+#define OVPN_DIR_DEL_SCRIPT	OVPN_FW_DIR"/"OVPN_DEL_SCRIPT
 #define WG_DIR			"/etc/wireguard"
 #define WG_DNS_DIR		WG_DIR"/dns"
 #define WG_SCRIPTS_DIR		WG_DIR"/scripts"
@@ -128,13 +129,19 @@ static inline int is_psta(int idx, int unit, int subunit, void *param)
 #endif /* TCONFIG_BCMWL6 */
 
 /* rc.c */
+typedef void (*_tf_ipt_write)(const char *format, ... );
+typedef void (*_tf_ip6t_write)(const char *format, ... );
 extern void chains_log_detection(void);
 extern void fix_chain_in_drop(void);
 extern int env2nv(char *env, char *nv);
 extern int serialize_restart(char *service, int start);
 extern void run_del_firewall_script(const char *infile, char *outfile);
 #if defined(TCONFIG_OPENVPN) || defined(TCONFIG_WIREGUARD)
-extern void kill_switch(const char *type);
+#ifdef TCONFIG_IPV6
+extern void kill_switch(_tf_ipt_write ipt_write, _tf_ip6t_write ip6t_write);
+#else
+extern void kill_switch(_tf_ipt_write ipt_write);
+#endif
 extern void run_vpn_firewall_scripts(const char *kind);
 #endif
 
@@ -375,7 +382,6 @@ extern void stop_nas(void);
 extern void notify_nas(const char *ifname);
 
 /* firewall.c */
-typedef void (*_tf_ipt_write)(const char *format, ... );
 extern wanface_list_t wanfaces[MWAN_MAX];
 extern char lanaddr[BRIDGE_COUNT][32];
 extern char lanmask[BRIDGE_COUNT][32];
@@ -411,7 +417,6 @@ extern void create_test_iptfile(void);
 #endif
 extern void allow_fastnat(const char *service, int allow);
 extern void try_enabling_fastnat(void);
-extern void log_segfault(void);
 
 /* forward.c */
 extern void ipt_forward(ipt_table_t table);
@@ -531,19 +536,19 @@ extern void stop_sched(void);
 
 /* pptp_client.c */
 #ifdef TCONFIG_PPTPD
-#define PPTP_CLIENT_TABLE_ID 5
-#define PPTP_CLIENT_TABLE_NAME "PPTP"
-extern void start_pptp_client(void);
-extern void stop_pptp_client(void);
-extern void start_pptp_client_eas(void);
-extern void stop_pptp_client_eas(void);
+#define PPTPC_TABLE_ID 5
+#define PPTPC_TABLE_NAME "PPTP"
+extern void start_pptpc(void);
+extern void stop_pptpc(void);
+extern void start_pptpc_eas(void);
+extern void stop_pptpc_eas(void);
 extern int write_pptpc_resolv(FILE*);
 extern int pptpc_ipup_main(int argc, char **argv);
 extern int pptpc_ipdown_main(int argc, char **argv);
 extern void pptpc_firewall(const char *table, const char *opt, _tf_ipt_write table_writer);
 #else
-static inline void start_pptp_client_eas(void) {};
-static inline void stop_pptp_client_eas(void) {};
+static inline void start_pptpc_eas(void) {};
+static inline void stop_pptpc_eas(void) {};
 #define write_pptpc_resolv(f) (0)
 #endif
 

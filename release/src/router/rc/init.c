@@ -2432,7 +2432,13 @@ static int init_nvram(void)
 		break;
 	case MODEL_WRT610Nv2:
 		mfr = "Linksys";
-		name = nvram_match("boot_hw_model", "E300") ? "E3000" : "WRT610N v2";
+		if (nvram_match("boot_hw_model", "E300")) {
+			name = "E3000";
+			nvram_set("lan_invert", "1");
+		}
+		else {
+			name = "WRT610N v2";
+		}
 		features = SUP_SES | SUP_80211N | SUP_WHAM_LED | SUP_1000ET;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
@@ -11616,6 +11622,12 @@ static inline void set_kernel_memory(void)
 #endif
 }
 
+static void set_kernel_log_segfault(void)
+{
+	/* warn about various signal handling related application anomalies */
+	f_write_string("/proc/sys/kernel/print-fatal-signals", (nvram_get_int("debug_logsegfault") ? "1" : "0"), 0, 0);
+}
+
 #ifdef TCONFIG_USB
 static inline void tune_min_free_kbytes(void)
 {
@@ -11850,6 +11862,7 @@ static void sysinit(void)
 
 	set_kernel_panic(); /* reboot automatically when the kernel panics and set waiting time */
 	set_kernel_memory(); /* set overcommit_memory and overcommit_ratio */
+	set_kernel_log_segfault(); /* warn about various signal handling related application anomalies */
 
 	setup_conntrack();
 	set_host_domain_name();
@@ -12013,7 +12026,6 @@ int init_main(int argc, char *argv[])
 			/* enable watchdog and other services */
 			nvram_set("g_reboot", "0");
 
-			log_segfault();
 			create_passwd();
 			init_lan_hwaddr();
 			start_vlan();
