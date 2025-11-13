@@ -20,6 +20,8 @@
 <% css(); %>
 <script src="tomato.js?rel=<% version(); %>"></script>
 <script src="interfaces.js?rel=<% version(); %>"></script>
+<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script src="status-data.jsx?_http_id=<% nv(http_id); %>"></script>
 <!-- USB-BEGIN -->
 <script src="wwan_parser.js?rel=<% version(); %>"></script>
 <!-- USB-END -->
@@ -39,17 +41,11 @@ var bgmo = {'disabled':'-','mixed':'Auto','b-only':'B Only','g-only':'G Only','b
 /* BCMWL6-END */
 };
 var updateWWANTimers = [], customStatusTimers = [], show_dhcpc = [], show_codi = [], show_radio = [];
-</script>
-
-<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
-<script src="status-data.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
 var cprefix = 'status_overview';
 var u;
 nphy = features('11n');
 
-var ref = new TomatoRefresh('status-data.jsx?_http_id=<% nv(http_id); %>', '', 5, cprefix+'_refresh');
+var ref = new TomatoRefresh('status-data.jsx', '', 5, cprefix+'_refresh');
 
 ref.refresh = function(text) {
 	stats = {};
@@ -259,21 +255,11 @@ function ethstates() {
 	E('ports').innerHTML = code;
 }
 
-function anon_update() {
-	var code = '';
-
+function anon_enable() {
 	if ((stats.anon_enable == '-1') || (stats.anon_answer == '0'))
 		E('status-anonwarn').style.display = 'block';
 	else
 		E('status-anonwarn').style.display = 'none';
-
-	var update = anonupdate.update;
-	if (update == 'no' || update == '' || !update)
-		return 0;
-
-	var code = '<div class="section-title">!! Attention !!<\/div><div class="section-centered">New version of FreshTomato '+update+' is now available. <a class="new_window" href="https://freshtomato.org/">Click here to download<\/a>.<\/div>';
-	E('status-nversion').style.display = 'block';
-	E('status-nversion').innerHTML = code;
 }
 
 function show() {
@@ -281,6 +267,7 @@ function show() {
 
 	visibility();
 	ethstates();
+	anon_enable();
 	anon_update();
 
 	c('cpu', stats.cpuload);

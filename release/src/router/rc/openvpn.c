@@ -17,11 +17,6 @@
 #define OVPN_CLIENT_BASEIF	10
 #define OVPN_SERVER_BASEIF	20
 
-#define BUF_SIZE		256
-#define BUF_SIZE_8		8
-#define BUF_SIZE_16		16
-#define BUF_SIZE_32		32
-#define BUF_SIZE_64		64
 #define IF_SIZE			8
 
 /* needed by logmsg() */
@@ -181,7 +176,7 @@ static void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
 			            "[ \"server\" == \"%s\" ] && return 0\n"
 			            " local i=1\n"
 			            " while :; do\n"
-			            "  ping -qc1 -W3 -I tun1%d 1.1.1.1 &>/dev/null && return 0\n"
+			            "  ping -qc1 -W3 -I tun1%d %s &>/dev/null && return 0\n"
 			            "  [ $((i++)) -ge 3 ] && break || sleep 5\n"
 			            " done\n"
 			            " return 1\n"
@@ -192,7 +187,7 @@ static void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
 			            " service vpn%s%d restart\n"
 			            "}\n",
 			            instanceType,
-			            unit,
+			            unit, nvram_safe_get("wan_checker"),
 			            instanceType, unit,
 			            instanceType, unit,
 			            instanceType, unit);

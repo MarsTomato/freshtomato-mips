@@ -1881,11 +1881,11 @@ sqlite: sqlite/Makefile
 
 sqlite-install:
 ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
-	install -D sqlite/staged/usr/lib/libsqlite3.so.3.50.4 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.4
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.50.4
+	install -D sqlite/staged/usr/lib/libsqlite3.so.3.51.0 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.51.0
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.51.0
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
-		ln -sf libsqlite3.so.3.50.4 libsqlite3.so.0 && \
-		ln -sf libsqlite3.so.3.50.4 libsqlite3.so
+		ln -sf libsqlite3.so.3.51.0 libsqlite3.so.0 && \
+		ln -sf libsqlite3.so.3.51.0 libsqlite3.so
 endif
 	@true
 
@@ -2356,6 +2356,7 @@ pcre2/build/Makefile:
 			-DPCRE2GREP_SUPPORT_CALLOUT=OFF \
 			-DPCRE2GREP_SUPPORT_CALLOUT_FORK=OFF \
 			-DPCRE2_BUILD_TESTS=OFF \
+			-DPCRE2_SYMVERS=OFF \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
 			..
@@ -2366,13 +2367,13 @@ pcre2: pcre2/build/Makefile
 	@$(MAKE) -C pcre2/build DESTDIR=$(TOP)/pcre2/staged install
 
 pcre2-install:
-	install -D pcre2/staged/usr/lib/libpcre2-8.so.0.14.0 $(INSTALLDIR)/pcre2/usr/lib/libpcre2-8.so.0.14.0
-	$(STRIP) -s $(INSTALLDIR)/pcre2/usr/lib/libpcre2-8.so.0.14.0
-	cd $(INSTALLDIR)/pcre2/usr/lib/ && ln -sf libpcre2-8.so.0.14.0 libpcre2-8.so.0 && ln -sf libpcre2-8.so.0.14.0 libpcre2-8.so
+	install -D pcre2/staged/usr/lib/libpcre2-8.so.0.15.0 $(INSTALLDIR)/pcre2/usr/lib/libpcre2-8.so.0.15.0
+	$(STRIP) -s $(INSTALLDIR)/pcre2/usr/lib/libpcre2-8.so.0.15.0
+	cd $(INSTALLDIR)/pcre2/usr/lib/ && ln -sf libpcre2-8.so.0.15.0 libpcre2-8.so.0 && ln -sf libpcre2-8.so.0.15.0 libpcre2-8.so
 ifeq ($(TCONFIG_AIO),y)
-	install -D pcre2/staged/usr/lib/libpcre2-posix.so.3.0.6 $(INSTALLDIR)/pcre2/usr/lib/libpcre2-posix.so.3.0.6
-	$(STRIP) -s $(INSTALLDIR)/pcre2/usr/lib/libpcre2-posix.so.3.0.6
-	cd $(INSTALLDIR)/pcre2/usr/lib/ && ln -sf libpcre2-posix.so.3.0.6 libpcre2-posix.so.3 && ln -sf libpcre2-posix.so.3.0.6 libpcre2-posix.so
+	install -D pcre2/staged/usr/lib/libpcre2-posix.so.3.0.7 $(INSTALLDIR)/pcre2/usr/lib/libpcre2-posix.so.3.0.7
+	$(STRIP) -s $(INSTALLDIR)/pcre2/usr/lib/libpcre2-posix.so.3.0.7
+	cd $(INSTALLDIR)/pcre2/usr/lib/ && ln -sf libpcre2-posix.so.3.0.7 libpcre2-posix.so.3 && ln -sf libpcre2-posix.so.3.0.7 libpcre2-posix.so
 endif
 
 pcre2-clean:
@@ -2486,9 +2487,9 @@ libxml2: libxml2/static/Makefile libxml2/build/Makefile
 
 libxml2-install:
 ifeq ($(TCONFIG_BCMARM),y)
-	install -D libxml2/staged/usr/lib/libxml2.so.16.1.0 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.0
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.0
-	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.1.0 libxml2.so.16 && ln -sf libxml2.so.16.1.0 libxml2.so
+	install -D libxml2/staged/usr/lib/libxml2.so.16.1.1 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.1
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.1
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.1.1 libxml2.so.16 && ln -sf libxml2.so.16.1.1 libxml2.so
 else
 	install -D libxml2/staged/usr/lib/libxml2.so.2.13.7 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
 	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7

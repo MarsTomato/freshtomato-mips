@@ -55,6 +55,7 @@ static void asp_discovery(int argc, char **argv);
 #endif
 static void asp_css(int argc, char **argv);
 static void asp_resmsg(int argc, char **argv);
+static void asp_resreset(int argc, char **argv);
 static void wo_tomato(char *url);
 static void wo_update(char *url);
 static void wo_service(char *url);
@@ -125,6 +126,7 @@ const aspapi_t aspapi[] = {
 	{ "psup",			asp_psup			},
 	{ "qrate",			asp_qrate			},
 	{ "resmsg",			asp_resmsg			},
+	{ "resreset",			asp_resreset			},
 	{ "rrule",			asp_rrule			},
 	{ "statfs",			asp_statfs			},
 	{ "sysinfo",			asp_sysinfo			},
@@ -2172,6 +2174,17 @@ static void asp_resmsg(int argc, char **argv)
 	free(p);
 }
 
+static void asp_resreset(int argc, char **argv)
+{
+	char *p;
+
+	if ((p = js_string(webcgi_safeget("resreset", (argc > 0) ? argv[0] : ""))) == NULL)
+		return;
+
+	web_printf("\nresreset='%s';\n", p);
+	free(p);
+}
+
 static int webcgi_nvram_set(const nvset_t *v, const char *name, int write)
 {
 	char *p, *e;
@@ -2390,22 +2403,18 @@ static int save_variables(int write)
 
 static void wo_tomato(char *url)
 {
+	const char *redir;
 	char *v;
-	int i;
-	int ajax;
-	int nvset;
-	const char *red;
-	int commit;
-	int force_commit;
+	int i, ajax, nvset, commit, force_commit;
 
-	red = webcgi_safeget("_redirect", "");
+	nvset = atoi(webcgi_safeget("_nvset", "1"));
+	redir = webcgi_safeget("_redirect", "");
 	commit = atoi(webcgi_safeget("_commit", "1"));
 	force_commit = atoi(webcgi_safeget("_force_commit", "0"));
 	ajax = atoi(webcgi_safeget("_ajax", "0"));
 	rboot = atoi(webcgi_safeget("_reboot", "0"));
-	nvset = atoi(webcgi_safeget("_nvset", "1"));
 
-	if (!*red)
+	if (!*redir)
 		send_header(200, NULL, mime_html, 0);
 
 	if (nvset) {
@@ -2429,7 +2438,7 @@ static void wo_tomato(char *url)
 			web_printf("@msg:%s", resmsg_get());
 		else if (atoi(webcgi_safeget("_moveip", "0")) || atoi(webcgi_safeget("dhcp_moveip", "0")))
 			parse_asp("saved-moved.asp");
-		else if (!*red)
+		else if (!*redir)
 			parse_asp("saved.asp");
 	}
 
@@ -2439,7 +2448,7 @@ static void wo_tomato(char *url)
 	}
 
 	if ((v = webcgi_get("_service")) != NULL && *v != 0) {
-		if (!*red) {
+		if (!*redir) {
 			if (ajax)
 				web_printf(" Some services are being restarted...");
 
@@ -2447,7 +2456,7 @@ static void wo_tomato(char *url)
 		}
 		sleep(1);
 
-		if (*v == '*')
+		if (*v == '*') /* restart everything */
 			kill(1, SIGHUP);
 		else
 			exec_service(v);
@@ -2456,8 +2465,8 @@ static void wo_tomato(char *url)
 	for (i = atoi(webcgi_safeget("_sleep", "0")); i > 0; --i)
 		sleep(1);
 
-	if (*red)
-		redirect(red);
+	if (*redir)
+		redirect(redir);
 
 	if (rboot) {
 		web_close();
