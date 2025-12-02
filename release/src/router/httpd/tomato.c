@@ -56,11 +56,6 @@ static void asp_discovery(int argc, char **argv);
 static void asp_css(int argc, char **argv);
 static void asp_resmsg(int argc, char **argv);
 static void asp_resreset(int argc, char **argv);
-static void wo_tomato(char *url);
-static void wo_update(char *url);
-static void wo_service(char *url);
-static void wo_shutdown(char *url);
-static void wo_nvcommit(char *url);
 
 typedef union {
 	int i;
@@ -2063,8 +2058,12 @@ static void asp_css(int argc, char **argv)
 		if (nvram_match("web_css", "online"))
 			web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"ext/%s.css?rel=%s\">", ttb, tomato_shortver);
 		else {
-			if (c)
-				web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"%s.css?rel=%s\">", css, tomato_shortver);
+			if (c) {
+				if (nvram_get_int("g_upgrade"))
+					web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"%s.css\">", css);
+				else
+					web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"%s.css?rel=%s\">", css, tomato_shortver);
+			}
 		}
 #ifdef TCONFIG_ADVTHEMES
 	}

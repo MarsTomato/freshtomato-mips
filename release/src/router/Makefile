@@ -1881,11 +1881,11 @@ sqlite: sqlite/Makefile
 
 sqlite-install:
 ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
-	install -D sqlite/staged/usr/lib/libsqlite3.so.3.51.0 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.51.0
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.51.0
+	install -D sqlite/staged/usr/lib/libsqlite3.so.3.51.1 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.51.1
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.51.1
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
-		ln -sf libsqlite3.so.3.51.0 libsqlite3.so.0 && \
-		ln -sf libsqlite3.so.3.51.0 libsqlite3.so
+		ln -sf libsqlite3.so.3.51.1 libsqlite3.so.0 && \
+		ln -sf libsqlite3.so.3.51.1 libsqlite3.so
 endif
 	@true
 
@@ -2207,10 +2207,12 @@ ebtables-install:
 	@sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < $(TOP)/ebtables/ethertypes > $(TARGETDIR)/rom/etc/ethertypes
 	chmod 0644 $(TARGETDIR)/rom/etc/ethertypes
 	install -D ebtables/.libs/ebtables-legacy $(INSTALLDIR)/ebtables/usr/sbin/ebtables-legacy
+	install -D ebtables/.libs/ebtables-legacy-restore $(INSTALLDIR)/ebtables/usr/sbin/ebtables-legacy-restore
 	install -D ebtables/.libs/libebtc.so.0.0.0 $(INSTALLDIR)/ebtables/usr/lib/libebtc.so.0.0.0
 	$(STRIP) $(INSTALLDIR)/ebtables/usr/sbin/ebtables-legacy
+	$(STRIP) $(INSTALLDIR)/ebtables/usr/sbin/ebtables-legacy-restore
 	$(STRIP) $(INSTALLDIR)/ebtables/usr/lib/libebtc.so.0.0.0
-	cd $(INSTALLDIR)/ebtables/usr/sbin/ && ln -sf ebtables-legacy ebtables
+	cd $(INSTALLDIR)/ebtables/usr/sbin/ && ln -sf ebtables-legacy ebtables && ln -sf ebtables-legacy-restore ebtables-restore
 	cd $(INSTALLDIR)/ebtables/usr/lib/ && ln -sf libebtc.so.0.0.0 libebtc.so && ln -sf libebtc.so.0.0.0 libebtc.so.0
 
 ebtables-clean:
@@ -2528,9 +2530,9 @@ libpng: libpng/build/Makefile
 	@$(MAKE) -C libpng/build DESTDIR=$(TOP)/libpng/staged install
 
 libpng-install:
-	install -D libpng/build/libpng16.so.16.50.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.50.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.50.0
-	cd $(INSTALLDIR)/libpng/usr/lib && ln -sf libpng16.so.16.50.0 libpng16.so && ln -sf libpng16.so.16.50.0 libpng16.so.16
+	install -D libpng/build/libpng16.so.16.51.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.51.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.51.0
+	cd $(INSTALLDIR)/libpng/usr/lib && ln -sf libpng16.so.16.51.0 libpng16.so && ln -sf libpng16.so.16.51.0 libpng16.so.16
 
 libpng-clean:
 	@rm -rf libpng/build
@@ -3243,13 +3245,14 @@ portmap-clean:
 
 e2fsprogs/stamp-h1:
 	$(call patch_files,e2fsprogs)
-	cd e2fsprogs && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-		LDFLAGS="-Wl,--gc-sections" \
+	cd e2fsprogs && autoreconf -fsi && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) $(if $(TCONFIG_BCMARM),,-std=gnu89) -fPIC -ffunction-sections -fdata-sections" \
+		LDFLAGS="-Wl,--gc-sections $(if $(TCONFIG_BCMARM),,-Wl$(comma)--allow-multiple-definition)" \
 		LIBS="-lgcc_s" \
 		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs --with-crond-dir=no \
 			--disable-tls --disable-nls --disable-jbd-debug --disable-blkid-debug --disable-testio-debug --disable-backtrace --disable-uuidd \
 			--disable-debugfs --disable-imager --disable-resizer --disable-defrag --disable-fuse2fs --disable-e2initrd-helper --disable-rpath \
+			--disable-bmap-stats --disable-tdb $(if $(TCONFIG_BCMARM),--without-libarchive --without-libmagic,) \
 			$(if $(TCONFIG_BCMARM),ac_cv_lib_pthread_sem_init=no,) ac_cv_lib_dl_dlopen=no
 	@touch $@
 

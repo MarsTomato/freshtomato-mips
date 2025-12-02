@@ -18,7 +18,7 @@ For the following **MIPSR1** and **MIPSR2** routers: **Asus** WL500GP, N10U, N12
 - [**Pull Requests**](https://github.com/FreshTomato-Project/freshtomato-mips/pulls)
 - [**Forum EN**](https://www.linksysinfo.org/index.php?forums/tomato-firmware.33/)
 - [**Forum PL**](https://openlinksys.info/forum/)
-- **Donations**: [**PayPal**](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=B4FDH9TH6Z8FU)  or  BTC: **`1JDxBBQvcJ9XxgagJRNVrqC1nysq8F8B1Y`**  
+- [**Donations**](https://freshtomato.org/donations.html)
   
   
 **HOW TO PREPARE A WORK ENVIRONMENT FOR FRESHTOMATO COMPILATION (on Debian 12/64bit)**

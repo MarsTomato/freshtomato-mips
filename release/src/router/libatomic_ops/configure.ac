@@ -12,7 +12,7 @@
 
 dnl Process this file with autoconf to produce configure.
 
-AC_INIT([libatomic_ops],[7.8.4],https://github.com/bdwgc/libatomic_ops/issues)
+AC_INIT([libatomic_ops],[7.10.0],https://github.com/bdwgc/libatomic_ops/issues)
 
 AC_PREREQ(2.61)
 AC_CANONICAL_TARGET([])
@@ -100,7 +100,6 @@ else
       AC_MSG_RESULT(-Kpic)
       PICFLAG=-Kpic
       CFLAGS="-O $CFLAGS"
-      need_asm=true
       ;;
     *-*-linux*)
       AC_MSG_RESULT(-fPIC)
@@ -109,6 +108,11 @@ else
       ;;
     *)
       AC_MSG_RESULT([none])
+      ;;
+  esac
+  case "$host" in
+    sparc*)
+      need_asm=true
       ;;
   esac
 fi
@@ -125,14 +129,6 @@ AC_ARG_ENABLE(atomic-intrinsics,
 if test "$enable_atomic_intrinsics" = no; then
   AC_DEFINE([AO_DISABLE_GCC_ATOMICS], 1,
             [Define to avoid GCC atomic intrinsics even if available.])
-fi
-
-AC_ARG_ENABLE(gcov, AS_HELP_STRING([--enable-gcov],
-                                   [Turn on code coverage analysis]))
-if test "$enable_gcov" = "yes"; then
-  CFLAGS="$CFLAGS --coverage"
-  # Turn off code optimization to get accurate line numbers.
-  CFLAGS=`echo "$CFLAGS" | sed -e 's/-O\(1\|2\|3\|4\|s\|fast\)\?//g'`
 fi
 
 AC_ARG_ENABLE(gpl,

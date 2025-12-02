@@ -28,7 +28,8 @@
   printf("Missing: %s\n", #name "XX")
 
 #undef INIT_BEFORE_FIRST_STORE
-#if (AO_GNUC_PREREQ(13, 0) || defined(AO_MEMORY_SANITIZER) || defined(LINT2)) \
+#if (AO_GNUC_PREREQ(13, 0) || defined(AO_MEMORY_SANITIZER) || defined(LINT2) \
+     || (defined(__e2k__) && defined(AO_FAT_POINTER))) \
     && defined(AO_PREFER_GENERALIZED)
   /* Explicitly initialize variable (to any value) before generalized   */
   /* AO_store call to avoid a false warning about use of uninitialized  */
@@ -44,12 +45,23 @@
   void double_list_atomicXX(void);
 #endif
 
+#undef LVAR_VOLATILE
+#if defined(LINT2) && !defined(CPPCHECK)
+  /* Workaround a warning that the argument of TA_assert() has a side   */
+  /* effect because the variable is volatile.                           */
+# define LVAR_VOLATILE /* empty */
+#else
+  /* Workaround a cppcheck warning that the expression passed to        */
+  /* TA_assert() is always true.                                        */
+# define LVAR_VOLATILE volatile
+#endif
+
 void test_atomicXX(void)
 {
-  AO_t x;
-  unsigned char b;
-  unsigned short s;
-  unsigned int zz;
+  LVAR_VOLATILE AO_t x;
+  LVAR_VOLATILE unsigned char b;
+  LVAR_VOLATILE unsigned short s;
+  LVAR_VOLATILE unsigned int zz;
 # if defined(AO_HAVE_test_and_setXX)
     AO_TS_t z = AO_TS_INITIALIZER;
 # endif
@@ -121,13 +133,14 @@ void test_atomicXX(void)
     TA_assert(AO_fetch_and_add1XX(&x) == 13);
 # else
     MISSING(AO_fetch_and_add1);
-    ++x;
+    /* Note: do not use compound assignment for a volatile variable. */
+    x = x + 1;
 # endif
 # if defined(AO_HAVE_fetch_and_sub1XX)
     TA_assert(AO_fetch_and_sub1XX(&x) == 14);
 # else
     MISSING(AO_fetch_and_sub1);
-    --x;
+    x = x - 1;
 # endif
 # if defined(AO_HAVE_short_storeXX)
 #   ifdef INIT_BEFORE_FIRST_STORE
@@ -162,18 +175,18 @@ void test_atomicXX(void)
     TA_assert(AO_short_fetch_and_add1XX(&s) == 13);
 # else
     MISSING(AO_short_fetch_and_add1);
-    ++s;
+    s = s + 1;
 # endif
 # if defined(AO_HAVE_short_fetch_and_sub1XX)
     TA_assert(AO_short_fetch_and_sub1XX(&s) == 14);
 # else
     MISSING(AO_short_fetch_and_sub1);
-    --s;
+    s = s - 1;
 # endif
   TA_assert(*(volatile short *)&s == 13);
 # if defined(AO_HAVE_char_storeXX)
 #   ifdef INIT_BEFORE_FIRST_STORE
-      *(volatile char *)&b = 0;
+      *(volatile unsigned char *)&b = 0;
 #   endif
     AO_char_storeXX(&b, 13);
 # else
@@ -203,15 +216,15 @@ void test_atomicXX(void)
     TA_assert(AO_char_fetch_and_add1XX(&b) == 13);
 # else
     MISSING(AO_char_fetch_and_add1);
-    ++b;
+    b = b + 1;
 # endif
 # if defined(AO_HAVE_char_fetch_and_sub1XX)
     TA_assert(AO_char_fetch_and_sub1XX(&b) == 14);
 # else
     MISSING(AO_char_fetch_and_sub1);
-    --b;
+    b = b - 1;
 # endif
-  TA_assert(*(volatile char *)&b == 13);
+  TA_assert(*(volatile unsigned char *)&b == 13);
 # if defined(AO_HAVE_int_storeXX)
 #   ifdef INIT_BEFORE_FIRST_STORE
       *(volatile int *)&zz = 0;
@@ -244,13 +257,13 @@ void test_atomicXX(void)
     TA_assert(AO_int_fetch_and_add1XX(&zz) == 13);
 # else
     MISSING(AO_int_fetch_and_add1);
-    ++zz;
+    zz = zz + 1;
 # endif
 # if defined(AO_HAVE_int_fetch_and_sub1XX)
     TA_assert(AO_int_fetch_and_sub1XX(&zz) == 14);
 # else
     MISSING(AO_int_fetch_and_sub1);
-    --zz;
+    zz = zz - 1;
 # endif
   TA_assert(*(volatile int *)&zz == 13);
 # if defined(AO_HAVE_compare_and_swapXX)
@@ -272,7 +285,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_or_release_write) || !defined(AO_HAVE_or_write)
       MISSING(AO_or);
 #   endif
-    x |= 66;
+    x = x | 66;
 # endif
 # if defined(AO_HAVE_xorXX)
     AO_xorXX(&x, 181);
@@ -284,7 +297,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_xor_release_write) || !defined(AO_HAVE_xor_write)
       MISSING(AO_xor);
 #   endif
-    x ^= 181;
+    x = x ^ 181;
 # endif
 # if defined(AO_HAVE_andXX)
     AO_andXX(&x, 57);
@@ -296,7 +309,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_and_release_write) || !defined(AO_HAVE_and_write)
       MISSING(AO_and);
 #   endif
-    x &= 57;
+    x = x & 57;
 # endif
 # if defined(AO_HAVE_fetch_compare_and_swapXX)
     TA_assert(AO_fetch_compare_and_swapXX(&x, 14, 117) == 25);
@@ -328,7 +341,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_short_or_write)
       MISSING(AO_short_or);
 #   endif
-    s |= 66;
+    s = s | 66;
 # endif
 # if defined(AO_HAVE_short_xorXX)
     AO_short_xorXX(&s, 181);
@@ -343,7 +356,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_short_xor_write)
       MISSING(AO_short_xor);
 #   endif
-    s ^= 181;
+    s = s ^ 181;
 # endif
 # if defined(AO_HAVE_short_andXX)
     AO_short_andXX(&s, 57);
@@ -358,7 +371,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_short_and_write)
       MISSING(AO_short_and);
 #   endif
-    s &= 57;
+    s = s & 57;
 # endif
 # if defined(AO_HAVE_short_fetch_compare_and_swapXX)
     TA_assert(AO_short_fetch_compare_and_swapXX(&s, 14, 117) == 25);
@@ -376,7 +389,7 @@ void test_atomicXX(void)
     TA_assert(b == 42);
 # else
     MISSING(AO_char_compare_and_swap);
-    if (*(volatile char *)&b == 13) b = 42;
+    if (*(volatile unsigned char *)&b == 13) b = 42;
 # endif
 # if defined(AO_HAVE_char_orXX)
     AO_char_orXX(&b, 66);
@@ -390,7 +403,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_char_or_write)
       MISSING(AO_char_or);
 #   endif
-    b |= 66;
+    b = b | 66;
 # endif
 # if defined(AO_HAVE_char_xorXX)
     AO_char_xorXX(&b, 181);
@@ -404,7 +417,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_char_xor_write)
       MISSING(AO_char_xor);
 #   endif
-    b ^= 181;
+    b = b ^ 181;
 # endif
 # if defined(AO_HAVE_char_andXX)
     AO_char_andXX(&b, 57);
@@ -418,7 +431,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_char_and_write)
       MISSING(AO_char_and);
 #   endif
-    b &= 57;
+    b = b & 57;
 # endif
 # if defined(AO_HAVE_char_fetch_compare_and_swapXX)
     TA_assert(AO_char_fetch_compare_and_swapXX(&b, 14, 117) == 25);
@@ -450,7 +463,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_int_or_write)
       MISSING(AO_int_or);
 #   endif
-    zz |= 66;
+    zz = zz | 66;
 # endif
 # if defined(AO_HAVE_int_xorXX)
     AO_int_xorXX(&zz, 181);
@@ -464,7 +477,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_int_xor_write)
       MISSING(AO_int_xor);
 #   endif
-    zz ^= 181;
+    zz = zz ^ 181;
 # endif
 # if defined(AO_HAVE_int_andXX)
     AO_int_andXX(&zz, 57);
@@ -478,7 +491,7 @@ void test_atomicXX(void)
        || !defined(AO_HAVE_int_and_write)
       MISSING(AO_int_and);
 #   endif
-    zz &= 57;
+    zz = zz & 57;
 # endif
 # if defined(AO_HAVE_int_fetch_compare_and_swapXX)
     TA_assert(AO_int_fetch_compare_and_swapXX(&zz, 14, 117) == 25);
