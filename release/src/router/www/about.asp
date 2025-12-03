@@ -1,12 +1,4 @@
 <!DOCTYPE html>
-<!--
-	Tomato GUI
-	Copyright (C) 2006-2010 Jonathan Zarate
-	http://www.polarcloud.com/tomato/
-
-	For use with Tomato Firmware only.
-	No part of this file may be used without permission.
--->
 <html lang="en-GB">
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
@@ -15,10 +7,9 @@
 <link rel="stylesheet" type="text/css" href="tomato.css?rel=<% version(); %>">
 <% css(); %>
 <script src="tomato.js?rel=<% version(); %>"></script>
-
 <script>
 
-//	<% nvram(''); %>	// http_id
+//	<% nvram(''); %>
 
 function init() {
 	eventHandler();
@@ -30,7 +21,7 @@ function init() {
 <table id="container">
 <tr><td colspan="2" id="header">
 	<div class="title"><a href="/">FreshTomato</a></div>
-	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %><span class="blinking bl2"><script><% anonupdate(); %> anon_update()</script>&nbsp;</span></div>
 </td></tr>
 <tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
@@ -39,19 +30,27 @@ function init() {
 <!-- / / / -->
 
 <div class="about">
-	<b>FreshTomato Firmware <% version(1); %></b><br>
-	<br>
-	Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br>
-	<br>
-	<b>Remember: Before asking a question on our forum or elsewhere, check if your question has already been answered on our wiki. You will find a link to the appropriate explanation on each router GUI page in the upper right corner.</b><br>
-	<br>
+	FreshTomato Firmware <% version(1); %><br>
+	Linux kernel <% version(2); %> and Broadcom Wireless Driver <% version(3); %><br><br>
+	Built on <% build_time(); %> &nbsp;&nbsp;<b>|</b>&nbsp;&nbsp; Copyright &copy; 2016-2025 by Pedro<br><br><hr>
+
+	<div style="text-align:center;padding:20px 0 20px 0">
+		<b style="font-size:1.2em;padding-bottom:20px">
+			FreshTomato is developed in my spare time and remains 100% free.<br>
+			Your donations help me keep improving it and adding new features.<br>
+			Every contribution - even a small one - makes a real difference.<br>
+			Thank you for your support! 🍅
+		</b><br>
+		<a href="https://freshtomato.org/donations.html" title="Donations" class="new_window"><img src="donate.gif" style="border:0" alt="Donate"></a>
+	</div>
+
+	<hr><br>
+	<b>Quick tip: before posting a question on the forum, please check if the answer is already in our Wiki. A direct link to the relevant article is always in the top-right corner of every page.<br>
+	   Thank you - this helps keep the forum clean and saves everyone time! 🍅</b><br><br>
 	<b>FreshTomato project page: </b><a href="https://freshtomato.org" class="new_window"> https://freshtomato.org</a><br>
 	<b>Forums about Tomato</b> - EN: <a href="https://www.linksysinfo.org/index.php?forums/tomato-firmware.33/" class="new_window">https://linksysinfo.org</a> PL: <a href="https://openlinksys.info" class="new_window">https://openlinksys.info</a><br>
-	<b>Source code: </b><a href="https://github.com/FreshTomato-Project" class="new_window"> https://github.com</a><br>
-	<br>
-	<hr>
+	<b>Source code: </b><a href="https://github.com/FreshTomato-Project" class="new_window"> https://github.com</a><br><br><hr><br>
 <!-- OPTSIZE-BEGIN -->
-	<br>
 
 <!-- / / / -->
 
@@ -64,7 +63,7 @@ function init() {
 <!-- IPV6-END -->
 	- Dual-band and Wireless-N mode<br>
 	<i>Copyright (C) 2008-2011 Fedor Kozhevnikov, Ray Van Tassle, Wes Campaigne</i><br>
-	<a href="http://www.tomatousb.org/" class="new_window">http://www.tomatousb.org</a><br>
+	<a href="https://www.tomatousb.org/" class="new_window">https://www.tomatousb.org</a><br>
 	<br>
 
 	<b>"Shibby" features:</b><br>
@@ -105,7 +104,7 @@ function init() {
 	- Extended MOTD (written by @Monter, modified by @Shibby)<br>
 	- Webmon Backup Script<br>
 	<i>Copyright (C) 2011-2013 Michał Rupental</i><br>
-	<a href="http://openlinksys.info" class="new_window">http://openlinksys.info</a><br>
+	<a href="https://openlinksys.info" class="new_window">https://openlinksys.info</a><br>
 	<br>
 
 	<b>Tomato-RAF features:</b><br>
@@ -120,7 +119,7 @@ function init() {
 	- HFS / HFS+ filesystem integration<br>
 <!-- HFS-END -->
 	<i>Copyright (C) 2007-2011 Ofer Chen &amp; Vicente Soriano</i><br>
-	<a href="http://victek.is-a-geek.com" class="new_window">http://victek.is-a-geek.com</a><br>
+	<a href="https://victek.is-a-geek.com" class="new_window">https://victek.is-a-geek.com</a><br>
 	<br>
 
 	<b>"Teaman" features:</b><br>
@@ -135,7 +134,6 @@ function init() {
 	- PPTP Server integration and GUI<br>
 <!-- PPTPD-END -->
 	<i>Copyright (C) 2011 Augusto Bott</i><br>
-	<a href="http://code.google.com/p/tomato-sdhc-vlan/" class="new_window">Tomato-sdhc-vlan Homepage</a><br>
 	<br>
 
 	<b>"Lancethepants" features:</b><br>
@@ -160,7 +158,7 @@ function init() {
 	- GPT support for HDD by Yaniv Hamo<br>
 	- Tools-System refresh timer<br>
 	<i>Copyright (C) 2011 Toastman</i><br>
-	<a href="http://www.linksysinfo.org/index.php?threads/using-qos-tutorial-and-discussion.28349/" class="new_window">Using QoS - Tutorial and discussion</a><br>
+	<a href="https://www.linksysinfo.org/index.php?threads/using-qos-tutorial-and-discussion.28349/" class="new_window">Using QoS - Tutorial and discussion</a><br>
 	<br>
 
 <!-- VPN-BEGIN -->
@@ -233,36 +231,9 @@ function init() {
 	<i>Copyright (C) 2017-2019 Michał Obrembski</i><br>
 	<a href="mailto:michal.o@szerszen.com">michal.o@szerszen.com</a><br>
 	<br>
-
-	<b>Special thanks:</b><br>
-	We want to express our gratitude to all people not mentioned here but contributed with patches, new models additions, bug solving and updates to Tomato firmware.<br>
-	<br>
-
-	<hr>
 <!-- OPTSIZE-END -->
-	<br><b>FreshTomato-MIPS - is an alternative, customized version, forked off from Tomato by Shibby</b>
-	<br>
-	Copyright (C) 2016-2025 by Pedro
-	<br>
-	<br>
-	Built on <% build_time(); %> by Pedro
-	<br>
-	<br>
-	<br>
-	<b>Click below to send a "Thank you" gift through PayPal:</b>
-	<br>
-	<br>
-	<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-	<div>
-		<input type="hidden" name="cmd" value="_s-xclick">
-		<input type="image" src="donate.gif" style="border:0" name="submit" alt="Donate">
-		<input type="hidden" name="hosted_button_id" value="B4FDH9TH6Z8FU">
-	</div>
-	</form>
-	<br>
-	<div id="donate"><b>...Or by Bitcoin: </b> 1JDxBBQvcJ9XxgagJRNVrqC1nysq8F8B1Y</div>
-	<br>
-	<hr>
+
+	<b>A special thank you to everyone whose name isn't listed here — for your patches, new device support, bug reports, fixes, testing, and all the contributions that keep FreshTomato alive and improving. Your help means a lot! 🍅</b>
 </div>
 
 <!-- / / / -->

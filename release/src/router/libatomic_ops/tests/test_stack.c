@@ -66,7 +66,7 @@
 #elif (defined(USE_WINTHREADS) || defined(AO_USE_WIN32_PTHREADS)) \
       && !defined(CPPCHECK)
 # include <sys/timeb.h>
-  unsigned long get_msecs(void)
+  static unsigned long get_msecs(void)
   {
     struct timeb tb;
 
@@ -76,7 +76,7 @@
 #else /* Unix */
 # include <time.h>
 # include <sys/time.h>
-  unsigned long get_msecs(void)
+  static unsigned long get_msecs(void)
   {
     struct timeval tv;
 
@@ -86,96 +86,94 @@
 #endif /* !NO_TIMES */
 
 struct le {
-  AO_t next; /* must be the first field */
+  AO_uintptr_t next; /* must be the first field */
   int data;
 };
 
 typedef union le_u {
-  AO_t next;
+  AO_uintptr_t next;
   struct le e;
 } list_element;
 
 #if defined(CPPCHECK)
-  AO_stack_t the_list; /* to test AO_stack_init() */
+  static AO_stack_t the_list; /* to test AO_stack_init() */
 #else
-  AO_stack_t the_list = AO_STACK_INITIALIZER;
+  static AO_stack_t the_list = AO_STACK_INITIALIZER;
 #endif
 
 /* Add elements from 1 to n to the list (1 is pushed first).    */
 /* This is called from a single thread only.                    */
-void add_elements(int n)
+static void add_elements(int n)
 {
   list_element * le;
   if (n == 0) return;
   add_elements(n-1);
   le = (list_element *)malloc(sizeof(list_element));
-  if (le == 0)
-    {
-      fprintf(stderr, "Out of memory\n");
-      exit(2);
-    }
+  if (NULL == le) {
+    fprintf(stderr, "Out of memory\n");
+    exit(2);
+  }
 # if defined(CPPCHECK)
     le->e.next = 0; /* mark field as used */
 # endif
   le->e.data = n;
-  AO_stack_push(&the_list, &le->next);
+# if defined(CPPCHECK)
+    (void)le->next;
+    AO_stack_push(&the_list, (AO_uintptr_t *)le);
+#else
+    AO_stack_push(&the_list, &le->next);
+# endif
 }
 
 #ifdef VERBOSE_STACK
-void print_list(void)
-{
-  AO_t *p;
+  static void print_list(void)
+  {
+    AO_uintptr_t *p;
 
-  for (p = AO_REAL_HEAD_PTR(the_list);
-       p != 0; p = AO_REAL_NEXT_PTR(*p))
-    printf("%d\n", ((list_element*)p)->e.data);
-}
+    for (p = AO_REAL_HEAD_PTR(the_list);
+         p != NULL; p = AO_REAL_NEXT_PTR(*p))
+      printf("%d\n", ((list_element *)p)->e.data);
+  }
 #endif /* VERBOSE_STACK */
 
 /* Check that the list contains only values from 1 to n, in any order,  */
 /* w/o duplications.  Executed when the list mutation is finished.      */
-void check_list(int n)
+static void check_list(int n)
 {
-  AO_t *p;
+  AO_uintptr_t *p;
   int i;
   int err_cnt = 0;
   char *marks = (char*)calloc(n + 1, 1);
 
-  if (0 == marks)
-    {
-      fprintf(stderr, "Out of memory (marks)\n");
-      exit(2);
-    }
+  if (NULL == marks) {
+    fprintf(stderr, "Out of memory (marks)\n");
+    exit(2);
+  }
 
   for (p = AO_REAL_HEAD_PTR(the_list);
-       p != 0; p = AO_REAL_NEXT_PTR(*p))
-    {
-      i = ((list_element*)p)->e.data;
-      if (i > n || i <= 0)
-        {
-          fprintf(stderr, "Found erroneous list element %d\n", i);
-          err_cnt++;
-        }
-      else if (marks[i] != 0)
-        {
-          fprintf(stderr, "Found duplicate list element %d\n", i);
-          abort();
-        }
-      else marks[i] = 1;
+       p != NULL; p = AO_REAL_NEXT_PTR(*p)) {
+    i = ((list_element *)p)->e.data;
+    if (i > n || i <= 0) {
+      fprintf(stderr, "Found erroneous list element %d\n", i);
+      err_cnt++;
+    } else if (marks[i] != 0) {
+      fprintf(stderr, "Found duplicate list element %d\n", i);
+      abort();
+    } else {
+      marks[i] = 1;
     }
+  }
 
   for (i = 1; i <= n; ++i)
-    if (marks[i] != 1)
-      {
-        fprintf(stderr, "Missing list element %d\n", i);
-        err_cnt++;
-      }
-
+    if (marks[i] != 1) {
+      fprintf(stderr, "Missing list element %d\n", i);
+      err_cnt++;
+    }
   free(marks);
   if (err_cnt > 0) abort();
 }
 
-volatile AO_t ops_performed = 0;
+static volatile AO_t ops_performed = 0;
 
 #ifndef LIMIT
         /* Total number of push/pop ops in all threads per test.    */
@@ -200,13 +198,13 @@ volatile AO_t ops_performed = 0;
 #endif
 
 #ifdef USE_WINTHREADS
-  DWORD WINAPI run_one_test(LPVOID arg)
+  static DWORD WINAPI run_one_test(LPVOID arg)
 #else
-  void * run_one_test(void * arg)
+  static void * run_one_test(void * arg)
 #endif
 {
-  AO_t *t[MAX_NTHREADS + 1];
-  unsigned index = (unsigned)(size_t)arg;
+  AO_uintptr_t *t[MAX_NTHREADS + 1];
+  unsigned index = (unsigned)(AO_uintptr_t)arg;
   unsigned i;
 # ifdef VERBOSE_STACK
     unsigned j = 0;
@@ -214,32 +212,28 @@ volatile AO_t ops_performed = 0;
     printf("starting thread %u\n", index);
 # endif
   assert(index <= MAX_NTHREADS);
-  while (fetch_then_add(&ops_performed, index + 1) + index + 1 < LIMIT)
-    {
-      /* Pop index+1 elements (where index is the thread's one), then   */
-      /* push them back (in the same order of operations).              */
-      /* Note that this is done in parallel by many threads.            */
-      for (i = 0; i <= index; ++i)
-        {
-          t[i] = AO_stack_pop(&the_list);
-          if (0 == t[i])
-            {
-              /* This should not happen as at most n*(n+1)/2 elements   */
-              /* could be popped off at a time.                         */
-              fprintf(stderr, "Failed - nothing to pop\n");
-              abort();
-            }
-        }
-      for (i = 0; i <= index; ++i)
-        {
-          AO_stack_push(&the_list, t[i]);
-        }
-#     ifdef VERBOSE_STACK
-        j += index + 1;
-#     endif
+  while (fetch_then_add(&ops_performed, index + 1) + index + 1 < LIMIT) {
+    /* Pop index+1 elements (where index is the thread's one), then */
+    /* push them back (in the same order of operations).            */
+    /* Note that this is done in parallel by many threads.          */
+    for (i = 0; i <= index; ++i) {
+      t[i] = AO_stack_pop(&the_list);
+      if (NULL == t[i]) {
+        /* This should not happen as at most n*(n+1)/2 elements */
+        /* could be popped off at a time.                       */
+        fprintf(stderr, "Failed - nothing to pop\n");
+        abort();
+      }
     }
-    /* Repeat until LIMIT push/pop operations are performed (by all     */
-    /* the threads simultaneously).                                     */
+    for (i = 0; i <= index; ++i) {
+      AO_stack_push(&the_list, t[i]);
+    }
+#   ifdef VERBOSE_STACK
+      j += index + 1;
+#   endif
+  }
+  /* Repeat until LIMIT push/pop operations are performed (by all   */
+  /* the threads simultaneously).                                   */
 # ifdef VERBOSE_STACK
     printf("finished thread %u: %u total ops\n", index, j);
 # endif
@@ -250,9 +244,9 @@ volatile AO_t ops_performed = 0;
 # define N_EXPERIMENTS 1
 #endif
 
-unsigned long times[MAX_NTHREADS + 1][N_EXPERIMENTS];
+static unsigned long times[MAX_NTHREADS + 1][N_EXPERIMENTS];
 
-void run_one_experiment(int max_nthreads, int exper_n)
+static void run_one_experiment(int max_nthreads, int exper_n)
 {
   int nthreads;
 
@@ -268,7 +262,7 @@ void run_one_experiment(int max_nthreads, int exper_n)
 #   endif
     int list_length = nthreads*(nthreads+1)/2;
     unsigned long start_time;
-    AO_t *le;
+    AO_uintptr_t *le;
 
 #   ifdef VERBOSE_STACK
       printf("Before add_elements: exper_n=%d, nthreads=%d,"
@@ -289,12 +283,12 @@ void run_one_experiment(int max_nthreads, int exper_n)
       int code;
 
 #     ifdef USE_WINTHREADS
-        thread[i] = CreateThread(NULL, 0, run_one_test, (LPVOID)(size_t)i,
-                                 0, &thread_id);
+        thread[i] = CreateThread(NULL, 0, run_one_test,
+                                 (LPVOID)(AO_uintptr_t)i, 0, &thread_id);
         code = thread[i] != NULL ? 0 : (int)GetLastError();
 #     else
         code = pthread_create(&thread[i], 0, run_one_test,
-                              (void *)(size_t)i);
+                              (void *)(AO_uintptr_t)i);
 #     endif
       if (code != 0) {
         fprintf(stderr, "Thread creation failed %u\n", (unsigned)code);
@@ -329,13 +323,13 @@ void run_one_experiment(int max_nthreads, int exper_n)
     /* Ensure that no element is lost or duplicated.    */
     check_list(list_length);
     /* And, free the entire list.   */
-    while ((le = AO_stack_pop(&the_list)) != 0)
+    while ((le = AO_stack_pop(&the_list)) != NULL)
       free(le);
     /* Retry with larger n values.      */
   }
 }
 
-void run_all_experiments(int max_nthreads)
+static void run_all_experiments(int max_nthreads)
 {
   int exper_n;
 
@@ -344,7 +338,7 @@ void run_all_experiments(int max_nthreads)
 }
 
 /* Output the performance statistic.    */
-void output_stat(int max_nthreads)
+static void output_stat(int max_nthreads)
 {
   int nthreads;
 
@@ -375,24 +369,21 @@ int main(int argc, char **argv)
 {
   int max_nthreads = DEFAULT_NTHREADS;
 
-  if (2 == argc)
-    {
-      max_nthreads = atoi(argv[1]);
-      if (max_nthreads < 1 || max_nthreads > MAX_NTHREADS)
-        {
-          fprintf(stderr, "Invalid max # of threads argument\n");
-          exit(1);
-        }
-    }
-  else if (argc > 2)
-    {
-      fprintf(stderr, "Usage: %s [max # of threads]\n", argv[0]);
+  if (2 == argc) {
+    max_nthreads = atoi(argv[1]);
+    if (max_nthreads < 1 || max_nthreads > MAX_NTHREADS) {
+      fprintf(stderr, "Invalid max # of threads argument\n");
       exit(1);
     }
+  } else if (argc > 2) {
+    fprintf(stderr, "Usage: %s [max # of threads]\n", argv[0]);
+    exit(1);
+  }
   if (!AO_stack_is_lock_free())
     printf("Use almost-lock-free implementation\n");
 # if defined(CPPCHECK)
     AO_stack_init(&the_list);
+    (void)AO_stack_next_ptr(0);
 # endif
   run_all_experiments(max_nthreads);
   output_stat(max_nthreads);

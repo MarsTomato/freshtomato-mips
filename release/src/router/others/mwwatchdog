@@ -235,7 +235,7 @@ mwwatchdogAdd() {
 	local CKTIME=$(NG mwan_cktime)
 	local MINS=$((CKTIME/60))
 
-	[ "$MINS" -gt 0 ] && cru l | grep -q mwwatchdogJob || cru a mwwatchdogJob "*/$MINS * * * * /usr/sbin/mwwatchdog"
+	[ "$MINS" -gt 0 ] && { cru l | grep -q mwwatchdogJob || cru a mwwatchdogJob "*/$MINS * * * * /usr/sbin/mwwatchdog"; }
 }
 
 mwwatchdogDel() {
@@ -324,7 +324,7 @@ case "$1" in
 			# run with a 10 sec timeout to not hang
 			timeout 10 findHost
 			[ -f "$IPLISTFILE" ] && IPLIST=$(cat "$IPLISTFILE")
-			[ -z "$IPLIST" ] && IPLIST="8.8.8.8" # Resilient IP if the list is empty
+			[ -z "$IPLIST" ] && IPLIST="$(NG wan_checker)" # Resilient IP if the list is empty
 
 			# filter out DNS IPs from the list
 			BADIPLIST=""

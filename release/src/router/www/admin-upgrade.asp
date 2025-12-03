@@ -12,9 +12,9 @@
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
 <title>[<% ident(); %>] Admin: Upgrade</title>
-<link rel="stylesheet" type="text/css" href="tomato.css?rel=<% version(); %>">
+<link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
-<script src="tomato.js?rel=<% version(); %>"></script>
+<script src="tomato.js"></script>
 
 <script>
 
@@ -75,7 +75,7 @@ function earlyInit() {
 <table id="container">
 <tr><td colspan="2" id="header">
 	<div class="title"><a href="/">FreshTomato</a></div>
-	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %></div>
+	<div class="version">Version <% version(); %> on <% nv("t_model_name"); %><span class="blinking bl2"><script><% anonupdate(); %> anon_update()</script>&nbsp;</span></div>
 </td></tr>
 <tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">

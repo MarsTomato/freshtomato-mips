@@ -25,10 +25,10 @@
      }
    
    return 1;
-@@ -127,9 +131,11 @@
+@@ -131,9 +135,11 @@
  	      arp->addr.addr4.s_addr != addr->in.sin_addr.s_addr)
  	    continue;
- 	    
+ 	  
 +#ifdef HAVE_IPV6
  	  if (arp->family == AF_INET6 && 
  	      !IN6_ARE_ADDR_EQUAL(&arp->addr.addr6, &addr->in6.sin6_addr))
@@ -37,7 +37,7 @@
  	  
  	  /* Only accept positive entries unless in lazy mode. */
  	  if (arp->status != ARP_EMPTY || lazy || updated)
-@@ -192,8 +198,10 @@
+@@ -200,8 +206,10 @@
  
        if (addr->sa.sa_family == AF_INET)
  	arp->addr.addr4.s_addr = addr->in.sin_addr.s_addr;
@@ -755,7 +755,7 @@
        ipsz = sizeof(ip);
 --- dnsmasq/src/edns0.c
 +++ dnsmasq/src/edns0.c
-@@ -326,14 +326,20 @@
+@@ -335,14 +335,20 @@
  
  struct subnet_opt {
    u16 family;
@@ -777,7 +777,7 @@
  
    return &addr->in.sin_addr;
  }
-@@ -350,6 +356,7 @@
+@@ -359,6 +365,7 @@
    opt->source_netmask = 0;
    opt->scope_netmask = 0;
      
@@ -785,7 +785,7 @@
    if (source->sa.sa_family == AF_INET6 && daemon->add_subnet6)
      {
        opt->source_netmask = daemon->add_subnet6->mask;
-@@ -362,6 +369,7 @@
+@@ -371,6 +378,7 @@
        else 
  	addrp = &source->in6.sin6_addr;
      }
@@ -793,7 +793,7 @@
  
    if (source->sa.sa_family == AF_INET && daemon->add_subnet4)
      {
-@@ -376,7 +384,11 @@
+@@ -385,7 +393,11 @@
  	  addrp = &source->in.sin_addr;
      }
    
@@ -1905,7 +1905,7 @@
        addr.pfra_net = 0x20;
 --- dnsmasq/src/tftp.c
 +++ dnsmasq/src/tftp.c
-@@ -63,11 +63,17 @@
+@@ -62,11 +62,17 @@
    struct tftp_prefix *pref;
    union all_addr addra;
    int family = listen->addr.sa.sa_family;
@@ -1923,7 +1923,7 @@
  #if defined(HAVE_LINUX_NETWORK)
      char control[CMSG_SPACE(sizeof(struct in_pktinfo))];
  #elif defined(HAVE_SOLARIS_NETWORK)
-@@ -177,6 +183,7 @@
+@@ -174,6 +180,7 @@
  	  
  #endif
  
@@ -1931,7 +1931,7 @@
        if (family == AF_INET6)
          {
            for (cmptr = CMSG_FIRSTHDR(&msg); cmptr; cmptr = CMSG_NXTHDR(&msg, cmptr))
-@@ -192,6 +199,7 @@
+@@ -189,6 +196,7 @@
                  if_index = p.p->ipi6_ifindex;
                }
          }
@@ -1939,7 +1939,7 @@
        
        if (!indextoname(listen->tftpfd, if_index, namebuff))
  	return;
-@@ -198,9 +206,11 @@
+@@ -195,9 +203,11 @@
  
        name = namebuff;
        
@@ -1951,7 +1951,7 @@
  	addra.addr4 = addr.in.sin_addr;
        
        if (daemon->tftp_interfaces)
-@@ -295,6 +305,7 @@
+@@ -292,6 +302,7 @@
        addr.in.sin_len = sizeof(addr.in);
  #endif
      }
@@ -1959,7 +1959,7 @@
    else
      {
        addr.in6.sin6_port = htons(port);
-@@ -304,6 +315,7 @@
+@@ -301,6 +312,7 @@
        addr.in6.sin6_len = sizeof(addr.in6);
  #endif
      }
@@ -1967,7 +1967,7 @@
  
    /* May reuse struct transfer from abandoned transfer in single port mode. */
    if (!transfer && !(transfer = whine_malloc(sizeof(struct tftp_transfer))))
-@@ -348,8 +360,10 @@
+@@ -345,8 +357,10 @@
  		{ 
  		  if (family == AF_INET)
  		    addr.in.sin_port = htons(port);
