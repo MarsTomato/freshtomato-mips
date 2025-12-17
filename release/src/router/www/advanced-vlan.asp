@@ -892,6 +892,7 @@ function earlyInit() {
 	show();
 
 	verifyFields(null, 1);
+	insOvl();
 }
 
 function init() {

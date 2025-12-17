@@ -969,6 +969,7 @@ const defaults_t defaults[] = {
 
 /* advanced-firewall */
 	{ "nf_loopback",		"0"				},
+	{ "fw_strict_input",		"1"				},	/* block inter-bridge access to router IPs */
 	{ "block_wan",			"1"				},	/* block inbound icmp */
 	{ "block_wan_limit",		"1"				},
 	{ "block_wan_limit_icmp",	"3"				},

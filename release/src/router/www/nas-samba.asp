@@ -215,6 +215,7 @@ function earlyInit() {
 	show();
 	ssg.setup();
 	verifyFields(null, 1);
+	insOvl();
 }
 
 function init() {

@@ -459,7 +459,7 @@
  	/* At the end */
 --- dnsmasq/src/dnsmasq.c
 +++ dnsmasq/src/dnsmasq.c
-@@ -2052,11 +2052,11 @@
+@@ -2051,11 +2051,11 @@
  	  indextoname(listener->tcpfd, if_index, intr_name))
  	{
  	  union all_addr addr;
@@ -1037,7 +1037,7 @@
    /* May not be able to have permission to set multicast groups don't die in that case */
    if ((daemon->netlinkfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) != -1)
      {
-@@ -250,6 +252,7 @@
+@@ -257,6 +259,7 @@
  		      if (!callback.af_inet(addr, ifa->ifa_index, label,  netmask, broadcast, parm))
  			callback_ok = 0;
  		  }
@@ -1045,7 +1045,7 @@
  		else if (ifa->ifa_family == AF_INET6)
  		  {
  		    struct in6_addr *addrp = NULL;
-@@ -293,6 +296,7 @@
+@@ -300,6 +303,7 @@
  					(unsigned int)preferred, (unsigned int)valid, parm))
  			callback_ok = 0;
  		  }

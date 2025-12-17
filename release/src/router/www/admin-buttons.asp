@@ -54,6 +54,7 @@ function earlyInit() {
 		if (brau) E('braudiv').style.display = 'block';
 		if ((wham) || (aoss) || (brau)) E('leddiv').style.display = 'block';
 	}
+	insOvl();
 }
 </script>
 </head>
