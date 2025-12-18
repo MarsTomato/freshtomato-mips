@@ -10,6 +10,7 @@ FreshTomato-MIPS Changelog
 
 - Warning: due to changes in the naming of some nvram variables, users of PPTP Client should review their settings.
 
+- kernel RT-N/RT-AC: enable NETFILTER_NETLINK_QUEUE (Netfilter NFQUEUE over NFNETLINK) (close #40)
 - openssl: update to 3.0.18
 - tor: update to 0.4.8.21
 - php: update to 8.3.28
@@ -30,6 +31,7 @@ FreshTomato-MIPS Changelog
 - GUI: status-overview.asp - Only displaying unsecured WiFi warning in AP mode
 - Add Bridge Gateway Isolation + UI (IPv4 only atm), IPv6 bridge isolation, and IPv6-aware advanced-access.asp
 - Improved IPv6 support
+- IPv6 (DHCPv6 with PD): add option to adjust Identity Association for Non-temporary Addresses ID and Identity Association for Prefix Delegation ID
 - Add autoconf-archive to installation command
 - build: e2fsprogs: tune recipe, add patch to make libmagic optional
 - build: also install ebtables-restore
