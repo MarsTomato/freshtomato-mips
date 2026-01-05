@@ -1,6 +1,6 @@
 --- dropbear/configure.ac
 +++ dropbear/configure.ac
-@@ -115,22 +115,6 @@ if test "$hardenbuild" -eq 1; then
+@@ -109,22 +109,6 @@ if test "$hardenbuild" -eq 1; then
  			[AC_MSG_NOTICE([Not setting $TESTFLAGS]); LDFLAGS="$OLDLDFLAGS" ]
  			)
  	fi # non-static

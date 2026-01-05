@@ -107,8 +107,8 @@ static int add_domain(domain_list_t *list, const char *domain)
 
 	/* allocate memory for the new domain */
 	list->domains[list->count] = (char*)malloc((strlen(domain) + 1) * sizeof(char));
-		if (!list->domains[list->count])
-			return -1;
+	if (!list->domains[list->count])
+		return -1;
 
 	/* copy domain */
 	strlcpy(list->domains[list->count], domain, strlen(domain) + 1);
@@ -241,6 +241,8 @@ static void update_dnsmasq_ipset(const char *tag, domain_list_t *list, int add)
 
 	/* add new entries for domains not found in file */
 	if (add && list->domains) {
+		rewind(fp_read); /* reset file pointer to beginning */
+
 		for (i = 0; i < domain_count; i++) {
 			found = 0;
 
@@ -469,11 +471,6 @@ static void wg_build_routing(const int unit, const char *fwmark, const char *fwm
 	int policy;
 	domain_list_t my_domains;
 
-	if (init_domain_list(&my_domains) != 0) {
-		logmsg(LOG_ERR, "cannot initialize domain list");
-		return;
-	}
-
 	memset(buffer, 0, BUF_SIZE_64);
 	snprintf(buffer, BUF_SIZE_64, WG_FW_DIR"/wg%d-fw-routing.sh", unit);
 
@@ -483,6 +480,13 @@ static void wg_build_routing(const int unit, const char *fwmark, const char *fwm
 		            "\n# Routing\n"
 		            "iptables -t mangle -A PREROUTING -m set --match-set %s dst,src -j MARK --set-mark %s\n",
 		            wgrouting_mark, fwmark_mask);
+
+		if (init_domain_list(&my_domains) != 0) {
+			logmsg(LOG_WARNING, "cannot initialize domain list");
+			fclose(fp);
+			eval("rm", "-rf", buffer);
+			return;
+		}
 
 		/* example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0> (enabled<type<domain_or_IP<kill_switch>) */
 		nv = nvp = strdup(getNVRAMVar("wg%d_routing_val", unit));
@@ -545,11 +549,14 @@ static int wg_quick_iface(char *iface, const char *file, const int up)
 	memset(buffer, 0, BUF_SIZE_32);
 	snprintf(buffer, BUF_SIZE_32, WG_DIR"/%s.conf", iface);
 	if ((f = fopen(buffer, "w")) != NULL) {
-		fappend(f, file);
-		fclose(f);
+		if (fappend(f, file) < 0) {
+			logmsg(LOG_WARNING, "fappend failed for %s", buffer);
+			fclose(f);
+			return -1;
+		}
 	}
 	else
-		logmsg(LOG_WARNING, "unable to open wireguard configuration file %s for interface %s!", iface, file);
+		logmsg(LOG_WARNING, "unable to open wireguard configuration file %s for interface %s!", file, iface);
 
 	/* set up/down wireguard IF */
 	if (eval("wg-quick", up_down, buffer, iface, "--norestart")) {
@@ -684,7 +691,7 @@ static int wg_create_iface(char *iface)
 
 static int wg_set_iface_addr(char *iface, const char *addr)
 {
-	char *nv, *b;
+	char *nv, *nv_orig, *b;
 
 	/* Flush all addresses from interface */
 	if (eval("ip", "addr", "flush", "dev", iface)) {
@@ -695,18 +702,21 @@ static int wg_set_iface_addr(char *iface, const char *addr)
 		logmsg(LOG_DEBUG, "successfully flushed wireguard interface %s", iface);
 
 	/* Set wireguard interface address(es) */
-	nv = strdup(addr);
-	while ((b = strsep(&nv, ",")) != NULL) {
+	nv = nv_orig = strdup(addr);
+	while (nv && (b = strsep(&nv, ",")) != NULL) {
 		if (eval("ip", "addr", "add", b, "dev", iface)) {
 			logmsg(LOG_WARNING, "unable to add wireguard interface %s address of %s!", iface, b);
+			if (nv_orig)
+				free(nv_orig);
+
 			return -1;
 		}
 		else
 			logmsg(LOG_DEBUG, "wireguard interface %s has had address %s add to it", iface, b);
 	}
 
-	if (nv)
-		free(nv);
+	if (nv_orig)
+		free(nv_orig);
 
 	return 0;
 }
@@ -732,8 +742,11 @@ static int wg_set_iface_privkey(char *iface, const char *privkey)
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, BUF_SIZE, WG_KEYS_DIR"/%s", iface);
 
-	fp = fopen(buffer, "w");
-	fprintf(fp, privkey);
+	if (!(fp = fopen(buffer, "w"))) {
+		logmsg(LOG_WARNING, "cannot open file for writing: %s (%s)", buffer, strerror(errno));
+		return -1;
+	}
+	fprintf(fp, "%s", privkey);
 	fclose(fp);
 
 	chmod(buffer, (S_IRUSR | S_IWUSR));
@@ -762,12 +775,12 @@ static int wg_set_iface_fwmark(char *iface, char *fwmark)
 	else
 		snprintf(buffer, BUF_SIZE_16, "0x%s", fwmark);
 
-	if (eval("wg", "set", iface, "fwmark", fwmark)) {
-		logmsg(LOG_WARNING, "unable to set wireguard interface %s fwmark to %s!", iface, fwmark);
+	if (eval("wg", "set", iface, "fwmark", buffer)) {
+		logmsg(LOG_WARNING, "unable to set wireguard interface %s fwmark to %s!", iface, buffer);
 		return -1;
 	}
 	else
-		logmsg(LOG_DEBUG, "wireguard interface %s has had its fwmark set to %s", iface, fwmark);
+		logmsg(LOG_DEBUG, "wireguard interface %s has had its fwmark set to %s", iface, buffer);
 
 	return 0;
 }
@@ -882,8 +895,11 @@ static int wg_set_peer_psk(char *iface, char *pubkey, const char *presharedkey)
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, BUF_SIZE, WG_KEYS_DIR"/%s.psk", iface);
 
-	fp = fopen(buffer, "w");
-	fprintf(fp, presharedkey);
+	if (!(fp = fopen(buffer, "w"))) {
+		logmsg(LOG_WARNING, "cannot open file for writing: %s (%s)", buffer, strerror(errno));
+		return -1;
+	}
+	fprintf(fp, "%s", presharedkey);
 	fclose(fp);
 
 	if (eval("wg", "set", iface, "peer", pubkey, "preshared-key", buffer)) {
@@ -895,6 +911,7 @@ static int wg_set_peer_psk(char *iface, char *pubkey, const char *presharedkey)
 
 	/* remove file for security */
 	remove(buffer);
+
 	return err;
 }
 
@@ -1198,22 +1215,40 @@ static void wg_routing_policy(char *iface, char *route, char *fwmark, const int 
 
 static void wg_route_peer_allowed_ips(const int unit, char *iface, const char *allowed_ips, const char *fwmark, const int add)
 {
-	char *aip, *b, *table, *rt, *tp, *ip, *nm;
-	int route_type = 1;
+	char *aip, *aip_orig, *b, *table, *rt, *tp, *ip, *nm;
+	int parsed, route_type = 1;
 	char buffer[BUF_SIZE_32];
+	char table_buf[BUF_SIZE_32];
+
+	memset(table_buf, 0, BUF_SIZE_32);
+	table = rt = NULL;
 
 	tp = b = strdup(getNVRAMVar("wg%d_route", unit));
 	if (tp) {
-		if (vstrsep(b, "|", &rt, &table) < 3)
-			route_type = atoi(rt);
+		parsed = vstrsep(b, "|", &rt, &table);
 
+		if (!rt || rt[0] == '\0') {
+			logmsg(LOG_WARNING, "invalid route format for wg%d: missing routetype in '%s'", unit, tp);
+			/* use default route_type = 1, table = NULL */
+		}
+		else if (parsed == 1) {
+			route_type = atoi(rt);
+			table = NULL;
+		}
+		else {
+			route_type = atoi(rt);
+			strlcpy(table_buf, table, BUF_SIZE_32);
+			table = table_buf;
+		}
 		free(tp);
 	}
 
+	logmsg(LOG_DEBUG, "*** %s: routing: iface=[%s] route_type=[%s] table=[%d]", __FUNCTION__, iface, route_type, table);
+
 	/* check which routing type the user specified */
 	if (route_type > 0) { /* !off */
-		aip = strdup(allowed_ips);
-		while ((b = strsep(&aip, ",")) != NULL) {
+		aip = aip_orig = strdup(allowed_ips);
+		while (aip && (b = strsep(&aip, ",")) != NULL) {
 			memset(buffer, 0, BUF_SIZE_32);
 			snprintf(buffer, BUF_SIZE_32, "%s", b);
 
@@ -1232,12 +1267,12 @@ static void wg_route_peer_allowed_ips(const int unit, char *iface, const char *a
 				}
 			}
 			else { /* std route */
-				logmsg(LOG_DEBUG, "*** %s: running wg_route_peer() iface=[%s] route=[%s] table=[%s] add=[%d]", __FUNCTION__, iface, buffer, table, add);
-				wg_route_peer(iface, buffer, (route_type == 1 ? NULL : table), add);
+				logmsg(LOG_DEBUG, "*** %s: running wg_route_peer() iface=[%s] route=[%s] table=[%s] add=[%d]", __FUNCTION__, iface, buffer, (route_type == 1 || !table) ? "-" : table, add);
+				wg_route_peer(iface, buffer, (route_type == 1) ? NULL : table, add);
 			}
 		}
-		if (aip)
-			free(aip);
+		if (aip_orig)
+			free(aip_orig);
 	}
 }
 
@@ -1357,9 +1392,9 @@ static void wg_add_peer_privkey(const int unit, char *iface, const char *privkey
 static void wg_remove_peer(const int unit, char *iface, char *pubkey, char *allowed_ips, const char *fwmark)
 {
 	if (eval("wg", "set", iface, "peer", pubkey, "remove"))
-		logmsg(LOG_WARNING, "unable to remove peer %s from wireguard interface %s!", iface, pubkey);
+		logmsg(LOG_WARNING, "unable to remove peer %s from wireguard interface %s!", pubkey, iface);
 	else
-		logmsg(LOG_DEBUG, "peer %s has been removed from wireguard interface %s", iface, pubkey);
+		logmsg(LOG_DEBUG, "peer %s has been removed from wireguard interface %s", pubkey, iface);
 
 	/* remove routes (also default route if any) */
 	wg_route_peer_allowed_ips(unit, iface, allowed_ips, fwmark, 0); /* 0 = remove */
@@ -1399,11 +1434,12 @@ static int wg_remove_iface(char *iface)
 			logmsg(LOG_WARNING, "unable to delete wireguard interface %s!", iface);
 			return -1;
 		}
-		else
-			logmsg(LOG_DEBUG, "wireguard interface %s has been deleted", iface);
+		logmsg(LOG_DEBUG, "wireguard interface %s has been deleted", iface);
+		return 0;
 	}
-	else
-		logmsg(LOG_DEBUG, "no such interface: %s", iface);
+
+	/* interface doesn't exist - not an error, just log */
+	logmsg(LOG_DEBUG, "no such interface: %s", iface);
 
 	return 0;
 }
@@ -1543,9 +1579,8 @@ void start_wireguard(const int unit)
 				else
 					wg_add_peer(unit, iface, key, buffer, psk, (mode == 3 ? ka : rka), ep, fwmark, port);
 			}
+			free(nv);
 		}
-		if (nvp)
-			free(nvp);
 
 		eval("ip", "route", "flush", "cache");
 
@@ -1656,9 +1691,8 @@ void stop_wireguard(const int unit)
 				else
 					wg_remove_peer(unit, iface, key, buffer, fwmark);
 			}
+			free(nv);
 		}
-		if (nvp)
-			free(nvp);
 
 		eval("ip", "rule", "delete", "table", fwmark, "fwmark", fwmark);
 		eval("ip", "route", "flush", "table", fwmark);
@@ -1700,20 +1734,26 @@ void write_wg_dnsmasq_config(FILE* f)
 		}
 	}
 
-	if ((dir = opendir(WG_DNS_DIR)) != NULL) {
-		while ((file = readdir(dir)) != NULL) {
-			fn = file->d_name;
+	dir = opendir(WG_DNS_DIR);
+	if (!dir)
+		return;
 
-			if (fn[0] == '.')
+	while ((file = readdir(dir)) != NULL) {
+		fn = file->d_name;
+
+		if (fn[0] == '.')
+			continue;
+
+		if (sscanf(fn, "%s.conf", device) == 1) {
+			memset(buf, 0, BUF_SIZE);
+			snprintf(buf, BUF_SIZE, "%s/%s", WG_DNS_DIR, fn);
+			if (fappend(f, buf) == -1) {
+				logmsg(LOG_WARNING, "fappend failed for %s (%s)", buf, strerror(errno));
 				continue;
-
-			if (sscanf(fn, "%s.conf", device) == 1) {
-				logmsg(LOG_DEBUG, "*** %s: adding Dnsmasq config from %s", __FUNCTION__, fn);
-				memset(buf, 0, BUF_SIZE);
-				snprintf(buf, BUF_SIZE, WG_DNS_DIR"/%s", fn);
-				fappend(f, buf);
 			}
+
+			logmsg(LOG_DEBUG, "*** %s: adding Dnsmasq config from %s", __FUNCTION__, fn);
 		}
-		closedir(dir);
 	}
+	closedir(dir);
 }

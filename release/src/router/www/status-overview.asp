@@ -379,6 +379,7 @@ function show() {
 
 function earlyInit() {
 	show();
+	insOvl();
 }
 
 function init() {

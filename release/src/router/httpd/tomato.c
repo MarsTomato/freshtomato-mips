@@ -551,6 +551,8 @@ static const nvset_t nvset_list[] = {
 	{ "ipv6_debug",			V_01				},	/* enable/show debug infos */
 #endif
 	{ "ipv6_duid_type",		V_RANGE(1, 4)			},	/* see RFC8415 Section 11; DUID-LLT = 1, DUID-EN = 2, DUID-LL = 3, DUID-UUID = 4 */
+	{ "ipv6_ia_na_id",		V_RANGE(0, 255)			},	/* default 0 - Allow to adjust it for some special providers! */
+	{ "ipv6_ia_pd_id",		V_RANGE(0, 255)			},	/* default 0 - Allow to adjust it for some special providers! */
 	{ "ipv6_prefix",		V_IPV6(0)			},
 	{ "ipv6_prefix_length",		V_RANGE(3, 127)			},
 	{ "ipv6_rtr_addr",		V_IPV6(0)			},
@@ -572,7 +574,7 @@ static const nvset_t nvset_list[] = {
 	{ "ipv6_6rd_prefix_length",	V_RANGE(3, 127)			},
 	{ "ipv6_6rd_borderrelay",	V_IP				},
 	{ "ipv6_6rd_ipv4masklen",	V_RANGE(0, 32)			},
-	{ "ipv6_vlan",			V_RANGE(0, 7)			},	/* Enable IPv6: bit 0 = LAN1, bit 1 = LAN2, bit 2 = LAN3 */
+	{ "ipv6_vlan",			V_RANGE(0, (1U<<(BRIDGE_COUNT-1))-1)},	/* Enable IPv6: bit 0 = LAN1, bit 1 = LAN2, bit 2 = LAN3 (depending on BRIDGE_COUNT) */
 	{ "ipv6_isp_opt",		V_01				},	/* see router/rc/wan.c --> add default route ::/0 */
 	{ "ipv6_pdonly",		V_01				},	/* Request DHCPv6 Prefix Delegation Only (send ia-pd and NO send ia-na) */
 	{ "ipv6_pd_norelease",		V_01				},	/* DHCP6 client - no prefix/address release on exit */
@@ -2528,6 +2530,14 @@ static void wo_nvcommit(char *url)
 	nvram_commit();
 }
 
+static void wo_updatelast(char *url)
+{
+	if (strcmp(nvram_safe_get("os_version_last"), tomato_shortver)) {
+		nvram_set("os_version_last", tomato_shortver);
+		nvram_commit();
+	}
+}
+
 const struct mime_handler mime_handlers[] = {
 /*	  pattern			mime_type				cache  input(path,len,boundary)	output(path)		auth */
 	{ "update.cgi",			mime_javascript,			0,	wi_generic,		wo_update,		1 },
@@ -2577,6 +2587,7 @@ const struct mime_handler mime_handlers[] = {
 	{ "dhcpc.cgi",			NULL,					0,	wi_generic,		wo_dhcpc,		1 },
 	{ "dhcpd.cgi",			mime_javascript,			0,	wi_generic,		wo_dhcpd,		1 },
 	{ "nvcommit.cgi",		NULL,					0,	wi_generic,		wo_nvcommit,		1 },
+	{ "updatelast.cgi",		NULL,					0,	wi_generic,		wo_updatelast,		1 },
 	{ "ping.cgi",			mime_javascript,			0,	wi_generic,		wo_ping,		1 },
 	{ "trace.cgi",			mime_javascript,			0,	wi_generic,		wo_trace,		1 },
 	{ "upgrade.cgi",		mime_html,				0,	wi_upgrade,		wo_flash,		1 },
