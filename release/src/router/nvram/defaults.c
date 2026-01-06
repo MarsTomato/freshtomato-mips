@@ -338,6 +338,7 @@ const defaults_t bsd_defaults[] = {
 
 const defaults_t defaults[] = {
 	{ "restore_defaults",		"0"				},	/* Set to 0 to not restore defaults on boot */
+	{ "fname",			""				},	/* Populate filename used during flashing */
 
 	/* LAN H/W parameters */
 	{ "lan_hwnames",		""				},	/* LAN driver names (e.g. et0) */
