@@ -339,7 +339,7 @@ obj-$(TCONFIG_SDHC)		+= mmc
 obj-$(TCONFIG_L2TP)		+= xl2tpd
 obj-$(TCONFIG_RAID)		+= mdadm
 obj-$(TCONFIG_NFS)		+= e2fsprogs zlib libevent portmap libnfsidmap nfs-utils
-obj-$(TCONFIG_USB)		+= e2fsprogs p910nd comgt libjson-c libubox uqmi sd-idle apcupsd
+obj-$(TCONFIG_USB)		+= e2fsprogs p910nd comgt libjson-c libubox uqmi sd-idle $(if $(TCONFIG_UPS),apcupsd,)
 obj-$(TCONFIG_NOCAT)		+= $(if $(TCONFIG_BCMARM),zlib libffi libiconv gettext-tiny $(PCRE_TARGET) glib2,glib) nocat
 obj-$(TCONFIG_SAMBASRV)		+= $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),libiconv,) zlib samba3 wsdd2
 obj-$(TCONFIG_IPV6)		+= dhcpv6
@@ -3892,7 +3892,7 @@ avahi/stamp-h1:
 	$(call patch_files,avahi)
 	cd avahi && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -DNDEBUG -DDISABLE_SYSTEMD -I$(TOP)/expat/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/expat/staged/usr/lib -ldl -lpthread" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/expat/staged/usr/lib -ldl -lpthread $(if $(TCONFIG_BCMARM),-lgcc_s,)" \
 		LIBDAEMON_CFLAGS="-I$(TOP)/libdaemon" \
 		LIBDAEMON_LIBS="-L$(TOP)/libdaemon/libdaemon/.libs -ldaemon" \
 		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc localstatedir=/var --with-distro=none \
@@ -3906,7 +3906,7 @@ avahi/stamp-h1:
 			--disable-doxygen-chi --disable-doxygen-html --disable-doxygen-ps --disable-doxygen-pdf \
 			--with-xml=expat \
 			--with-avahi-user=nobody --with-avahi-group=nobody \
-			--with-autoipd-user=nobody --with-autoipd-group=nobody /
+			--with-autoipd-user=nobody --with-autoipd-group=nobody \
 			--disable-stack-protector \
 			--disable-dependency-tracking \
 			avahi_runtime_dir=/var/run servicedir=/etc/avahi/services
