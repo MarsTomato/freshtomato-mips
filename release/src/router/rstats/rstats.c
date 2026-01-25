@@ -1,20 +1,24 @@
 /*
+ *
+ * rstats
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * Fixes/updates (C) 2018 - 2026 pedro
+ * https://freshtomato.org/
+ *
+ */
 
-	rstats
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-
-	This program is free software; you can redistribute it and/or
-	modify it under the terms of the GNU General Public License
-	as published by the Free Software Foundation; either version 2
-	of the License, or (at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +32,10 @@
 #include <sys/ioctl.h>
 #include <stdint.h>
 #include <syslog.h>
+#include <inttypes.h>
+#ifdef USE_ZLIB
+ #include <zlib.h>
+#endif
 
 #include <bcmnvram.h>
 #include <shutils.h>
@@ -51,7 +59,7 @@
 #define MAX_NDAILY	62
 #define MAX_NMONTHLY	25
 #define MAX_SPEED_IF	32
-#define MAX_ROLLOVER	(3750UL * M) /* 3750 MByte - new rollover limit */
+#define MAX_ROLLOVER	(3750ULL * M) /* 3750 MByte - new rollover limit */
 
 #define MAX_COUNTER	2
 #define RX 		0
@@ -80,20 +88,10 @@ typedef struct {
 } history_t;
 
 typedef struct {
-	uint32_t id;
-
-	data_t daily[62];
-	int dailyp;
-
-	data_t monthly[12];
-	int monthlyp;
-} history_v0_t;
-
-typedef struct {
 	char ifname[12];
 	long utime;
 	unsigned long speed[MAX_NSPEED][MAX_COUNTER];
-	unsigned long last[MAX_COUNTER];
+	uint64_t last[MAX_COUNTER];
 	int tail;
 	signed char sync;
 } speed_t;
@@ -116,10 +114,18 @@ volatile int gotuser = 0;
 volatile int gotterm = 0;
 volatile int restarted = 1;
 
-const char history_fn[] = "/var/lib/misc/rstats-history";
-const char speed_fn[] = "/var/lib/misc/rstats-speed";
-const char uncomp_fn[] = "/var/tmp/rstats-uncomp";
-const char source_fn[] = "/var/lib/misc/rstats-source";
+const char history_fn[]       = "/var/lib/misc/rstats-history";
+const char speed_fn[]         = "/var/lib/misc/rstats-speed";
+#ifndef USE_ZLIB
+ const char uncomp_fn[]        = "/var/tmp/rstats-uncomp";
+#endif
+const char source_fn[]        = "/var/lib/misc/rstats-source";
+const char historyjs_fn[]     = "/var/spool/rstats-history.js";
+const char historyjs_tmp_fn[] = "/var/tmp/rstats-history.js";
+const char speedjs_fn[]       = "/var/spool/rstats-speed.js";
+const char speedjs_tmp_fn[]   = "/var/tmp/rstats-speed.js";
+const char load_fn[]          = "/var/tmp/rstats-load";
+const char stime_fn[]         = "/var/lib/misc/rstats-stime";
 
 
 static int get_stime(void)
@@ -136,17 +142,30 @@ static int get_stime(void)
 
 static int comp(const char *path, void *buffer, int size)
 {
-	char s[256];
+#ifdef USE_ZLIB
+	char gzpath[256];
+	int written, ret;
+
+	snprintf(gzpath, sizeof(gzpath), "%s.gz", path);
+	gzFile gf = gzopen(gzpath, "wb9");
+	if (!gf)
+		return 0;
+
+	written = gzwrite(gf, buffer, size);
+	ret = (written > 0 && written == size);
+	gzclose(gf);
+
+	return ret;
+#else
+	char cmd[256];
 
 	if (f_write(path, buffer, size, 0, 0) != size)
 		return 0;
 
-	sprintf(s, "%s.gz", path);
-	unlink(s);
+	snprintf(cmd, sizeof(cmd), "gzip -f %s", path); /* -f to overwrite existing .gz */
 
-	sprintf(s, "gzip %s", path);
-
-	return system(s) == 0;
+	return system(cmd) == 0;
+#endif
 }
 
 static void save(int quick)
@@ -165,7 +184,7 @@ static void save(int quick)
 
 	logmsg(LOG_DEBUG, "*** %s: quick=%d", __FUNCTION__, quick);
 
-	f_write("/var/lib/misc/rstats-stime", &save_utime, sizeof(save_utime), 0, 0);
+	f_write(stime_fn, &save_utime, sizeof(save_utime), 0, 0);
 
 	comp(speed_fn, speed, sizeof(speed[0]) * speed_count);
 	comp(history_fn, &history, sizeof(history));
@@ -176,7 +195,7 @@ static void save(int quick)
 	if (quick)
 		return;
 
-	sprintf(hgz, "%s.gz", history_fn);
+	snprintf(hgz, sizeof(hgz), "%s.gz", history_fn);
 
 	if (strcmp(save_path, "*nvram") == 0) {
 		if (!wait_action_idle(10)) {
@@ -186,7 +205,7 @@ static void save(int quick)
 
 		if ((n = f_read_alloc(hgz, &bi, 20 * 1024)) > 0) {
 			if ((bo = malloc(base64_encoded_len(n) + 1)) != NULL) {
-				n = base64_encode(bi, bo, n);
+				n = base64_encode((unsigned char *)bi, bo, n);
 				bo[n] = 0;
 				nvram_set("rstats_data", bo);
 				if (!nvram_match("debug_nocommit", "1"))
@@ -196,8 +215,8 @@ static void save(int quick)
 
 				free(bo);
 			}
+			free(bi);
 		}
-		free(bi);
 	}
 	else if (save_path[0] != 0) {
 		strcpy(tmp, save_path);
@@ -222,8 +241,8 @@ static void save(int quick)
 
 							strcpy(bkp, bak);
 							for (b = HI_BACK-1; b > 0; --b) {
-								sprintf(bkp + n, "_%d.bak", b + 1);
-								sprintf(bak + n, "_%d.bak", b);
+								snprintf(bkp + n, sizeof(bkp) - n, "_%d.bak", b + 1);
+								snprintf(bak + n, sizeof(bak) - n, "_%d.bak", b);
 								rename(bak, bkp);
 							}
 							if (eval("cp", "-p", save_path, bak) == 0)
@@ -249,25 +268,41 @@ static void save(int quick)
 
 static int decomp(const char *fname, void *buffer, int size, int max)
 {
-	char s[256];
-	int n;
+	int n = 0;
+#ifndef USE_ZLIB
+	char cmd[256];
+#endif
 
 	logmsg(LOG_DEBUG, "*** %s: fname=%s", __FUNCTION__, fname);
 
+#ifdef USE_ZLIB
+	gzFile gf = gzopen(fname, "rb");
+	if (gf) {
+		n = gzread(gf, buffer, (unsigned)(size * max));
+		gzclose(gf);
+
+		if (n <= 0)
+			n = 0;
+		else
+			n /= size;
+	}
+#else
 	unlink(uncomp_fn);
 
-	n = 0;
-	sprintf(s, "gzip -dc %s > %s", fname, uncomp_fn);
-	if (system(s) == 0) {
+	snprintf(cmd, sizeof(cmd), "gzip -dc %s > %s", fname, uncomp_fn);
+	if (system(cmd) == 0) {
 		n = f_read(uncomp_fn, buffer, size * max);
 		_dprintf("%s: n=%d\n", __FUNCTION__, n);
-		if (n <= 0) n = 0;
-			else n = n / size;
+		if (n <= 0)
+			n = 0;
+		else
+			n /= size;
 	}
 	else
-		logmsg(LOG_DEBUG, "*** %s: %s != 0", __FUNCTION__, s);
+		logmsg(LOG_DEBUG, "*** %s: %s != 0", __FUNCTION__, cmd);
 
 	unlink(uncomp_fn);
+#endif
 	memset((char *)buffer + (size * n), 0, (max - n) * size);
 
 	return n;
@@ -289,8 +324,8 @@ static int load_history(const char *fname)
 		logmsg(LOG_DEBUG, "*** %s: load failed", __FUNCTION__);
 		return 0;
 	}
-	else
-		memcpy(&history, &hist, sizeof(history));
+
+	memcpy(&history, &hist, sizeof(history));
 
 	logmsg(LOG_DEBUG, "*** %s: dailyp=%d monthlyp=%d", __FUNCTION__, history.dailyp, history.monthlyp);
 
@@ -313,7 +348,7 @@ static int try_hardway(const char *fname)
 		n -= 3;
 
 	for (b = HI_BACK; b > 0; --b) {
-		sprintf(fn + n, "_%d.bak", b);
+		snprintf(fn + n, sizeof(fn) - n, "_%d.bak", b);
 		found |= load_history(fn);
 	}
 	found |= load_history(fname);
@@ -325,7 +360,7 @@ static void load_new(void)
 {
 	char hgz[256];
 
-	sprintf(hgz, "%s.gz.new", history_fn);
+	snprintf(hgz, sizeof(hgz), "%s.gz.new", history_fn);
 	if (load_history(hgz))
 		save(0);
 
@@ -344,14 +379,14 @@ static void load(int new)
 
 	uptime = get_uptime();
 
-	strlcpy(save_path, nvram_safe_get("rstats_path"), sizeof(save_path) - 32);
+	strlcpy(save_path, nvram_safe_get("rstats_path"), sizeof(save_path));
 	if (((n = strlen(save_path)) > 0) && (save_path[n - 1] == '/')) {
 		ether_atoe(nvram_safe_get("lan_hwaddr"), mac);
-		sprintf(save_path + n, "tomato_rstats_%02x%02x%02x%02x%02x%02x.gz",
-			mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+		snprintf(save_path + n, sizeof(save_path) - n, "tomato_rstats_%02x%02x%02x%02x%02x%02x.gz",
+		         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	}
 
-	if (f_read("/var/lib/misc/rstats-stime", &save_utime, sizeof(save_utime)) != sizeof(save_utime))
+	if (f_read(stime_fn, &save_utime, sizeof(save_utime)) != sizeof(save_utime))
 		save_utime = 0;
 
 	t = uptime + get_stime();
@@ -360,7 +395,7 @@ static void load(int new)
 
 	logmsg(LOG_DEBUG, "*** %s: uptime = %ldm, save_utime = %ldm", __FUNCTION__, uptime / 60, save_utime / 60);
 
-	sprintf(hgz, "%s.gz", speed_fn);
+	snprintf(hgz, sizeof(hgz), "%s.gz", speed_fn);
 	speed_count = decomp(hgz, speed, sizeof(speed[0]), MAX_SPEED_IF);
 	logmsg(LOG_DEBUG, "*** %s: speed_count = %d", __FUNCTION__, speed_count);
 
@@ -371,7 +406,7 @@ static void load(int new)
 		}
 	}
 
-	sprintf(hgz, "%s.gz", history_fn);
+	snprintf(hgz, sizeof(hgz), "%s.gz", history_fn);
 
 	if (new) {
 		unlink(hgz);
@@ -395,7 +430,7 @@ static void load(int new)
 			bi = nvram_safe_get("rstats_data");
 			if ((n = strlen(bi)) > 0) {
 				if ((bo = malloc(base64_decoded_len(n))) != NULL) {
-					n = base64_decode(bi, (unsigned char *) bo, n);
+					n = base64_decode(bi, (unsigned char *)bo, n);
 					logmsg(LOG_DEBUG, "*** %s: nvram n=%d", __FUNCTION__, n);
 					f_write(hgz, bo, n, 0, 0);
 					free(bo);
@@ -407,7 +442,6 @@ static void load(int new)
 			i = 1;
 			while (1) {
 				if (wait_action_idle(10)) {
-
 					/* cifs quirk: try forcing refresh */
 					eval("ls", save_path);
 
@@ -454,7 +488,7 @@ static void save_speedjs(long next)
 	int sfd;
 	struct ifreq ifr;
 
-	if ((f = fopen("/var/tmp/rstats-speed.js", "w")) == NULL)
+	if ((f = fopen(speedjs_tmp_fn, "w")) == NULL)
 		return;
 
 	logmsg(LOG_DEBUG, "*** %s: speed_count = %d", __FUNCTION__, speed_count);
@@ -501,7 +535,7 @@ static void save_speedjs(long next)
 
 	fclose(f);
 
-	rename("/var/tmp/rstats-speed.js", "/var/spool/rstats-speed.js");
+	rename(speedjs_tmp_fn, speedjs_fn);
 }
 
 static void save_datajs(FILE *f, int mode)
@@ -529,7 +563,7 @@ static void save_datajs(FILE *f, int mode)
 		if (data[p].xtime == 0)
 			continue;
 
-		fprintf(f, "%s[0x%lx,0x%llx,0x%llx]", kn ? "," : "", (unsigned long)data[p].xtime, data[p].counter[0] / K, data[p].counter[1] / K);
+		fprintf(f, "%s[0x%lx,0x%llx,0x%llx]", kn ? "," : "", (unsigned long)data[p].xtime, data[p].counter[RX] / K, data[p].counter[TX] / K);
 		++kn;
 	}
 	fprintf(f, "];\n");
@@ -539,15 +573,15 @@ static void save_histjs(void)
 {
 	FILE *f;
 
-	if ((f = fopen("/var/tmp/rstats-history.js", "w")) != NULL) {
+	if ((f = fopen(historyjs_tmp_fn, "w")) != NULL) {
 		save_datajs(f, DAILY);
 		save_datajs(f, MONTHLY);
 		fclose(f);
-		rename("/var/tmp/rstats-history.js", "/var/spool/rstats-history.js");
+		rename(historyjs_tmp_fn, historyjs_fn);
 	}
 }
 
-static void bump(data_t *data, int *tail, int max, uint32_t xnow, unsigned long *counter)
+static void bump(data_t *data, int *tail, int max, uint32_t xnow, uint64_t *counter)
 {
 	int t, i;
 
@@ -577,16 +611,16 @@ static void calc(void)
 	char prefix[] = "wanXX";
 	char *ifname;
 	char *p;
-	unsigned long counter[MAX_COUNTER];
+	uint64_t counter[MAX_COUNTER];
 	speed_t *sp;
 	speed_runtime_t *sp_rtd;
 	int i, j;
 	time_t now;
 	time_t mon;
 	struct tm *tms;
-	uint32_t c;
-	uint32_t sc;
-	unsigned long diff;
+	uint64_t c;
+	uint64_t sc;
+	uint64_t diff;
 	long tick;
 	int n;
 	char *exclude;
@@ -616,8 +650,16 @@ static void calc(void)
 			continue;
 
 		/* <rx bytes, packets, errors, dropped, fifo errors, frame errors, compressed, multicast><tx ...> */
-		if (sscanf(p + 1, "%lu%*u%*u%*u%*u%*u%*u%*u%lu", &counter[0], &counter[1]) != 2)
-			continue;
+		/* first we try 64-bit format (newer kernels), then fallback to 32-bit (old 2.6 kernels) */
+		if (sscanf(p + 1, "%" SCNu64 "%*u%*u%*u%*u%*u%*u%*u%" SCNu64, &counter[RX], &counter[TX]) != 2) {
+			/* fallback 32-bit */
+			unsigned long temp_rx, temp_tx;
+			if (sscanf(p + 1, "%lu%*u%*u%*u%*u%*u%*u%*u%lu", &temp_rx, &temp_tx) != 2)
+				continue;
+
+			counter[RX] = temp_rx;
+			counter[TX] = temp_tx;
+		}
 
 		sp = speed;
 		sp_rtd = speed_rtd;
@@ -664,9 +706,7 @@ static void calc(void)
 			sp->sync = -1;
 			/* reset previous counters on first calc() to prevent wrong rollover */
 			if (restarted > 0) {
-				for (i = 0; i < MAX_COUNTER; ++i) {
-					sp->last[i] = counter[i];
-				}
+				memcpy(sp->last, counter, sizeof(sp->last));
 			}
 
 			tick = uptime - sp->utime;
@@ -683,17 +723,17 @@ static void calc(void)
 				c = counter[i];
 				sc = sp->last[i];
 				if (c < sc) { /* TX/RX bytes went backwards - figure out why */
-					diff = ((0xFFFFFFFFUL) - sc + 1UL) + c; /* rollover calculation */
+					diff = (0xFFFFFFFFFFFFFFFFULL - sc + 1ULL) + c; /* rollover calculation */
 					if (diff > MAX_ROLLOVER) {
-						diff = 0UL; /* 3750 MByte / 60 sec => 500 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
+						diff = 0ULL; /* 3750 MByte / 60 sec => 500 MBit/s maximum limit with roll-over! Try to catch unknown/unwanted traffic peaks - Part 1/2 */
 					}
 					else {
 						wanup = check_wanup(prefix); /* see router/shared/misc.c */
 						wanuptime = check_wanup_time(prefix); /* see router/shared/misc.c */
 
-						/* see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/page-39#post-281722 */
+						/* see https://www.linksysinfo.org/index.php?threads/tomato-toastmans-releases.36106/post-281722 */
 						if (wanup && (wanuptime < (long)(INTERVAL + 10)))
-							diff = 0UL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
+							diff = 0ULL; /* Try to catch traffic peaks at connection startup/reconnect (xDSL/PPPoE) - Part 2/2 */
 					}
 				}
 				else
@@ -706,7 +746,7 @@ static void calc(void)
 			for (j = 0; j < n; ++j) {
 				sp->tail = (sp->tail + 1) % MAX_NSPEED;
 				for (i = 0; i < MAX_COUNTER; ++i) {
-					sp->speed[sp->tail][i] = counter[i] / n;
+					sp->speed[sp->tail][i] = (unsigned long)(counter[i] / n);
 				}
 			}
 		}
@@ -737,7 +777,7 @@ static void calc(void)
 	}
 	fclose(f);
 
-	/* cleanup stale entries */
+	/* cleanup stale entries + save if needed */
 	for (i = 0; i < speed_count; ++i) {
 		sp = &speed[i];
 		if (sp->sync == -1) {
@@ -747,7 +787,7 @@ static void calc(void)
 		if (((uptime - sp->utime) > (10 * SMIN)) || (find_word(exclude, sp->ifname))) {
 			logmsg(LOG_DEBUG, "*** %s: #%d removing. > time limit or excluded", __FUNCTION__, i);
 			--speed_count;
-			memcpy(sp, sp + 1, (speed_count - i) * sizeof(speed[0]));
+			memmove(sp, sp + 1, (speed_count - i) * sizeof(speed[0]));
 		}
 		else {
 			logmsg(LOG_DEBUG, "*** %s: %s not found setting sync=1 #%d", __FUNCTION__, sp->ifname, i);
@@ -765,7 +805,6 @@ static void calc(void)
 	if (restarted > 0)
 		restarted = 0;
 }
-
 
 static void sig_handler(int sig)
 {
@@ -808,7 +847,7 @@ int main(int argc, char *argv[])
 	}
 
 	clear_history();
-	unlink("/var/tmp/rstats-load");
+	unlink(load_fn);
 
 	sa.sa_handler = sig_handler;
 	sa.sa_flags = 0;
@@ -826,7 +865,7 @@ int main(int argc, char *argv[])
 		while (uptime < z) {
 			sleep(z - uptime);
 			if (gothup) {
-				if (unlink("/var/tmp/rstats-load") == 0)
+				if (unlink(load_fn) == 0)
 					load_new();
 				else
 					save(0);

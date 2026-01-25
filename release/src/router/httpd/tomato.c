@@ -3,7 +3,7 @@
  * Tomato Firmware
  * Copyright (C) 2006-2009 Jonathan Zarate
  *
- * Fixes/updates (C) 2018 - 2025 pedro
+ * Fixes/updates (C) 2018 - 2026 pedro
  * https://freshtomato.org/
  *
  */
@@ -1331,26 +1331,27 @@ static const nvset_t nvset_list[] = {
 
 /* web-nginx */
 #ifdef TCONFIG_NGINX
-	{"nginx_enable",		V_01				},	/* NGinX enabled */
-	{"nginx_php",			V_01				},	/* PHP enabled */
-	{"nginx_keepconf",		V_01				},	/* NGinX configuration files overwrite flag */
-	{"nginx_docroot",		V_LENGTH(0, 255)		},	/* root files path */
-	{"nginx_port",			V_PORT				},	/* listening port */
-	{"nginx_fqdn",			V_LENGTH(0, 255)		},	/* server name */
-	{"nginx_upload",		V_LENGTH(1, 1000)		},	/* upload file size limit */
-	{"nginx_remote",		V_01				},
-	{"nginx_priority",		V_LENGTH(0, 255)		},	/* server priority */
-	{"nginx_custom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
-	{"nginx_httpcustom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
-	{"nginx_servercustom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
-	{"nginx_phpconf",		V_TEXT(0, 4096)			},	/* user window to add parameters to php.ini */
+	{ "nginx_enable",		V_01				},	/* NGinX enabled */
+	{ "nginx_php",			V_01				},	/* PHP enabled */
+	{ "nginx_keepconf",		V_01				},	/* NGinX configuration files overwrite flag */
+	{ "nginx_docroot",		V_LENGTH(0, 255)		},	/* root files path */
+	{ "nginx_port",			V_PORT				},	/* listening port */
+	{ "nginx_fqdn",			V_LENGTH(0, 255)		},	/* server name */
+	{ "nginx_upload",		V_LENGTH(1, 1000)		},	/* upload file size limit */
+	{ "nginx_remote",		V_01				},
+	{ "nginx_priority",		V_LENGTH(0, 255)		},	/* server priority */
+	{ "nginx_custom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
+	{ "nginx_httpcustom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
+	{ "nginx_servercustom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
+	{ "nginx_phpconf",		V_TEXT(0, 4096)			},	/* user window to add parameters to php.ini */
 #ifdef TCONFIG_BCMARM
-	{"nginx_phpfpmconf",		V_TEXT(0, 4096)			},	/* user window to add parameters to php-fpm.conf */
+	{ "nginx_phpfpmconf",		V_TEXT(0, 4096)			},	/* user window to add parameters to php-fpm.conf */
 #endif
-	{"nginx_user",			V_LENGTH(0, 255)		},	/* user used to start nginx and spawn-fcgi/php-fpm */
-	{"nginx_override",		V_01				},	/* use user config */
-	{"nginx_overridefile",		V_TEXT(0, 4096)			},	/* path/to/user/nginx.conf */
-	{"nginx_h5aisupport",		V_01				},	/* enable h5ai support */
+	{ "nginx_user",			V_LENGTH(0, 255)		},	/* user used to start nginx and spawn-fcgi/php-fpm */
+	{ "nginx_override",		V_01				},	/* use user config */
+	{ "nginx_overridefile",		V_TEXT(0, 4096)			},	/* path/to/user/nginx.conf */
+	{ "nginx_h5aisupport",		V_01				},	/* enable h5ai support */
+	{ "nginx_sleep",		V_RANGE(1, 60)			},	/* delay at startup */
 
 /* web-mysql */
 	{ "mysql_enable",		V_01				},
@@ -1467,6 +1468,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_ecdh",		V_01				},	/* when using ECDH */
 	{ "vpn_client_eas",		V_NONE				},
 	{ "vpn_client1_poll",		V_RANGE(0, 30)			},
+	{ "vpn_client1_tchk",		V_01				},	/* check if tunnel is up */
 	{ "vpn_client1_if",		V_TEXT(3, 3)			},	/* tap, tun */
 	{ "vpn_client1_bridge",		V_01				},
 	{ "vpn_client1_nat",		V_01				},
@@ -1505,6 +1507,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_fw",		V_01				},
 	{ "vpn_client1_prio",		V_NONE				},
 	{ "vpn_client2_poll",		V_RANGE(0, 30)			},
+	{ "vpn_client2_tchk",		V_01				},	/* check if tunnel is up */
 	{ "vpn_client2_if",		V_TEXT(3, 3)			},	/* tap, tun */
 	{ "vpn_client2_bridge",		V_01				},
 	{ "vpn_client2_nat",		V_01				},
@@ -1544,6 +1547,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_prio",		V_NONE				},
 #ifdef TCONFIG_BCMARM
 	{ "vpn_client3_poll",		V_RANGE(0, 30)			},
+	{ "vpn_client3_tchk",		V_01				},	/* check if tunnel is up */
 	{ "vpn_client3_if",		V_TEXT(3, 3)			},	/* tap, tun */
 	{ "vpn_client3_bridge",		V_01				},
 	{ "vpn_client3_nat",		V_01				},
@@ -1663,6 +1667,8 @@ static const nvset_t nvset_list[] = {
 	{ "wg_adns",			V_NONE				},
 	{ "wg0_enable",			V_01				},
 	{ "wg0_poll",			V_RANGE(0, 30)			},
+	{ "wg0_tchk",			V_01				},	/* check if tunnel is up */
+	{ "wg0_sleep",			V_RANGE(1, 60)			},	/* delay at startup */
 	{ "wg0_file",			V_TEXT(0, 64)			},
 	{ "wg0_key",			V_TEXT(0, 44)			},
 	{ "wg0_endpoint",		V_NONE				},
@@ -1691,6 +1697,8 @@ static const nvset_t nvset_list[] = {
 	{ "wg0_prio",			V_NONE				},
 	{ "wg1_enable",			V_01				},
 	{ "wg1_poll",			V_RANGE(0, 30)			},
+	{ "wg1_tchk",			V_01				},	/* check if tunnel is up */
+	{ "wg1_sleep",			V_RANGE(1, 60)			},	/* delay at startup */
 	{ "wg1_file",			V_TEXT(0, 64)			},
 	{ "wg1_key",			V_TEXT(0, 44)			},
 	{ "wg1_endpoint",		V_NONE				},
@@ -1719,6 +1727,8 @@ static const nvset_t nvset_list[] = {
 	{ "wg1_prio",			V_NONE				},
 	{ "wg2_enable",			V_01				},
 	{ "wg2_poll",			V_RANGE(0, 30)			},
+	{ "wg2_tchk",			V_01				},	/* check if tunnel is up */
+	{ "wg2_sleep",			V_RANGE(1, 60)			},	/* delay at startup */
 	{ "wg2_file",			V_TEXT(0, 64)			},
 	{ "wg2_key",			V_TEXT(0, 44)			},
 	{ "wg2_endpoint",		V_NONE				},
