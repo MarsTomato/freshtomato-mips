@@ -32,7 +32,6 @@
 #include <sys/ioctl.h>
 #include <stdint.h>
 #include <syslog.h>
-#include <inttypes.h>
 #ifdef USE_ZLIB
  #include <zlib.h>
 #endif
@@ -107,6 +106,7 @@ speed_runtime_t speed_rtd[MAX_SPEED_IF];
 int speed_count;
 long save_utime;
 char save_path[96];
+char speed_save_path[96];
 long uptime;
 
 volatile int gothup = 0;
@@ -143,19 +143,28 @@ static int get_stime(void)
 static int comp(const char *path, void *buffer, int size)
 {
 #ifdef USE_ZLIB
+	gzFile f;
 	char gzpath[256];
-	int written, ret;
+	int written, err;
 
 	snprintf(gzpath, sizeof(gzpath), "%s.gz", path);
-	gzFile gf = gzopen(gzpath, "wb9");
-	if (!gf)
+	if (!(f = gzopen(gzpath, "wb8"))) {
+		logmsg(LOG_ERR, "*** %s: cannot open %s for writing (%s)", __FUNCTION__, gzpath, strerror(errno));
 		return 0;
+	}
+	written = gzwrite(f, buffer, size);
+	if (written != size) {
+		gzclose(f);
+		return 0;
+	}
 
-	written = gzwrite(gf, buffer, size);
-	ret = (written > 0 && written == size);
-	gzclose(gf);
+	err = gzclose(f);
+	if (err != Z_OK) {
+		logmsg(LOG_ERR, "*** %s: gzclose failed for %s: error %d", __FUNCTION__, gzpath, err);
+		return 0;
+	}
 
-	return ret;
+	return (err == Z_OK);
 #else
 	char cmd[256];
 
@@ -170,14 +179,10 @@ static int comp(const char *path, void *buffer, int size)
 
 static void save(int quick)
 {
-	int i;
+	int i, n, b;
 	char *bi, *bo;
-	int n;
-	int b;
-	char hgz[256];
-	char tmp[256];
-	char bak[256];
-	char bkp[256];
+	char hgz[256], tmp[256], bak[256], bkp[256];
+	char speed_hgz[256], speed_tmp[256], speed_bak[256], speed_bkp[256];
 	time_t now;
 	struct tm *tms;
 	static int lastbak = -1;
@@ -219,8 +224,8 @@ static void save(int quick)
 		}
 	}
 	else if (save_path[0] != 0) {
-		strcpy(tmp, save_path);
-		strcat(tmp, ".tmp");
+		strlcpy(tmp, save_path, sizeof(tmp));
+		strlcat(tmp, ".tmp", sizeof(tmp));
 
 		for (i = 15; i > 0; --i) {
 			if (!wait_action_idle(10))
@@ -234,12 +239,12 @@ static void save(int quick)
 						now = time(0);
 						tms = localtime(&now);
 						if (lastbak != tms->tm_yday) {
-							strcpy(bak, save_path);
+							strlcpy(bak, save_path, sizeof(bak));
 							n = strlen(bak);
 							if ((n > 3) && (strcmp(bak + (n - 3), ".gz") == 0))
 								n -= 3;
 
-							strcpy(bkp, bak);
+							strlcpy(bkp, bak, sizeof(bkp));
 							for (b = HI_BACK-1; b > 0; --b) {
 								snprintf(bkp + n, sizeof(bkp) - n, "_%d.bak", b + 1);
 								snprintf(bak + n, sizeof(bak) - n, "_%d.bak", b);
@@ -249,10 +254,49 @@ static void save(int quick)
 								lastbak = tms->tm_yday;
 						}
 					}
-					logmsg(LOG_DEBUG, "*** %s: rename %s %s", __FUNCTION__, tmp, save_path);
 
+					logmsg(LOG_DEBUG, "*** %s: rename %s %s", __FUNCTION__, tmp, save_path);
 					if (rename(tmp, save_path) == 0) {
 						logmsg(LOG_DEBUG, "*** %s: rename ok", __FUNCTION__);
+
+						/* speed */
+						snprintf(speed_hgz, sizeof(speed_hgz), "%s.gz", speed_fn);
+						strlcpy(speed_tmp, speed_save_path, sizeof(speed_tmp));
+						strlcat(speed_tmp, ".tmp", sizeof(speed_tmp));
+
+						logmsg(LOG_DEBUG, "*** %s: cp %s %s", __FUNCTION__, speed_hgz, speed_tmp);
+
+						if (eval("cp", speed_hgz, speed_tmp) == 0) {
+							logmsg(LOG_DEBUG, "*** %s: copy ok for speed", __FUNCTION__);
+							if (!nvram_match("rstats_bak", "0")) {
+								now = time(0);
+								tms = localtime(&now);
+								if (lastbak != tms->tm_yday) {
+									strlcpy(speed_bak, speed_save_path, sizeof(speed_bak));
+									n = strlen(speed_bak);
+
+									if ((n > 3) && (strcmp(speed_bak + (n - 3), ".gz") == 0))
+										n -= 3;
+
+									strlcpy(speed_bkp, speed_bak, sizeof(speed_bkp));
+									for (b = HI_BACK-1; b > 0; --b) {
+										snprintf(speed_bkp + n, sizeof(speed_bkp) - n, "_%d.bak", b + 1);
+										snprintf(speed_bak + n, sizeof(speed_bak) - n, "_%d.bak", b);
+										rename(speed_bak, speed_bkp);
+									}
+
+									if (eval("cp", "-p", speed_save_path, speed_bak) == 0)
+										lastbak = tms->tm_yday;
+								}
+							}
+							logmsg(LOG_DEBUG, "*** %s: rename %s %s", __FUNCTION__, speed_tmp, speed_save_path);
+
+							if (rename(speed_tmp, speed_save_path) == 0) {
+								logmsg(LOG_DEBUG, "*** %s: rename ok for speed", __FUNCTION__);
+							}
+						}
+						/* --- */
+
 						break;
 					}
 				}
@@ -269,24 +313,25 @@ static void save(int quick)
 static int decomp(const char *fname, void *buffer, int size, int max)
 {
 	int n = 0;
-#ifndef USE_ZLIB
-	char cmd[256];
-#endif
 
 	logmsg(LOG_DEBUG, "*** %s: fname=%s", __FUNCTION__, fname);
-
 #ifdef USE_ZLIB
-	gzFile gf = gzopen(fname, "rb");
-	if (gf) {
-		n = gzread(gf, buffer, (unsigned)(size * max));
-		gzclose(gf);
+	gzFile f;
+
+	if ((f = gzopen(fname, "rb"))) {
+		n = gzread(f, buffer, (unsigned)(size * max));
+		gzclose(f);
 
 		if (n <= 0)
 			n = 0;
 		else
 			n /= size;
 	}
+	else
+		logmsg(LOG_DEBUG, "*** %s: cannot open %s for reading (%s)", __FUNCTION__, fname, strerror(errno));
 #else
+	char cmd[256];
+
 	unlink(uncomp_fn);
 
 	snprintf(cmd, sizeof(cmd), "gzip -dc %s > %s", fname, uncomp_fn);
@@ -332,28 +377,49 @@ static int load_history(const char *fname)
 	return 1;
 }
 
+static int load_speed(const char *fname)
+{
+	int count;
+
+	logmsg(LOG_DEBUG, "*** %s: fname=%s", __FUNCTION__, fname);
+
+	count = decomp(fname, speed, sizeof(speed[0]), MAX_SPEED_IF);
+
+	return count;
+}
+
 /* Try loading from the backup versions.
  * We'll try from oldest to newest, then
  * retry the requested one again last.  In case the drive mounts while
  * we are trying to find a good version.
  */
-static int try_hardway(const char *fname)
+static int try_hardway(const char *fname, const int is_speed)
 {
 	char fn[256];
 	int n, b, found = 0;
 
-	strcpy(fn, fname);
+	strlcpy(fn, fname, sizeof(fn));
 	n = strlen(fn);
 	if ((n > 3) && (strcmp(fn + (n - 3), ".gz") == 0))
 		n -= 3;
 
 	for (b = HI_BACK; b > 0; --b) {
 		snprintf(fn + n, sizeof(fn) - n, "_%d.bak", b);
-		found |= load_history(fn);
+		if (is_speed) {
+			if (load_speed(fn) > 0)
+				found = 1;
+		} else
+			found |= load_history(fn);
 	}
-	found |= load_history(fname);
 
-	return found;
+	if (is_speed) {
+		if (load_speed(fname) > 0)
+			found = 1;
+	}
+	else
+		found |= load_history(fname);
+
+	return is_speed ? (found ? speed_count : 0) : found;
 }
 
 static void load_new(void)
@@ -369,22 +435,36 @@ static void load_new(void)
 
 static void load(int new)
 {
-	int i;
+	int i, n;
+	int speed_loaded;
 	long t;
 	char *bi, *bo;
-	int n;
-	char hgz[256];
+	char hgz[256], speed_hgz[256];
 	char sp[sizeof(save_path)];
 	unsigned char mac[6];
 
 	uptime = get_uptime();
 
-	strlcpy(save_path, nvram_safe_get("rstats_path"), sizeof(save_path));
+	strlcpy(save_path, nvram_safe_get("rstats_path"), sizeof(save_path) - 32);
 	if (((n = strlen(save_path)) > 0) && (save_path[n - 1] == '/')) {
 		ether_atoe(nvram_safe_get("lan_hwaddr"), mac);
 		snprintf(save_path + n, sizeof(save_path) - n, "tomato_rstats_%02x%02x%02x%02x%02x%02x.gz",
 		         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	}
+
+	/* speed */
+	strlcpy(speed_save_path, nvram_safe_get("rstats_path"), sizeof(speed_save_path) - 32);
+	if (((n = strlen(speed_save_path)) > 0) && (speed_save_path[n - 1] == '/')) {
+		snprintf(speed_save_path + n, sizeof(speed_save_path) - n, "tomato_rstatss_%02x%02x%02x%02x%02x%02x.gz",
+		         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+	}
+	else {
+		if ((n > 3) && (strcmp(speed_save_path + (n - 3), ".gz") == 0))
+			speed_save_path[n - 3] = 0;
+
+		strlcat(speed_save_path, "-s.gz", sizeof(speed_save_path));
+	}
+	/* --- */
 
 	if (f_read(stime_fn, &save_utime, sizeof(save_utime)) != sizeof(save_utime))
 		save_utime = 0;
@@ -395,8 +475,24 @@ static void load(int new)
 
 	logmsg(LOG_DEBUG, "*** %s: uptime = %ldm, save_utime = %ldm", __FUNCTION__, uptime / 60, save_utime / 60);
 
-	snprintf(hgz, sizeof(hgz), "%s.gz", speed_fn);
-	speed_count = decomp(hgz, speed, sizeof(speed[0]), MAX_SPEED_IF);
+	/* speed */
+	speed_loaded = 0;
+	if (save_path[0] != 0 && strcmp(save_path, "*nvram") != 0) {
+		speed_count = load_speed(speed_save_path);
+		if (speed_count > 0) {
+			speed_loaded = 1;
+		}
+		else {
+			speed_count = try_hardway(speed_save_path, 1);
+			if (speed_count > 0)
+				speed_loaded = 1;
+		}
+	}
+	if (!speed_loaded) {
+		snprintf(speed_hgz, sizeof(speed_hgz), "%s.gz", speed_fn);
+		speed_count = decomp(speed_hgz, speed, sizeof(speed[0]), MAX_SPEED_IF);
+	}
+
 	logmsg(LOG_DEBUG, "*** %s: speed_count = %d", __FUNCTION__, speed_count);
 
 	for (i = 0; i < speed_count; ++i) {
@@ -405,11 +501,15 @@ static void load(int new)
 			speed[i].sync = 1;
 		}
 	}
+	/* --- */
 
 	snprintf(hgz, sizeof(hgz), "%s.gz", history_fn);
 
 	if (new) {
 		unlink(hgz);
+		if (save_path[0] != 0 && strcmp(save_path, "*nvram") != 0)
+			unlink(speed_save_path);
+
 		save_utime = 0;
 		return;
 	}
@@ -451,7 +551,7 @@ static void load(int new)
 					 * maybe it's corrupted (like 0 bytes long).
 					 * In these cases, try the backup files.
 					 */
-					if (load_history(save_path) || try_hardway(save_path)) {
+					if (load_history(save_path) || try_hardway(save_path, 0)) {
 						f_write_string(source_fn, save_path, 0, 0);
 						break;
 					}
@@ -476,19 +576,17 @@ static void load(int new)
 
 static void save_speedjs(long next)
 {
-	int i, j, k;
+	int j, k, p, i;
 	speed_t *sp;
-	int p;
 	FILE *f;
-	uint64_t total;
-	uint64_t tmax;
-	unsigned long n;
+	uint64_t total, tmax;
+	uint64_t n;
 	char c;
 	int up;
 	int sfd;
 	struct ifreq ifr;
 
-	if ((f = fopen(speedjs_tmp_fn, "w")) == NULL)
+	if (!(f = fopen(speedjs_tmp_fn, "w")))
 		return;
 
 	logmsg(LOG_DEBUG, "*** %s: speed_count = %d", __FUNCTION__, speed_count);
@@ -503,13 +601,12 @@ static void save_speedjs(long next)
 
 		up = 0;
 		if (sfd >= 0) {
-			strcpy(ifr.ifr_name, sp->ifname);
+			strlcpy(ifr.ifr_name, sp->ifname, sizeof(ifr.ifr_name));
 			if (ioctl(sfd, SIOCGIFFLAGS, &ifr) == 0)
 				up = (ifr.ifr_flags & IFF_UP);
 		}
 
 		fprintf(f, "%s'%s': { up: %d", i ? " },\n" : "", sp->ifname, up);
-
 		for (j = 0; j < MAX_COUNTER; ++j) {
 			total = tmax = 0;
 			c = j ? 't' : 'r';
@@ -518,7 +615,7 @@ static void save_speedjs(long next)
 			for (k = 0; k < MAX_NSPEED; ++k) {
 				p = (p + 1) % MAX_NSPEED;
 				n = sp->speed[p][j];
-				fprintf(f, "%s%lu", k ? "," : "", n);
+				fprintf(f, "%s%llu", k ? "," : "", n);
 				total += n;
 				if (n > tmax)
 					tmax = n;
@@ -573,7 +670,7 @@ static void save_histjs(void)
 {
 	FILE *f;
 
-	if ((f = fopen(historyjs_tmp_fn, "w")) != NULL) {
+	if ((f = fopen(historyjs_tmp_fn, "w"))) {
 		save_datajs(f, DAILY);
 		save_datajs(f, MONTHLY);
 		fclose(f);
@@ -631,7 +728,7 @@ static void calc(void)
 	now = time(0);
 	exclude = nvram_safe_get("rstats_exclude");
 
-	if ((f = fopen("/proc/net/dev", "r")) == NULL)
+	if (!(f = fopen("/proc/net/dev", "r")))
 		return;
 
 	fgets(buf, sizeof(buf), f); /* header */
@@ -650,16 +747,8 @@ static void calc(void)
 			continue;
 
 		/* <rx bytes, packets, errors, dropped, fifo errors, frame errors, compressed, multicast><tx ...> */
-		/* first we try 64-bit format (newer kernels), then fallback to 32-bit (old 2.6 kernels) */
-		if (sscanf(p + 1, "%" SCNu64 "%*u%*u%*u%*u%*u%*u%*u%" SCNu64, &counter[RX], &counter[TX]) != 2) {
-			/* fallback 32-bit */
-			unsigned long temp_rx, temp_tx;
-			if (sscanf(p + 1, "%lu%*u%*u%*u%*u%*u%*u%*u%lu", &temp_rx, &temp_tx) != 2)
-				continue;
-
-			counter[RX] = temp_rx;
-			counter[TX] = temp_tx;
-		}
+		if (sscanf(p + 1, "%llu%*u%*u%*u%*u%*u%*u%*u%llu", &counter[RX], &counter[TX]) != 2)
+			continue;
 
 		sp = speed;
 		sp_rtd = speed_rtd;
@@ -680,7 +769,7 @@ static void calc(void)
 			sp = &speed[i];
 			sp_rtd = &speed_rtd[i];
 			memset(sp, 0, sizeof(*sp));
-			strcpy(sp->ifname, ifname);
+			strlcpy(sp->ifname, ifname, sizeof(sp->ifname));
 			sp->sync = 1;
 			sp->utime = uptime;
 		}
@@ -833,6 +922,11 @@ int main(int argc, char *argv[])
 
 	if (fork() != 0)
 		return 0;
+
+	/* proper daemonization */
+	setsid();
+	chdir("/");
+	close(0); close(1); close(2);
 
 	openlog("rstats", LOG_PID, LOG_USER);
 

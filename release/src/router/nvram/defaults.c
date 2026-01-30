@@ -1127,7 +1127,7 @@ const defaults_t defaults[] = {
 	{ "ttb_url",			"http://ttb.mooo.com http://ttb.ath.cx http://ttb.ddnsfree.com"},	/* Tomato Themes Base - default URL */
 #endif
 	{ "web_svg",			"1"				},
-	{ "telnetd_eas",		"1"				},
+	{ "telnetd_eas",		"0"				},
 	{ "telnetd_port",		"23"				},
 	{ "sshd_eas",			"1"				},	/* enable sshd by default */
 	{ "sshd_pass",			"1"				},
