@@ -97,6 +97,11 @@ ref.refresh = function(text) {
 
 				h.tx.splice(0, 1);
 				h.tx.push(txDelta);
+
+				if (typeof(h.count) == 'undefined')
+					h.count = 0;
+				if (h.count < updateMaxL)
+					h.count++;
 			}
 			else if (!speed_history[i]) {
 				speed_history[i] = {};
