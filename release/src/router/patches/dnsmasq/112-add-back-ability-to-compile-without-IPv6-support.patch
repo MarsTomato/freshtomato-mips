@@ -459,7 +459,7 @@
  	/* At the end */
 --- dnsmasq/src/dnsmasq.c
 +++ dnsmasq/src/dnsmasq.c
-@@ -2096,9 +2096,11 @@
+@@ -2100,9 +2100,11 @@
  
  	  got_index = 1;
  	  
