@@ -94,6 +94,239 @@ else
 	current_V2 = ""
 endif
 
+# Macro to inject firmware name and package the firmware (Default: Asus Header)
+define CREATE_INJECT_MODEL_SDK6
+	# 1. Prepare environment: Create target directory and remove old artifacts
+	mkdir -p router/mipsel-uclibc/target/rom/filename
+	rm -rf router/mipsel-uclibc/target/rom/filename/*
+	rm -f image/linux-lzma.trx
+	rm -f fpkg.log
+	@echo "" >>fpkg.log
+	@echo "***********************" `date` "************************" >>fpkg.log
+	@cat router/shared/tomato_version >>fpkg.log
+	@echo "" >>fpkg.log
+
+	# 2. Sanitize the model name: Remove quotes and store in a variable
+	$(eval SAN_IMAGE := $(shell echo $(1) | tr -d '"' | tr -d "'"))
+
+	# 3. Create a placeholder file with the sanitized name inside the target folder
+	printf "" > router/mipsel-uclibc/target/rom/filename/$(SAN_IMAGE)
+
+	# 4. Generate the SquashFS filesystem from the target directory
+	ctools/mksquashfs router/mipsel-uclibc/target ctools/target.squashfs -noappend -all-root
+
+	# 5. Build the standard TRX image
+	ctools/trx -o image/linux-lzma.trx ctools/vmlinuz-lzma ctools/target.squashfs | tee -a fpkg.log
+
+	# 6. Add ASUS-specific headers and create the final flashable image
+	ctools/trx_asus -i image/linux-lzma.trx -r $(2),$(3),$(4),$(5),image/$(SAN_IMAGE) | tee -a fpkg.log
+
+	# 7. Cleanup and archiving
+	cp fpkg.log image/fpkg_$(SAN_IMAGE).log
+endef
+
+define CREATE_INJECT_MODEL_NETGEAR_SDK6
+	# 1. Prepare environment, create target directory and remove old artifacts
+	mkdir -p router/mipsel-uclibc/target/rom/filename
+	rm -rf router/mipsel-uclibc/target/rom/filename/*
+	rm -f image/linux-lzma.trx
+	rm -f fpkg.log
+	@echo "" >>fpkg.log
+	@echo "***********************" `date` "************************" >>fpkg.log
+	@cat router/shared/tomato_version >>fpkg.log
+	@echo "" >>fpkg.log
+
+	# 2. Sanitize the model name: Remove quotes and store in a variable
+	$(eval SAN_IMAGE := $(shell echo $(1) | tr -d '"' | tr -d "'"))
+
+	# 3. Create a placeholder file with the sanitized name inside the target folder
+	printf "" > router/mipsel-uclibc/target/rom/filename/$(SAN_IMAGE)
+
+	# 4. Generate the SquashFS filesystem from the target directory
+	ctools/mksquashfs router/mipsel-uclibc/target ctools/target.squashfs -noappend -all-root
+
+	# 5. Build the standard TRX image
+	ctools/trx -o image/linux-lzma.trx ctools/vmlinuz-lzma ctools/target.squashfs | tee -a fpkg.log
+
+	# 6. Add Netgear-specific headers and create the final flashable image
+	$(SRCBASE)/wnrtool/mkchkimg -o image/$(SAN_IMAGE) \
+	-k image/linux-lzma.trx \
+	-b $(2) -r 2 2>&1 | tee -a fpkg.log
+
+	# 7. Cleanup and archiving
+	cp fpkg.log image/fpkg_$(SAN_IMAGE).log
+endef
+
+# Macro to inject firmware name and package the firmware
+define CREATE_INJECT_MODEL_GEN
+	# 1. Prepare environment, create target directory and remove old artifacts
+	mkdir -p router/mipsel-uclibc/target/rom/filename
+	rm -rf router/mipsel-uclibc/target/rom/filename/*
+	rm -f router/mipsel-uclibc/target.image
+	rm -f fpkg.log
+	@echo "" >>fpkg.log
+	@echo "***********************" `date` "************************" >>fpkg.log
+	@cat router/shared/tomato_version >>fpkg.log
+	@echo "" >>fpkg.log
+
+	# 2. Sanitize the model name: Remove quotes and store in a variable
+	$(eval SAN_IMAGE := $(shell echo $(1) | tr -d '"' | tr -d "'"))
+
+	# 3. Create a placeholder file with the sanitized name inside the target folder
+	printf "" > router/mipsel-uclibc/target/rom/filename/$(SAN_IMAGE)
+
+	# 4. Generate the SquashFS filesystem from the target directory
+	$(LINUXDIR)/scripts/squashfs/mksquashfs-lzma router/mipsel-uclibc/target router/mipsel-uclibc/target.image -all-root -noappend -no-duplicates | tee router/target.info
+	cat router/target.info >>fpkg.log
+
+	# 5. Build Generic TRX using fpkg
+	btools/fpkg -i lzma-loader/loader.gz \
+		-i $(LINUXDIR)/arch/mips/brcm-boards/bcm947xx/compressed/vmlinuz \
+		-a 1024 \
+		-i router/mipsel-uclibc/target.image \
+		-t image/$(SAN_IMAGE) | tee -a fpkg.log
+
+	# 6. Cleanup and archiving
+	cp fpkg.log image/fpkg_$(SAN_IMAGE).log
+	rm -f router/target.info
+endef
+
+define CREATE_INJECT_MODEL_WNR3500LV2
+	# 1. Prepare environment, create target directory and remove old artifacts
+	mkdir -p router/mipsel-uclibc/target/rom/filename
+	rm -rf router/mipsel-uclibc/target/rom/filename/*
+	rm -f router/mipsel-uclibc/target.image
+	rm -f fpkg.log
+	@echo "" >>fpkg.log
+	@echo "***********************" `date` "************************" >>fpkg.log
+	@cat router/shared/tomato_version >>fpkg.log
+	@echo "" >>fpkg.log
+
+	# 2. Sanitize the model name: Remove quotes and store in a variable
+	$(eval SAN_IMAGE := $(shell echo $(1) | tr -d '"' | tr -d "'"))
+
+	# 3. Create a placeholder file with the sanitized name inside the target folder
+	printf "" > router/mipsel-uclibc/target/rom/filename/$(SAN_IMAGE)
+
+	# 4. Generate the SquashFS filesystem from the target directory
+	$(LINUXDIR)/scripts/squashfs/mksquashfs-lzma router/mipsel-uclibc/target router/mipsel-uclibc/target.image -all-root -noappend -no-duplicates | tee router/target.info
+	cat router/target.info >>fpkg.log
+
+	# 5. Build the standard TRX image
+	$(WNRTOOL)/trx -o image/freshtomato-wnr3500lv2.trx image/vmlinux.lzma router/mipsel-uclibc/target.image | tee -a fpkg.log
+
+	# 6. Cleanup and archiving
+	rm -f image/vmlinux.bin image/vmlinux.lzma
+	cp fpkg.log image/fpkg_$(SAN_IMAGE).log
+	rm -f router/target.info
+endef
+
+define CREATE_INJECT_MODEL_WNDR
+	# 1. Prepare environment, create target directory and remove old artifacts
+	mkdir -p router/mipsel-uclibc/target/rom/filename
+	rm -rf router/mipsel-uclibc/target/rom/filename/*
+	rm -f router/mipsel-uclibc/target.image
+	rm -f image/linux-lzma.trx
+	rm -f fpkg.log
+	@echo "" >>fpkg.log
+	@echo "***********************" `date` "************************" >>fpkg.log
+	@cat router/shared/tomato_version >>fpkg.log
+	@echo "" >>fpkg.log
+
+	# 2. Sanitize the model name: Remove quotes and store in a variable
+	$(eval SAN_IMAGE := $(shell echo $(1) | tr -d '"' | tr -d "'"))
+
+	# 3. Create a placeholder file with the sanitized name inside the target folder
+	printf "" > router/mipsel-uclibc/target/rom/filename/$(SAN_IMAGE)
+
+	# 4. Generate the SquashFS filesystem from the target directory
+	$(LINUXDIR)/scripts/squashfs/mksquashfs-lzma router/mipsel-uclibc/target router/mipsel-uclibc/target.image -all-root -noappend -no-duplicates | tee router/target.info
+	cat router/target.info >>fpkg.log
+
+	# 5. Build Generic TRX using fpkg
+	btools/fpkg -i lzma-loader/loader.gz \
+		-i $(LINUXDIR)/arch/mips/brcm-boards/bcm947xx/compressed/vmlinuz \
+		-a 1024 \
+		-i router/mipsel-uclibc/target.image \
+		-t image/linux-lzma.trx | tee -a fpkg.log
+
+	# 6. Add Netgear-specific headers and create the final flashable image
+	$(SRCBASE)/wnrtool/mkchkimg -o image/$(SAN_IMAGE) \
+	-k image/linux-lzma.trx \
+	-b $(2) -r 2 2>&1 | tee -a fpkg.log
+
+	# 7. Cleanup and archiving
+	cp fpkg.log image/fpkg_$(SAN_IMAGE).log
+	rm -f router/target.info
+endef
+
+define CREATE_INJECT_MODEL_LINKSYS
+	$(if $(filter -l -m,$(2)),,$(error ERROR: Argument 2 must be '-l' or '-m' but was '$(2)'))
+	# 1. Prepare environment, create target directory and remove old artifacts
+	mkdir -p router/mipsel-uclibc/target/rom/filename
+	rm -rf router/mipsel-uclibc/target/rom/filename/*
+	rm -f router/mipsel-uclibc/target.image
+	rm -f fpkg.log
+	@echo "" >>fpkg.log
+	@echo "***********************" `date` "************************" >>fpkg.log
+	@cat router/shared/tomato_version >>fpkg.log
+	@echo "" >>fpkg.log
+
+	# 2. Sanitize the model name: Remove quotes and store in a variable
+	$(eval SAN_IMAGE := $(shell echo $(1) | tr -d '"' | tr -d "'"))
+
+	# 3. Create a placeholder file with the sanitized name inside the target folder
+	printf "" > router/mipsel-uclibc/target/rom/filename/$(SAN_IMAGE)
+
+	# 4. Generate the SquashFS filesystem from the target directory
+	$(LINUXDIR)/scripts/squashfs/mksquashfs-lzma router/mipsel-uclibc/target router/mipsel-uclibc/target.image -all-root -noappend -no-duplicates | tee router/target.info
+	cat router/target.info >>fpkg.log
+
+	# 5. Build Linksys image using fpkg
+	btools/fpkg -i lzma-loader/loader.gz \
+		-i $(LINUXDIR)/arch/mips/brcm-boards/bcm947xx/compressed/vmlinuz \
+		-a 1024 \
+		-i router/mipsel-uclibc/target.image \
+		$(2) $(3),image/$(SAN_IMAGE) | tee -a fpkg.log
+
+	# 6. Cleanup and archiving
+	cp fpkg.log image/fpkg_$(SAN_IMAGE).log
+	rm -f router/target.info
+endef
+
+define CREATE_INJECT_MODEL_BELKIN
+	# 1. Prepare environment, create target directory and remove old artifacts
+	mkdir -p router/mipsel-uclibc/target/rom/filename
+	rm -rf router/mipsel-uclibc/target/rom/filename/*
+	rm -f router/mipsel-uclibc/target.image
+	rm -f fpkg.log
+	@echo "" >>fpkg.log
+	@echo "***********************" `date` "************************" >>fpkg.log
+	@cat router/shared/tomato_version >>fpkg.log
+	@echo "" >>fpkg.log
+
+	# 2. Sanitize the model name: Remove quotes and store in a variable
+	$(eval SAN_IMAGE := $(shell echo $(1) | tr -d '"' | tr -d "'"))
+
+	# 3. Create a placeholder file with the sanitized name inside the target folder
+	printf "" > router/mipsel-uclibc/target/rom/filename/$(SAN_IMAGE)
+
+	# 4. Generate the SquashFS filesystem from the target directory
+	$(LINUXDIR)/scripts/squashfs/mksquashfs-lzma router/mipsel-uclibc/target router/mipsel-uclibc/target.image -all-root -noappend -no-duplicates | tee router/target.info
+	cat router/target.info >>fpkg.log
+
+	# 5. Build Linksys image using fpkg
+	btools/fpkg -i lzma-loader/loader.gz \
+		-i $(LINUXDIR)/arch/mips/brcm-boards/bcm947xx/compressed/vmlinuz \
+		-a 1024 \
+		-i router/mipsel-uclibc/target.image \
+		-b $(2),image/$(SAN_IMAGE) | tee -a fpkg.log
+
+	# 6. Cleanup and archiving
+	cp fpkg.log image/fpkg_$(SAN_IMAGE).log
+	rm -f router/target.info
+endef
+
 # prepare variables for filename
 fn_BUILD_USB = $(if $(filter $(current_BUILD_USB),"USB"),$(shell echo -$(current_BUILD_USB)))
 fn_NVRAM_SIZE = $(if $(filter $(NVRAM_SIZE),0),,$(shell echo -NVRAM$(NVRAM_SIZE)K))
