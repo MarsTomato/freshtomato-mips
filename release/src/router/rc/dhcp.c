@@ -31,7 +31,9 @@
  *
  * Modified for Tomato Firmware
  * Portions, Copyright (C) 2006-2009 Jonathan Zarate
- * Fixes/updates (C) 2018 - 2025 pedro
+ *
+ * Fixes/updates (C) 2018 - 2026 pedro
+ * https://freshtomato.org/
  *
  */
 
@@ -250,8 +252,10 @@ static int bound(char *ifname, int renew, char *prefix)
 			for (i = 1; i <= MWAN_MAX; i++) {
 				memset(tmp, 0, sizeof(tmp));
 				snprintf(tmp, sizeof(tmp), (i == 1 ? "wan" : "wan%d"), i);
-				if (!strcmp(prefix, tmp))
+				if (!strcmp(prefix, tmp)) {
 					start_pppoe(PPPOEWAN(i), prefix);
+					break; /* found prefix - break */
+				}
 			}
 			break;
 		}
@@ -343,6 +347,8 @@ int dhcpc_event_main(int argc, char **argv)
 	unsigned int i;
 
 	ifname = getenv("interface");
+	if (ifname == NULL)
+		return EINVAL;
 
 	memset(tmp, 0, sizeof(tmp));
 	strlcpy(prefix, "wan", sizeof(prefix)); /* default */
@@ -353,13 +359,17 @@ int dhcpc_event_main(int argc, char **argv)
 
 		memset(tmp, 0, sizeof(tmp));
 		snprintf(tmp, sizeof(tmp), "%s_ifname", name);
-		if (nvram_match(tmp, ifname))
+		if (nvram_match(tmp, ifname)) {
 			strlcpy(prefix, name, sizeof(prefix));
+			break; /* found prefix (ifname) - break */
+		}
 
 		memset(tmp, 0, sizeof(tmp));
 		snprintf(tmp, sizeof(tmp), "%s_iface", name);
-		if (nvram_match(tmp, ifname))
+		if (nvram_match(tmp, ifname)) {
 			strlcpy(prefix, name, sizeof(prefix));
+			break; /* found prefix (ifname) - break */
+		}
 	}
 
 	if (!wait_action_idle(10))
@@ -367,7 +377,7 @@ int dhcpc_event_main(int argc, char **argv)
 
 	logmsg(LOG_DEBUG, "*** %s: interface=%s wan_prefix=%s event=%s", __FUNCTION__, ifname, prefix, argv[1] ? : "");
 
-	if ((!argv[1]) || (ifname == NULL))
+	if (!argv[1])
 		return EINVAL;
 	else if (strstr(argv[1], "deconfig"))
 		return deconfig(ifname, prefix);
@@ -859,6 +869,9 @@ void start_dhcp6c(void)
 
 		if (nvram_get_int("ipv6_pdonly") == 0)
 			fprintf(f, " send ia-na %d;\n", ia_na_id);
+
+		if (nvram_get_int("ipv6_rapid_commit"))
+			fprintf(f, " send rapid-commit;\n");
 
 		fprintf(f, " send ia-pd %d;\n"
 		           " request domain-name-servers;\n"

@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011 shibby
  *
- * Fixes/updates (C) 2018 - 2025 pedro
+ * Fixes/updates (C) 2018 - 2026 pedro
  * https://freshtomato.org/
  *
  */
@@ -15,11 +15,15 @@
 
 
 const char snmp_conf[] = "/etc/snmpd.conf";
+const char snmp_pid[]  = "/var/run/snmpd.pid";
 
 void start_snmp(void)
 {
 	FILE *fp;
 	const char *location, *contact, *name, *descr, *ro;
+
+	if (serialize_restart("snmpd", 1))
+		return;
 
 	/*  only if enabled... */
 	if (nvram_match("snmp_enable", "1")) {
@@ -58,7 +62,7 @@ void start_snmp(void)
 
 		chmod(snmp_conf, 0644);
 
-		xstart("snmpd", "-c", (char *)snmp_conf);
+		xstart("snmpd", "-c", (char *)snmp_conf, "-p", (char *)snmp_pid);
 
 		syslog(LOG_INFO, "snmpd started");
 	}
@@ -66,8 +70,13 @@ void start_snmp(void)
 
 void stop_snmp(void)
 {
+	if (serialize_restart("snmpd", 0))
+		return;
+
 	if (pidof("snmpd") > 0) {
-		killall("snmpd", SIGTERM);
+		killall_tk_period_wait("snmpd", 70);
 		syslog(LOG_INFO, "snmpd stopped");
 	}
+
+	eval("rm", "-f", (char *)snmp_pid);
 }

@@ -1911,6 +1911,10 @@ span.pptpsvg {
 div#dev-grid span.cellsvg {
 	background-image: var(--icon-cell);
 }
+
+div#usb-controls {
+	text-align: right;
+}
 /* USB-END */
 
 /* QRCODE-BEGIN */
@@ -1953,6 +1957,12 @@ span.pptpsvg {
 #svg text {
 	font: 11px monospace;
 	fill: #000;
+}
+
+#selectionRect {
+	fill: #999999;
+	fill-opacity: 0.2;
+	pointer-events: none;
 }
 
 .svg-line {

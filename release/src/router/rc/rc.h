@@ -10,6 +10,10 @@
  * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
  *
  * $Id: rc.h,v 1.39 2005/03/29 02:00:06 honor Exp $
+ *
+ * Fixes/updates (C) 2018 - 2026 pedro
+ * https://freshtomato.org/
+ *
  */
 
 
@@ -163,6 +167,9 @@ extern void start_vlan(void);
 extern void stop_vlan(void);
 extern int config_vlan(void);
 #ifdef TCONFIG_IPV6
+extern int _ipv6_route_add(const char *name, int metric, const char *dst, const char *gateway, int flags);
+extern int ipv6_route_add(const char *name, int metric, const char *dst, const char *gateway);
+extern int ipv6_route_del(const char *name, int metric, const char *dst, const char *gateway);
 extern int ipv6_mapaddr4(struct in6_addr *addr6, int ip6len, struct in_addr *addr4, int ip4mask);
 #endif
 

@@ -2,7 +2,9 @@
  *
  * Tomato Firmware
  * Copyright (C) 2006-2009 Jonathan Zarate
- * Fixes/updates (C) 2018 - 2025 pedro
+ *
+ * Fixes/updates (C) 2018 - 2026 pedro
+ * https://freshtomato.org/
  *
  */
 
@@ -219,7 +221,7 @@ static void update(int num, int *dirty, int force)
 
 		memset(v, 0, sizeof(v));
 		snprintf(v, sizeof(v), "%s_save", ddnsx);
-		if (nvram_get_int(s) && (strstr(serv, "dyndns") == 0))
+		if (nvram_get_int(v) && (strstr(serv, "dyndns") == 0))
 			*dirty = 1;
 	}
 

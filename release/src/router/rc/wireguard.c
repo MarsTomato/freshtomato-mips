@@ -1,7 +1,7 @@
 /*
  * wireguard.c
  *
- * Copyright (C) 2025 FreshTomato
+ * Copyright (C) 2025 - 2026 FreshTomato
  * https://freshtomato.org/
  *
  * This program is free software; you can redistribute it and/or
@@ -50,6 +50,7 @@ char port[BUF_SIZE_8];
 char fwmark[BUF_SIZE_16];
 unsigned int restart_dnsmasq = 0;
 unsigned int restart_fw = 0;
+const char *pid_path = WG_DIR "/child_wg%d.pid";
 
 /* structure for storing a dynamic array of domains */
 typedef struct {
@@ -641,10 +642,10 @@ static void wg_setup_watchdog(const int unit)
 		if ((fp = fopen(buffer, "w"))) {
 			fprintf(fp, "#!/bin/sh\n"
 			            "pingme() {\n"
-			            "[ \"3\" != \"%d\" ] && return 0\n"
+			            "[ \"3\" != \"%d\" -o \"%d\" = \"0\" ] && return 0\n"
 			            " local i=1\n"
 			            " while :; do\n"
-			            "  ping -qc1 -W3 -I wg%d 1.1.1.1 &>/dev/null && return 0\n"
+			            "  ping -qc1 -W3 -I wg%d %s &>/dev/null && return 0\n"
 			            "  [ $((i++)) -ge 3 ] && break || sleep 5\n"
 			            " done\n"
 			            " return 1\n"
@@ -655,8 +656,8 @@ static void wg_setup_watchdog(const int unit)
 			            " logger -t wg-watchdog wg%d stopped? Starting...\n"
 			            " service wireguard%d restart\n"
 			            "}\n",
-			            atoi(getNVRAMVar("wg%d_com", unit)), /* only for 'External' (3) mode */
-			            unit,
+			            atoi(getNVRAMVar("wg%d_com", unit)), /* only for 'External' (3) mode */ atoi(getNVRAMVar("wg%d_tchk", unit)),
+			            unit, nvram_safe_get("wan_checker"),
 			            unit,
 			            unit,
 			            unit);
@@ -767,20 +768,12 @@ static int wg_set_iface_privkey(char *iface, const char *privkey)
 
 static int wg_set_iface_fwmark(char *iface, char *fwmark)
 {
-	char buffer[BUF_SIZE_16];
-	memset(buffer, 0, BUF_SIZE_16);
-
-	if (fwmark[0] == '0' && fwmark[1] == '\0')
-		snprintf(buffer, BUF_SIZE_16, "%s", fwmark);
-	else
-		snprintf(buffer, BUF_SIZE_16, "0x%s", fwmark);
-
-	if (eval("wg", "set", iface, "fwmark", buffer)) {
-		logmsg(LOG_WARNING, "unable to set wireguard interface %s fwmark to %s!", iface, buffer);
+	if (eval("wg", "set", iface, "fwmark", fwmark)) {
+		logmsg(LOG_WARNING, "unable to set wireguard interface %s fwmark to %s!", iface, fwmark);
 		return -1;
 	}
 	else
-		logmsg(LOG_DEBUG, "wireguard interface %s has had its fwmark set to %s", iface, buffer);
+		logmsg(LOG_DEBUG, "wireguard interface %s has had its fwmark set to %s", iface, fwmark);
 
 	return 0;
 }
@@ -1243,7 +1236,7 @@ static void wg_route_peer_allowed_ips(const int unit, char *iface, const char *a
 		free(tp);
 	}
 
-	logmsg(LOG_DEBUG, "*** %s: routing: iface=[%s] route_type=[%s] table=[%d]", __FUNCTION__, iface, route_type, table);
+	logmsg(LOG_DEBUG, "*** %s: routing: iface=[%s] route_type=[%d] table=[%s]", __FUNCTION__, iface, route_type, table);
 
 	/* check which routing type the user specified */
 	if (route_type > 0) { /* !off */
@@ -1499,12 +1492,23 @@ void start_wireguard(const int unit)
 	char *priv, *name, *key, *psk, *ip, *ka, *aip, *ep;
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
-	int mode;
+	char wg_child_pid[BUF_SIZE_32];
+	int mode, n;
+	pid_t pidof_child = 0;
 
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, BUF_SIZE, "wireguard%d", unit);
 	if (serialize_restart(buffer, 1))
 		return;
+
+	memset(wg_child_pid, 0, BUF_SIZE_32);
+	snprintf(wg_child_pid, BUF_SIZE_32, pid_path, unit); /* add no of unit to pid file */
+
+	memset(buffer, 0, BUF_SIZE);
+	if (f_read_string(wg_child_pid, buffer, BUF_SIZE_32) > 0 && atoi(buffer) > 0 && ppid(atoi(buffer)) > 0) { /* fork is still up */
+		logmsg(LOG_WARNING, "%s: another process (PID: %s) still up, aborting ...", __FUNCTION__, buffer);
+		return;
+	}
 
 	/* determine interface */
 	memset(iface, 0, IF_SIZE);
@@ -1515,6 +1519,24 @@ void start_wireguard(const int unit)
 
 	/* set up directories for later use */
 	wg_setup_dirs();
+
+	/* fork new process */
+	if (fork() != 0) /* foreground process */
+		return;
+
+	pidof_child = getpid();
+
+	/* write child pid to a file */
+	memset(buffer, 0, BUF_SIZE);
+	snprintf(buffer, BUF_SIZE, "%d", pidof_child);
+	f_write_string(wg_child_pid, buffer, 0, 0);
+
+	/* wait a given time */
+	n = atoi(getNVRAMVar("wg%d_sleep", unit));
+	if (n > 0 && n < 60) {
+		logmsg(LOG_INFO, "wg%d - delaying start by %d seconds ...", unit, n);
+		sleep(n);
+	}
 
 	/* check if file is specified */
 	if (getNVRAMVar("wg%d_file", unit)[0] != '\0') {
@@ -1623,10 +1645,16 @@ void start_wireguard(const int unit)
 
 	logmsg(LOG_INFO, "wireguard (%s) started", iface);
 
-	return;
+	eval("rm", "-f", wg_child_pid);
+
+	/* terminate the child */
+	exit(0);
 
 out:
 	stop_wireguard(unit);
+
+	/* terminate the child */
+	exit(0);
 }
 
 void stop_wireguard(const int unit)
@@ -1635,12 +1663,25 @@ void stop_wireguard(const int unit)
 	char *priv, *name, *key, *psk, *ip, *ka, *aip, *ep;
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
-	int is_dev;
+	char wg_child_pid[BUF_SIZE_32];
+	int is_dev, m;
 
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, BUF_SIZE, "wireguard%d", unit);
 	if (serialize_restart(buffer, 0))
 		return;
+
+	/* prepare variables */
+	memset(wg_child_pid, 0, BUF_SIZE_32);
+	snprintf(wg_child_pid, BUF_SIZE_32, pid_path, unit); /* add no of unit to pid file */
+	m = atoi(getNVRAMVar("wg%d_sleep", unit)) + 10;
+
+	/* wait for child of start_wireguard to finish (if any) */
+	memset(buffer, 0, BUF_SIZE);
+	while (f_read_string(wg_child_pid, buffer, BUF_SIZE_32) > 0 && atoi(buffer) > 0 && ppid(atoi(buffer)) > 0 && (m-- > 0)) {
+		logmsg(LOG_DEBUG, "*** %s: waiting for child process of start_wireguard to end, %d secs left ...", __FUNCTION__, m);
+		sleep(1);
+	}
 
 	/* remove cron job */
 	memset(buffer, 0, BUF_SIZE);
@@ -1711,6 +1752,8 @@ void stop_wireguard(const int unit)
 	run_del_firewall_script(buffer, WG_DIR_DEL_SCRIPT);
 	eval("rm", "-rf", buffer);
 	simple_unlock("firewall");
+
+	eval("rm", "-f", wg_child_pid);
 
 	if (is_dev)
 		logmsg(LOG_INFO, "wireguard (%s) stopped", iface);

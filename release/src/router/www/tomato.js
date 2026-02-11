@@ -3012,7 +3012,7 @@ function wikiLink() {
 	else
 		page = 'status-overview';
 
-	var res = '<a href="'+url+'/'+page+'" target="_blank" rel="noopener noreferrer">Wiki</a> | <a onclick="toggleTheme()" href="#">◐</a>';
+	var res = '<a href="'+url+'/'+page+'" target="_blank" rel="noopener noreferrer" title="Freshtomato Wiki">Wiki</a> | <a onclick="toggleTheme()" href="#" title="Light/Dark mode">◐</a>';
 
 	W(res);
 	var alt = cookie.get('gui_themet');
@@ -3042,7 +3042,7 @@ function anon_update() {
 
 	/* special case */
 	if (page == 'status-overview.asp') {
-		res = '<div class="section-title">!! Attention !!</div><div class="section-centered">New version of FreshTomato <b>'+update+'</b> is now available. <a class="new_window" href="https://freshtomato.org/">Click here to download</a>.</div>';
+		res = '<div class="section-title">!! Attention !!</div><div class="section-centered">New version of FreshTomato <b>'+update+'</b> is now available. <a href="https://freshtomato.org/" target="_blank">Click here to download</a>.</div>';
 		E('status-nversion').innerHTML = res;
 		E('status-nversion').style.display = 'block';
 	}

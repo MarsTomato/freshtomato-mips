@@ -18,10 +18,10 @@
 +
      int  snmp_get_do_logging(    void);
      NETSNMP_IMPORT
-     void netsnmp_logging_restart(void);
+     void snmp_disable_log(       void);
 --- snmp/snmplib/snmp_logging.c
 +++ snmp/snmplib/snmp_logging.c
-@@ -1366,6 +1366,7 @@ snmp_log_string(int priority, const char
+@@ -1371,6 +1371,7 @@ snmp_log_string(int priority, const char
   *
   * @see snmp_log
   */
@@ -29,7 +29,7 @@
  int
  snmp_vlog(int priority, const char *format, va_list ap)
  {
-@@ -1400,6 +1401,7 @@ snmp_log(int priority, const char *forma
+@@ -1405,6 +1406,7 @@ snmp_log(int priority, const char *forma
      va_end(ap);
      return (ret);
  }

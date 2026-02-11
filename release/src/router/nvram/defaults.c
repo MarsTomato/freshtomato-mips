@@ -3,7 +3,8 @@
  * Tomato Firmware
  * Copyright (C) 2006-2009 Jonathan Zarate
  *
- * Fixes/updates (C) 2018 - 2025 pedro
+ * Fixes/updates (C) 2018 - 2026 pedro
+ * https://freshtomato.org/
  *
  */
 
@@ -512,10 +513,12 @@ const defaults_t defaults[] = {
 	{ "ipv6_vlan",			"0"				},	/* Enable IPv6 on LAN1 (bit 0) and/or LAN2 (bit 1) and/or LAN3 (bit 2) */
 	{ "ipv6_isp_opt",		"0"				},	/* see router/rc/wan.c --> add default route ::/0 */
 	{ "ipv6_pdonly",		"0"				},	/* Request DHCPv6 Prefix Delegation Only */
+	{ "ipv6_rapid_commit",		"0"				},	/* DHCP6 client - shorten the address assignment process from a 4-message to a 2-message exchange; default: off --> can cause problems and must be support by the server */
 	{ "ipv6_pd_norelease",		"0"				},	/* DHCP6 client - no prefix/address release on exit */
 	{ "ipv6_wan_addr",		""				},	/* Static IPv6 WAN Address */
 	{ "ipv6_prefix_len_wan",	"64"				},	/* Static IPv6 WAN Prefix Length */
 	{ "ipv6_isp_gw",		""				},	/* Static IPv6 ISP Gateway */
+	{ "ipv6_llremote_custom",	""				},	/* DHCPv6 PD user defined Gateway - used for default route, usually fe80:: (until provided via IPv6 RAs) */
 #endif /* TCONFIG_IPV6 */
 
 #ifdef TCONFIG_FANCTRL
@@ -1125,7 +1128,7 @@ const defaults_t defaults[] = {
 	{ "ttb_url",			"http://ttb.mooo.com http://ttb.ath.cx http://ttb.ddnsfree.com"},	/* Tomato Themes Base - default URL */
 #endif
 	{ "web_svg",			"1"				},
-	{ "telnetd_eas",		"1"				},
+	{ "telnetd_eas",		"0"				},
 	{ "telnetd_port",		"23"				},
 	{ "sshd_eas",			"1"				},	/* enable sshd by default */
 	{ "sshd_pass",			"1"				},
@@ -1497,6 +1500,7 @@ const defaults_t defaults[] = {
 	{ "vpn_server2_ecdh",		"0"				},
 	{ "vpn_client_eas",		""				},
 	{ "vpn_client1_poll",		"0"				},
+	{ "vpn_client1_tchk",		"0"				},	/* check if tunnel is up */
 	{ "vpn_client1_if",		"tun"				},
 	{ "vpn_client1_bridge",		"1"				},
 	{ "vpn_client1_nat",		"1"				},
@@ -1535,6 +1539,7 @@ const defaults_t defaults[] = {
 	{ "vpn_client1_tlsvername",	"0"				},
 	{ "vpn_client1_prio",		""				},
 	{ "vpn_client2_poll",		"0"				},
+	{ "vpn_client2_tchk",		"0"				},	/* check if tunnel is up */
 	{ "vpn_client2_if",		"tun"				},
 	{ "vpn_client2_bridge",		"1"				},
 	{ "vpn_client2_nat",		"1"				},
@@ -1574,6 +1579,7 @@ const defaults_t defaults[] = {
 	{ "vpn_client2_prio",		""				},
 #ifdef TCONFIG_BCMARM
 	{ "vpn_client3_poll",		"0"				},
+	{ "vpn_client3_tchk",		"0"				},	/* check if tunnel is up */
 	{ "vpn_client3_if",		"tun"				},
 	{ "vpn_client3_bridge",		"1"				},
 	{ "vpn_client3_nat",		"1"				},
@@ -1662,6 +1668,8 @@ const defaults_t defaults[] = {
 	{"wg_adns",			""				},
 	{"wg0_enable",			"0"				},
 	{"wg0_poll",			"0"				},
+	{"wg0_tchk",			"0"				},	/* check if tunnel is up */
+	{"wg0_sleep",			"1"				},	/* delay at startup */
 	{"wg0_file",			""				},
 	{"wg0_key",			""				},
 	{"wg0_endpoint",		""				},
@@ -1690,6 +1698,8 @@ const defaults_t defaults[] = {
 	{"wg0_prio",			""				},
 	{"wg1_enable",			"0"				},
 	{"wg1_poll",			"0"				},
+	{"wg1_tchk",			"0"				},	/* check if tunnel is up */
+	{"wg1_sleep",			"1"				},	/* delay at startup */
 	{"wg1_file",			""				},
 	{"wg1_key",			""				},
 	{"wg1_endpoint",		""				},
@@ -1718,6 +1728,8 @@ const defaults_t defaults[] = {
 	{"wg1_prio",			""				},
 	{"wg2_enable",			"0"				},
 	{"wg2_poll",			"0"				},
+	{"wg2_tchk",			"0"				},	/* check if tunnel is up */
+	{"wg2_sleep",			"1"				},	/* delay at startup */
 	{"wg2_file",			""				},
 	{"wg2_key",			""				},
 	{"wg2_endpoint",		""				},
@@ -1828,26 +1840,27 @@ const defaults_t defaults[] = {
 #endif /* TCONFIG_NOCAT */
 
 #ifdef TCONFIG_NGINX
-	{"nginx_enable",		"0"				},	/* NGinX enabled */
-	{"nginx_php",			"0"				},	/* PHP enabled */
-	{"nginx_keepconf",		"0"				},	/* Enable/disable keep configuration files unmodified in /etc/nginx */
-	{"nginx_docroot",		"/www"				},	/* path for server files */
-	{"nginx_port",			"85"				},	/* port to listen */
-	{"nginx_remote",		"0"				},	/* open port from WAN side */
-	{"nginx_fqdn",			"FreshTomato"			},	/* server name */
-	{"nginx_upload",		"100"				},	/* upload file size limit */
-	{"nginx_priority",		"10"				},	/* server priority = worker_priority */
-	{"nginx_custom",		""				},	/* additional lines for nginx.conf */
-	{"nginx_httpcustom",		""				},	/* additional lines for nginx.conf */
-	{"nginx_servercustom",		""				},	/* additional lines for nginx.conf */
-	{"nginx_phpconf",		""				},	/* additional lines for php.ini */
+	{ "nginx_enable",		"0"				},	/* NGinX enabled */
+	{ "nginx_php",			"0"				},	/* PHP enabled */
+	{ "nginx_keepconf",		"0"				},	/* Enable/disable keep configuration files unmodified in /etc/nginx */
+	{ "nginx_docroot",		"/www"				},	/* path for server files */
+	{ "nginx_port",			"85"				},	/* port to listen */
+	{ "nginx_remote",		"0"				},	/* open port from WAN side */
+	{ "nginx_fqdn",			"FreshTomato"			},	/* server name */
+	{ "nginx_upload",		"100"				},	/* upload file size limit */
+	{ "nginx_priority",		"10"				},	/* server priority = worker_priority */
+	{ "nginx_custom",		""				},	/* additional lines for nginx.conf */
+	{ "nginx_httpcustom",		""				},	/* additional lines for nginx.conf */
+	{ "nginx_servercustom",		""				},	/* additional lines for nginx.conf */
+	{ "nginx_phpconf",		""				},	/* additional lines for php.ini */
 #ifdef TCONFIG_BCMARM
-	{"nginx_phpfpmconf",		""				},	/* additional lines for php-fpm.conf */
+	{ "nginx_phpfpmconf",		""				},	/* additional lines for php-fpm.conf */
 #endif
-	{"nginx_user",			"root"				},	/* user/group */
-	{"nginx_override",		"0"				},	/* use user config */
-	{"nginx_overridefile",		"/path/to/nginx.conf"		},	/* path/to/user/nginx.conf */
-	{"nginx_h5aisupport",		"0"				},	/* enable h5ai support */
+	{ "nginx_user",			"root"				},	/* user/group */
+	{ "nginx_override",		"0"				},	/* use user config */
+	{ "nginx_overridefile",		"/path/to/nginx.conf"		},	/* path/to/user/nginx.conf */
+	{ "nginx_h5aisupport",		"0"				},	/* enable h5ai support */
+	{ "nginx_sleep",		"1"				},	/* delay at startup */
 
 	{ "mysql_enable",		"0"				},
 	{ "mysql_sleep",		"2"				},
