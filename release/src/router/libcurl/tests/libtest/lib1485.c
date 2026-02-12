@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 struct t1485_transfer_status {
   CURL *curl;
   curl_off_t out_len;
@@ -56,7 +58,7 @@ static size_t t1485_header_callback(char *ptr, size_t size, size_t nmemb,
     st->http_status = (int)httpcode;
     if(st->http_status >= 200 && st->http_status < 300) {
       result = curl_easy_getinfo(st->curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,
-                              &clen);
+                                 &clen);
       curl_mfprintf(stderr, "header_callback, info Content-Length: "
                     "%" CURL_FORMAT_CURL_OFF_T ", %d\n", clen, result);
       if(result) {
@@ -86,7 +88,7 @@ static size_t t1485_write_cb(char *ptr, size_t size, size_t nmemb, void *userp)
 static CURLcode test_lib1485(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   struct t1485_transfer_status st;
 
   start_test_timing();
@@ -106,12 +108,12 @@ static CURLcode test_lib1485(const char *URL)
 
   easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result; /* return the final return code */
+  return res; /* return the final return code */
 }

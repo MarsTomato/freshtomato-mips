@@ -27,6 +27,7 @@
 
 /* global variable declarations, for libcurl runtime info */
 
+
 extern curl_version_info_data *curlinfo;
 
 extern const char * const *built_in_protos;

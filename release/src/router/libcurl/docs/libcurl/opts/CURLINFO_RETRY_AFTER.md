@@ -54,10 +54,10 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    result = curl_easy_perform(curl);
-    if(result == CURLE_OK) {
+    res = curl_easy_perform(curl);
+    if(res == CURLE_OK) {
       curl_off_t wait = 0;
       curl_easy_getinfo(curl, CURLINFO_RETRY_AFTER, &wait);
       if(wait)

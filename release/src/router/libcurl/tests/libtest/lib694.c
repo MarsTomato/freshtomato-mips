@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib694(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
   long usedauth = 0;
   int count = 0;
@@ -51,25 +53,25 @@ static CURLcode test_lib694(const char *URL)
 
   do {
 
-    result = curl_easy_perform(curl);
-    if(result)
+    res = curl_easy_perform(curl);
+    if(res)
       goto test_cleanup;
 
-    result = curl_easy_getinfo(curl, CURLINFO_HTTPAUTH_USED, &usedauth);
-    if(result)
+    res = curl_easy_getinfo(curl, CURLINFO_HTTPAUTH_USED, &usedauth);
+    if(res)
       goto test_cleanup;
     if(CURLAUTH_NTLM != usedauth) {
       curl_mprintf("CURLINFO_HTTPAUTH_USED did not say NTLM\n");
     }
 
-    /* set a new URL for the second, so that we do not restart NTLM */
+    /* set a new URL for the second, so that we don't restart NTLM */
     test_setopt(curl, CURLOPT_URL, libtest_arg2);
-  } while(!result && ++count < 2);
+  } while(!res && ++count < 2);
 
 test_cleanup:
 
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

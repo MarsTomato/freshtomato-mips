@@ -27,7 +27,9 @@
 #include <tchar.h>
 #endif
 
+#ifndef UNDER_CE
 #include <signal.h>
+#endif
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
@@ -39,7 +41,15 @@
 #include "tool_operate.h"
 #include "tool_vms.h"
 #include "tool_main.h"
+#include "tool_libinfo.h"
 #include "tool_stderr.h"
+
+/*
+ * This is low-level hard-hacking memory leak tracking and similar. Using
+ * the library level code from this client-side is ugly, but we do this
+ * anyway for convenience.
+ */
+#include "memdebug.h" /* keep this as LAST include */
 
 #ifdef __VMS
 /*
@@ -57,7 +67,7 @@ int vms_show = 0;
 #else
 #define CURL_USED
 #endif
-static const char CURL_USED min_stack[] = "$STACK:32768";
+static const char CURL_USED min_stack[] = "$STACK:16384";
 #endif
 
 #ifdef __MINGW32__
@@ -107,11 +117,13 @@ static void memory_tracking_init(void)
   if(env) {
     /* use the value as filename */
     char fname[512];
-    curlx_strcopy(fname, sizeof(fname), env, strlen(env));
+    if(strlen(env) >= sizeof(fname))
+      env[sizeof(fname)-1] = '\0';
+    strcpy(fname, env);
     curl_free(env);
     curl_dbg_memdebug(fname);
     /* this weird stuff here is to make curl_free() get called before
-       curl_dbg_memdebug() as otherwise memory tracking will log a curlx_free()
+       curl_dbg_memdebug() as otherwise memory tracking will log a free()
        without an alloc! */
   }
   /* if CURL_MEMLIMIT is set, this enables fail-on-alloc-number-N feature */
@@ -131,7 +143,7 @@ static void memory_tracking_init(void)
 /*
 ** curl tool main function.
 */
-#ifdef _UNICODE
+#if defined(_UNICODE) && !defined(UNDER_CE)
 #if defined(__GNUC__) || defined(__clang__)
 /* GCC does not know about wmain() */
 #pragma GCC diagnostic push
@@ -147,7 +159,7 @@ int main(int argc, char *argv[])
 
   tool_init_stderr();
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UNDER_CE)
   /* Undocumented diagnostic option to list the full paths of all loaded
      modules. This is purposely pre-init. */
   if(argc == 2 && !_tcscmp(argv[1], _T("--dump-module-paths"))) {
@@ -157,7 +169,8 @@ int main(int argc, char *argv[])
     curl_slist_free_all(head);
     return head ? 0 : 1;
   }
-
+#endif
+#ifdef _WIN32
   /* win32_init must be called before other init routines. */
   result = win32_init();
   if(result) {
@@ -201,7 +214,7 @@ int main(int argc, char *argv[])
 #endif
 }
 
-#ifdef _UNICODE
+#if defined(_UNICODE) && !defined(UNDER_CE)
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif

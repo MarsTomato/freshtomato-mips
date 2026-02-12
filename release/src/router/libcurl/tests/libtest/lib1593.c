@@ -26,12 +26,14 @@
 
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1593(const char *URL)
 {
   struct curl_slist *header = NULL;
   long unmet;
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   global_init(CURL_GLOBAL_ALL);
 
@@ -39,19 +41,19 @@ static CURLcode test_lib1593(const char *URL)
 
   easy_setopt(curl, CURLOPT_URL, URL);
   easy_setopt(curl, CURLOPT_TIMECONDITION, CURL_TIMECOND_IFMODSINCE);
-  /* Some TIMEVALUE; it does not matter. */
+  /* Some TIMEVALUE; it doesn't matter. */
   easy_setopt(curl, CURLOPT_TIMEVALUE, 1566210680L);
 
   header = curl_slist_append(NULL, "If-Modified-Since:");
   if(!header) {
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
   easy_setopt(curl, CURLOPT_HTTPHEADER, header);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   /* Confirm that the condition checking still worked, even though we
@@ -59,12 +61,12 @@ static CURLcode test_lib1593(const char *URL)
    * The server returns 304, which means the condition is "unmet".
    */
 
-  result = curl_easy_getinfo(curl, CURLINFO_CONDITION_UNMET, &unmet);
-  if(result)
+  res = curl_easy_getinfo(curl, CURLINFO_CONDITION_UNMET, &unmet);
+  if(res)
     goto test_cleanup;
 
   if(unmet != 1L) {
-    result = TEST_ERR_FAILURE;
+    res = TEST_ERR_FAILURE;
     goto test_cleanup;
   }
 
@@ -75,5 +77,5 @@ test_cleanup:
   curl_slist_free_all(header);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

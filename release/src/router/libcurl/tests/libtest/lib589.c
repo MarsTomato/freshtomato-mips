@@ -23,10 +23,12 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib589(const char *URL)
 {
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
@@ -51,16 +53,16 @@ static CURLcode test_lib589(const char *URL)
     curl_mime_name(part, "fake");
     curl_mime_data(part, "party", 5);
     test_setopt(curl, CURLOPT_MIMEPOST, mime);
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     curl_mime_free(mime);
-    if(result)
+    if(res)
       goto test_cleanup;
   }
 
   test_setopt(curl, CURLOPT_MIMEPOST, NULL);
 
   /* Now, we should be making a zero byte POST request */
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -68,5 +70,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

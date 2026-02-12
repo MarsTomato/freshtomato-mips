@@ -23,12 +23,14 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 #include <curl/multi.h>
 
 static CURLcode test_lib1567(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURLU *u = NULL;
 
   global_init(CURL_GLOBAL_ALL);
@@ -40,12 +42,12 @@ static CURLcode test_lib1567(const char *URL)
       curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
       curl_url_set(u, CURLUPART_URL, URL, 0);
       curl_easy_setopt(curl, CURLOPT_CURLU, u);
-      result = curl_easy_perform(curl);
-      if(result)
+      res = curl_easy_perform(curl);
+      if(res)
         goto test_cleanup;
 
       curl_mfprintf(stderr, "****************************** Do it again\n");
-      result = curl_easy_perform(curl);
+      res = curl_easy_perform(curl);
     }
   }
 
@@ -53,5 +55,5 @@ test_cleanup:
   curl_url_cleanup(u);
   curl_easy_cleanup(curl);
   curl_global_cleanup();
-  return result;
+  return res;
 }

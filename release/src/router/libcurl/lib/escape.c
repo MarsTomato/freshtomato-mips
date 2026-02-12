@@ -21,16 +21,25 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 /* Escape and unescape URL encoding in strings. The functions return a new
- * allocated string or NULL if an error occurred. */
+ * allocated string or NULL if an error occurred.  */
+
 #include "curl_setup.h"
+
+#include <curl/curl.h>
 
 struct Curl_easy;
 
 #include "urldata.h"
+#include "curlx/warnless.h"
 #include "escape.h"
 #include "curlx/strparse.h"
 #include "curl_printf.h"
+
+/* The last 2 #include files should be in this order */
+#include "curl_memory.h"
+#include "memdebug.h"
 
 /* for ABI-compatibility with previous versions */
 char *curl_escape(const char *string, int inlength)
@@ -47,7 +56,8 @@ char *curl_unescape(const char *string, int length)
 /* Escapes for URL the given unescaped string of given length.
  * 'data' is ignored since 7.82.0.
  */
-char *curl_easy_escape(CURL *data, const char *string, int inlength)
+char *curl_easy_escape(CURL *data, const char *string,
+                       int inlength)
 {
   size_t length;
   struct dynbuf d;
@@ -58,10 +68,7 @@ char *curl_easy_escape(CURL *data, const char *string, int inlength)
 
   length = (inlength ? (size_t)inlength : strlen(string));
   if(!length)
-    return curlx_strdup("");
-
-  if(length > SIZE_MAX / 16)
-    return NULL;
+    return strdup("");
 
   curlx_dyn_init(&d, length * 3 + 1);
 
@@ -76,7 +83,7 @@ char *curl_easy_escape(CURL *data, const char *string, int inlength)
     }
     else {
       /* encode it */
-      unsigned char out[3] = { '%' };
+      unsigned char out[3]={'%'};
       Curl_hexbyte(&out[1], in);
       if(curlx_dyn_addn(&d, out, 3))
         return NULL;
@@ -113,7 +120,7 @@ CURLcode Curl_urldecode(const char *string, size_t length,
   DEBUGASSERT(ctrl >= REJECT_NADA); /* crash on TRUE/FALSE */
 
   alloc = (length ? length : strlen(string));
-  ns = curlx_malloc(alloc + 1);
+  ns = malloc(alloc + 1);
 
   if(!ns)
     return CURLE_OUT_OF_MEMORY;
@@ -126,8 +133,8 @@ CURLcode Curl_urldecode(const char *string, size_t length,
     if(('%' == in) && (alloc > 2) &&
        ISXDIGIT(string[1]) && ISXDIGIT(string[2])) {
       /* this is two hexadecimal digits following a '%' */
-      in = (unsigned char)((curlx_hexval(string[1]) << 4) |
-                           curlx_hexval(string[2]));
+      in = (unsigned char)((Curl_hexval(string[1]) << 4) |
+                           Curl_hexval(string[2]));
       string += 3;
       alloc -= 3;
     }
@@ -160,7 +167,8 @@ CURLcode Curl_urldecode(const char *string, size_t length,
  * If olen == NULL, no output length is stored.
  * 'data' is ignored since 7.82.0.
  */
-char *curl_easy_unescape(CURL *data, const char *string, int length, int *olen)
+char *curl_easy_unescape(CURL *data, const char *string,
+                         int length, int *olen)
 {
   char *str = NULL;
   (void)data;
@@ -173,7 +181,7 @@ char *curl_easy_unescape(CURL *data, const char *string, int length, int *olen)
       return NULL;
 
     if(olen) {
-      if(outputlen <= (size_t)INT_MAX)
+      if(outputlen <= (size_t) INT_MAX)
         *olen = curlx_uztosi(outputlen);
       else
         /* too large to return in an int, fail! */
@@ -188,7 +196,7 @@ char *curl_easy_unescape(CURL *data, const char *string, int length, int *olen)
    the library's memory system */
 void curl_free(void *p)
 {
-  curlx_free(p);
+  free(p);
 }
 
 /*

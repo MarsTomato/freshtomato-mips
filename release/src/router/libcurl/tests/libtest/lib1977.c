@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1977(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURLU *curlu = curl_url();
   CURLU *curlu_2 = curl_url();
   CURL *curl;
@@ -38,30 +40,32 @@ static CURLcode test_lib1977(const char *URL)
   curl_url_set(curlu, CURLUPART_URL, URL, CURLU_DEFAULT_SCHEME);
   easy_setopt(curl, CURLOPT_CURLU, curlu);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   effective = NULL;
-  result = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effective);
-  if(result)
+  res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effective);
+  if(res)
     goto test_cleanup;
   curl_mprintf("effective URL: %s\n", effective);
+
 
   /* second transfer: set URL + query in the second CURLU handle */
   curl_url_set(curlu_2, CURLUPART_URL, URL, CURLU_DEFAULT_SCHEME);
   curl_url_set(curlu_2, CURLUPART_QUERY, "foo", 0);
   easy_setopt(curl, CURLOPT_CURLU, curlu_2);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   effective = NULL;
-  result = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effective);
-  if(result)
+  res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effective);
+  if(res)
     goto test_cleanup;
   curl_mprintf("effective URL: %s\n", effective);
+
 
   /* third transfer: append extra query in the second CURLU handle, but do not
      set CURLOPT_CURLU again. this is to test that the contents of the handle
@@ -69,15 +73,16 @@ static CURLcode test_lib1977(const char *URL)
      CURLOPT_CURLU again */
   curl_url_set(curlu_2, CURLUPART_QUERY, "bar", CURLU_APPENDQUERY);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   effective = NULL;
-  result = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effective);
-  if(result)
+  res = curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &effective);
+  if(res)
     goto test_cleanup;
   curl_mprintf("effective URL: %s\n", effective);
+
 
 test_cleanup:
   curl_easy_cleanup(curl);
@@ -85,5 +90,5 @@ test_cleanup:
   curl_url_cleanup(curlu_2);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

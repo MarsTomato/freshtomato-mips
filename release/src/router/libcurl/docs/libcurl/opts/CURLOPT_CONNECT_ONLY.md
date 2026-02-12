@@ -65,11 +65,11 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode ret;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
-    result = curl_easy_perform(curl);
-    if(result == CURLE_OK) {
+    ret = curl_easy_perform(curl);
+    if(ret == CURLE_OK) {
       /* only connected */
     }
   }

@@ -24,6 +24,10 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
+#include <curl/curl.h>
+#include "curlx/timeval.h"
+
 struct connectdata;
 struct Curl_easy;
 struct curl_pollfds;

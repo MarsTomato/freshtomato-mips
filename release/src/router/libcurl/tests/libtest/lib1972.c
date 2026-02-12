@@ -23,12 +23,14 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1972(const char *URL)
 {
   CURL *curl;
   curl_mime *mime = NULL;
   curl_mimepart *part = NULL;
-  CURLcode result = TEST_ERR_MAJOR_BAD;
+  CURLcode res = TEST_ERR_MAJOR_BAD;
   struct curl_slist *list = NULL;
   struct curl_slist *connect_to = NULL;
 
@@ -68,7 +70,7 @@ static CURLcode test_lib1972(const char *URL)
   }
   test_setopt(curl, CURLOPT_CONNECT_TO, connect_to);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -78,5 +80,5 @@ test_cleanup:
   curl_mime_free(mime);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

@@ -64,7 +64,7 @@ use testutil qw(
     exerunner
     );
 
-our $logfile;  # server log filename, for logmsg
+our $logfile;  # server log file name, for logmsg
 
 #***************************************************************************
 # Just for convenience, test harness uses 'https' and 'httptls' literals as
@@ -89,6 +89,7 @@ sub logmsg {
         close($logfilefh);
     }
 }
+
 
 #***************************************************************************
 # Return server characterization factors given a server id string.
@@ -117,6 +118,7 @@ sub serverfactors {
     return($proto, $ipvnum, $idnum);
 }
 
+
 #***************************************************************************
 # Return server name string formatted for presentation purposes
 #
@@ -140,6 +142,7 @@ sub servername_str {
     return "${proto}${idnum}${ipver}";
 }
 
+
 #***************************************************************************
 # Return server name string formatted for identification purposes
 #
@@ -148,8 +151,9 @@ sub servername_id {
     return lc(servername_str($proto, $ipver, $idnum));
 }
 
+
 #***************************************************************************
-# Return server name string formatted for filename purposes
+# Return server name string formatted for file name purposes
 #
 sub servername_canon {
     my ($proto, $ipver, $idnum) = @_;
@@ -159,8 +163,9 @@ sub servername_canon {
     return $string;
 }
 
+
 #***************************************************************************
-# Return filename for server pid file.
+# Return file name for server pid file.
 #
 sub server_pidfilename {
     my ($piddir, $proto, $ipver, $idnum) = @_;
@@ -169,7 +174,7 @@ sub server_pidfilename {
 }
 
 #***************************************************************************
-# Return filename for server port file.
+# Return file name for server port file.
 #
 sub server_portfilename {
     my ($piddir, $proto, $ipver, $idnum) = @_;
@@ -177,8 +182,9 @@ sub server_portfilename {
     return "${piddir}/". servername_canon($proto, $ipver, $idnum) ."$trailer";
 }
 
+
 #***************************************************************************
-# Return filename for server log file.
+# Return file name for server log file.
 #
 sub server_logfilename {
     my ($logdir, $proto, $ipver, $idnum) = @_;
@@ -187,8 +193,9 @@ sub server_logfilename {
     return "${logdir}/". servername_canon($proto, $ipver, $idnum) ."$trailer";
 }
 
+
 #***************************************************************************
-# Return filename for server commands file.
+# Return file name for server commands file.
 #
 sub server_cmdfilename {
     my ($logdir, $proto, $ipver, $idnum) = @_;
@@ -196,8 +203,9 @@ sub server_cmdfilename {
     return "${logdir}/". servername_canon($proto, $ipver, $idnum) ."$trailer";
 }
 
+
 #***************************************************************************
-# Return filename for server input file.
+# Return file name for server input file.
 #
 sub server_inputfilename {
     my ($logdir, $proto, $ipver, $idnum) = @_;
@@ -205,14 +213,16 @@ sub server_inputfilename {
     return "${logdir}/". servername_canon($proto, $ipver, $idnum) ."$trailer";
 }
 
+
 #***************************************************************************
-# Return filename for server output file.
+# Return file name for server output file.
 #
 sub server_outputfilename {
     my ($logdir, $proto, $ipver, $idnum) = @_;
     my $trailer = '_server.output';
     return "${logdir}/". servername_canon($proto, $ipver, $idnum) ."$trailer";
 }
+
 
 #***************************************************************************
 # Return filename for a server executable
@@ -224,6 +234,7 @@ sub server_exe {
     }
     return exerunner() . $SRVDIR . "servers" . exe_ext($ext) . " $name";
 }
+
 
 #***************************************************************************
 # Return filename for a server executable as an argument list
@@ -240,8 +251,9 @@ sub server_exe_args {
     return @cmd;
 }
 
+
 #***************************************************************************
-# Return filename for main or primary sockfilter pid file.
+# Return file name for main or primary sockfilter pid file.
 #
 sub mainsockf_pidfilename {
     my ($piddir, $proto, $ipver, $idnum) = @_;
@@ -251,8 +263,9 @@ sub mainsockf_pidfilename {
     return "${piddir}/". servername_canon($proto, $ipver, $idnum) ."$trailer";
 }
 
+
 #***************************************************************************
-# Return filename for main or primary sockfilter log file.
+# Return file name for main or primary sockfilter log file.
 #
 sub mainsockf_logfilename {
     my ($logdir, $proto, $ipver, $idnum) = @_;
@@ -262,8 +275,9 @@ sub mainsockf_logfilename {
     return "${logdir}/". servername_canon($proto, $ipver, $idnum) ."$trailer";
 }
 
+
 #***************************************************************************
-# Return filename for data or secondary sockfilter pid file.
+# Return file name for data or secondary sockfilter pid file.
 #
 sub datasockf_pidfilename {
     my ($piddir, $proto, $ipver, $idnum) = @_;
@@ -273,8 +287,9 @@ sub datasockf_pidfilename {
     return "${piddir}/". servername_canon($proto, $ipver, $idnum) ."$trailer";
 }
 
+
 #***************************************************************************
-# Return filename for data or secondary sockfilter log file.
+# Return file name for data or secondary sockfilter log file.
 #
 sub datasockf_logfilename {
     my ($logdir, $proto, $ipver, $idnum) = @_;
@@ -283,6 +298,7 @@ sub datasockf_logfilename {
     my $trailer = '_sockdata.log';
     return "${logdir}/". servername_canon($proto, $ipver, $idnum) ."$trailer";
 }
+
 
 #***************************************************************************
 # End of library

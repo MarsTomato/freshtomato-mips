@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -10,6 +9,7 @@ type=
 </keywords>
 </info>
 
+#
 # Server-side
 <reply>
 <data crlf="headers" nocheck="yes">
@@ -25,6 +25,7 @@ hello
 </data>
 </reply>
 
+#
 # Client-side
 <client>
 <server>
@@ -46,6 +47,7 @@ FTP RETR with CURLOPT_PROXY_TRANSFER_MODE, ASCII transfer and type=i
 </command>
 </client>
 
+#
 # Verify data after the test has been "shot"
 <verify>
 <protocol crlf="headers">

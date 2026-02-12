@@ -24,6 +24,7 @@
 #include "first.h"
 
 #include "testutil.h"
+#include "memdebug.h"
 
 #if !defined(HAVE_POLL) && !defined(USE_WINSOCK) && !defined(FD_SETSIZE)
 #error "this test requires FD_SETSIZE"
@@ -61,7 +62,7 @@ static void t537_close_file_descriptors(void)
       t537_num_open.rlim_cur++)
     if(t537_testfd[t537_num_open.rlim_cur] > 0)
       close(t537_testfd[t537_num_open.rlim_cur]);
-  curlx_free(t537_testfd);
+  free(t537_testfd);
   t537_testfd = NULL;
 }
 
@@ -118,7 +119,7 @@ static int t537_test_rlimit(int keep_open)
   /* If the OS allows a HUGE number of open files, we do not run.
    * Modern debian sid reports a limit of 134217724 and this tests
    * takes minutes. */
-#define LIMIT_CAP (256 * 1024)
+#define LIMIT_CAP     (256*1024)
   if(rl.rlim_cur > LIMIT_CAP) {
     curl_mfprintf(stderr, "soft limit above %ld, not running\n",
                   (long)LIMIT_CAP);
@@ -142,7 +143,7 @@ static int t537_test_rlimit(int keep_open)
       curl_mfprintf(stderr, "raising soft limit up to OPEN_MAX\n");
       rl.rlim_cur = OPEN_MAX;
       if(setrlimit(RLIMIT_NOFILE, &rl) != 0) {
-        /* on failure do not abort just issue a warning */
+        /* on failure don't abort just issue a warning */
         t537_store_errmsg("setrlimit() failed", errno);
         curl_mfprintf(stderr, "%s\n", t537_msgbuff);
         t537_msgbuff[0] = '\0';
@@ -153,7 +154,7 @@ static int t537_test_rlimit(int keep_open)
     curl_mfprintf(stderr, "raising soft limit up to hard limit\n");
     rl.rlim_cur = rl.rlim_max;
     if(setrlimit(RLIMIT_NOFILE, &rl) != 0) {
-      /* on failure do not abort just issue a warning */
+      /* on failure don't abort just issue a warning */
       t537_store_errmsg("setrlimit() failed", errno);
       curl_mfprintf(stderr, "%s\n", t537_msgbuff);
       t537_msgbuff[0] = '\0';
@@ -181,7 +182,7 @@ static int t537_test_rlimit(int keep_open)
    * test 537 is all about testing libcurl functionality
    * when the system has nearly exhausted the number of
    * available file descriptors. Test 537 will try to run
-   * with a small number of file descriptors available.
+   * with a very small number of file descriptors available.
    * This implies that any file descriptor which is open
    * when the test runs will have a number in the high range
    * of whatever the system supports.
@@ -192,8 +193,8 @@ static int t537_test_rlimit(int keep_open)
    * avoid a low memory condition once the file descriptors are
    * open. System conditions that could make the test fail should
    * be addressed in the precheck phase. This chunk of memory shall
-   * be always curlx_free()ed before exiting the t537_test_rlimit()
-   * function so that it becomes available to the test.
+   * be always free()ed before exiting the t537_test_rlimit() function so
+   * that it becomes available to the test.
    */
 
   for(nitems = i = 1; nitems <= i; i *= 2)
@@ -204,7 +205,7 @@ static int t537_test_rlimit(int keep_open)
     t537_num_open.rlim_max = sizeof(*memchunk) * nitems;
     tutil_rlim2str(strbuff, sizeof(strbuff), t537_num_open.rlim_max);
     curl_mfprintf(stderr, "allocating memchunk %s byte array\n", strbuff);
-    memchunk = curlx_malloc(sizeof(*memchunk) * (size_t)nitems);
+    memchunk = malloc(sizeof(*memchunk) * (size_t)nitems);
     if(!memchunk) {
       curl_mfprintf(stderr, "memchunk, malloc() failed\n");
       nitems /= 2;
@@ -242,7 +243,7 @@ static int t537_test_rlimit(int keep_open)
     t537_num_open.rlim_max = nitems;
   }
 
-  /* verify that we do not overflow size_t in curlx_malloc() */
+  /* verify that we won't overflow size_t in malloc() */
 
   if((size_t)(t537_num_open.rlim_max) > ((size_t)-1) / sizeof(*t537_testfd)) {
     tutil_rlim2str(strbuff1, sizeof(strbuff1), t537_num_open.rlim_max);
@@ -251,7 +252,7 @@ static int t537_test_rlimit(int keep_open)
                    "file descriptors, would overflow size_t", strbuff1);
     t537_store_errmsg(strbuff, 0);
     curl_mfprintf(stderr, "%s\n", t537_msgbuff);
-    curlx_free(memchunk);
+    free(memchunk);
     return -5;
   }
 
@@ -262,8 +263,8 @@ static int t537_test_rlimit(int keep_open)
     curl_mfprintf(stderr, "allocating array for %s file descriptors\n",
                   strbuff);
 
-    t537_testfd = curlx_malloc(sizeof(*t537_testfd) *
-                               (size_t)(t537_num_open.rlim_max));
+    t537_testfd = malloc(sizeof(*t537_testfd) *
+                         (size_t)(t537_num_open.rlim_max));
     if(!t537_testfd) {
       curl_mfprintf(stderr, "testfd, malloc() failed\n");
       t537_num_open.rlim_max /= 2;
@@ -272,7 +273,7 @@ static int t537_test_rlimit(int keep_open)
   if(!t537_testfd) {
     t537_store_errmsg("testfd, malloc() failed", errno);
     curl_mfprintf(stderr, "%s\n", t537_msgbuff);
-    curlx_free(memchunk);
+    free(memchunk);
     return -6;
   }
 
@@ -295,9 +296,9 @@ static int t537_test_rlimit(int keep_open)
     curl_msnprintf(strbuff, sizeof(strbuff), "opening of %s failed", DEV_NULL);
     t537_store_errmsg(strbuff, errno);
     curl_mfprintf(stderr, "%s\n", t537_msgbuff);
-    curlx_free(t537_testfd);
+    free(t537_testfd);
     t537_testfd = NULL;
-    curlx_free(memchunk);
+    free(memchunk);
     return -7;
   }
 
@@ -342,11 +343,10 @@ static int t537_test_rlimit(int keep_open)
       curl_mfprintf(stderr, "shrinking array for %s file descriptors\n",
                     strbuff);
 
-      /* we do not care if we cannot shrink it */
+      /* we don't care if we can't shrink it */
 
-      tmpfd = curlx_realloc(t537_testfd,
-                            sizeof(*t537_testfd) *
-                            (size_t)(t537_num_open.rlim_max));
+      tmpfd = realloc(t537_testfd,
+                      sizeof(*t537_testfd) * (size_t)(t537_num_open.rlim_max));
       if(tmpfd) {
         t537_testfd = tmpfd;
         tmpfd = NULL;
@@ -379,7 +379,7 @@ static int t537_test_rlimit(int keep_open)
     t537_store_errmsg(strbuff, 0);
     curl_mfprintf(stderr, "%s\n", t537_msgbuff);
     t537_close_file_descriptors();
-    curlx_free(memchunk);
+    free(memchunk);
     return -8;
   }
 
@@ -394,7 +394,7 @@ static int t537_test_rlimit(int keep_open)
       t537_store_errmsg(strbuff, 0);
       curl_mfprintf(stderr, "%s\n", t537_msgbuff);
       t537_close_file_descriptors();
-      curlx_free(memchunk);
+      free(memchunk);
       return -9;
     }
   }
@@ -419,14 +419,14 @@ static int t537_test_rlimit(int keep_open)
                    "fopen fails with lots of fds open");
     t537_store_errmsg(strbuff, 0);
     t537_close_file_descriptors();
-    curlx_free(memchunk);
+    free(memchunk);
     return -10;
   }
 
   /* free the chunk of memory we were reserving so that it
      becomes available to the test */
 
-  curlx_free(memchunk);
+  free(memchunk);
 
   /* close file descriptors unless instructed to keep them */
 
@@ -439,7 +439,7 @@ static int t537_test_rlimit(int keep_open)
 
 static CURLcode test_lib537(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
 
   if(!strcmp(URL, "check")) {
@@ -476,7 +476,7 @@ static CURLcode test_lib537(const char *URL)
   test_setopt(curl, CURLOPT_URL, URL);
   test_setopt(curl, CURLOPT_HEADER, 1L);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -484,7 +484,7 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }
 
 #else /* HAVE_GETRLIMIT && HAVE_SETRLIMIT */

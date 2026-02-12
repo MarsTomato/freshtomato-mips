@@ -24,26 +24,27 @@
 #include "first.h"
 
 #include "testtrace.h"
+#include "memdebug.h"
 
 #ifndef CURL_DISABLE_WEBSOCKETS
 
 static CURLcode pingpong(CURL *curl, const char *payload)
 {
-  CURLcode result;
+  CURLcode res;
   int i;
 
-  result = ws_send_ping(curl, payload);
-  if(result)
-    return result;
+  res = ws_send_ping(curl, payload);
+  if(res)
+    return res;
   for(i = 0; i < 10; ++i) {
     curl_mfprintf(stderr, "Receive pong\n");
-    result = ws_recv_pong(curl, payload);
-    if(result == CURLE_AGAIN) {
+    res = ws_recv_pong(curl, payload);
+    if(res == CURLE_AGAIN) {
       curlx_wait_ms(100);
       continue;
     }
     ws_close(curl);
-    return result;
+    return res;
   }
   ws_close(curl);
   return CURLE_RECV_ERROR;

@@ -25,6 +25,8 @@
  ***************************************************************************/
 #include "curl_setup.h"
 
+#include <curl/curl.h>
+
 /**
  * A chunk of bytes for reading and writing.
  * The size is fixed a creation with read and write offset
@@ -36,7 +38,7 @@ struct buf_chunk {
   size_t r_offset;         /* first unread bytes */
   size_t w_offset;         /* one after last written byte */
   union {
-    uint8_t data[1];       /* the buffer for `dlen` bytes */
+    unsigned char data[1]; /* the buffer for `dlen` bytes */
     void *dummy;           /* alignment */
   } x;
 };
@@ -164,7 +166,7 @@ bool Curl_bufq_is_full(const struct bufq *q);
  * CURLE_AGAIN is returned if the buffer queue is full.
  */
 CURLcode Curl_bufq_write(struct bufq *q,
-                         const uint8_t *buf, size_t len,
+                         const unsigned char *buf, size_t len,
                          size_t *pnwritten);
 
 CURLcode Curl_bufq_cwrite(struct bufq *q,
@@ -175,7 +177,7 @@ CURLcode Curl_bufq_cwrite(struct bufq *q,
  * Read buf from the start of the buffer queue. The buf is copied
  * and the amount of copied bytes is returned.
  */
-CURLcode Curl_bufq_read(struct bufq *q, uint8_t *buf, size_t len,
+CURLcode Curl_bufq_read(struct bufq *q, unsigned char *buf, size_t len,
                         size_t *pnread);
 
 CURLcode Curl_bufq_cread(struct bufq *q, char *buf, size_t len,
@@ -191,10 +193,10 @@ CURLcode Curl_bufq_cread(struct bufq *q, char *buf, size_t len,
  * is modified, see `Curl_bufq_skip()``
  */
 bool Curl_bufq_peek(struct bufq *q,
-                    const uint8_t **pbuf, size_t *plen);
+                    const unsigned char **pbuf, size_t *plen);
 
 bool Curl_bufq_peek_at(struct bufq *q, size_t offset,
-                       const uint8_t **pbuf, size_t *plen);
+                       const unsigned char **pbuf, size_t *plen);
 
 /**
  * Tell the buffer queue to discard `amount` buf bytes at the head
@@ -204,7 +206,7 @@ bool Curl_bufq_peek_at(struct bufq *q, size_t offset,
 void Curl_bufq_skip(struct bufq *q, size_t amount);
 
 typedef CURLcode Curl_bufq_writer(void *writer_ctx,
-                                  const uint8_t *buf, size_t len,
+                                  const unsigned char *buf, size_t len,
                                   size_t *pwritten);
 /**
  * Passes the chunks in the buffer queue to the writer and returns
@@ -219,7 +221,7 @@ CURLcode Curl_bufq_pass(struct bufq *q, Curl_bufq_writer *writer,
                         void *writer_ctx, size_t *pwritten);
 
 typedef CURLcode Curl_bufq_reader(void *reader_ctx,
-                                  uint8_t *buf, size_t len,
+                                  unsigned char *buf, size_t len,
                                   size_t *pnread);
 
 /**
@@ -251,7 +253,7 @@ CURLcode Curl_bufq_sipn(struct bufq *q, size_t max_len,
  * amount buffered, chunk size, etc.
  */
 CURLcode Curl_bufq_write_pass(struct bufq *q,
-                              const uint8_t *buf, size_t len,
+                              const unsigned char *buf, size_t len,
                               Curl_bufq_writer *writer, void *writer_ctx,
                               size_t *pwritten);
 

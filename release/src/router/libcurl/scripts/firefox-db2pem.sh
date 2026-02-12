@@ -54,6 +54,7 @@ cat > "$out" <<EOF
 ##
 EOF
 
+
 certutil -L -h 'Builtin Object Token' -d "$db" | \
 grep ' *[CcGTPpu]*,[CcGTPpu]*,[CcGTPpu]* *$' | \
 sed -e 's/ *[CcGTPpu]*,[CcGTPpu]*,[CcGTPpu]* *$//' -e 's/\(.*\)/"\1"/' | \

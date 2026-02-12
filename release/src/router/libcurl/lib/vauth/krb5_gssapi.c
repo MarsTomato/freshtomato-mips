@@ -24,14 +24,22 @@
  * RFC4752 The Kerberos V5 ("GSSAPI") SASL Mechanism
  *
  ***************************************************************************/
+
 #include "../curl_setup.h"
 
 #if defined(HAVE_GSSAPI) && defined(USE_KERBEROS5)
 
+#include <curl/curl.h>
+
 #include "vauth.h"
 #include "../curl_sasl.h"
+#include "../urldata.h"
 #include "../curl_gssapi.h"
-#include "../curl_trc.h"
+#include "../sendf.h"
+
+/* The last #include files should be: */
+#include "../curl_memory.h"
+#include "../memdebug.h"
 
 #if defined(__GNUC__) && defined(__APPLE__)
 #pragma GCC diagnostic push
@@ -112,12 +120,12 @@ CURLcode Curl_auth_create_gssapi_user_message(struct Curl_easy *data,
       Curl_gss_log_error(data, "gss_import_name() failed: ",
                          major_status, minor_status);
 
-      curlx_free(spn);
+      free(spn);
 
       return CURLE_AUTH_ERROR;
     }
 
-    curlx_free(spn);
+    free(spn);
   }
 
   if(chlg) {
@@ -151,11 +159,11 @@ CURLcode Curl_auth_create_gssapi_user_message(struct Curl_easy *data,
   }
 
   if(output_token.value && output_token.length) {
-    result = Curl_bufref_memdup0(out, output_token.value, output_token.length);
+    result = Curl_bufref_memdup(out, output_token.value, output_token.length);
     gss_release_buffer(&unused_status, &output_token);
   }
   else
-    Curl_bufref_set(out, mutual_auth ? "" : NULL, 0, NULL);
+    Curl_bufref_set(out, mutual_auth ? "": NULL, 0, NULL);
 
   return result;
 }
@@ -250,7 +258,7 @@ CURLcode Curl_auth_create_gssapi_security_message(struct Curl_easy *data,
   messagelen = 4;
   if(authzid)
     messagelen += strlen(authzid);
-  message = curlx_malloc(messagelen);
+  message = malloc(messagelen);
   if(!message)
     return CURLE_OUT_OF_MEMORY;
 
@@ -277,17 +285,17 @@ CURLcode Curl_auth_create_gssapi_security_message(struct Curl_easy *data,
   if(GSS_ERROR(major_status)) {
     Curl_gss_log_error(data, "gss_wrap() failed: ",
                        major_status, minor_status);
-    curlx_free(message);
+    free(message);
     return CURLE_AUTH_ERROR;
   }
 
   /* Return the response. */
-  result = Curl_bufref_memdup0(out, output_token.value, output_token.length);
+  result = Curl_bufref_memdup(out, output_token.value, output_token.length);
   /* Free the output buffer */
   gss_release_buffer(&unused_status, &output_token);
 
   /* Free the message buffer */
-  curlx_free(message);
+  free(message);
 
   return result;
 }

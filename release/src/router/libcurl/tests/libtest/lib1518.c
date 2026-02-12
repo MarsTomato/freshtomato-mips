@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 /* Test inspired by github issue 3340 */
 
 static size_t t1518_write_cb(char *buffer, size_t size, size_t nitems,
@@ -38,7 +40,7 @@ static size_t t1518_write_cb(char *buffer, size_t size, size_t nitems,
 static CURLcode test_lib1518(const char *URL)
 {
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   long curlResponseCode;
   long curlRedirectCount;
   char *effectiveUrl = NULL;
@@ -68,9 +70,9 @@ static CURLcode test_lib1518(const char *URL)
     test_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
   }
 
-  /* Perform the request, result will get the return code */
-  result = curl_easy_perform(curl);
-  if(result)
+  /* Perform the request, res will get the return code */
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &curlResponseCode);
@@ -79,12 +81,12 @@ static CURLcode test_lib1518(const char *URL)
   curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirectUrl);
   test_setopt(curl, CURLOPT_WRITEFUNCTION, t1518_write_cb);
 
-  curl_mprintf("result %d\n"
+  curl_mprintf("res %d\n"
                "status %ld\n"
                "redirects %ld\n"
                "effectiveurl %s\n"
                "redirecturl %s\n",
-               result,
+               res,
                curlResponseCode,
                curlRedirectCount,
                effectiveUrl,
@@ -96,5 +98,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
   curl_url_cleanup(urlu);
-  return result;
+  return res;
 }

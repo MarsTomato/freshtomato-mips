@@ -51,7 +51,7 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "ftp://example.com/file.txt");
 
     /* contact us back, aka "active" FTP */
@@ -60,7 +60,7 @@ int main(void)
     /* FTP the way the neanderthals did it */
     curl_easy_setopt(curl, CURLOPT_FTP_USE_EPRT, 0L);
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     curl_easy_cleanup(curl);
   }

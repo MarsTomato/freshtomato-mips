@@ -21,8 +21,10 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
+#include <curl/curl.h>
 #include "strcase.h"
 
 /*

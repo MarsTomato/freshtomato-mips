@@ -133,6 +133,7 @@ Apple SecTrust and your own file to be considered, use:
 
     curl --ca-native --cacert mycerts.pem https://example.com
 
+
 #### Other Combinations
 
 How well the use of native CA stores work in all other combinations depends

@@ -37,6 +37,14 @@
 #include "nonblock.h"
 /* "nonblock.h" provides curlx_nonblock() */
 
+#include "warnless.h"
+/* "warnless.h" provides functions:
+
+  curlx_ultous()
+  curlx_ultouc()
+  curlx_uztosi()
+*/
+
 #include "multibyte.h"
 /* "multibyte.h" provides these functions and macros:
 
@@ -44,6 +52,7 @@
   curlx_convert_wchar_to_UTF8()
   curlx_convert_UTF8_to_tchar()
   curlx_convert_tchar_to_UTF8()
+  curlx_unicodefree()
 */
 
 #include "version_win32.h"
@@ -54,9 +63,6 @@
 
 #include "strparse.h"
 /* The curlx_str_* parsing functions */
-
-#include "strcopy.h"
-/* curlx_strcopy */
 
 #include "dynbuf.h"
 /* The curlx_dyn_* functions */

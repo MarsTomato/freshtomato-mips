@@ -15,7 +15,7 @@ Added-in: 7.61.0
 ---
 # NAME
 
-CURLINFO_TOTAL_TIME_T - total time of previous transfer
+CURLINFO_TOTAL_TIME_T - get total time of previous transfer in microseconds
 
 # SYNOPSIS
 
@@ -45,13 +45,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_off_t total;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    result = curl_easy_perform(curl);
-    if(CURLE_OK == result) {
-      result = curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME_T, &total);
-      if(CURLE_OK == result) {
+    res = curl_easy_perform(curl);
+    if(CURLE_OK == res) {
+      res = curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME_T, &total);
+      if(CURLE_OK == res) {
         printf("Time: %" CURL_FORMAT_CURL_OFF_T ".%06ld", total / 1000000,
                (long)(total % 1000000));
       }

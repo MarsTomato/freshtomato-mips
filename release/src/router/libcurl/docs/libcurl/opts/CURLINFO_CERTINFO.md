@@ -14,13 +14,13 @@ TLS-backend:
   - OpenSSL
   - GnuTLS
   - Schannel
-  - Rustls
+  - rustls
 Added-in: 7.19.1
 ---
 
 # NAME
 
-CURLINFO_CERTINFO - TLS certificate chain
+CURLINFO_CERTINFO - get the TLS certificate chain
 
 # SYNOPSIS
 
@@ -60,7 +60,7 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://www.example.com/");
 
     /* connect to any HTTPS site, trusted or not */
@@ -69,14 +69,14 @@ int main(void)
 
     curl_easy_setopt(curl, CURLOPT_CERTINFO, 1L);
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       int i;
       struct curl_certinfo *ci;
-      result = curl_easy_getinfo(curl, CURLINFO_CERTINFO, &ci);
+      res = curl_easy_getinfo(curl, CURLINFO_CERTINFO, &ci);
 
-      if(!result) {
+      if(!res) {
         printf("%d certs!\n", ci->num_of_certs);
 
         for(i = 0; i < ci->num_of_certs; i++) {

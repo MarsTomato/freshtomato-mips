@@ -63,13 +63,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL,
                      "ftp://example.com/non-existing/new.txt");
     curl_easy_setopt(curl, CURLOPT_FTP_CREATE_MISSING_DIRS,
                      CURLFTP_CREATE_DIR_RETRY);
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     curl_easy_cleanup(curl);
   }

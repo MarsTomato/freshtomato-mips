@@ -84,13 +84,15 @@ const struct Curl_handler *Curl_getn_scheme_handler(const char *scheme,
  * @param nowp      NULL or pointer to time being checked against.
  */
 bool Curl_conn_seems_dead(struct connectdata *conn,
-                          struct Curl_easy *data);
+                          struct Curl_easy *data,
+                          struct curltime *nowp);
 
 /**
  * Perform upkeep operations on the connection.
  */
 CURLcode Curl_conn_upkeep(struct Curl_easy *data,
-                          struct connectdata *conn);
+                          struct connectdata *conn,
+                          struct curltime *now);
 
 /**
  * Always eval all arguments, return the first result != CURLE_OK.

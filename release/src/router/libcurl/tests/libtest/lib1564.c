@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 #define WAKEUP_NUM 10
 
 static CURLcode test_lib1564(const char *URL)
@@ -30,7 +32,7 @@ static CURLcode test_lib1564(const char *URL)
   CURLM *multi = NULL;
   int numfds;
   int i;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   struct curltime time_before_wait, time_after_wait;
 
   (void)URL;
@@ -47,10 +49,10 @@ static CURLcode test_lib1564(const char *URL)
   multi_poll(multi, NULL, 0, 1000, &numfds);
   time_after_wait = curlx_now();
 
-  if(curlx_timediff_ms(time_after_wait, time_before_wait) < 500) {
+  if(curlx_timediff(time_after_wait, time_before_wait) < 500) {
     curl_mfprintf(stderr, "%s:%d curl_multi_poll returned too early\n",
                   __FILE__, __LINE__);
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
@@ -64,10 +66,10 @@ static CURLcode test_lib1564(const char *URL)
   multi_poll(multi, NULL, 0, 1000, &numfds);
   time_after_wait = curlx_now();
 
-  if(curlx_timediff_ms(time_after_wait, time_before_wait) > 500) {
+  if(curlx_timediff(time_after_wait, time_before_wait) > 500) {
     curl_mfprintf(stderr, "%s:%d curl_multi_poll returned too late\n",
                   __FILE__, __LINE__);
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
@@ -79,10 +81,10 @@ static CURLcode test_lib1564(const char *URL)
   multi_poll(multi, NULL, 0, 1000, &numfds);
   time_after_wait = curlx_now();
 
-  if(curlx_timediff_ms(time_after_wait, time_before_wait) < 500) {
+  if(curlx_timediff(time_after_wait, time_before_wait) < 500) {
     curl_mfprintf(stderr, "%s:%d curl_multi_poll returned too early\n",
                   __FILE__, __LINE__);
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
@@ -97,10 +99,10 @@ static CURLcode test_lib1564(const char *URL)
   multi_poll(multi, NULL, 0, 1000, &numfds);
   time_after_wait = curlx_now();
 
-  if(curlx_timediff_ms(time_after_wait, time_before_wait) > 500) {
+  if(curlx_timediff(time_after_wait, time_before_wait) > 500) {
     curl_mfprintf(stderr, "%s:%d curl_multi_poll returned too late\n",
                   __FILE__, __LINE__);
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
@@ -112,10 +114,10 @@ static CURLcode test_lib1564(const char *URL)
   multi_poll(multi, NULL, 0, 1000, &numfds);
   time_after_wait = curlx_now();
 
-  if(curlx_timediff_ms(time_after_wait, time_before_wait) < 500) {
+  if(curlx_timediff(time_after_wait, time_before_wait) < 500) {
     curl_mfprintf(stderr, "%s:%d curl_multi_poll returned too early\n",
                   __FILE__, __LINE__);
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
@@ -126,5 +128,5 @@ test_cleanup:
   curl_multi_cleanup(multi);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

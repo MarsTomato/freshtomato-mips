@@ -27,13 +27,11 @@
  */
 #include <stdio.h>
 #include <string.h>
-
 #include <curl/curl.h>
 
 /* silly test data to POST */
-static const char data[] =
-  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
-  "Sed vel urna neque. Ut quis leo metus. Quisque eleifend, ex at "
+static const char data[]="Lorem ipsum dolor sit amet, consectetur adipiscing "
+  "elit. Sed vel urna neque. Ut quis leo metus. Quisque eleifend, ex at "
   "laoreet rhoncus, odio ipsum semper metus, at tempus ante urna in mauris. "
   "Suspendisse ornare tempor venenatis. Ut dui neque, pellentesque a ______ "
   "eget, mattis vitae ligula. Fusce ut pharetra est. Ut ullamcorper mi ac "
@@ -48,7 +46,7 @@ struct WriteThis {
 static size_t read_cb(char *dest, size_t size, size_t nmemb, void *userp)
 {
   struct WriteThis *wt = (struct WriteThis *)userp;
-  size_t buffer_size = size * nmemb;
+  size_t buffer_size = size*nmemb;
 
   if(wt->sizeleft) {
     /* copy as much as possible from the source to the destination */
@@ -62,13 +60,13 @@ static size_t read_cb(char *dest, size_t size, size_t nmemb, void *userp)
     return copy_this_much; /* we copied this many bytes */
   }
 
-  return 0;  /* no more data left to deliver */
+  return 0; /* no more data left to deliver */
 }
 
 int main(void)
 {
   CURL *curl;
-  CURLcode result;
+  CURLcode res;
 
   struct WriteThis wt;
 
@@ -76,12 +74,12 @@ int main(void)
   wt.sizeleft = strlen(data);
 
   /* In Windows, this inits the Winsock stuff */
-  result = curl_global_init(CURL_GLOBAL_DEFAULT);
+  res = curl_global_init(CURL_GLOBAL_DEFAULT);
   /* Check for errors */
-  if(result != CURLE_OK) {
+  if(res != CURLE_OK) {
     fprintf(stderr, "curl_global_init() failed: %s\n",
-            curl_easy_strerror(result));
-    return (int)result;
+            curl_easy_strerror(res));
+    return (int)res;
   }
 
   /* get a curl handle */
@@ -114,7 +112,7 @@ int main(void)
       struct curl_slist *chunk = NULL;
 
       chunk = curl_slist_append(chunk, "Transfer-Encoding: chunked");
-      result = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+      res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
       /* use curl_slist_free_all() after the *perform() call to free this
          list again */
     }
@@ -137,18 +135,18 @@ int main(void)
       struct curl_slist *chunk = NULL;
 
       chunk = curl_slist_append(chunk, "Expect:");
-      result = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+      res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
       /* use curl_slist_free_all() after the *perform() call to free this
          list again */
     }
 #endif
 
-    /* Perform the request, result gets the return code */
-    result = curl_easy_perform(curl);
+    /* Perform the request, res gets the return code */
+    res = curl_easy_perform(curl);
     /* Check for errors */
-    if(result != CURLE_OK)
+    if(res != CURLE_OK)
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(result));
+              curl_easy_strerror(res));
 
     /* always cleanup */
     curl_easy_cleanup(curl);

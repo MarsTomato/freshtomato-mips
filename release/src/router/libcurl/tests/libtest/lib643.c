@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 struct t643_WriteThis {
   const char *readptr;
   curl_off_t sizeleft;
@@ -33,7 +35,7 @@ static size_t t643_read_cb(char *ptr, size_t size, size_t nmemb, void *userp)
   struct t643_WriteThis *pooh = (struct t643_WriteThis *)userp;
   int eof;
 
-  if(size * nmemb < 1)
+  if(size*nmemb < 1)
     return 0;
 
   if(testnum == 643) {
@@ -59,7 +61,7 @@ static CURLcode t643_test_once(const char *URL, bool oldstyle)
   static const char testdata[] = "dummy\n";
 
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   curl_mime *mime = NULL;
   curl_mimepart *part = NULL;
@@ -98,25 +100,25 @@ static CURLcode t643_test_once(const char *URL, bool oldstyle)
 
   /* Fill in the file upload part */
   if(oldstyle) {
-    result = curl_mime_name(part, "sendfile");
-    if(!result)
-      result = curl_mime_data_cb(part, datasize, t643_read_cb, NULL, NULL,
-                                 &pooh);
-    if(!result)
-      result = curl_mime_filename(part, "postit2.c");
+    res = curl_mime_name(part, "sendfile");
+    if(!res)
+      res = curl_mime_data_cb(part, datasize, t643_read_cb,
+                              NULL, NULL, &pooh);
+    if(!res)
+      res = curl_mime_filename(part, "postit2.c");
   }
   else {
     /* new style */
-    result = curl_mime_name(part, "sendfile alternative");
-    if(!result)
-      result = curl_mime_data_cb(part, datasize, t643_read_cb, NULL, NULL,
-                                 &pooh);
-    if(!result)
-      result = curl_mime_filename(part, "filename 2 ");
+    res = curl_mime_name(part, "sendfile alternative");
+    if(!res)
+      res = curl_mime_data_cb(part, datasize, t643_read_cb,
+                              NULL, NULL, &pooh);
+    if(!res)
+      res = curl_mime_filename(part, "file name 2");
   }
 
-  if(result)
-    curl_mprintf("curl_mime_xxx(1) = %s\n", curl_easy_strerror(result));
+  if(res)
+    curl_mprintf("curl_mime_xxx(1) = %s\n", curl_easy_strerror(res));
 
   /* Now add the same data with another name and make it not look like
      a file upload but still using the callback */
@@ -135,13 +137,13 @@ static CURLcode t643_test_once(const char *URL, bool oldstyle)
     return TEST_ERR_MAJOR_BAD;
   }
   /* Fill in the file upload part */
-  result = curl_mime_name(part, "callbackdata");
-  if(!result)
-    result = curl_mime_data_cb(part, datasize, t643_read_cb, NULL, NULL,
-                               &pooh2);
+  res = curl_mime_name(part, "callbackdata");
+  if(!res)
+    res = curl_mime_data_cb(part, datasize, t643_read_cb,
+                            NULL, NULL, &pooh2);
 
-  if(result)
-    curl_mprintf("curl_mime_xxx(2) = %s\n", curl_easy_strerror(result));
+  if(res)
+    curl_mprintf("curl_mime_xxx(2) = %s\n", curl_easy_strerror(res));
 
   part = curl_mime_addpart(mime);
   if(!part) {
@@ -153,12 +155,13 @@ static CURLcode t643_test_once(const char *URL, bool oldstyle)
   }
 
   /* Fill in the filename field */
-  result = curl_mime_name(part, "filename");
-  if(!result)
-    result = curl_mime_data(part, "postit2.c", CURL_ZERO_TERMINATED);
+  res = curl_mime_name(part, "filename");
+  if(!res)
+    res = curl_mime_data(part, "postit2.c",
+                         CURL_ZERO_TERMINATED);
 
-  if(result)
-    curl_mprintf("curl_mime_xxx(3) = %s\n", curl_easy_strerror(result));
+  if(res)
+    curl_mprintf("curl_mime_xxx(3) = %s\n", curl_easy_strerror(res));
 
   /* Fill in a submit field too */
   part = curl_mime_addpart(mime);
@@ -169,12 +172,13 @@ static CURLcode t643_test_once(const char *URL, bool oldstyle)
     curl_global_cleanup();
     return TEST_ERR_MAJOR_BAD;
   }
-  result = curl_mime_name(part, "submit");
-  if(!result)
-    result = curl_mime_data(part, "send", CURL_ZERO_TERMINATED);
+  res = curl_mime_name(part, "submit");
+  if(!res)
+    res = curl_mime_data(part, "send",
+                         CURL_ZERO_TERMINATED);
 
-  if(result)
-    curl_mprintf("curl_mime_xxx(4) = %s\n", curl_easy_strerror(result));
+  if(res)
+    curl_mprintf("curl_mime_xxx(4) = %s\n", curl_easy_strerror(res));
 
   part = curl_mime_addpart(mime);
   if(!part) {
@@ -184,14 +188,14 @@ static CURLcode t643_test_once(const char *URL, bool oldstyle)
     curl_global_cleanup();
     return TEST_ERR_MAJOR_BAD;
   }
-  result = curl_mime_name(part, "somename");
-  if(!result)
-    result = curl_mime_filename(part, "somefile.txt");
-  if(!result)
-    result = curl_mime_data(part, "blah blah", 9);
+  res = curl_mime_name(part, "somename");
+  if(!res)
+    res = curl_mime_filename(part, "somefile.txt");
+  if(!res)
+    res = curl_mime_data(part, "blah blah", 9);
 
-  if(result)
-    curl_mprintf("curl_mime_xxx(5) = %s\n", curl_easy_strerror(result));
+  if(res)
+    curl_mprintf("curl_mime_xxx(5) = %s\n", curl_easy_strerror(res));
 
   /* First set the URL that is about to receive our POST. */
   test_setopt(curl, CURLOPT_URL, URL);
@@ -205,8 +209,8 @@ static CURLcode t643_test_once(const char *URL, bool oldstyle)
   /* include headers in the output */
   test_setopt(curl, CURLOPT_HEADER, 1L);
 
-  /* Perform the request, result will get the return code */
-  result = curl_easy_perform(curl);
+  /* Perform the request, res will get the return code */
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -216,7 +220,7 @@ test_cleanup:
   /* now cleanup the mimepost structure */
   curl_mime_free(mime);
 
-  return result;
+  return res;
 }
 
 static CURLcode t643_cyclic_add(void)
@@ -245,21 +249,21 @@ static CURLcode t643_cyclic_add(void)
 
 static CURLcode test_lib643(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
     return TEST_ERR_MAJOR_BAD;
   }
 
-  result = t643_test_once(URL, TRUE); /* old */
-  if(!result)
-    result = t643_test_once(URL, FALSE); /* new */
+  res = t643_test_once(URL, TRUE); /* old */
+  if(!res)
+    res = t643_test_once(URL, FALSE); /* new */
 
-  if(!result)
-    result = t643_cyclic_add();
+  if(!res)
+    res = t643_cyclic_add();
 
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

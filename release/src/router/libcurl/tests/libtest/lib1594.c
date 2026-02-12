@@ -26,12 +26,14 @@
 
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1594(const char *URL)
 {
   struct curl_slist *header = NULL;
   curl_off_t retry;
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   global_init(CURL_GLOBAL_ALL);
 
@@ -39,12 +41,12 @@ static CURLcode test_lib1594(const char *URL)
 
   easy_setopt(curl, CURLOPT_URL, URL);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
-  result = curl_easy_getinfo(curl, CURLINFO_RETRY_AFTER, &retry);
-  if(result)
+  res = curl_easy_getinfo(curl, CURLINFO_RETRY_AFTER, &retry);
+  if(res)
     goto test_cleanup;
 
   curl_mprintf("Retry-After %" CURL_FORMAT_CURL_OFF_T "\n", retry);
@@ -56,5 +58,5 @@ test_cleanup:
   curl_slist_free_all(header);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

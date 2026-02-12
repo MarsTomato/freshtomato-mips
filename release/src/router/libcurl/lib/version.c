@@ -21,12 +21,14 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
 #ifdef USE_NGHTTP2
 #include <nghttp2/nghttp2.h>
 #endif
 
+#include <curl/curl.h>
 #include "urldata.h"
 #include "vtls/vtls.h"
 #include "http2.h"
@@ -75,8 +77,16 @@
 #include <gsasl.h>
 #endif
 
-#ifndef CURL_DISABLE_LDAP
-#include "curl_ldap.h"
+#ifdef HAVE_GSSAPI
+# ifdef HAVE_GSSGNU
+#  include <gss.h>
+# else
+#  include <gssapi/gssapi.h>
+# endif
+#endif
+
+#ifdef USE_OPENLDAP
+#include <ldap.h>
 #endif
 
 #ifdef HAVE_BROTLI
@@ -98,6 +108,28 @@ static void zstd_version(char *buf, size_t bufsz)
   unsigned int minor = (version - (major * 100 * 100)) / 100;
   unsigned int patch = version - (major * 100 * 100) - (minor * 100);
   (void)curl_msnprintf(buf, bufsz, "zstd/%u.%u.%u", major, minor, patch);
+}
+#endif
+
+#ifdef USE_OPENLDAP
+static void oldap_version(char *buf, size_t bufsz)
+{
+  LDAPAPIInfo api;
+  api.ldapai_info_version = LDAP_API_INFO_VERSION;
+
+  if(ldap_get_option(NULL, LDAP_OPT_API_INFO, &api) == LDAP_OPT_SUCCESS) {
+    unsigned int patch = (unsigned int)(api.ldapai_vendor_version % 100);
+    unsigned int major = (unsigned int)(api.ldapai_vendor_version / 10000);
+    unsigned int minor =
+      (((unsigned int)api.ldapai_vendor_version - major * 10000)
+       - patch) / 100;
+    curl_msnprintf(buf, bufsz, "%s/%u.%u.%u",
+                   api.ldapai_vendor_name, major, minor, patch);
+    ldap_memfree(api.ldapai_vendor_name);
+    ber_memvfree((void **)api.ldapai_extensions);
+  }
+  else
+    curl_msnprintf(buf, bufsz, "OpenLDAP");
 }
 #endif
 
@@ -187,7 +219,7 @@ char *curl_version(void)
 #ifdef HAVE_GSSAPI
   char gss_buf[40];
 #endif
-#ifndef CURL_DISABLE_LDAP
+#ifdef USE_OPENLDAP
   char ldap_buf[30];
 #endif
   int i = 0;
@@ -265,8 +297,8 @@ char *curl_version(void)
 #endif
   src[i++] = gss_buf;
 #endif /* HAVE_GSSAPI */
-#ifndef CURL_DISABLE_LDAP
-  Curl_ldap_version(ldap_buf, sizeof(ldap_buf));
+#ifdef USE_OPENLDAP
+  oldap_version(ldap_buf, sizeof(ldap_buf));
   src[i++] = ldap_buf;
 #endif
 
@@ -333,8 +365,8 @@ static const char * const supported_protocols[] = {
 #ifndef CURL_DISABLE_LDAP
   "ldap",
 #if !defined(CURL_DISABLE_LDAPS) && \
-  ((defined(USE_OPENLDAP) && defined(USE_SSL)) || \
-   (!defined(USE_OPENLDAP) && defined(HAVE_LDAP_SSL)))
+    ((defined(USE_OPENLDAP) && defined(USE_SSL)) || \
+     (!defined(USE_OPENLDAP) && defined(HAVE_LDAP_SSL)))
   "ldaps",
 #endif
 #endif
@@ -436,7 +468,7 @@ static int ech_present(curl_version_info_data *info)
  * Use FEATURE() macro to define an entry: this allows documentation check.
  */
 
-#define FEATURE(name, present, bitmask) { (name), (present), (bitmask) }
+#define FEATURE(name, present, bitmask) {(name), (present), (bitmask)}
 
 struct feat {
   const char *name;
@@ -498,7 +530,8 @@ static const struct feat features_table[] = {
 #ifdef USE_KERBEROS5
   FEATURE("Kerberos",    NULL,                CURL_VERSION_KERBEROS5),
 #endif
-#if (SIZEOF_CURL_OFF_T > 4) && ((SIZEOF_OFF_T > 4) || defined(_WIN32))
+#if (SIZEOF_CURL_OFF_T > 4) && \
+    ( (SIZEOF_OFF_T > 4) || defined(USE_WIN32_LARGE_FILES) )
   FEATURE("Largefile",   NULL,                CURL_VERSION_LARGEFILE),
 #endif
 #ifdef HAVE_LIBZ
@@ -549,7 +582,9 @@ static const struct feat features_table[] = {
   {NULL,                 NULL,                0}
 };
 
-static const char *feature_names[CURL_ARRAYSIZE(features_table)] = { NULL };
+static const char *feature_names[sizeof(features_table) /
+                                 sizeof(features_table[0])] = {NULL};
+
 
 static curl_version_info_data version_info = {
   CURLVERSION_NOW,

@@ -25,29 +25,32 @@
 #
 # Input variables:
 #
-# - `QUICHE_INCLUDE_DIR`:  Absolute path to quiche include directory.
-# - `QUICHE_LIBRARY`:      Absolute path to `quiche` library.
+# - `QUICHE_INCLUDE_DIR`:   Absolute path to quiche include directory.
+# - `QUICHE_LIBRARY`:       Absolute path to `quiche` library.
 #
-# Defines:
+# Result variables:
 #
-# - `QUICHE_FOUND`:        System has quiche.
-# - `QUICHE_VERSION`:      Version of quiche.
-# - `CURL::quiche`:        quiche library target.
+# - `QUICHE_FOUND`:         System has quiche.
+# - `QUICHE_INCLUDE_DIRS`:  The quiche include directories.
+# - `QUICHE_LIBRARIES`:     The quiche library names.
+# - `QUICHE_LIBRARY_DIRS`:  The quiche library directories.
+# - `QUICHE_PC_REQUIRES`:   The quiche pkg-config packages.
+# - `QUICHE_CFLAGS`:        Required compiler flags.
+# - `QUICHE_VERSION`:       Version of quiche.
 
-set(_quiche_pc_requires "quiche")
+set(QUICHE_PC_REQUIRES "quiche")
 
 if(CURL_USE_PKGCONFIG AND
    NOT DEFINED QUICHE_INCLUDE_DIR AND
    NOT DEFINED QUICHE_LIBRARY)
   find_package(PkgConfig QUIET)
-  pkg_check_modules(_quiche ${_quiche_pc_requires})
+  pkg_check_modules(QUICHE ${QUICHE_PC_REQUIRES})
 endif()
 
-if(_quiche_FOUND)
+if(QUICHE_FOUND)
   set(Quiche_FOUND TRUE)
-  set(QUICHE_FOUND TRUE)
-  set(QUICHE_VERSION ${_quiche_VERSION})
-  message(STATUS "Found Quiche (via pkg-config): ${_quiche_INCLUDE_DIRS} (found version \"${QUICHE_VERSION}\")")
+  string(REPLACE ";" " " QUICHE_CFLAGS "${QUICHE_CFLAGS}")
+  message(STATUS "Found Quiche (via pkg-config): ${QUICHE_INCLUDE_DIRS} (found version \"${QUICHE_VERSION}\")")
 else()
   find_path(QUICHE_INCLUDE_DIR NAMES "quiche.h")
   find_library(QUICHE_LIBRARY NAMES "quiche")
@@ -60,25 +63,9 @@ else()
   )
 
   if(QUICHE_FOUND)
-    set(_quiche_INCLUDE_DIRS ${QUICHE_INCLUDE_DIR})
-    set(_quiche_LIBRARIES    ${QUICHE_LIBRARY})
+    set(QUICHE_INCLUDE_DIRS ${QUICHE_INCLUDE_DIR})
+    set(QUICHE_LIBRARIES    ${QUICHE_LIBRARY})
   endif()
 
   mark_as_advanced(QUICHE_INCLUDE_DIR QUICHE_LIBRARY)
-endif()
-
-if(QUICHE_FOUND)
-  if(CMAKE_VERSION VERSION_LESS 3.13)
-    link_directories(${_quiche_LIBRARY_DIRS})
-  endif()
-
-  if(NOT TARGET CURL::quiche)
-    add_library(CURL::quiche INTERFACE IMPORTED)
-    set_target_properties(CURL::quiche PROPERTIES
-      INTERFACE_LIBCURL_PC_MODULES "${_quiche_pc_requires}"
-      INTERFACE_COMPILE_OPTIONS "${_quiche_CFLAGS}"
-      INTERFACE_INCLUDE_DIRECTORIES "${_quiche_INCLUDE_DIRS}"
-      INTERFACE_LINK_DIRECTORIES "${_quiche_LIBRARY_DIRS}"
-      INTERFACE_LINK_LIBRARIES "${_quiche_LIBRARIES}")
-  endif()
 endif()

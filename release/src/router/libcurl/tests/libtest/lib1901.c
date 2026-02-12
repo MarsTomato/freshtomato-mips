@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static size_t t1901_read_cb(char *ptr, size_t size, size_t nmemb, void *stream)
 {
   static const char *chunks[] = {
@@ -33,10 +35,12 @@ static size_t t1901_read_cb(char *ptr, size_t size, size_t nmemb, void *stream)
     NULL
   };
   static int ix = 0;
+  (void)size;
+  (void)nmemb;
   (void)stream;
   if(chunks[ix]) {
     size_t len = strlen(chunks[ix]);
-    curlx_strcopy(ptr, size * nmemb, chunks[ix], len);
+    strcpy(ptr, chunks[ix]);
     ix++;
     return len;
   }
@@ -46,7 +50,7 @@ static size_t t1901_read_cb(char *ptr, size_t size, size_t nmemb, void *stream)
 static CURLcode test_lib1901(const char *URL)
 {
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   struct curl_slist *chunk = NULL;
 
   curl_global_init(CURL_GLOBAL_ALL);
@@ -74,12 +78,12 @@ static CURLcode test_lib1901(const char *URL)
         easy_setopt(curl, CURLOPT_HTTPHEADER, n);
     }
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
   }
 test_cleanup:
   curl_easy_cleanup(curl);
   curl_slist_free_all(chunk);
 
   curl_global_cleanup();
-  return result;
+  return res;
 }

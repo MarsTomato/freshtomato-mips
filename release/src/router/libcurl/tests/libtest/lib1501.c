@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1501(const char *URL)
 {
   static const long HANG_TIMEOUT = 30 * 1000;
@@ -32,7 +34,7 @@ static CURLcode test_lib1501(const char *URL)
 
   CURL *curl = NULL;
   CURLM *multi = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   int still_running = 0;
 
   start_test_timing();
@@ -85,11 +87,11 @@ static CURLcode test_lib1501(const char *URL)
     abort_on_test_timeout_custom(HANG_TIMEOUT);
 
     after = curlx_now();
-    e = curlx_timediff_ms(after, before);
+    e = curlx_timediff(after, before);
     curl_mfprintf(stderr, "pong = %ld\n", (long)e);
 
     if(e > MAX_BLOCKED_TIME_MS) {
-      result = CURLE_TOO_LARGE;
+      res = CURLE_TOO_LARGE;
       break;
     }
   }
@@ -102,5 +104,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

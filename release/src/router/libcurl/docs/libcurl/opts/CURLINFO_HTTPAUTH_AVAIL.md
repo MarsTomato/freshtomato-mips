@@ -16,7 +16,7 @@ Added-in: 7.10.8
 
 # NAME
 
-CURLINFO_HTTPAUTH_AVAIL - available HTTP authentication methods
+CURLINFO_HTTPAUTH_AVAIL - get available HTTP authentication methods
 
 # SYNOPSIS
 
@@ -41,16 +41,16 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       /* extract the available authentication types */
       long auth;
-      result = curl_easy_getinfo(curl, CURLINFO_HTTPAUTH_AVAIL, &auth);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_HTTPAUTH_AVAIL, &auth);
+      if(!res) {
         if(!auth)
           printf("No auth available, perhaps no 401?\n");
         else {

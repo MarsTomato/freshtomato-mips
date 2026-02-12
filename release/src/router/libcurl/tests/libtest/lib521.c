@@ -23,38 +23,36 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib521(const char *URL)
 {
-  CURLcode result = TEST_ERR_MAJOR_BAD;
+  CURLcode res;
   CURL *curl;
-  curl_off_t port;
-
-  if(curlx_str_number(&libtest_arg2, &port, 0xffff))
-    return result;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
-    return result;
+    return TEST_ERR_MAJOR_BAD;
   }
 
   curl = curl_easy_init();
   if(!curl) {
     curl_mfprintf(stderr, "curl_easy_init() failed\n");
     curl_global_cleanup();
-    return result;
+    return TEST_ERR_MAJOR_BAD;
   }
 
   test_setopt(curl, CURLOPT_URL, URL);
-  test_setopt(curl, CURLOPT_PORT, (long)port);
+  test_setopt(curl, CURLOPT_PORT, atol(libtest_arg2));
   test_setopt(curl, CURLOPT_USERPWD, "xxx:yyy");
   test_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

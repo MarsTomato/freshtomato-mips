@@ -130,7 +130,7 @@ character or string.
 
 For example, this could look like:
 
-    https://user:password@www.example.com:80/index.html?foo=bar#top
+    http://user:password@www.example.com:80/index.html?foo=bar#top
 
 ## Scheme
 
@@ -169,13 +169,13 @@ local network name of the machine on your network or the IP address of the
 server or machine represented by either an IPv4 or IPv6 address (within
 brackets). For example:
 
-    https://www.example.com/
+    http://www.example.com/
 
-    https://hostname.example/
+    http://hostname/
 
-    https://192.168.0.1/
+    http://192.168.0.1/
 
-    https://[2001:1890:1112:1::20]/
+    http://[2001:1890:1112:1::20]/
 
 ### "localhost"
 

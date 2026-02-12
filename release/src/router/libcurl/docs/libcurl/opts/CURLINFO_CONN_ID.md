@@ -15,7 +15,7 @@ Added-in: 8.2.0
 
 # NAME
 
-CURLINFO_CONN_ID - ID of the last connection
+CURLINFO_CONN_ID - get the ID of the last connection used by the handle
 
 # SYNOPSIS
 
@@ -44,17 +44,17 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
 
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
     /* Perform the request */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       curl_off_t conn_id;
-      result = curl_easy_getinfo(curl, CURLINFO_CONN_ID, &conn_id);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_CONN_ID, &conn_id);
+      if(!res) {
         printf("Connection used: %" CURL_FORMAT_CURL_OFF_T "\n", conn_id);
       }
     }

@@ -47,12 +47,12 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode ret;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     /* delegate if okayed by policy */
     curl_easy_setopt(curl, CURLOPT_GSSAPI_DELEGATION,
                      CURLGSSAPI_DELEGATION_POLICY_FLAG);
-    result = curl_easy_perform(curl);
+    ret = curl_easy_perform(curl);
   }
 }
 ~~~

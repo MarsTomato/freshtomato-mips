@@ -23,6 +23,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "../curl_setup.h"
 
 #ifdef USE_OPENSSL
@@ -50,7 +51,8 @@
  * BoringSSL: supported since d28f59c27bac (committed 2015-11-19)
  * LibreSSL: not supported. 3.5.0+ has a stub function that does nothing.
  */
-#ifndef LIBRESSL_VERSION_NUMBER
+#if (OPENSSL_VERSION_NUMBER >= 0x10101000L && \
+  !defined(LIBRESSL_VERSION_NUMBER)) || defined(HAVE_BORINGSSL_LIKE)
 #define HAVE_KEYLOG_CALLBACK
 #endif
 
@@ -149,7 +151,8 @@ CURLcode Curl_ossl_check_peer_cert(struct Curl_cfilter *cf,
                                    struct ssl_peer *peer);
 
 /* Report properties of a successful handshake */
-void Curl_ossl_report_handshake(struct Curl_easy *data, struct ossl_ctx *octx);
+void Curl_ossl_report_handshake(struct Curl_easy *data,
+                                struct ossl_ctx *octx);
 
 #endif /* USE_OPENSSL */
 #endif /* HEADER_CURL_SSLUSE_H */

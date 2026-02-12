@@ -21,8 +21,10 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
+#include "curlx/timeval.h"
 #include "splay.h"
 
 /*
@@ -32,13 +34,13 @@
  *  zero          : when i is equal   to   j
  *  positive when : when i is larger  than j
  */
-#define splay_compare(i, j) curlx_ptimediff_us(i, j)
+#define compare(i,j) curlx_timediff_us(i,j)
 
 /*
  * Splay using the key i (which may or may not be in the tree.) The starting
  * root is t.
  */
-struct Curl_tree *Curl_splay(const struct curltime *pkey,
+struct Curl_tree *Curl_splay(struct curltime i,
                              struct Curl_tree *t)
 {
   struct Curl_tree N, *l, *r, *y;
@@ -49,11 +51,11 @@ struct Curl_tree *Curl_splay(const struct curltime *pkey,
   l = r = &N;
 
   for(;;) {
-    timediff_t comp = splay_compare(pkey, &t->key);
+    timediff_t comp = compare(i, t->key);
     if(comp < 0) {
       if(!t->smaller)
         break;
-      if(splay_compare(pkey, &t->smaller->key) < 0) {
+      if(compare(i, t->smaller->key) < 0) {
         y = t->smaller;                           /* rotate smaller */
         t->smaller = y->larger;
         y->larger = t;
@@ -68,7 +70,7 @@ struct Curl_tree *Curl_splay(const struct curltime *pkey,
     else if(comp > 0) {
       if(!t->larger)
         break;
-      if(splay_compare(pkey, &t->larger->key) > 0) {
+      if(compare(i, t->larger->key) > 0) {
         y = t->larger;                          /* rotate larger */
         t->larger = y->smaller;
         y->smaller = t;
@@ -101,16 +103,16 @@ static const struct curltime SPLAY_SUBNODE = {
  *
  * @unittest: 1309
  */
-struct Curl_tree *Curl_splayinsert(const struct curltime *pkey,
+struct Curl_tree *Curl_splayinsert(struct curltime i,
                                    struct Curl_tree *t,
                                    struct Curl_tree *node)
 {
   DEBUGASSERT(node);
 
   if(t) {
-    t = Curl_splay(pkey, t);
+    t = Curl_splay(i, t);
     DEBUGASSERT(t);
-    if(splay_compare(pkey, &t->key) == 0) {
+    if(compare(i, t->key) == 0) {
       /* There already exists a node in the tree with the same key. Build a
          doubly-linked circular list of nodes. We add the new 'node' struct to
          the end of this list. */
@@ -128,17 +130,18 @@ struct Curl_tree *Curl_splayinsert(const struct curltime *pkey,
   if(!t) {
     node->smaller = node->larger = NULL;
   }
-  else if(splay_compare(pkey, &t->key) < 0) {
+  else if(compare(i, t->key) < 0) {
     node->smaller = t->smaller;
     node->larger = t;
     t->smaller = NULL;
+
   }
   else {
     node->larger = t->larger;
     node->smaller = t;
     t->larger = NULL;
   }
-  node->key = *pkey;
+  node->key = i;
 
   /* no identical nodes (yet), we are the only one in the list of nodes */
   node->samen = node;
@@ -149,11 +152,11 @@ struct Curl_tree *Curl_splayinsert(const struct curltime *pkey,
 /* Finds and deletes the best-fit node from the tree. Return a pointer to the
    resulting tree. best-fit means the smallest node if it is not larger than
    the key */
-struct Curl_tree *Curl_splaygetbest(const struct curltime *pkey,
+struct Curl_tree *Curl_splaygetbest(struct curltime i,
                                     struct Curl_tree *t,
                                     struct Curl_tree **removed)
 {
-  static const struct curltime tv_zero = { 0, 0 };
+  static const struct curltime tv_zero = {0, 0};
   struct Curl_tree *x;
 
   if(!t) {
@@ -162,9 +165,9 @@ struct Curl_tree *Curl_splaygetbest(const struct curltime *pkey,
   }
 
   /* find smallest */
-  t = Curl_splay(&tv_zero, t);
+  t = Curl_splay(tv_zero, t);
   DEBUGASSERT(t);
-  if(splay_compare(pkey, &t->key) < 0) {
+  if(compare(i, t->key) < 0) {
     /* even the smallest is too big */
     *removed = NULL;
     return t;
@@ -194,6 +197,7 @@ struct Curl_tree *Curl_splaygetbest(const struct curltime *pkey,
   return x;
 }
 
+
 /* Deletes the node we point out from the tree if it is there. Stores a
  * pointer to the new resulting tree in 'newroot'.
  *
@@ -216,7 +220,7 @@ int Curl_splayremove(struct Curl_tree *t,
 
   DEBUGASSERT(removenode);
 
-  if(splay_compare(&SPLAY_SUBNODE, &removenode->key) == 0) {
+  if(compare(SPLAY_SUBNODE, removenode->key) == 0) {
     /* It is a subnode within a 'same' linked list and thus we can unlink it
        easily. */
     DEBUGASSERT(removenode->samen != removenode);
@@ -234,7 +238,7 @@ int Curl_splayremove(struct Curl_tree *t,
     return 0;
   }
 
-  t = Curl_splay(&removenode->key, t);
+  t = Curl_splay(removenode->key, t);
   DEBUGASSERT(t);
 
   /* First make sure that we got the same root node as the one we want
@@ -266,7 +270,7 @@ int Curl_splayremove(struct Curl_tree *t,
     if(!t->smaller)
       x = t->larger;
     else {
-      x = Curl_splay(&removenode->key, t->smaller);
+      x = Curl_splay(removenode->key, t->smaller);
       DEBUGASSERT(x);
       x->larger = t->larger;
     }

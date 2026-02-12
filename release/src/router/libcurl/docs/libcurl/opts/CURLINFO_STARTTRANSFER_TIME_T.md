@@ -16,7 +16,7 @@ Added-in: 7.61.0
 
 # NAME
 
-CURLINFO_STARTTRANSFER_TIME_T - time to first byte received
+CURLINFO_STARTTRANSFER_TIME_T - get the time until the first byte is received
 
 # SYNOPSIS
 
@@ -48,13 +48,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_off_t start;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    result = curl_easy_perform(curl);
-    if(CURLE_OK == result) {
-      result = curl_easy_getinfo(curl, CURLINFO_STARTTRANSFER_TIME_T, &start);
-      if(CURLE_OK == result) {
+    res = curl_easy_perform(curl);
+    if(CURLE_OK == res) {
+      res = curl_easy_getinfo(curl, CURLINFO_STARTTRANSFER_TIME_T, &start);
+      if(CURLE_OK == res) {
         printf("Time: %" CURL_FORMAT_CURL_OFF_T ".%06ld", start / 1000000,
                (long)(start % 1000000));
       }

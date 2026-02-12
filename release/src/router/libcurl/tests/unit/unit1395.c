@@ -22,6 +22,7 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
+#include "memdebug.h"
 #include "unitprotos.h"
 
 static CURLcode test_unit1395(const char *arg)
@@ -96,9 +97,9 @@ static CURLcode test_unit1395(const char *arg)
     { "/hello/1/./../2", "/hello/2" },
     { "test/this", "test/this" },
     { "test/this/../now", "test/now" },
-    { "/1../moo../foo", "/1../moo../foo" },
-    { "/../../moo", "/moo" },
-    { "/../../moo?", "/moo?" },
+    { "/1../moo../foo", "/1../moo../foo"},
+    { "/../../moo", "/moo"},
+    { "/../../moo?", "/moo?"},
     { "/123?", "/123?" },
     { "/", NULL },
     { "", NULL },
@@ -132,7 +133,7 @@ static CURLcode test_unit1395(const char *arg)
     }
     else
       curl_mfprintf(stderr, "Test %u: OK\n", i);
-    curlx_free(out);
+    free(out);
   }
 
   fail_if(fails, "output mismatched");

@@ -58,17 +58,5 @@ if(NOT DANTED)
 endif()
 mark_as_advanced(DANTED)
 
-find_program(SSHD "sshd" PATHS "/usr/sbin" "/usr/bin")
-if(NOT SSHD)
-  set(SSHD "")
-endif()
-mark_as_advanced(SSHD)
-
-find_program(SFTPD "sftp-server" PATHS "/usr/libexec" "/usr/lib/openssh")
-if(NOT SFTPD)
-  set(SFTPD "")
-endif()
-mark_as_advanced(SFTPD)
-
-# Consumed variables: APXS, CADDY, DANTED, HTTPD, HTTPD_NGHTTPX, SFTPD, SSHD, VSFTPD
+# Consumed variables: APXS, CADDY, HTTPD, HTTPD_NGHTTPX, DANTED, VSFTPD
 configure_file("config.ini.in" "${CMAKE_CURRENT_BINARY_DIR}/config.ini" @ONLY)

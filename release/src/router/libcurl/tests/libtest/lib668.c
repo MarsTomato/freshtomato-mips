@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 struct t668_WriteThis {
   const char *readptr;
   curl_off_t sizeleft;
@@ -51,7 +53,7 @@ static CURLcode test_lib668(const char *URL)
   CURL *curl = NULL;
   curl_mime *mime = NULL;
   curl_mimepart *part;
-  CURLcode result = TEST_ERR_FAILURE;
+  CURLcode res = TEST_ERR_FAILURE;
   struct t668_WriteThis pooh1, pooh2;
 
   /*
@@ -76,7 +78,7 @@ static CURLcode test_lib668(const char *URL)
 
   /* Prepare the callback structures. */
   pooh1.readptr = testdata;
-  pooh1.sizeleft = (curl_off_t)strlen(testdata);
+  pooh1.sizeleft = (curl_off_t) strlen(testdata);
   pooh2 = pooh1;
 
   /* Build the mime tree. */
@@ -84,14 +86,14 @@ static CURLcode test_lib668(const char *URL)
   part = curl_mime_addpart(mime);
   curl_mime_name(part, "field1");
   /* Early end of data detection can be done because the data size is known. */
-  curl_mime_data_cb(part, (curl_off_t)strlen(testdata),
+  curl_mime_data_cb(part, (curl_off_t) strlen(testdata),
                     t668_read_cb, NULL, NULL, &pooh1);
   part = curl_mime_addpart(mime);
   curl_mime_name(part, "field2");
   /* Using an undefined length forces chunked transfer and disables early
      end of data detection for this part. */
-  curl_mime_data_cb(part, (curl_off_t)-1,
-                    t668_read_cb, NULL, NULL, &pooh2);
+  curl_mime_data_cb(part, (curl_off_t) -1, t668_read_cb,
+                    NULL, NULL, &pooh2);
   part = curl_mime_addpart(mime);
   curl_mime_name(part, "field3");
   /* Regular file part sources early end of data can be detected because
@@ -102,8 +104,8 @@ static CURLcode test_lib668(const char *URL)
   test_setopt(curl, CURLOPT_MIMEPOST, mime);
 
   /* Send data. */
-  result = curl_easy_perform(curl);
-  if(result != CURLE_OK) {
+  res = curl_easy_perform(curl);
+  if(res != CURLE_OK) {
     curl_mfprintf(stderr, "curl_easy_perform() failed\n");
   }
 
@@ -111,5 +113,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_mime_free(mime);
   curl_global_cleanup();
-  return result;
+  return res;
 }

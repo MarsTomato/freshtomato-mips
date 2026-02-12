@@ -16,7 +16,7 @@ Added-in: 7.76.0
 
 # NAME
 
-CURLINFO_REFERER - used HTTP referrer request header
+CURLINFO_REFERER - get the used referrer request header
 
 # SYNOPSIS
 
@@ -44,11 +44,11 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
     curl_easy_setopt(curl, CURLOPT_REFERER, "https://example.org/referrer");
-    result = curl_easy_perform(curl);
-    if(result == CURLE_OK) {
+    res = curl_easy_perform(curl);
+    if(res == CURLE_OK) {
       char *hdr = NULL;
       curl_easy_getinfo(curl, CURLINFO_REFERER, &hdr);
       if(hdr)

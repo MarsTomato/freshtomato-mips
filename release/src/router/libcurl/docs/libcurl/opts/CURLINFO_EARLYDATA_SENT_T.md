@@ -16,7 +16,7 @@ Added-in: 8.11.0
 
 # NAME
 
-CURLINFO_EARLYDATA_SENT_T - number of bytes sent as TLS early data
+CURLINFO_EARLYDATA_SENT_T - get the number of bytes sent as TLS early data
 
 # SYNOPSIS
 
@@ -51,16 +51,16 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
     /* Perform the request */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       curl_off_t amount;
-      result = curl_easy_getinfo(curl, CURLINFO_EARLYDATA_SENT_T, &amount);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_EARLYDATA_SENT_T, &amount);
+      if(!res) {
         printf("TLS earlydata: %" CURL_FORMAT_CURL_OFF_T " bytes\n", amount);
       }
     }

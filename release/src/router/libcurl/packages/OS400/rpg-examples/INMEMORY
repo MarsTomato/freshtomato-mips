@@ -1,4 +1,4 @@
-      * curl get in memory and count HTML tags
+      * Curl get in memory and count HTML tags
       *
      h DFTACTGRP(*NO) ACTGRP(*NEW)
      h OPTION(*NOSHOWCPY)

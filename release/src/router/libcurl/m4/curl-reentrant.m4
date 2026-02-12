@@ -184,7 +184,6 @@ AC_DEFUN([CURL_CHECK_NEED_REENTRANT_STRERROR_R], [
   fi
 ])
 
-
 dnl CURL_CHECK_NEED_REENTRANT_GETHOSTBYNAME_R
 dnl -------------------------------------------------
 dnl Checks if the preprocessor _REENTRANT definition
@@ -360,7 +359,7 @@ _EOF
 dnl CURL_CONFIGURE_REENTRANT
 dnl -------------------------------------------------
 dnl This first checks if the preprocessor _REENTRANT
-dnl symbol is already defined. If it is not currently
+dnl symbol is already defined. If it isn't currently
 dnl defined a set of checks are performed to verify
 dnl if its definition is required to make visible to
 dnl the compiler a set of *_r functions. Finally, if
@@ -422,7 +421,7 @@ AC_DEFUN([CURL_CONFIGURE_REENTRANT], [
 dnl CURL_CONFIGURE_THREAD_SAFE
 dnl -------------------------------------------------
 dnl This first checks if the preprocessor _THREAD_SAFE
-dnl symbol is already defined. If it is not currently
+dnl symbol is already defined. If it isn't currently
 dnl defined a set of checks are performed to verify
 dnl if its definition is required. Finally, if
 dnl _THREAD_SAFE is already defined or needed it takes

@@ -24,7 +24,6 @@
 SUBDIRS = vms
 
 EXTRA_DIST = README.md \
-  OS400/.checksrc \
   OS400/README.OS400 \
   OS400/rpg-examples \
   OS400/ccsidcurl.c \

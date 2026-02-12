@@ -52,11 +52,11 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     char *prev_id = "old"; /* saved from before somehow */
     curl_easy_setopt(curl, CURLOPT_URL, "rtsp://example.com/");
     curl_easy_setopt(curl, CURLOPT_RTSP_SESSION_ID, prev_id);
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
 }

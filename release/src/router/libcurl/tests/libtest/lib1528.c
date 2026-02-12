@@ -23,10 +23,12 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1528(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_FAILED_INIT;
+  CURLcode res = CURLE_FAILED_INIT;
   /* http header list */
   struct curl_slist *hhl = NULL;
   struct curl_slist *phl = NULL;
@@ -59,7 +61,7 @@ static CURLcode test_lib1528(const char *URL)
   test_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_HTTP);
   test_setopt(curl, CURLOPT_HEADER, 1L);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -68,5 +70,5 @@ test_cleanup:
   curl_slist_free_all(phl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

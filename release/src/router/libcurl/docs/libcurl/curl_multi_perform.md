@@ -74,18 +74,19 @@ int main(void)
   if(curl) {
     curl_multi_add_handle(multi, curl);
     do {
-      CURLMcode mresult = curl_multi_perform(multi, &still_running);
+      CURLMcode mc = curl_multi_perform(multi, &still_running);
 
-      if(!mresult && still_running)
+      if(!mc && still_running)
         /* wait for activity, timeout or "nothing" */
-        mresult = curl_multi_poll(multi, NULL, 0, 1000, NULL);
+        mc = curl_multi_poll(multi, NULL, 0, 1000, NULL);
 
-      if(mresult) {
-        fprintf(stderr, "curl_multi_poll() failed, code %d.\n", (int)mresult);
+      if(mc) {
+        fprintf(stderr, "curl_multi_poll() failed, code %d.\n", (int)mc);
         break;
       }
 
-    } while(still_running);  /* if there are still transfers, loop */
+    /* if there are still transfers, loop */
+    } while(still_running);
   }
 }
 ~~~

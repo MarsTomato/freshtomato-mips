@@ -53,7 +53,7 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/foo.bin");
 
     /* follow redirects */
@@ -62,7 +62,7 @@ int main(void)
     /* set Referer: automatically when following redirects */
     curl_easy_setopt(curl, CURLOPT_AUTOREFERER, 1L);
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     curl_easy_cleanup(curl);
   }

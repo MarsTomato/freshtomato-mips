@@ -28,6 +28,8 @@
 #include "tool_cb_wrt.h"
 #include "tool_operate.h"
 
+#include "memdebug.h" /* keep this as LAST include */
+
 #ifdef _WIN32
 #define OPENMODE S_IREAD | S_IWRITE
 #else
@@ -66,7 +68,7 @@ bool tool_create_output_file(struct OutStruct *outs,
       while(fd == -1 && /* have not successfully opened a file */
             (errno == EEXIST || errno == EISDIR) &&
             /* because we keep having files that already exist */
-            next_num < 100 /* and we have not reached the retry limit */) {
+            next_num < 100 /* and we have not reached the retry limit */ ) {
         curlx_dyn_reset(&fbuffer);
         if(curlx_dyn_addf(&fbuffer, "%s.%d", fname, next_num))
           return FALSE;
@@ -107,7 +109,7 @@ bool tool_create_output_file(struct OutStruct *outs,
   return TRUE;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UNDER_CE)
 static size_t win_console(intptr_t fhnd, struct OutStruct *outs,
                           char *buffer, size_t bytes,
                           size_t *retp)
@@ -158,12 +160,12 @@ static size_t win_console(intptr_t fhnd, struct OutStruct *outs,
     }
 
     if(complete) {
-      WCHAR prefix[3] = { 0 }; /* UTF-16 (1-2 WCHARs) + NUL */
+      WCHAR prefix[3] = {0};  /* UTF-16 (1-2 WCHARs) + NUL */
 
       if(MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)outs->utf8seq, -1,
                              prefix, CURL_ARRAYSIZE(prefix))) {
         DEBUGASSERT(prefix[2] == L'\0');
-        if(!WriteConsoleW((HANDLE)fhnd, prefix, prefix[1] ? 2 : 1,
+        if(!WriteConsoleW((HANDLE) fhnd, prefix, prefix[1] ? 2 : 1,
                           &chars_written, NULL)) {
           return CURL_WRITEFUNC_ERROR;
         }
@@ -209,8 +211,8 @@ static size_t win_console(intptr_t fhnd, struct OutStruct *outs,
 
     /* grow the buffer if needed */
     if(len > global->term.len) {
-      wchar_t *buf = (wchar_t *)curlx_realloc(global->term.buf,
-                                              len * sizeof(wchar_t));
+      wchar_t *buf = (wchar_t *) realloc(global->term.buf,
+                                         len * sizeof(wchar_t));
       if(!buf)
         return CURL_WRITEFUNC_ERROR;
       global->term.len = len;
@@ -245,7 +247,7 @@ size_t tool_write_cb(char *buffer, size_t sz, size_t nmemb, void *userdata)
   struct OperationConfig *config = per->config;
   size_t bytes = sz * nmemb;
   bool is_tty = global->isatty;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UNDER_CE)
   CONSOLE_SCREEN_BUFFER_INFO console_info;
   intptr_t fhnd;
 #endif
@@ -319,7 +321,7 @@ size_t tool_write_cb(char *buffer, size_t sz, size_t nmemb, void *userdata)
     }
   }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UNDER_CE)
   fhnd = _get_osfhandle(fileno(outs->stream));
   /* if Windows console then UTF-8 must be converted to UTF-16 */
   if(isatty(fileno(outs->stream)) &&

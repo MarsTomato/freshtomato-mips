@@ -24,6 +24,7 @@
 #include "first.h"
 
 #include "testtrace.h"
+#include "memdebug.h"
 
 static int testcounter;
 
@@ -53,7 +54,7 @@ static void setupcallbacks(CURL *curl)
 
 static CURLcode test_lib500(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
   char *ipstr = NULL;
 
@@ -84,10 +85,10 @@ static CURLcode test_lib500(const char *URL)
   if(testnum == 585 || testnum == 586 || testnum == 595 || testnum == 596)
     setupcallbacks(curl);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
-  if(!result) {
-    result = curl_easy_getinfo(curl, CURLINFO_PRIMARY_IP, &ipstr);
+  if(!res) {
+    res = curl_easy_getinfo(curl, CURLINFO_PRIMARY_IP, &ipstr);
     if(libtest_arg2) {
       FILE *moo = curlx_fopen(libtest_arg2, "wb");
       if(moo) {
@@ -127,10 +128,7 @@ static CURLcode test_lib500(const char *URL)
                         (time_pretransfer / 1000000),
                         (long)(time_pretransfer % 1000000));
         }
-        if(time_posttransfer > time_pretransfer) {
-          /* counter-intuitive: on a GET request, all bytes are sent *before*
-           * PRETRANSFER happens. Thus POSTTRANSFER has to be smaller.
-           * The reverse would be true for a POST/PUT. */
+        if(time_pretransfer > time_posttransfer) {
           curl_mfprintf(moo, "pretransfer vs posttransfer: %"
                         CURL_FORMAT_CURL_OFF_T
                         ".%06ld %" CURL_FORMAT_CURL_OFF_T ".%06ld\n",
@@ -175,5 +173,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

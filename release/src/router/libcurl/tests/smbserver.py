@@ -23,6 +23,9 @@
 #
 """Server for testing SMB."""
 
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import argparse
 import logging
 import os
@@ -30,10 +33,14 @@ import signal
 import sys
 import tempfile
 import threading
-import configparser
 
 # Import our curl test data helper
 from util import ClosingFileHandler, TestData
+
+if sys.version_info.major >= 3:
+    import configparser
+else:
+    import ConfigParser as configparser
 
 # impacket needs to be installed in the Python environment
 try:
@@ -53,6 +60,7 @@ SERVER_MAGIC = "SERVER_MAGIC"
 TESTS_MAGIC = "TESTS_MAGIC"
 VERIFIED_REQ = "verifiedserver"
 VERIFIED_RSP = "WE ROOLZ: {pid}\n"
+
 
 class ShutdownHandler(threading.Thread):
     """
@@ -75,7 +83,7 @@ class ShutdownHandler(threading.Thread):
         signal.signal(signal.SIGTERM, self._sighandler)
 
     def __exit__(self, *_):
-        # Call for shutdown just in case it was not done already
+        # Call for shutdown just in case it wasn't done already
         self.shutdown_event.set()
         # Wait for thread, and therefore also the server, to finish
         self.join()
@@ -170,7 +178,7 @@ class TestSmbServer(imp_smbserver.SMBSERVER):
         self.ctd = TestData(test_data_directory)
 
         # Override smbComNtCreateAndX so we can pretend to have files which
-        # do not exist.
+        # don't exist.
         self.hookSmbCommand(imp_smb.SMB.SMB_COM_NT_CREATE_ANDX,
                             self.create_and_x)
 
@@ -310,7 +318,7 @@ class TestSmbServer(imp_smbserver.SMBSERVER):
         log.debug("[SMB] Get server path '%s'", requested_filename)
 
         if requested_filename not in [VERIFIED_REQ]:
-            raise SmbError(STATUS_NO_SUCH_FILE, "Could not find the file")
+            raise SmbError(STATUS_NO_SUCH_FILE, "Couldn't find the file")
 
         fid, filename = tempfile.mkstemp()
         log.debug("[SMB] Created %s (%d) for storing '%s'",
@@ -382,9 +390,9 @@ def get_options():
     parser.add_argument("--verbose", action="store", type=int, default=0,
                         help="verbose output")
     parser.add_argument("--pidfile", action="store",
-                        help="filename for the PID")
+                        help="file name for the PID")
     parser.add_argument("--logfile", action="store",
-                        help="filename for the log")
+                        help="file name for the log")
     parser.add_argument("--srcdir", action="store", help="test directory")
     parser.add_argument("--id", action="store", help="server ID")
     parser.add_argument("--ipv4", action="store_true", default=0,
@@ -407,7 +415,7 @@ def setup_logging(options):
         handler.setLevel(logging.DEBUG)
         root_logger.addHandler(handler)
     else:
-        # The logfile was not specified. Add a stdout logger.
+        # The logfile wasn't specified. Add a stdout logger.
         add_stdout = True
 
     if options.verbose:

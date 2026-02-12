@@ -15,7 +15,6 @@ FreshTomato-MIPS Changelog
 
 - snmp: update to 5.9.5.2
 - ebtables: updates from upstream
-- libcurl: update to 8.18.0
 - libsodium: update to 1.0.21
 - irqbalance: update to 1.9.5
 - libsodium: update to latest 1.0.21-stable

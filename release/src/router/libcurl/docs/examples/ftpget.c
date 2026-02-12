@@ -21,19 +21,14 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+#include <stdio.h>
+
+#include <curl/curl.h>
+
 /* <DESC>
  * Get a single file from an FTP server.
  * </DESC>
  */
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS  /* for fopen() */
-#endif
-#endif
-
-#include <stdio.h>
-
-#include <curl/curl.h>
 
 struct FtpFile {
   const char *filename;
@@ -52,18 +47,19 @@ static size_t write_cb(void *buffer, size_t size, size_t nmemb, void *stream)
   return fwrite(buffer, size, nmemb, out->stream);
 }
 
+
 int main(void)
 {
   CURL *curl;
-  CURLcode result;
+  CURLcode res;
   struct FtpFile ftpfile = {
     "curl.tar.gz", /* name to store the file as if successful */
     NULL
   };
 
-  result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -80,14 +76,14 @@ int main(void)
     /* Switch on full protocol/debug output */
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     /* always cleanup */
     curl_easy_cleanup(curl);
 
-    if(CURLE_OK != result) {
+    if(CURLE_OK != res) {
       /* we failed */
-      fprintf(stderr, "curl told us %d\n", result);
+      fprintf(stderr, "curl told us %d\n", res);
     }
   }
 
@@ -96,5 +92,5 @@ int main(void)
 
   curl_global_cleanup();
 
-  return (int)result;
+  return (int)res;
 }

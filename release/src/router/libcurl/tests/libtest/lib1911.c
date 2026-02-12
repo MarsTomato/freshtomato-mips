@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 /* The maximum string length limit (CURL_MAX_INPUT_LENGTH) is an internal
    define not publicly exposed so we set our own */
 #define MAX_INPUT_LENGTH 8000000
@@ -49,7 +51,9 @@ static CURLcode test_lib1911(const char *URL)
 
   curl_mprintf("string length: %zu\n", strlen(testbuf));
 
-  for(o = curl_easy_option_next(NULL); o; o = curl_easy_option_next(o)) {
+  for(o = curl_easy_option_next(NULL);
+      o;
+      o = curl_easy_option_next(o)) {
     if(o->type == CURLOT_STRING) {
       CURLcode result;
       /*

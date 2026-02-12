@@ -76,8 +76,7 @@ warnings are:
 
 - `EXCLAMATIONSPACE`: space found after exclamations mark
 
-- `FOPENMODE`: `curlx_fopen()`, `curlx_freopen()` need a macro for the mode
-  string, use it
+- `FOPENMODE`: `curlx_fopen()` needs a macro for the mode string, use it
 
 - `INDENTATION`: detected a wrong start column for code. Note that this
    warning only checks some specific places and can certainly miss many bad
@@ -107,7 +106,7 @@ warnings are:
   `sizeof(int)` style.
 
 - `SNPRINTF` - Found use of `snprintf()`. Since we use an internal replacement
-   with a different return code etc, we prefer `curl_msnprintf()`.
+   with a different return code etc, we prefer `msnprintf()`.
 
 - `SPACEAFTERPAREN`: there was a space after open parenthesis, `( text`.
 

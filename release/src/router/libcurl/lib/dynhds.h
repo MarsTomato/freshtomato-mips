@@ -25,6 +25,7 @@
  ***************************************************************************/
 #include "curl_setup.h"
 
+#include <curl/curl.h>
 #include "curlx/dynbuf.h"
 
 struct dynbuf;
@@ -124,6 +125,7 @@ size_t Curl_dynhds_ccount_name(struct dynhds *dynhds, const char *name);
 size_t Curl_dynhds_remove(struct dynhds *dynhds,
                           const char *name, size_t namelen);
 size_t Curl_dynhds_cremove(struct dynhds *dynhds, const char *name);
+
 
 /**
  * Set the give header name and value, replacing any entries with

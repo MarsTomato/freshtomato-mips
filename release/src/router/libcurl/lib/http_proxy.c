@@ -21,22 +21,32 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
 #include "http_proxy.h"
 
 #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_PROXY)
 
-#include "curl_trc.h"
+#include <curl/curl.h>
+#include "sendf.h"
 #include "http.h"
 #include "url.h"
+#include "select.h"
+#include "progress.h"
 #include "cfilters.h"
 #include "cf-h1-proxy.h"
 #include "cf-h2-proxy.h"
 #include "connect.h"
+#include "vtls/vtls.h"
 #include "transfer.h"
+#include "multiif.h"
 #include "vauth/vauth.h"
 #include "curlx/strparse.h"
+
+/* The last 2 #include files should be in this order */
+#include "curl_memory.h"
+#include "memdebug.h"
 
 static CURLcode dynhds_add_custom(struct Curl_easy *data,
                                   bool is_connect, int httpversion,
@@ -125,31 +135,25 @@ static CURLcode dynhds_add_custom(struct Curl_easy *data,
       if(data->state.aptr.host &&
          /* a Host: header was sent already, do not pass on any custom Host:
             header as that will produce *two* in the same request! */
-         curlx_str_casecompare(&name, "Host"))
-        ;
+         curlx_str_casecompare(&name, "Host"));
       else if(data->state.httpreq == HTTPREQ_POST_FORM &&
               /* this header (extended by formdata.c) is sent later */
-              curlx_str_casecompare(&name, "Content-Type"))
-        ;
+              curlx_str_casecompare(&name, "Content-Type"));
       else if(data->state.httpreq == HTTPREQ_POST_MIME &&
               /* this header is sent later */
-              curlx_str_casecompare(&name, "Content-Type"))
-        ;
+              curlx_str_casecompare(&name, "Content-Type"));
       else if(data->req.authneg &&
               /* while doing auth neg, do not allow the custom length since
                  we will force length zero then */
-              curlx_str_casecompare(&name, "Content-Length"))
-        ;
+              curlx_str_casecompare(&name, "Content-Length"));
       else if((httpversion >= 20) &&
-              curlx_str_casecompare(&name, "Transfer-Encoding"))
-        ;
+              curlx_str_casecompare(&name, "Transfer-Encoding"));
       /* HTTP/2 and HTTP/3 do not support chunked requests */
       else if((curlx_str_casecompare(&name, "Authorization") ||
                curlx_str_casecompare(&name, "Cookie")) &&
               /* be careful of sending this potentially sensitive header to
                  other hosts */
-              !Curl_auth_allowed_to_host(data))
-        ;
+              !Curl_auth_allowed_to_host(data));
       else {
         CURLcode result =
           Curl_dynhds_add(hds, curlx_str(&name), curlx_strlen(&name),
@@ -163,9 +167,9 @@ static CURLcode dynhds_add_custom(struct Curl_easy *data,
   return CURLE_OK;
 }
 
-void Curl_http_proxy_get_destination(struct Curl_cfilter *cf,
-                                     const char **phostname,
-                                     int *pport, bool *pipv6_ip)
+CURLcode Curl_http_proxy_get_destination(struct Curl_cfilter *cf,
+                                         const char **phostname,
+                                         int *pport, bool *pipv6_ip)
 {
   DEBUGASSERT(cf);
   DEBUGASSERT(cf->conn);
@@ -188,6 +192,8 @@ void Curl_http_proxy_get_destination(struct Curl_cfilter *cf,
     *pipv6_ip = (strchr(*phostname, ':') != NULL);
   else
     *pipv6_ip = cf->conn->bits.ipv6_ip;
+
+  return CURLE_OK;
 }
 
 struct cf_proxy_ctx {
@@ -208,16 +214,18 @@ CURLcode Curl_http_proxy_create_CONNECT(struct httpreq **preq,
   CURLcode result;
   struct httpreq *req = NULL;
 
-  Curl_http_proxy_get_destination(cf, &hostname, &port, &ipv6_ip);
+  result = Curl_http_proxy_get_destination(cf, &hostname, &port, &ipv6_ip);
+  if(result)
+    goto out;
 
   authority = curl_maprintf("%s%s%s:%d", ipv6_ip ? "[" : "", hostname,
-                            ipv6_ip ? "]" : "", port);
+                            ipv6_ip ?"]" : "", port);
   if(!authority) {
     result = CURLE_OUT_OF_MEMORY;
     goto out;
   }
 
-  result = Curl_http_req_make(&req, "CONNECT", sizeof("CONNECT") - 1,
+  result = Curl_http_req_make(&req, "CONNECT", sizeof("CONNECT")-1,
                               NULL, 0, authority, strlen(authority),
                               NULL, 0);
   if(result)
@@ -253,7 +261,7 @@ CURLcode Curl_http_proxy_create_CONNECT(struct httpreq **preq,
   }
 
   if(http_version_major == 1 &&
-     !Curl_checkProxyheaders(data, cf->conn, STRCONST("Proxy-Connection"))) {
+    !Curl_checkProxyheaders(data, cf->conn, STRCONST("Proxy-Connection"))) {
     result = Curl_dynhds_cadd(&req->headers, "Proxy-Connection", "Keep-Alive");
     if(result)
       goto out;
@@ -266,7 +274,7 @@ out:
     Curl_http_req_free(req);
     req = NULL;
   }
-  curlx_free(authority);
+  free(authority);
   *preq = req;
   return result;
 }
@@ -382,7 +390,7 @@ static void http_proxy_cf_destroy(struct Curl_cfilter *cf,
 
   (void)data;
   CURL_TRC_CF(data, cf, "destroy");
-  curlx_free(ctx);
+  free(ctx);
 }
 
 static void http_proxy_cf_close(struct Curl_cfilter *cf,
@@ -394,9 +402,10 @@ static void http_proxy_cf_close(struct Curl_cfilter *cf,
     cf->next->cft->do_close(cf->next, data);
 }
 
+
 struct Curl_cftype Curl_cft_http_proxy = {
   "HTTP-PROXY",
-  CF_TYPE_IP_CONNECT | CF_TYPE_PROXY,
+  CF_TYPE_IP_CONNECT|CF_TYPE_PROXY,
   0,
   http_proxy_cf_destroy,
   http_proxy_cf_connect,
@@ -420,7 +429,7 @@ CURLcode Curl_cf_http_proxy_insert_after(struct Curl_cfilter *cf_at,
   CURLcode result;
 
   (void)data;
-  ctx = curlx_calloc(1, sizeof(*ctx));
+  ctx = calloc(1, sizeof(*ctx));
   if(!ctx) {
     result = CURLE_OUT_OF_MEMORY;
     goto out;
@@ -432,8 +441,8 @@ CURLcode Curl_cf_http_proxy_insert_after(struct Curl_cfilter *cf_at,
   Curl_conn_cf_insert_after(cf_at, cf);
 
 out:
-  curlx_free(ctx);
+  free(ctx);
   return result;
 }
 
-#endif /* !CURL_DISABLE_HTTP && !CURL_DISABLE_PROXY */
+#endif /* ! CURL_DISABLE_HTTP && !CURL_DISABLE_PROXY */

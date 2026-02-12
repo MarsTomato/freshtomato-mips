@@ -38,8 +38,6 @@ BEGIN {
         runclientoutput
         setlogfunc
         exerunner
-        subtextfile
-        subchars
         subbase64
         subnewlines
         subsha256base64file
@@ -63,6 +61,7 @@ use globalconfig qw(
 
 my $logfunc;      # optional reference to function for logging
 my @logmessages;  # array holding logged messages
+
 
 #######################################################################
 # Log an informational message
@@ -97,36 +96,15 @@ sub clearlogs {
     return $loglines;
 }
 
+
 #######################################################################
 
 sub includefile {
-    my ($f, $text) = @_;
+    my ($f) = @_;
     open(F, "<$f");
-    if($text) {
-        binmode F, ':crlf';
-    }
     my @a = <F>;
     close(F);
     return join("", @a);
-}
-
-sub subtextfile {
-    my ($thing) = @_;
-
-    my $count = ($$thing =~ s/%includetext ([^%]*)%[\n\r]+/includefile($1, 1)/ge);
-
-    return $count > 0;
-}
-
-sub subchars {
-    my ($thing) = @_;
-
-    $$thing =~ s/%SP/ /g;    # space
-    $$thing =~ s/%TAB/\t/g;  # horizontal tab
-    $$thing =~ s/%CR/\r/g;   # carriage return aka \r aka 0x0d
-    $$thing =~ s/%LT/</g;
-    $$thing =~ s/%GT/>/g;
-    $$thing =~ s/%AMP/&/g;
 }
 
 sub subbase64 {
@@ -169,8 +147,11 @@ sub subbase64 {
         $$thing =~ s/%%DAYS%%/%alternatives[$d,$d2]/;
     }
 
+    $$thing =~ s/%spc%/ /g;   # space
+    $$thing =~ s/%tab%/\t/g;  # horizontal tab
+
     # include a file
-    $$thing =~ s/%include ([^%]*)%[\n\r]+/includefile($1, 0)/ge;
+    $$thing =~ s/%include ([^%]*)%[\n\r]+/includefile($1)/ge;
 }
 
 my $prevupdate;  # module scope so it remembers the last value
@@ -195,7 +176,7 @@ sub subnewlines {
     }
     else {
         if(($$thing =~ /^\n\z/) && $prevupdate) {
-            # if there is a blank link after a line we update, we hope it is
+            # if there's a blank link after a line we update, we hope it is
             # the empty line following headers
             $$thing =~ s/\x0a/\x0d\x0a/;
         }

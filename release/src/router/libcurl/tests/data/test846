@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -6,6 +5,7 @@ IMAP
 </keywords>
 </info>
 
+#
 # Server-side
 <reply>
 <servercmd>
@@ -23,6 +23,7 @@ body
 </data>
 </reply>
 
+#
 # Client-side
 <client>
 <server>
@@ -36,6 +37,7 @@ IMAP PREAUTH response
 </command>
 </client>
 
+#
 # Verify data after the test has been "shot"
 <verify>
 <protocol crlf="yes">

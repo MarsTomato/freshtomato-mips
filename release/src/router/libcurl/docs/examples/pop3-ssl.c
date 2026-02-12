@@ -21,12 +21,13 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 /* <DESC>
  * Get POP3 email using implicit SSL
  * </DESC>
  */
-#include <stdio.h>
 
+#include <stdio.h>
 #include <curl/curl.h>
 
 /* This is a simple example showing how to retrieve mail using libcurl's POP3
@@ -40,9 +41,9 @@ int main(void)
 {
   CURL *curl;
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -66,7 +67,7 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 #endif
 
-    /* If the site you are connecting to uses a different hostname than what
+    /* If the site you are connecting to uses a different host name that what
      * they have mentioned in their server certificate's commonName (or
      * subjectAltName) fields, libcurl refuses to connect. You can skip this
      * check, but it makes the connection insecure. */
@@ -80,12 +81,12 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
     /* Perform the retr */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     /* Check for errors */
-    if(result != CURLE_OK)
+    if(res != CURLE_OK)
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(result));
+              curl_easy_strerror(res));
 
     /* Always cleanup */
     curl_easy_cleanup(curl);
@@ -93,5 +94,5 @@ int main(void)
 
   curl_global_cleanup();
 
-  return (int)result;
+  return (int)res;
 }

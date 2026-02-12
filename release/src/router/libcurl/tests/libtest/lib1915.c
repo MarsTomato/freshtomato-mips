@@ -24,13 +24,15 @@
 #include "first.h"
 
 #include "testtrace.h"
+#include "memdebug.h"
 
 struct state {
   int index;
 };
 
 /* "read" is from the point of the library, it wants data from us */
-static CURLSTScode hstsread(CURL *curl, struct curl_hstsentry *e, void *userp)
+static CURLSTScode hstsread(CURL *curl, struct curl_hstsentry *e,
+                            void *userp)
 {
   struct entry {
     const char *name;
@@ -58,10 +60,10 @@ static CURLSTScode hstsread(CURL *curl, struct curl_hstsentry *e, void *userp)
   host = preload_hosts[s->index].name;
   expire = preload_hosts[s->index++].exp;
 
-  if(host) {
-    curlx_strcopy(e->name, e->namelen, host, strlen(host));
+  if(host && (strlen(host) < e->namelen)) {
+    strcpy(e->name, host);
     e->includeSubDomains = FALSE;
-    curlx_strcopy(e->expire, sizeof(e->expire), expire, strlen(expire));
+    strcpy(e->expire, expire);
     curl_mfprintf(stderr, "add '%s'\n", host);
   }
   else
@@ -95,9 +97,9 @@ static CURLSTScode hstswrite(CURL *curl, struct curl_hstsentry *e,
 
 static CURLcode test_lib1915(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURL *curl;
-  struct state st = { 0 };
+  struct state st = {0};
 
   global_init(CURL_GLOBAL_ALL);
 
@@ -115,13 +117,13 @@ static CURLcode test_lib1915(const char *URL)
   easy_setopt(curl, CURLOPT_DEBUGDATA, &debug_config);
   easy_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
   easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
   curl_easy_cleanup(curl);
   curl = NULL;
-  if(result == CURLE_OPERATION_TIMEDOUT) /* we expect that on Windows */
-    result = CURLE_COULDNT_CONNECT;
-  curl_mprintf("First request returned %d\n", result);
-  result = CURLE_OK;
+  if(res == CURLE_OPERATION_TIMEDOUT) /* we expect that on Windows */
+    res = CURLE_COULDNT_CONNECT;
+  curl_mprintf("First request returned %d\n", res);
+  res = CURLE_OK;
 
   easy_init(curl);
   easy_setopt(curl, CURLOPT_URL, URL);
@@ -134,13 +136,13 @@ static CURLcode test_lib1915(const char *URL)
   easy_setopt(curl, CURLOPT_DEBUGDATA, &debug_config);
   easy_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
   easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
   curl_easy_cleanup(curl);
   curl = NULL;
-  curl_mprintf("Second request returned %d\n", result);
+  curl_mprintf("Second request returned %d\n", res);
 
 test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
-  return result;
+  return res;
 }

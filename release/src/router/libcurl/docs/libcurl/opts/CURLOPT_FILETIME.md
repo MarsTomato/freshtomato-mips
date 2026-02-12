@@ -49,15 +49,15 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/path.html");
     /* Ask for filetime */
     curl_easy_setopt(curl, CURLOPT_FILETIME, 1L);
-    result = curl_easy_perform(curl);
-    if(CURLE_OK == result) {
+    res = curl_easy_perform(curl);
+    if(CURLE_OK == res) {
       long filetime;
-      result = curl_easy_getinfo(curl, CURLINFO_FILETIME, &filetime);
-      if((CURLE_OK == result) && (filetime >= 0)) {
+      res = curl_easy_getinfo(curl, CURLINFO_FILETIME, &filetime);
+      if((CURLE_OK == res) && (filetime >= 0)) {
         time_t file_time = (time_t)filetime;
         printf("filetime: %s", ctime(&file_time));
       }

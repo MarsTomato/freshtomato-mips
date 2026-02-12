@@ -25,10 +25,12 @@
  * using the multi interface to do a multipart formpost without blocking
  * </DESC>
  */
+
 /*
- * Warning: this example uses the deprecated form API. See "multi-post.c"
- *          for a similar example using the mime API.
+ * Warning: this example uses the deprecated form api. See "multi-post.c"
+ *          for a similar example using the mime api.
  */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -43,13 +45,13 @@ int main(void)
   struct curl_slist *headerlist = NULL;
   static const char buf[] = "Expect:";
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   CURL_IGNORE_DEPRECATION(
     /* Fill in the file upload field. This makes libcurl load data from
-       the given filename when curl_easy_perform() is called. */
+       the given file name when curl_easy_perform() is called. */
     curl_formadd(&formpost,
                  &lastptr,
                  CURLFORM_COPYNAME, "sendfile",
@@ -97,13 +99,13 @@ int main(void)
       curl_multi_add_handle(multi, curl);
 
       do {
-        CURLMcode mresult = curl_multi_perform(multi, &still_running);
+        CURLMcode mc = curl_multi_perform(multi, &still_running);
 
         if(still_running)
           /* wait for activity, timeout or "nothing" */
-          mresult = curl_multi_poll(multi, NULL, 0, 1000, NULL);
+          mc = curl_multi_poll(multi, NULL, 0, 1000, NULL);
 
-        if(mresult)
+        if(mc)
           break;
 
       } while(still_running);

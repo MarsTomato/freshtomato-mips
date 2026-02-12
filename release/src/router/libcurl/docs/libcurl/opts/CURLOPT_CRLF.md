@@ -45,10 +45,10 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode ret;
     curl_easy_setopt(curl, CURLOPT_URL, "ftp://example.com/");
     curl_easy_setopt(curl, CURLOPT_CRLF, 1L);
-    result = curl_easy_perform(curl);
+    ret = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
 }

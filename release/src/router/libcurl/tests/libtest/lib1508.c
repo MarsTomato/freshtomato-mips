@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1508(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURLM *multi = NULL;
 
   (void)URL;
@@ -43,5 +45,5 @@ test_cleanup:
 
   curl_mprintf("We are done\n");
 
-  return result;
+  return res;
 }

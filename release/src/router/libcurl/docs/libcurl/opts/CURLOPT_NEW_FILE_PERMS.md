@@ -46,10 +46,10 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode ret;
     curl_easy_setopt(curl, CURLOPT_URL, "sftp://upload.example.com/file.txt");
     curl_easy_setopt(curl, CURLOPT_NEW_FILE_PERMS, 0664L);
-    result = curl_easy_perform(curl);
+    ret = curl_easy_perform(curl);
   }
 }
 ~~~

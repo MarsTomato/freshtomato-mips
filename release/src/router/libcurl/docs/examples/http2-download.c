@@ -25,17 +25,20 @@
  * Multiplexed HTTP/2 downloads over a single connection
  * </DESC>
  */
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS  /* for _snprintf(), fopen(), strerror() */
-#endif
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef UNDER_CE
+#define strerror(e) "?"
+#else
 #include <errno.h>
+#endif
 
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+#define snprintf _snprintf
+#endif
+
+/* curl stuff */
 #include <curl/curl.h>
 
 #ifndef CURLPIPE_MULTIPLEX
@@ -43,10 +46,6 @@
    old enough to not have this symbol. It is _not_ defined to zero in a recent
    libcurl header. */
 #define CURLPIPE_MULTIPLEX 0L
-#endif
-
-#if defined(_MSC_VER) && (_MSC_VER < 1900)
-#define snprintf _snprintf
 #endif
 
 struct transfer {
@@ -91,7 +90,7 @@ static void dump(const char *text, int num, unsigned char *ptr,
       }
       fprintf(stderr, "%c",
               (ptr[i + c] >= 0x20) && (ptr[i + c] < 0x80) ? ptr[i + c] : '.');
-      /* check again for 0D0A, to avoid an extra \n if it is at width */
+      /* check again for 0D0A, to avoid an extra \n if it's at width */
       if(nohex && (i + c + 2 < size) && ptr[i + c + 1] == 0x0D &&
          ptr[i + c + 2] == 0x0A) {
         i += (c + 3 - width);
@@ -189,7 +188,7 @@ static int setup(struct transfer *t, int num)
  */
 int main(int argc, char **argv)
 {
-  CURLcode result;
+  CURLcode res;
   struct transfer *trans;
   CURLM *multi = NULL;
   int i;
@@ -200,14 +199,14 @@ int main(int argc, char **argv)
     /* if given a number, do that many transfers */
     num_transfers = atoi(argv[1]);
     if((num_transfers < 1) || (num_transfers > 1000))
-      num_transfers = 3; /* a suitable low default */
+      num_transfers = 3;  /* a suitable low default */
   }
   else
-    num_transfers = 3; /* a suitable low default */
+    num_transfers = 3;  /* a suitable low default */
 
-  result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   trans = calloc(num_transfers, sizeof(*trans));
   if(!trans) {
@@ -232,13 +231,13 @@ int main(int argc, char **argv)
   curl_multi_setopt(multi, CURLMOPT_PIPELINING, CURLPIPE_MULTIPLEX);
 
   do {
-    CURLMcode mresult = curl_multi_perform(multi, &still_running);
+    CURLMcode mc = curl_multi_perform(multi, &still_running);
 
     if(still_running)
       /* wait for activity, timeout or "nothing" */
-      mresult = curl_multi_poll(multi, NULL, 0, 1000, NULL);
+      mc = curl_multi_poll(multi, NULL, 0, 1000, NULL);
 
-    if(mresult)
+    if(mc)
       break;
 
   } while(still_running);

@@ -27,8 +27,7 @@
 
 /* only allow this many levels of recursive --config use */
 #define CONFIG_MAX_LEVELS 5
-ParameterError parseconfig(const char *filename, int max_recursive,
-                           char **resolved);
+ParameterError parseconfig(const char *filename, int max_recursive);
 bool my_get_line(FILE *fp, struct dynbuf *db, bool *error);
 
 #endif /* HEADER_CURL_TOOL_PARSECFG_H */

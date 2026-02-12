@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib3100(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
@@ -52,10 +54,10 @@ static CURLcode test_lib3100(const char *URL)
   test_setopt(curl, CURLOPT_PASSWORD, "password");
   test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_DESCRIBE);
 
-  result = curl_easy_perform(curl);
-  if(result != CURLE_OK) {
-    curl_mfprintf(stderr, "Failed to send DESCRIBE: %d\n", result);
-    result = TEST_ERR_MAJOR_BAD;
+  res = curl_easy_perform(curl);
+  if(res != CURLE_OK) {
+    curl_mfprintf(stderr, "Failed to send DESCRIBE: %d\n", res);
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
@@ -63,5 +65,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

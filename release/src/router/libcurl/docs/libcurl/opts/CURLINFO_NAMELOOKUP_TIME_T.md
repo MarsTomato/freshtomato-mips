@@ -15,7 +15,7 @@ Added-in: 7.61.0
 
 # NAME
 
-CURLINFO_NAMELOOKUP_TIME_T - name lookup time in microseconds
+CURLINFO_NAMELOOKUP_TIME_T - get the name lookup time in microseconds
 
 # SYNOPSIS
 
@@ -44,14 +44,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_off_t namelookup;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    result = curl_easy_perform(curl);
-    if(CURLE_OK == result) {
-      result = curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME_T,
-                                 &namelookup);
-      if(CURLE_OK == result) {
+    res = curl_easy_perform(curl);
+    if(CURLE_OK == res) {
+      res = curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME_T, &namelookup);
+      if(CURLE_OK == res) {
         printf("Time: %" CURL_FORMAT_CURL_OFF_T ".%06ld", namelookup / 1000000,
                (long)(namelookup % 1000000));
       }

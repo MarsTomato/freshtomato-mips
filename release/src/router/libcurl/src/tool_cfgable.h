@@ -23,21 +23,26 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "tool_setup.h"
 
+#include <curl/mprintf.h>
+#include "tool_setup.h"
 #include "tool_sdecls.h"
 #include "tool_urlglob.h"
 #include "var.h"
 
-#define MAX_CONFIG_LINE_LENGTH (10 * 1024 * 1024)
+/* the type we use for storing a single boolean bit */
+#ifndef BIT
+#ifdef _MSC_VER
+#define BIT(x) bool x
+#else
+#define BIT(x) unsigned int x:1
+#endif
+#endif
 
-#define checkprefix(a, b) curl_strnequal(b, STRCONST(a))
+#define checkprefix(a,b)    curl_strnequal(b, STRCONST(a))
 
-#define tool_safefree(ptr) \
-  do {                     \
-    curlx_free(ptr);       \
-    (ptr) = NULL;          \
-  } while(0)
+#define tool_safefree(ptr)                      \
+  do { free((ptr)); (ptr) = NULL;} while(0)
 
 extern struct GlobalConfig *global;
 
@@ -243,7 +248,7 @@ struct OperationConfig {
   BIT(autoreferer);         /* automatically set referer */
   BIT(show_headers);        /* show headers to data output */
   BIT(no_body);             /* do not get the body */
-  BIT(dirlistonly);         /* only get the FTP directory list */
+  BIT(dirlistonly);         /* only get the FTP dir list */
   BIT(unrestricted_auth);   /* Continue to send authentication (user+password)
                                when following redirects, even when hostname
                                changed */
@@ -321,7 +326,7 @@ struct OperationConfig {
   BIT(skip_existing);
 };
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UNDER_CE)
 struct termout {
   wchar_t *buf;
   DWORD len;
@@ -338,7 +343,7 @@ struct GlobalConfig {
   struct OperationConfig *first;
   struct OperationConfig *current;
   struct OperationConfig *last;
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UNDER_CE)
   struct termout term;
 #endif
   timediff_t ms_per_transfer;     /* start next transfer after (at least) this

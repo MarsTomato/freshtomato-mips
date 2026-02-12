@@ -23,6 +23,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curlx/dynbuf.h"
 
 /* Curl_get_line() returns complete lines that end with a newline. */

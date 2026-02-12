@@ -23,10 +23,12 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1916(const char *URL)
 {
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
@@ -43,12 +45,12 @@ static CURLcode test_lib1916(const char *URL)
     else {
       curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
     }
-    result = curl_easy_perform(curl);
-    if(result) {
-      curl_mprintf("result: %d\n", result);
+    res = curl_easy_perform(curl);
+    if(res) {
+      curl_mprintf("res: %d\n", res);
     }
     curl_easy_cleanup(curl);
   }
   curl_global_cleanup();
-  return result;
+  return res;
 }

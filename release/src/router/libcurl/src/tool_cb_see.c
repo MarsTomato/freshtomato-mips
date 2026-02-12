@@ -27,6 +27,8 @@
 #include "tool_operate.h"
 #include "tool_cb_see.h"
 
+#include "memdebug.h" /* keep this as LAST include */
+
 /*
 ** callback for CURLOPT_SEEKFUNCTION
 **
@@ -38,14 +40,14 @@ int tool_seek_cb(void *userdata, curl_off_t offset, int whence)
 {
   struct per_transfer *per = userdata;
 
-#if (SIZEOF_CURL_OFF_T > SIZEOF_OFF_T) && !defined(_WIN32)
+#if (SIZEOF_CURL_OFF_T > SIZEOF_OFF_T) && !defined(USE_WIN32_LARGE_FILES)
 
 /* OUR_MAX_SEEK_L has 'long' data type, OUR_MAX_SEEK_O has 'curl_off_t,
    both represent the same value. Maximum offset used here when we lseek
    using a 'long' data type offset */
 
-#define OUR_MAX_SEEK_L (2147483647L - 1L)
-#define OUR_MAX_SEEK_O (0x7FFFFFFF - 0x1)
+#define OUR_MAX_SEEK_L  2147483647L - 1L
+#define OUR_MAX_SEEK_O  0x7FFFFFFF - 0x1
 
   /* The offset check following here is only interesting if curl_off_t is
      larger than off_t and we are not using the Win32 large file support
@@ -53,8 +55,8 @@ int tool_seek_cb(void *userdata, curl_off_t offset, int whence)
 
   if(offset > OUR_MAX_SEEK_O) {
     /* Some precaution code to work around problems with different data sizes
-       to allow seeking >32-bit even if off_t is 32-bit. Should be rare and
-       is really valid on weirdo-systems. */
+       to allow seeking >32-bit even if off_t is 32-bit. Should be very rare
+       and is really valid on weirdo-systems. */
     curl_off_t left = offset;
 
     if(whence != SEEK_SET)
@@ -76,7 +78,7 @@ int tool_seek_cb(void *userdata, curl_off_t offset, int whence)
   }
 #endif
 
-#ifdef __AMIGA__
+#if defined(__AMIGA__) || defined(__MINGW32CE__)
   if(LSEEK_ERROR == lseek(per->infd, (off_t)offset, whence))
 #else
   if(LSEEK_ERROR == lseek(per->infd, offset, whence))

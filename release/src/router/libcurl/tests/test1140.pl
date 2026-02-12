@@ -23,8 +23,8 @@
 #
 ###########################################################################
 #
-# scan man pages to find basic syntactic problems such as unbalanced \f
-# codes or references to non-existing curl man pages.
+# scan manpages to find basic syntactic problems such as unbalanced \f
+# codes or references to non-existing curl manpages.
 
 use strict;
 use warnings;
@@ -36,10 +36,13 @@ if(!$docsroot || ($docsroot eq "-g")) {
     exit;
 }
 
+
 shift @ARGV;
 
 my @f = @ARGV;
+
 my %manp;
+
 my $errors = 0;
 
 sub manpresent {
@@ -78,7 +81,7 @@ sub file {
                 my $man = "$1.3";
                 $man =~ s/\\//g; # cut off backslashes
                 if(!manpresent($man)) {
-                    print "error: $f:$line: referring to non-existing man page $man\n";
+                    print "error: $f:$line: referring to non-existing manpage $man\n";
                     $errors++;
                 }
                 if($pre ne "I") {
@@ -97,7 +100,7 @@ sub file {
                 my $man = "$1.3";
                 $man =~ s/\\//g; # cut off backslashes
                 if(!manpresent($man)) {
-                    print "error: $f:$line: referring to non-existing man page $man\n";
+                    print "error: $f:$line: referring to non-existing manpage $man\n";
                     $errors++;
                 }
             }

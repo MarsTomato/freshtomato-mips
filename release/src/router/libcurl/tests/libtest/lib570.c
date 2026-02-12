@@ -24,10 +24,11 @@
 #include "first.h"
 
 #include "testutil.h"
+#include "memdebug.h"
 
 static CURLcode test_lib570(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
   int request = 1;
   char *stream_uri = NULL;
@@ -54,56 +55,56 @@ static CURLcode test_lib570(const char *URL)
 
   stream_uri = tutil_suburl(URL, request++);
   if(!stream_uri) {
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
   test_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
   curl_free(stream_uri);
   stream_uri = NULL;
 
-  result = curl_easy_perform(curl);
-  if(result != CURLE_RTSP_CSEQ_ERROR) {
+  res = curl_easy_perform(curl);
+  if(res != CURLE_RTSP_CSEQ_ERROR) {
     curl_mfprintf(stderr, "Failed to detect CSeq mismatch");
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
   test_setopt(curl, CURLOPT_RTSP_CLIENT_CSEQ, 999L);
   test_setopt(curl, CURLOPT_RTSP_TRANSPORT,
-              "RAW/RAW/UDP;unicast;client_port=3056-3057");
+                    "RAW/RAW/UDP;unicast;client_port=3056-3057");
   test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_SETUP);
 
   stream_uri = tutil_suburl(URL, request++);
   if(!stream_uri) {
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
   test_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
   curl_free(stream_uri);
   stream_uri = NULL;
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_PLAY);
 
   stream_uri = tutil_suburl(URL, request++);
   if(!stream_uri) {
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
   test_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
   curl_free(stream_uri);
   stream_uri = NULL;
 
-  result = curl_easy_perform(curl);
-  if(result == CURLE_RTSP_SESSION_ERROR) {
-    result = CURLE_OK;
+  res = curl_easy_perform(curl);
+  if(res == CURLE_RTSP_SESSION_ERROR) {
+    res = CURLE_OK;
   }
   else {
     curl_mfprintf(stderr, "Failed to detect a Session ID mismatch");
-    result = TEST_ERR_FAILURE;
+    res = TEST_ERR_FAILURE;
   }
 
 test_cleanup:
@@ -112,5 +113,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

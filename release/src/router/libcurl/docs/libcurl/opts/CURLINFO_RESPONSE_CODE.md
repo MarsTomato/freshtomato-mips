@@ -18,7 +18,7 @@ Added-in: 7.10.8
 
 # NAME
 
-CURLINFO_RESPONSE_CODE - last response code
+CURLINFO_RESPONSE_CODE - get the last response code
 
 # SYNOPSIS
 
@@ -47,10 +47,10 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    result = curl_easy_perform(curl);
-    if(result == CURLE_OK) {
+    res = curl_easy_perform(curl);
+    if(res == CURLE_OK) {
       long response_code;
       curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
     }

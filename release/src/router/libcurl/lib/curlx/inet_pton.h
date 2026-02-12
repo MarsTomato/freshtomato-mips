@@ -23,6 +23,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "../curl_setup.h"
 
 #ifdef HAVE_INET_PTON
@@ -36,11 +37,9 @@
 #include <arpa/inet.h>
 #endif
 #ifdef __AMIGA__
-#define curlx_inet_pton(x, y, z) \
-  inet_pton(x, (unsigned char *)CURL_UNCONST(y), z)
+#define curlx_inet_pton(x,y,z) inet_pton(x,(unsigned char *)CURL_UNCONST(y),z)
 #else
-#define curlx_inet_pton(x, y, z) \
-  inet_pton(x, y, z)
+#define curlx_inet_pton(x,y,z) inet_pton(x,y,z)
 #endif
 #else
 int curlx_inet_pton(int, const char *, void *);

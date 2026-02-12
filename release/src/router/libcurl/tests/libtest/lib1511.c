@@ -23,11 +23,13 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1511(const char *URL)
 {
   long unmet;
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   global_init(CURL_GLOBAL_ALL);
 
@@ -40,30 +42,30 @@ static CURLcode test_lib1511(const char *URL)
   /* TIMEVALUE in the future */
   easy_setopt(curl, CURLOPT_TIMEVALUE, 1566210680L);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   curl_easy_getinfo(curl, CURLINFO_CONDITION_UNMET, &unmet);
   if(unmet != 1L) {
-    result = TEST_ERR_FAILURE; /* not correct */
+    res = TEST_ERR_FAILURE; /* not correct */
     goto test_cleanup;
   }
 
   /* TIMEVALUE in the past */
   easy_setopt(curl, CURLOPT_TIMEVALUE, 1L);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   curl_easy_getinfo(curl, CURLINFO_CONDITION_UNMET, &unmet);
   if(unmet) {
-    result = TEST_ERR_FAILURE; /* not correct */
+    res = TEST_ERR_FAILURE; /* not correct */
     goto test_cleanup;
   }
 
-  result = TEST_ERR_SUCCESS; /* this is where we should be */
+  res = TEST_ERR_SUCCESS; /* this is where we should be */
 
 test_cleanup:
 
@@ -71,5 +73,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib519(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
@@ -46,19 +48,19 @@ static CURLcode test_lib519(const char *URL)
   test_setopt(curl, CURLOPT_VERBOSE, 1L);
 
   /* get first page */
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   test_setopt(curl, CURLOPT_USERPWD, "anothermonster:inwardrobe");
 
   /* get second page */
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

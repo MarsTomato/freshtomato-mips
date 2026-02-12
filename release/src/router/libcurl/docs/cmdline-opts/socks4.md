@@ -7,7 +7,6 @@ Help: SOCKS4 proxy on given host + port
 Added: 7.15.2
 Category: proxy
 Multi: single
-Mutexed: proxy socks4a socks5 socks5-hostname
 See-also:
   - socks4a
   - socks5
@@ -22,9 +21,8 @@ Use the specified SOCKS4 proxy. If the port number is not specified, it is
 assumed at port 1080. Using this socket type makes curl resolve the hostname
 and pass the address on to the proxy.
 
-To specify the proxy on a Unix domain socket, use localhost for host and
-append the absolute path to the domain socket. For example:
-`socks4://localhost/path/to/socket.sock` (the scheme may be omitted).
+To specify proxy on a Unix domain socket, use localhost for host, e.g.
+`socks4://localhost/path/to/socket.sock`
 
 This option overrides any previous use of --proxy, as they are mutually
 exclusive.

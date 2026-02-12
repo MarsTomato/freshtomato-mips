@@ -519,5 +519,3 @@ November:
 We drop support for krb-ftp, Heimdal, wolfSSH and the winbuild build system.
 
 Add support for Apple SecTrust, native CA certs on Apple systems.
-
-December 15: the website served 78 TB over the last month.

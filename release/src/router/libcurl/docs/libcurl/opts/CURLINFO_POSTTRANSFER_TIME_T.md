@@ -16,7 +16,7 @@ Added-in: 8.10.0
 
 # NAME
 
-CURLINFO_POSTTRANSFER_TIME_T - time to last byte sent
+CURLINFO_POSTTRANSFER_TIME_T - get the time until the last byte is sent
 
 # SYNOPSIS
 
@@ -45,15 +45,15 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    result = curl_easy_perform(curl);
-    if(CURLE_OK == result) {
+    res = curl_easy_perform(curl);
+    if(CURLE_OK == res) {
       curl_off_t posttransfer;
-      result = curl_easy_getinfo(curl, CURLINFO_POSTTRANSFER_TIME_T,
+      res = curl_easy_getinfo(curl, CURLINFO_POSTTRANSFER_TIME_T,
                               &posttransfer);
-      if(CURLE_OK == result) {
-        printf("Request sent after: %" CURL_FORMAT_CURL_OFF_T ".%06ld s",
+      if(CURLE_OK == res) {
+        printf("Request sent after: %" CURL_FORMAT_CURL_OFF_T ".%06ld us",
                posttransfer / 1000000, (long)(posttransfer % 1000000));
       }
     }

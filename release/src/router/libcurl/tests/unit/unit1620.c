@@ -26,23 +26,26 @@
 #include "urldata.h"
 #include "url.h"
 
+#include "memdebug.h" /* LAST include file */
+
 static CURLcode t1620_setup(void)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   global_init(CURL_GLOBAL_ALL);
-  return result;
+  return res;
 }
 
-static void t1620_parse(const char *input,
-                        const char *exp_username,
-                        const char *exp_password,
-                        const char *exp_options)
+static void t1620_parse(
+  const char *input,
+  const char *exp_username,
+  const char *exp_password,
+  const char *exp_options)
 {
   char *userstr = NULL;
   char *passwdstr = NULL;
   char *options = NULL;
-  CURLcode rc = Curl_parse_login_details(input, strlen(input), &userstr,
-                                         &passwdstr, &options);
+  CURLcode rc = Curl_parse_login_details(input, strlen(input),
+                                &userstr, &passwdstr, &options);
   fail_unless(rc == CURLE_OK, "Curl_parse_login_details() failed");
 
   fail_unless(!!exp_username == !!userstr, "username expectation failed");
@@ -51,19 +54,19 @@ static void t1620_parse(const char *input,
 
   if(!unitfail) {
     fail_unless(!userstr || !exp_username ||
-                  strcmp(userstr, exp_username) == 0,
+                strcmp(userstr, exp_username) == 0,
                 "userstr should be equal to exp_username");
     fail_unless(!passwdstr || !exp_password ||
-                  strcmp(passwdstr, exp_password) == 0,
+                strcmp(passwdstr, exp_password) == 0,
                 "passwdstr should be equal to exp_password");
     fail_unless(!options || !exp_options ||
-                  strcmp(options, exp_options) == 0,
+                strcmp(options, exp_options) == 0,
                 "options should be equal to exp_options");
   }
 
-  curlx_free(userstr);
-  curlx_free(passwdstr);
-  curlx_free(options);
+  free(userstr);
+  free(passwdstr);
+  free(options);
 }
 
 static CURLcode test_unit1620(const char *arg)
@@ -115,7 +118,8 @@ static CURLcode test_unit1620(const char *arg)
 
   Curl_freeset(empty);
   for(i = (enum dupstring)0; i < STRING_LAST; i++) {
-    fail_unless(empty->set.str[i] == NULL, "Curl_free() did not set to NULL");
+    fail_unless(empty->set.str[i] == NULL,
+                "Curl_free() did not set to NULL");
   }
 
   rc = Curl_close(&empty);

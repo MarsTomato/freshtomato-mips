@@ -186,7 +186,7 @@ int my_trace(CURL *handle, curl_infotype type,
 int main(void)
 {
   CURL *curl;
-  CURLcode result;
+  CURLcode res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -199,11 +199,11 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     /* Check for errors */
-    if(result != CURLE_OK)
+    if(res != CURLE_OK)
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(result));
+              curl_easy_strerror(res));
 
     /* always cleanup */
     curl_easy_cleanup(curl);

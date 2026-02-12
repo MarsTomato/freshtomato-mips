@@ -96,13 +96,13 @@ static CURLcode test_lib2302(const char *URL)
 {
 #ifndef CURL_DISABLE_WEBSOCKETS
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   struct ws_data ws_data;
 
   global_init(CURL_GLOBAL_ALL);
 
   memset(&ws_data, 0, sizeof(ws_data));
-  ws_data.buf = (char *)curlx_calloc(LIB2302_BUFSIZE, 1);
+  ws_data.buf = (char *)calloc(LIB2302_BUFSIZE, 1);
   if(ws_data.buf) {
     curl = curl_easy_init();
     if(curl) {
@@ -114,16 +114,16 @@ static CURLcode test_lib2302(const char *URL)
       curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
       curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, t2302_write_cb);
       curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ws_data);
-      result = curl_easy_perform(curl);
-      curl_mfprintf(stderr, "curl_easy_perform() returned %d\n", result);
+      res = curl_easy_perform(curl);
+      curl_mfprintf(stderr, "curl_easy_perform() returned %d\n", res);
       /* always cleanup */
       curl_easy_cleanup(curl);
       flush_data(&ws_data);
     }
-    curlx_free(ws_data.buf);
+    free(ws_data.buf);
   }
   curl_global_cleanup();
-  return result;
+  return res;
 #else
   NO_SUPPORT_BUILT_IN
 #endif

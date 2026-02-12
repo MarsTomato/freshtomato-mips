@@ -22,7 +22,8 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
-#include "vssh/vssh.h"
+#include "vssh/curl_path.h"
+#include "memdebug.h"
 
 static CURLcode test_unit2604(const char *arg)
 {
@@ -50,27 +51,27 @@ static CURLcode test_unit2604(const char *arg)
   int i;
   const size_t too_long = 90720;
   struct set list[] = {
-    { "-too-long-", "", "", "", CURLE_TOO_LARGE },
-    { SA540 " c", SA540, "c", "/", CURLE_OK },
-    { "\" " SA540 "\" c", " " SA540, "c", "/", CURLE_OK },
-    { "a a", "a", "a", "/home/", CURLE_OK },
-    { "b a", "b", "a", "/", CURLE_OK },
-    { "a", "a", "", "/home/", CURLE_OK },
-    { "b", "b", "", "/", CURLE_OK },
-    { "\"foo bar\"\tb", "foo bar", "b", "/", CURLE_OK },
-    { "/~/hej", "/home/user/hej", "", "/home/user", CURLE_OK },
-    { "\"foo bar", "", "", "/", CURLE_QUOTE_ERROR },
-    { "\"foo\\\"bar\" a", "foo\"bar", "a", "/", CURLE_OK },
-    { "\"foo\\\'bar\" b", "foo\'bar", "b", "/", CURLE_OK },
-    { "\"foo\\\\bar\" c", "foo\\bar", "c", "/", CURLE_OK },
-    { "\"foo\\pbar\" c", "foo\\bar", "", "/", CURLE_QUOTE_ERROR },
-    { "\"\" c", "", "", "", CURLE_QUOTE_ERROR },
-    { "foo\"", "foo\"", "", "/", CURLE_OK },
-    { "foo \"", "foo", "\"", "/", CURLE_OK },
-    { "   \t\t   \t  ", "", "", "/", CURLE_QUOTE_ERROR },
-    { "              ", "", "", "/", CURLE_QUOTE_ERROR },
-    { "", "", "", "/", CURLE_QUOTE_ERROR },
-    { "       \r \n  ", "\r", "\n  ", "/", CURLE_OK },
+    { "-too-long-", "", "", "", CURLE_TOO_LARGE},
+    { SA540 " c", SA540, "c", "/", CURLE_OK},
+    { "\" " SA540 "\" c", " " SA540, "c", "/", CURLE_OK},
+    { "a a", "a", "a", "/home/", CURLE_OK},
+    { "b a", "b", "a", "/", CURLE_OK},
+    { "a", "a", "", "/home/", CURLE_OK},
+    { "b", "b", "", "/", CURLE_OK},
+    { "\"foo bar\"\tb", "foo bar", "b", "/", CURLE_OK},
+    { "/~/hej", "/home/user/hej", "", "/home/user", CURLE_OK},
+    { "\"foo bar", "", "", "/", CURLE_QUOTE_ERROR},
+    { "\"foo\\\"bar\" a", "foo\"bar", "a", "/", CURLE_OK},
+    { "\"foo\\\'bar\" b", "foo\'bar", "b", "/", CURLE_OK},
+    { "\"foo\\\\bar\" c", "foo\\bar", "c", "/", CURLE_OK},
+    { "\"foo\\pbar\" c", "foo\\bar", "", "/", CURLE_QUOTE_ERROR},
+    { "\"\" c", "", "", "", CURLE_QUOTE_ERROR},
+    { "foo\"", "foo\"", "", "/", CURLE_OK},
+    { "foo \"", "foo", "\"", "/", CURLE_OK},
+    { "   \t\t   \t  ", "", "", "/", CURLE_QUOTE_ERROR},
+    { "              ", "", "", "/", CURLE_QUOTE_ERROR},
+    { "", "", "", "/", CURLE_QUOTE_ERROR},
+    { "       \r \n  ", "\r", "\n  ", "/", CURLE_OK},
     { NULL, NULL, NULL, NULL, CURLE_OK }
   };
 
@@ -78,7 +79,7 @@ static CURLcode test_unit2604(const char *arg)
 #pragma GCC diagnostic pop
 #endif
 
-  char *cp0 = curlx_calloc(1, too_long + 1);
+  char *cp0 = calloc(1, too_long + 1);
   fail_unless(cp0, "could not alloc too long value");
   memset(cp0, 'a', too_long);
 
@@ -107,7 +108,7 @@ static CURLcode test_unit2604(const char *arg)
     }
   }
 
-  curlx_free(cp0);
+  free(cp0);
 
 #endif
 

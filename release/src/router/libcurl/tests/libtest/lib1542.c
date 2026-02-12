@@ -33,11 +33,12 @@
 #include "first.h"
 
 #include "testtrace.h"
+#include "memdebug.h"
 
 static CURLcode test_lib1542(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   global_init(CURL_GLOBAL_ALL);
 
@@ -51,26 +52,26 @@ static CURLcode test_lib1542(const char *URL)
   easy_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
   easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   /* CURLOPT_MAXLIFETIME_CONN is inclusive - the connection needs to be 2
    * seconds old */
   curlx_wait_ms(2000);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   easy_setopt(curl, CURLOPT_MAXLIFETIME_CONN, 1L);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
 test_cleanup:
@@ -78,5 +79,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

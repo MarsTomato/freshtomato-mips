@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib3104(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURLSH *share;
   CURL *curl;
 
@@ -47,10 +49,10 @@ static CURLcode test_lib3104(const char *URL)
   test_setopt(curl, CURLOPT_COOKIELIST,
               "example.com\tFALSE\t/\tFALSE\t0\tname\tvalue");
 
-  result = curl_easy_perform(curl);
-  if(result) {
+  res = curl_easy_perform(curl);
+  if(res) {
     curl_mfprintf(stderr, "curl_easy_perform() failed: %s\n",
-                  curl_easy_strerror(result));
+                  curl_easy_strerror(res));
   }
 
 test_cleanup:
@@ -60,5 +62,5 @@ test_cleanup:
   curl_share_cleanup(share);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

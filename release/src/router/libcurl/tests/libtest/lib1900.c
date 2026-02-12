@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1900(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURL *curl1 = NULL;
   CURL *curl2 = NULL;
 
@@ -47,5 +49,5 @@ test_cleanup:
   curl_easy_cleanup(curl1);
   curl_easy_cleanup(curl2);
   curl_global_cleanup();
-  return result;
+  return res;
 }

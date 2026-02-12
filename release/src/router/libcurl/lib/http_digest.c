@@ -21,6 +21,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
 #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_DIGEST_AUTH)
@@ -30,6 +31,10 @@
 #include "vauth/vauth.h"
 #include "http_digest.h"
 #include "curlx/strparse.h"
+
+/* The last 2 #include files should be in this order */
+#include "curl_memory.h"
+#include "memdebug.h"
 
 /* Test example headers:
 
@@ -147,20 +152,20 @@ CURLcode Curl_output_digest(struct Curl_easy *data,
     }
   }
   if(!tmp)
-    path = (unsigned char *)curlx_strdup((const char *)uripath);
+    path = (unsigned char *)strdup((const char *) uripath);
 
   if(!path)
     return CURLE_OUT_OF_MEMORY;
 
   result = Curl_auth_create_digest_http_message(data, userp, passwdp, request,
                                                 path, digest, &response, &len);
-  curlx_free(path);
+  free(path);
   if(result)
     return result;
 
   *allocuserpwd = curl_maprintf("%sAuthorization: Digest %s\r\n",
                                 proxy ? "Proxy-" : "", response);
-  curlx_free(response);
+  free(response);
   if(!*allocuserpwd)
     return CURLE_OUT_OF_MEMORY;
 

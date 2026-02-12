@@ -23,14 +23,14 @@
  ***************************************************************************/
 #include "unitcheck.h"
 
-#if defined(USE_GNUTLS) || defined(USE_SCHANNEL) || defined(USE_MBEDTLS)
-
 #include "vtls/x509asn1.h"
+
+#if defined(USE_GNUTLS) || defined(USE_SCHANNEL) || defined(USE_MBEDTLS)
 
 struct test1657_spec {
   CURLcode (*setbuf)(const struct test1657_spec *spec, struct dynbuf *buf);
   size_t n;
-  CURLcode exp_res;
+  CURLcode exp_result;
 };
 
 static CURLcode make1657_nested(const struct test1657_spec *spec,
@@ -64,22 +64,22 @@ static const struct test1657_spec test1657_specs[] = {
 static bool do_test1657(const struct test1657_spec *spec, size_t i,
                         struct dynbuf *buf)
 {
-  CURLcode res;
+  CURLcode result;
   struct Curl_asn1Element elem;
   const char *in;
 
   memset(&elem, 0, sizeof(elem));
   curlx_dyn_reset(buf);
-  res = spec->setbuf(spec, buf);
-  if(res) {
-    curl_mfprintf(stderr, "test %zu: error setting buf %d\n", i, res);
+  result = spec->setbuf(spec, buf);
+  if(result) {
+    curl_mfprintf(stderr, "test %zu: error setting buf %d\n", i, result);
     return FALSE;
   }
   in = curlx_dyn_ptr(buf);
-  res = Curl_x509_getASN1Element(&elem, in, in + curlx_dyn_len(buf));
-  if(res != spec->exp_res) {
+  result = Curl_x509_getASN1Element(&elem, in, in + curlx_dyn_len(buf));
+  if(result != spec->exp_result) {
     curl_mfprintf(stderr, "test %zu: expect result %d, got %d\n",
-                  i, spec->exp_res, res);
+                  i, spec->exp_result, result);
     return FALSE;
   }
   return TRUE;
@@ -93,7 +93,7 @@ static CURLcode test_unit1657(const char *arg)
   bool all_ok = TRUE;
   struct dynbuf dbuf;
 
-  curlx_dyn_init(&dbuf, 32 * 1024);
+  curlx_dyn_init(&dbuf, 32*1024);
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");

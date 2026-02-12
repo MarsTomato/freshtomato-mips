@@ -21,17 +21,22 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
 #if !defined(CURL_DISABLE_HTTP) && defined(USE_SPNEGO)
 
 #include "urldata.h"
 #include "cfilters.h"
-#include "curl_trc.h"
+#include "sendf.h"
 #include "http_negotiate.h"
 #include "vauth/vauth.h"
 #include "vtls/vtls.h"
 #include "curlx/strparse.h"
+
+/* The last 2 #include files should be in this order */
+#include "curl_memory.h"
+#include "memdebug.h"
 
 
 static void http_auth_nego_reset(struct connectdata *conn,
@@ -45,6 +50,7 @@ static void http_auth_nego_reset(struct connectdata *conn,
   if(neg_ctx)
     Curl_auth_cleanup_spnego(neg_ctx);
 }
+
 
 CURLcode Curl_input_negotiate(struct Curl_easy *data, struct connectdata *conn,
                               bool proxy, const char *header)
@@ -118,12 +124,12 @@ CURLcode Curl_input_negotiate(struct Curl_easy *data, struct connectdata *conn,
   neg_ctx->sslContext = conn->sslContext;
 #endif
   /* Check if the connection is using SSL and get the channel binding data */
-#ifdef GSS_C_CHANNEL_BOUND_FLAG
+#ifdef CURL_GSSAPI_HAS_CHANNEL_BINDING
 #ifdef USE_SSL
   curlx_dyn_init(&neg_ctx->channel_binding_data, SSL_CB_MAX_SIZE + 1);
   if(Curl_conn_is_ssl(conn, FIRSTSOCKET)) {
-    result = Curl_ssl_get_channel_binding(data, FIRSTSOCKET,
-                                          &neg_ctx->channel_binding_data);
+    result = Curl_ssl_get_channel_binding(
+      data, FIRSTSOCKET, &neg_ctx->channel_binding_data);
     if(result) {
       http_auth_nego_reset(conn, neg_ctx, proxy);
       return result;
@@ -132,13 +138,13 @@ CURLcode Curl_input_negotiate(struct Curl_easy *data, struct connectdata *conn,
 #else
   curlx_dyn_init(&neg_ctx->channel_binding_data, 1);
 #endif /* USE_SSL */
-#endif /* GSS_C_CHANNEL_BOUND_FLAG */
+#endif /* CURL_GSSAPI_HAS_CHANNEL_BINDING */
 
   /* Initialize the security context and decode our challenge */
   result = Curl_auth_decode_spnego_message(data, userp, passwdp, service,
                                            host, header, neg_ctx);
 
-#ifdef GSS_C_CHANNEL_BOUND_FLAG
+#ifdef CURL_GSSAPI_HAS_CHANNEL_BINDING
   curlx_dyn_free(&neg_ctx->channel_binding_data);
 #endif
 
@@ -217,16 +223,16 @@ CURLcode Curl_output_negotiate(struct Curl_easy *data,
 
     if(proxy) {
 #ifndef CURL_DISABLE_PROXY
-      curlx_free(data->state.aptr.proxyuserpwd);
+      free(data->state.aptr.proxyuserpwd);
       data->state.aptr.proxyuserpwd = userp;
 #endif
     }
     else {
-      curlx_free(data->state.aptr.userpwd);
+      free(data->state.aptr.userpwd);
       data->state.aptr.userpwd = userp;
     }
 
-    curlx_free(base64);
+    free(base64);
 
     if(!userp) {
       return CURLE_OUT_OF_MEMORY;

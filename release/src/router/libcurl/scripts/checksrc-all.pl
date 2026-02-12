@@ -22,7 +22,6 @@ if(@ARGV) {
 }
 
 @files = grep !/\/CMakeFiles\//, @files;
-@files = grep !/tests\/data\/data.+\.c/, @files;
 @files = map { dirname($_) } @files;
 my @dirs = sort { $a cmp $b } keys %{{ map { $_ => 1 } @files }};
 

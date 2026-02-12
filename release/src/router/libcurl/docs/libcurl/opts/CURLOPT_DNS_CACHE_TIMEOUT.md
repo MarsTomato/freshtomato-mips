@@ -68,17 +68,17 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/foo.bin");
 
     /* only reuse addresses for a short time */
     curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 2L);
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     /* in this second request, the cache is not be used if more than
        two seconds have passed since the previous name resolve */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     curl_easy_cleanup(curl);
   }

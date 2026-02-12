@@ -57,7 +57,7 @@ static int my_trace(CURL *handle, curl_infotype type,
 int main(void)
 {
   CURL *curl;
-  CURLcode result;
+  CURLcode res;
   struct data my_tracedata;
 
   curl = curl_easy_init();
@@ -70,7 +70,7 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     /* always cleanup */
     curl_easy_cleanup(curl);

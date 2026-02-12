@@ -72,14 +72,14 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     struct curl_blob blob;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     blob.data = certificateData;
     blob.len = filesize;
     blob.flags = CURL_BLOB_COPY;
     curl_easy_setopt(curl, CURLOPT_ISSUERCERT_BLOB, &blob);
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
 }

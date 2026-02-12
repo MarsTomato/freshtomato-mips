@@ -24,6 +24,7 @@
 #include "first.h"
 
 #include "testtrace.h"
+#include "memdebug.h"
 
 struct t753_transfer_status {
   CURL *curl;
@@ -65,7 +66,7 @@ static bool t753_setup(const char *URL, const char *name,
                        struct t753_transfer_status *st)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   *pcurl = NULL;
   memset(st, 0, sizeof(*st));
@@ -100,8 +101,8 @@ static CURLcode test_lib753(const char *URL)
   CURL *curl1 = NULL, *curl2 = NULL;
   CURLM *multi = NULL;
   struct t753_transfer_status st1, st2;
-  CURLcode result = CURLE_OK;
-  CURLMcode mresult;
+  CURLcode res = CURLE_OK;
+  CURLMcode mres;
   int still_running;
 
   start_test_timing();
@@ -114,7 +115,7 @@ static CURLcode test_lib753(const char *URL)
   curl_mfprintf(stderr, "init multi\n");
   multi = curl_multi_init();
   if(!multi) {
-    result = CURLE_OUT_OF_MEMORY;
+    res = CURLE_OUT_OF_MEMORY;
     goto test_cleanup;
   }
 
@@ -152,10 +153,10 @@ static CURLcode test_lib753(const char *URL)
       }
     }
 
-    mresult = curl_multi_wait(multi, NULL, 0, 1, &num);
-    if(mresult != CURLM_OK) {
-      curl_mfprintf(stderr, "curl_multi_wait() returned %d\n", mresult);
-      result = TEST_ERR_MAJOR_BAD;
+    mres = curl_multi_wait(multi, NULL, 0, 1, &num);
+    if(mres != CURLM_OK) {
+      curl_mfprintf(stderr, "curl_multi_wait() returned %d\n", mres);
+      res = TEST_ERR_MAJOR_BAD;
       goto test_cleanup;
     }
 
@@ -169,8 +170,8 @@ static CURLcode test_lib753(const char *URL)
 
 test_cleanup:
 
-  if(result)
-    curl_mfprintf(stderr, "ERROR: %s\n", curl_easy_strerror(result));
+  if(res)
+    curl_mfprintf(stderr, "ERROR: %s\n", curl_easy_strerror(res));
 
   if(curl1)
     curl_easy_cleanup(curl1);
@@ -179,5 +180,5 @@ test_cleanup:
   curl_multi_cleanup(multi);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

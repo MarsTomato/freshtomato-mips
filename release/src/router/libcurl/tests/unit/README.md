@@ -47,7 +47,7 @@ For the actual C file, here's a simple example:
 ~~~c
     #include "unitcheck.h"
 
-    #include "a libcurl header.h" /* from the lib directory */
+    #include "a libcurl header.h" /* from the lib dir */
 
     static CURLcode test_unit9998(const char *arg)
     {
@@ -68,7 +68,7 @@ Here's an example using optional initialization and cleanup:
 ~~~c
     #include "unitcheck.h"
 
-    #include "a libcurl header.h" /* from the lib directory */
+    #include "a libcurl header.h" /* from the lib dir */
 
     static CURLcode t9999_setup(void)
     {

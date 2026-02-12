@@ -23,12 +23,14 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static size_t t1940_write_cb(char *data, size_t n, size_t l, void *userp)
 {
   /* take care of the data here, ignored in this example */
   (void)data;
   (void)userp;
-  return n * l;
+  return n*l;
 }
 
 static void t1940_showem(CURL *curl, int header_request, unsigned int type)
@@ -44,7 +46,6 @@ static void t1940_showem(CURL *curl, int header_request, unsigned int type)
     "fold",
     "blank",
     "Blank2",
-    "Test",
     NULL
   };
 
@@ -79,7 +80,7 @@ static void t1940_showem(CURL *curl, int header_request, unsigned int type)
 static CURLcode test_lib1940(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   int header_request;
   if(testnum == 1946) {
@@ -97,13 +98,13 @@ static CURLcode test_lib1940(const char *URL)
   /* ignores any content */
   easy_setopt(curl, CURLOPT_WRITEFUNCTION, t1940_write_cb);
 
-  /* if there is a proxy set, use it */
+  /* if there's a proxy set, use it */
   if(libtest_arg2 && *libtest_arg2) {
     easy_setopt(curl, CURLOPT_PROXY, libtest_arg2);
     easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1L);
   }
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   t1940_showem(curl, header_request, CURLH_HEADER);
@@ -117,5 +118,5 @@ static CURLcode test_lib1940(const char *URL)
 test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
-  return result;
+  return res;
 }

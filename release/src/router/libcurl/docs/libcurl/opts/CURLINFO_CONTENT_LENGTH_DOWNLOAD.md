@@ -15,7 +15,7 @@ Added-in: 7.6.1
 
 # NAME
 
-CURLINFO_CONTENT_LENGTH_DOWNLOAD - content-length of download
+CURLINFO_CONTENT_LENGTH_DOWNLOAD - get content-length of download
 
 # SYNOPSIS
 
@@ -44,17 +44,17 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
     /* Perform the request */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       /* check the size */
       double cl;
-      result = curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &cl);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &cl);
+      if(!res) {
         printf("Size: %.0f\n", cl);
       }
     }

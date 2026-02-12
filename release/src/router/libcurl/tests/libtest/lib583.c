@@ -28,13 +28,15 @@
 
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib583(const char *URL)
 {
   int stillRunning;
   CURLM *multi = NULL;
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
-  CURLMcode mresult;
+  CURLcode res = CURLE_OK;
+  CURLMcode mres;
 
   assert(test_argc >= 4);
 
@@ -66,11 +68,11 @@ static CURLcode test_lib583(const char *URL)
   curl_mfprintf(stderr, "curl_multi_perform() succeeded\n");
 
   curl_mfprintf(stderr, "curl_multi_remove_handle()...\n");
-  mresult = curl_multi_remove_handle(multi, curl);
-  if(mresult) {
+  mres = curl_multi_remove_handle(multi, curl);
+  if(mres) {
     curl_mfprintf(stderr, "curl_multi_remove_handle() failed, with code %d\n",
-                  mresult);
-    result = TEST_ERR_MULTI;
+                  mres);
+    res = TEST_ERR_MULTI;
   }
   else
     curl_mfprintf(stderr, "curl_multi_remove_handle() succeeded\n");
@@ -83,5 +85,5 @@ test_cleanup:
   curl_multi_cleanup(multi);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

@@ -15,7 +15,7 @@ Added-in: 7.4.1
 
 # NAME
 
-CURLINFO_NAMELOOKUP_TIME - name lookup time
+CURLINFO_NAMELOOKUP_TIME - get the name lookup time
 
 # SYNOPSIS
 
@@ -44,13 +44,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     double namelookup;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
-    result = curl_easy_perform(curl);
-    if(CURLE_OK == result) {
-      result = curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME, &namelookup);
-      if(CURLE_OK == result) {
+    res = curl_easy_perform(curl);
+    if(CURLE_OK == res) {
+      res = curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME, &namelookup);
+      if(CURLE_OK == res) {
         printf("Time: %.1f", namelookup);
       }
     }

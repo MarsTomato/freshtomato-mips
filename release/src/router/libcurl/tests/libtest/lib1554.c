@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static const char *ldata_names[] = {
   "NONE",
   "SHARE",
@@ -42,7 +44,7 @@ static void t1554_test_lock(CURL *curl, curl_lock_data data,
   (void)data;
   (void)laccess;
   (void)useptr;
-  curl_mprintf("-] Mutex lock %s\n", ldata_names[data]);
+  curl_mprintf("-> Mutex lock %s\n", ldata_names[data]);
 }
 
 static void t1554_test_unlock(CURL *curl, curl_lock_data data, void *useptr)
@@ -50,13 +52,13 @@ static void t1554_test_unlock(CURL *curl, curl_lock_data data, void *useptr)
   (void)curl;
   (void)data;
   (void)useptr;
-  curl_mprintf("[- Mutex unlock %s\n", ldata_names[data]);
+  curl_mprintf("<- Mutex unlock %s\n", ldata_names[data]);
 }
 
 /* test function */
 static CURLcode test_lib1554(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURLSH *share = NULL;
   int i;
 
@@ -83,16 +85,16 @@ static CURLcode test_lib1554(const char *URL)
       /* use the share object */
       curl_easy_setopt(curl, CURLOPT_SHARE, share);
 
-      /* Perform the request, result will get the return code */
-      result = curl_easy_perform(curl);
+      /* Perform the request, res will get the return code */
+      res = curl_easy_perform(curl);
 
       /* always cleanup */
       curl_easy_cleanup(curl);
 
       /* Check for errors */
-      if(result != CURLE_OK) {
+      if(res != CURLE_OK) {
         curl_mfprintf(stderr, "curl_easy_perform() failed: %s\n",
-                      curl_easy_strerror(result));
+                      curl_easy_strerror(res));
         goto test_cleanup;
       }
     }
@@ -102,5 +104,5 @@ test_cleanup:
   curl_share_cleanup(share);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

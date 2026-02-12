@@ -24,10 +24,11 @@
 #include "first.h"
 
 #include "testtrace.h"
+#include "memdebug.h"
 
 static CURLcode test_lib564(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURL *curl = NULL;
   int running;
   CURLM *multi = NULL;
@@ -90,5 +91,5 @@ test_cleanup:
   curl_multi_cleanup(multi);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

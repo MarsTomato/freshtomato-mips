@@ -46,14 +46,14 @@ static CURL *curl;
 static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
 {
   const struct curl_tlssessioninfo *info;
-  CURLcode result;
+  CURLcode res;
 
   (void)stream;
   (void)ptr;
 
-  result = curl_easy_getinfo(curl, CURLINFO_TLS_SESSION, &info);
+  res = curl_easy_getinfo(curl, CURLINFO_TLS_SESSION, &info);
 
-  if(!result) {
+  if(!res) {
     unsigned int cert_list_size;
     const gnutls_datum_t *chainp;
 
@@ -73,8 +73,8 @@ static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
                gnutls_x509_crt_import(cert, &chainp[i], GNUTLS_X509_FMT_DER)) {
               if(GNUTLS_E_SUCCESS ==
                  gnutls_x509_crt_print(cert, GNUTLS_CRT_PRINT_FULL, &dn)) {
-                fprintf(stderr, "Certificate #%u: %.*s", i, (int)dn.size,
-                        dn.data);
+                fprintf(stderr, "Certificate #%u: %.*s", i,
+                                (int)dn.size, dn.data);
 
                 gnutls_free(dn.data);
               }
@@ -96,9 +96,9 @@ static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
 
 int main(void)
 {
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -106,12 +106,12 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     curl_easy_cleanup(curl);
   }
 
   curl_global_cleanup();
 
-  return (int)result;
+  return (int)res;
 }

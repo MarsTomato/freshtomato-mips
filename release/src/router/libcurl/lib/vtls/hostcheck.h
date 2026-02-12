@@ -23,7 +23,8 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "../curl_setup.h"
+
+#include <curl/curl.h>
 
 #if defined(USE_OPENSSL) || defined(USE_SCHANNEL)
 

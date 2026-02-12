@@ -15,7 +15,7 @@ Added-in: 8.12.0
 
 # NAME
 
-CURLINFO_PROXYAUTH_USED - HTTP proxy authentication method
+CURLINFO_PROXYAUTH_USED - get used HTTP proxy authentication method
 
 # SYNOPSIS
 
@@ -43,20 +43,20 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    curl_easy_setopt(curl, CURLOPT_PROXY, "http://proxy.example");
+    curl_easy_setopt(curl, CURLOPT_PROXY, "http://proxy.example.com");
     curl_easy_setopt(curl, CURLOPT_PROXYAUTH,
                      CURLAUTH_BASIC | CURLAUTH_DIGEST);
     curl_easy_setopt(curl, CURLOPT_PROXYUSERNAME, "shrek");
     curl_easy_setopt(curl, CURLOPT_PROXYPASSWORD, "swamp");
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       long auth;
-      result = curl_easy_getinfo(curl, CURLINFO_PROXYAUTH_USED, &auth);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_PROXYAUTH_USED, &auth);
+      if(!res) {
         if(!auth)
           printf("No auth used\n");
         else {

@@ -24,6 +24,7 @@
 #include "first.h"
 
 #include "testtrace.h"
+#include "memdebug.h"
 
 static int tse_found_tls_session = FALSE;
 
@@ -61,7 +62,7 @@ static CURL *tse_add_transfer(CURLM *multi, CURLSH *share,
                               const char *url, long http_version)
 {
   CURL *curl;
-  CURLMcode mresult;
+  CURLMcode mc;
 
   curl = curl_easy_init();
   if(!curl) {
@@ -83,10 +84,11 @@ static CURL *tse_add_transfer(CURLM *multi, CURLSH *share,
   if(resolve)
     curl_easy_setopt(curl, CURLOPT_RESOLVE, resolve);
 
-  mresult = curl_multi_add_handle(multi, curl);
-  if(mresult != CURLM_OK) {
+
+  mc = curl_multi_add_handle(multi, curl);
+  if(mc != CURLM_OK) {
     curl_mfprintf(stderr, "curl_multi_add_handle: %s\n",
-                  curl_multi_strerror(mresult));
+                  curl_multi_strerror(mc));
     curl_easy_cleanup(curl);
     return NULL;
   }
@@ -96,7 +98,7 @@ static CURL *tse_add_transfer(CURLM *multi, CURLSH *share,
 static CURLcode test_cli_tls_session_reuse(const char *URL)
 {
   CURLM *multi = NULL;
-  CURLMcode mresult;
+  CURLMcode mc;
   int running_handles = 0, numfds;
   CURLMsg *msg;
   CURLSH *share = NULL;
@@ -143,7 +145,7 @@ static CURLcode test_cli_tls_session_reuse(const char *URL)
     goto cleanup;
   }
 
-  curl_msnprintf(resolve_buf, sizeof(resolve_buf) - 1, "%s:%s:127.0.0.1",
+  curl_msnprintf(resolve_buf, sizeof(resolve_buf)-1, "%s:%s:127.0.0.1",
                  host, port);
   resolve = curl_slist_append(resolve, resolve_buf);
 
@@ -160,24 +162,25 @@ static CURLcode test_cli_tls_session_reuse(const char *URL)
   }
   curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
 
+
   if(!tse_add_transfer(multi, share, resolve, URL, http_version))
     goto cleanup;
   ++ongoing;
   add_more = 6;
   waits = 3;
   do {
-    mresult = curl_multi_perform(multi, &running_handles);
-    if(mresult != CURLM_OK) {
+    mc = curl_multi_perform(multi, &running_handles);
+    if(mc != CURLM_OK) {
       curl_mfprintf(stderr, "curl_multi_perform: %s\n",
-                    curl_multi_strerror(mresult));
+                    curl_multi_strerror(mc));
       goto cleanup;
     }
 
     if(running_handles) {
-      mresult = curl_multi_poll(multi, NULL, 0, 1000000, &numfds);
-      if(mresult != CURLM_OK) {
+      mc = curl_multi_poll(multi, NULL, 0, 1000000, &numfds);
+      if(mc != CURLM_OK) {
         curl_mfprintf(stderr, "curl_multi_poll: %s\n",
-                      curl_multi_strerror(mresult));
+                      curl_multi_strerror(mc));
         goto cleanup;
       }
     }
@@ -203,7 +206,7 @@ static CURLcode test_cli_tls_session_reuse(const char *URL)
         curl_easy_getinfo(msg->easy_handle, CURLINFO_XFER_ID, &xfer_id);
         curl_easy_getinfo(msg->easy_handle, CURLINFO_RESPONSE_CODE, &status);
         if(msg->data.result == CURLE_SEND_ERROR ||
-           msg->data.result == CURLE_RECV_ERROR) {
+            msg->data.result == CURLE_RECV_ERROR) {
           /* We get these if the server had a GOAWAY in transit on
            * reusing a connection */
         }

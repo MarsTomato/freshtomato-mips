@@ -16,7 +16,7 @@ Added-in: 7.4.1
 
 # NAME
 
-CURLINFO_REQUEST_SIZE - size of sent request
+CURLINFO_REQUEST_SIZE - get size of sent request
 
 # SYNOPSIS
 
@@ -41,13 +41,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    result = curl_easy_perform(curl);
-    if(result == CURLE_OK) {
+    res = curl_easy_perform(curl);
+    if(res == CURLE_OK) {
       long req;
-      result = curl_easy_getinfo(curl, CURLINFO_REQUEST_SIZE, &req);
-      if(!result)
+      res = curl_easy_getinfo(curl, CURLINFO_REQUEST_SIZE, &req);
+      if(!res)
         printf("Request size: %ld bytes\n", req);
     }
     curl_easy_cleanup(curl);

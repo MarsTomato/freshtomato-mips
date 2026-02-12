@@ -131,10 +131,10 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode ret;
     curl_easy_setopt(curl, CURLOPT_URL, "ftp://example.com/");
     curl_easy_setopt(curl, CURLOPT_NETRC, CURL_NETRC_OPTIONAL);
-    result = curl_easy_perform(curl);
+    ret = curl_easy_perform(curl);
   }
 }
 ~~~

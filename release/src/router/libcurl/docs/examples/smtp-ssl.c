@@ -21,13 +21,14 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 /* <DESC>
  * Send SMTP email using implicit SSL
  * </DESC>
  */
+
 #include <stdio.h>
 #include <string.h>
-
 #include <curl/curl.h>
 
 /* This is a simple example showing how to send mail using libcurl's SMTP
@@ -38,9 +39,9 @@
  * Note that this example requires libcurl 7.20.0 or above.
  */
 
-#define FROM_MAIL "<sender@example.com>"
-#define TO_MAIL   "<recipient@example.com>"
-#define CC_MAIL   "<info@example.com>"
+#define FROM_MAIL     "<sender@example.com>"
+#define TO_MAIL       "<recipient@example.com>"
+#define CC_MAIL       "<info@example.com>"
 
 static const char *payload_text =
   "Date: Mon, 29 Nov 2010 21:54:29 +1100\r\n"
@@ -67,7 +68,7 @@ static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *userp)
   size_t room = size * nmemb;
   size_t len;
 
-  if((size == 0) || (nmemb == 0) || ((size * nmemb) < 1)) {
+  if((size == 0) || (nmemb == 0) || ((size*nmemb) < 1)) {
     return 0;
   }
 
@@ -86,9 +87,9 @@ int main(void)
 {
   CURL *curl;
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -115,7 +116,7 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 #endif
 
-    /* If the site you are connecting to uses a different hostname than what
+    /* If the site you are connecting to uses a different host name that what
      * they have mentioned in their server certificate's commonName (or
      * subjectAltName) fields, libcurl refuses to connect. You can skip this
      * check, but it makes the connection insecure. */
@@ -152,12 +153,12 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
     /* Send the message */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     /* Check for errors */
-    if(result != CURLE_OK)
+    if(res != CURLE_OK)
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(result));
+              curl_easy_strerror(res));
 
     /* Free the list of recipients */
     curl_slist_free_all(recipients);
@@ -168,5 +169,5 @@ int main(void)
 
   curl_global_cleanup();
 
-  return (int)result;
+  return (int)res;
 }

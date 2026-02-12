@@ -27,7 +27,6 @@
  * </DESC>
  */
 #include <stdio.h>
-
 #include <curl/curl.h>
 
 int main(void)
@@ -42,15 +41,15 @@ int main(void)
   struct curl_slist *host = curl_slist_append(NULL,
                                               "example.com:443:127.0.0.1");
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
     curl_easy_setopt(curl, CURLOPT_RESOLVE, host);
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     /* always cleanup */
     curl_easy_cleanup(curl);
@@ -59,5 +58,5 @@ int main(void)
   curl_slist_free_all(host);
   curl_global_cleanup();
 
-  return (int)result;
+  return (int)res;
 }

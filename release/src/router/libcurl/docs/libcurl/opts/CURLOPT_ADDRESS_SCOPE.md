@@ -43,12 +43,12 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode ret;
     long my_scope_id;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     my_scope_id = if_nametoindex("eth0");
     curl_easy_setopt(curl, CURLOPT_ADDRESS_SCOPE, my_scope_id);
-    result = curl_easy_perform(curl);
+    ret = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
 }

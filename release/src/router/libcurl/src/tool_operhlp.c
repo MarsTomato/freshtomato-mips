@@ -22,12 +22,13 @@
  *
  ***************************************************************************/
 #include "tool_setup.h"
-
 #include "tool_operate.h"
+
 #include "tool_cfgable.h"
 #include "tool_doswin.h"
 #include "tool_operhlp.h"
 #include "tool_msgs.h"
+#include "memdebug.h" /* keep this as LAST include */
 
 void clean_getout(struct OperationConfig *config)
 {
@@ -79,7 +80,7 @@ CURLcode urlerr_cvt(CURLUcode ucode)
 
 /*
  * Adds the filename to the URL if it does not already have one.
- * URL will be freed before return if the returned pointer is different
+ * url will be freed before return if the returned pointer is different
  */
 CURLcode add_file_name_to_url(CURL *curl, char **inurlp, const char *filename)
 {
@@ -91,7 +92,7 @@ CURLcode add_file_name_to_url(CURL *curl, char **inurlp, const char *filename)
   if(uh) {
     char *ptr;
     uerr = curl_url_set(uh, CURLUPART_URL, *inurlp,
-                        CURLU_GUESS_SCHEME | CURLU_NON_SUPPORT_SCHEME);
+                    CURLU_GUESS_SCHEME|CURLU_NON_SUPPORT_SCHEME);
     if(uerr) {
       result = urlerr_cvt(uerr);
       goto fail;
@@ -143,7 +144,7 @@ CURLcode add_file_name_to_url(CURL *curl, char **inurlp, const char *filename)
         if(!newpath)
           goto fail;
         uerr = curl_url_set(uh, CURLUPART_PATH, newpath, 0);
-        curlx_free(newpath);
+        free(newpath);
         if(uerr) {
           result = urlerr_cvt(uerr);
           goto fail;
@@ -153,7 +154,7 @@ CURLcode add_file_name_to_url(CURL *curl, char **inurlp, const char *filename)
           result = urlerr_cvt(uerr);
           goto fail;
         }
-        curlx_free(*inurlp);
+        free(*inurlp);
         *inurlp = newurl;
         result = CURLE_OK;
       }
@@ -205,12 +206,12 @@ CURLcode get_url_file_name(char **filename, const char *url)
 
       if(pc) {
         /* duplicate the string beyond the slash */
-        *filename = curlx_strdup(pc + 1);
+        *filename = strdup(pc + 1);
       }
       else {
         /* no slash => empty string, use default */
-        *filename = curlx_strdup("curl_response");
-        warnf("No remote filename, uses \"%s\"", *filename);
+        *filename = strdup("curl_response");
+        warnf("No remote file name, uses \"%s\"", *filename);
       }
 
       curl_free(path);

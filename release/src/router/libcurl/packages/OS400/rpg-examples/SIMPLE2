@@ -1,4 +1,4 @@
-      * curl simple URL request (free-format RPG)
+      * Curl simple URL request (free-format RPG)
       *
         ctl-opt dftactgrp(*NO) actgrp(*NEW)
                 option(*NOSHOWCPY)

@@ -198,8 +198,7 @@ class ScoreRunner:
                  server_addr: Optional[str] = None,
                  with_flame: bool = False,
                  socks_args: Optional[List[str]] = None,
-                 limit_rate: Optional[str] = None,
-                 suppress_cl: bool = False):
+                 limit_rate: Optional[str] = None):
         self.verbose = verbose
         self.env = env
         self.protocol = protocol
@@ -212,7 +211,6 @@ class ScoreRunner:
         self._with_flame = with_flame
         self._socks_args = socks_args
         self._limit_rate = limit_rate
-        self.suppress_cl = suppress_cl
 
     def info(self, msg):
         if self.verbose > 0:
@@ -421,8 +419,7 @@ class ScoreRunner:
         for _ in range(nsamples):
             curl = self.mk_curl_client()
             r = curl.http_put(urls=[url], fdata=fpath, alpn_proto=self.protocol,
-                              with_headers=False, with_profile=True,
-                              suppress_cl=self.suppress_cl)
+                              with_headers=False, with_profile=True)
             err = self._check_uploads(r, 1)
             if err:
                 errors.append(err)
@@ -441,8 +438,7 @@ class ScoreRunner:
         for _ in range(nsamples):
             curl = self.mk_curl_client()
             r = curl.http_put(urls=[url], fdata=fpath, alpn_proto=self.protocol,
-                              with_headers=False, with_profile=True,
-                              suppress_cl=self.suppress_cl)
+                              with_headers=False, with_profile=True)
             err = self._check_uploads(r, count)
             if err:
                 errors.append(err)
@@ -463,10 +459,9 @@ class ScoreRunner:
             curl = self.mk_curl_client()
             r = curl.http_put(urls=[url], fdata=fpath, alpn_proto=self.protocol,
                               with_headers=False, with_profile=True,
-                              suppress_cl=self.suppress_cl,
                               extra_args=[
                                    '--parallel',
-                                   '--parallel-max', str(max_parallel),
+                                   '--parallel-max', str(max_parallel)
                               ])
             err = self._check_uploads(r, count)
             if err:
@@ -481,14 +476,11 @@ class ScoreRunner:
         nsamples = meta['samples']
         max_parallel = self._upload_parallel if self._upload_parallel > 0 else count
         cols = ['size']
-        run_single = not self._upload_parallel
-        run_serial = not self._upload_parallel and count > 1
-        run_parallel = self._upload_parallel or count > 1
-        if run_single:
+        if not self._upload_parallel:
             cols.append('single')
-        if run_serial:
-            cols.append(f'serial({count})')
-        if run_parallel:
+            if count > 1:
+                cols.append(f'serial({count})')
+        if count > 1:
             cols.append(f'parallel({count}x{max_parallel})')
         rows = []
         for fsize in fsizes:
@@ -497,15 +489,15 @@ class ScoreRunner:
                 'sval': Card.fmt_size(fsize)
             }]
             self.info(f'{row[0]["sval"]} uploads...')
-            url = f'https://{self.env.domain1}:{self.server_port}/curltest/put'
+            url = f'https://{self.env.domain2}:{self.server_port}/curltest/put'
             fname = f'upload{row[0]["sval"]}.data'
             fpath = self._make_docs_file(docs_dir=self.env.gen_dir,
                                          fname=fname, fsize=fsize)
-            if run_single:
+            if 'single' in cols:
                 row.append(self.ul_single(url=url, fpath=fpath, nsamples=nsamples))
-            if run_serial:
-                row.append(self.ul_serial(url=url, fpath=fpath, count=count, nsamples=nsamples))
-            if run_parallel:
+            if count > 1:
+                if 'single' in cols:
+                    row.append(self.ul_serial(url=url, fpath=fpath, count=count, nsamples=nsamples))
                 row.append(self.ul_parallel(url=url, fpath=fpath, count=count, nsamples=nsamples))
             rows.append(row)
             self.info('done.\n')
@@ -740,8 +732,7 @@ def run_score(args, protocol):
                                upload_parallel=args.upload_parallel,
                                with_flame=args.flame,
                                socks_args=socks_args,
-                               limit_rate=args.limit_rate,
-                               suppress_cl=args.upload_no_cl)
+                               limit_rate=args.limit_rate)
             cards.append(card)
 
         if test_httpd:
@@ -854,7 +845,7 @@ def print_file(filename):
 
 def main():
     parser = argparse.ArgumentParser(prog='scorecard', description="""
-        Run a range of tests to give a scorecard for an HTTP protocol
+        Run a range of tests to give a scorecard for a HTTP protocol
         'h3' or 'h2' implementation in curl.
         """)
     parser.add_argument("-v", "--verbose", action='count', default=1,
@@ -908,8 +899,6 @@ def main():
     parser.add_argument("--upload-parallel", action='store', type=int,
                         metavar='number', default=0,
                         help="perform that many uploads in parallel (default all)")
-    parser.add_argument("--upload-no-cl", action='store_true',
-                        default=False, help="suppress content-length on upload")
 
     parser.add_argument("-r", "--requests", action='store_true',
                         default=False, help="evaluate requests")

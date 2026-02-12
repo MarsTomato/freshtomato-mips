@@ -21,15 +21,18 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
 #ifdef __AMIGA__
+
+#include <curl/curl.h>
 
 #include "hostip.h"
 #include "amigaos.h"
 
 #ifdef HAVE_PROTO_BSDSOCKET_H
-#  ifdef __amigaos4__
+#  if defined(__amigaos4__)
 #    include <bsdsocket/socketbasetags.h>
 #  elif !defined(USE_AMISSL)
 #    include <amitcp/socketbasetags.h>
@@ -38,6 +41,10 @@
 #    include <stabs.h>
 #  endif
 #endif
+
+/* The last #include files should be: */
+#include "curl_memory.h"
+#include "memdebug.h"
 
 #ifdef HAVE_PROTO_BSDSOCKET_H
 
@@ -113,11 +120,12 @@ void Curl_amiga_cleanup(void)
  * Because we need to handle the different cases in hostip4.c at runtime,
  * not at compile-time, based on what was detected in Curl_amiga_init(),
  * we replace it completely with our own as to not complicate the baseline
- * code. Assumes malloc/calloc/free are thread-safe because Curl_he2ai()
+ * code. Assumes malloc/calloc/free are thread safe because Curl_he2ai()
  * allocates memory also.
  */
 
-struct Curl_addrinfo *Curl_ipv4_resolve_r(const char *hostname, int port)
+struct Curl_addrinfo *Curl_ipv4_resolve_r(const char *hostname,
+                                          int port)
 {
   struct Curl_addrinfo *ai = NULL;
   struct hostent *h;
@@ -127,7 +135,7 @@ struct Curl_addrinfo *Curl_ipv4_resolve_r(const char *hostname, int port)
     LONG h_errnop = 0;
     struct hostent *buf;
 
-    buf = curlx_calloc(1, CURL_HOSTENT_SIZE);
+    buf = calloc(1, CURL_HOSTENT_SIZE);
     if(buf) {
       h = gethostbyname_r((STRPTR)hostname, buf,
                           (char *)buf + sizeof(struct hostent),
@@ -136,12 +144,12 @@ struct Curl_addrinfo *Curl_ipv4_resolve_r(const char *hostname, int port)
       if(h) {
         ai = Curl_he2ai(h, port);
       }
-      curlx_free(buf);
+      free(buf);
     }
   }
   else {
-#ifdef CURLRES_THREADED
-    /* gethostbyname() is not thread-safe, so we need to reopen bsdsocket
+    #ifdef CURLRES_THREADED
+    /* gethostbyname() is not thread safe, so we need to reopen bsdsocket
      * on the thread's context
      */
     struct Library *base = OpenLibrary("bsdsocket.library", 4);
@@ -156,13 +164,13 @@ struct Curl_addrinfo *Curl_ipv4_resolve_r(const char *hostname, int port)
       }
       CloseLibrary(base);
     }
-#else
+    #else
     /* not using threaded resolver - safe to use this as-is */
     h = gethostbyname(hostname);
     if(h) {
       ai = Curl_he2ai(h, port);
     }
-#endif
+    #endif
   }
 
   return ai;
@@ -215,7 +223,8 @@ CURLcode Curl_amiga_init(void)
   }
 
   if(SocketBaseTags(SBTM_SETVAL(SBTC_ERRNOPTR(sizeof(errno))), (ULONG)&errno,
-                    SBTM_SETVAL(SBTC_LOGTAGPTR), (ULONG)"curl", TAG_DONE)) {
+                    SBTM_SETVAL(SBTC_LOGTAGPTR), (ULONG)"curl",
+                    TAG_DONE)) {
     CURL_AMIGA_REQUEST("SocketBaseTags ERROR");
     return CURLE_FAILED_INIT;
   }

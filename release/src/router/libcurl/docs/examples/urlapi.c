@@ -38,11 +38,11 @@ int main(void)
   CURLU *urlp;
   CURLUcode uc;
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
-  /* init curl URL */
+  /* init Curl URL */
   urlp = curl_url();
   uc = curl_url_set(urlp, CURLUPART_URL,
                     "http://example.com/path/index.html", 0);
@@ -62,16 +62,16 @@ int main(void)
     /* only allow HTTP, TFTP and SFTP */
     curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "http,tftp,sftp");
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     /* Check for errors */
-    if(result != CURLE_OK)
+    if(res != CURLE_OK)
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(result));
+              curl_easy_strerror(res));
   }
 
 cleanup:
   curl_url_cleanup(urlp);
   curl_easy_cleanup(curl);
   curl_global_cleanup();
-  return (int)result;
+  return (int)res;
 }

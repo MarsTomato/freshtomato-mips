@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static size_t t513_read_cb(char *ptr, size_t size, size_t nmemb, void *userp)
 {
   (void)ptr;
@@ -35,7 +37,7 @@ static size_t t513_read_cb(char *ptr, size_t size, size_t nmemb, void *userp)
 static CURLcode test_lib513(const char *URL)
 {
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
@@ -70,8 +72,8 @@ static CURLcode test_lib513(const char *URL)
   /* include headers in the output */
   test_setopt(curl, CURLOPT_HEADER, 1L);
 
-  /* Perform the request, result will get the return code */
-  result = curl_easy_perform(curl);
+  /* Perform the request, res will get the return code */
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -79,5 +81,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

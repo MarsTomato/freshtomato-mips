@@ -25,102 +25,97 @@
 
 #include "tool_getparam.h"
 
+#include "memdebug.h" /* LAST include file */
+
 static CURLcode test_tool1394(const char *arg)
 {
   UNITTEST_BEGIN_SIMPLE
 
-  struct cert {
-    const char *param;
-    const char *cert;
-    const char *passwd;
-  };
-
-  static const struct cert values[] = {
+  static const char *values[] = {
     /* -E parameter */        /* exp. cert name */  /* exp. passphrase */
-    {"foo:bar:baz",            "foo",                "bar:baz"},
-    {"foo\\:bar:baz",          "foo:bar",            "baz"},
-    {"foo\\\\:bar:baz",        "foo\\",              "bar:baz"},
-    {"foo:bar\\:baz",          "foo",                "bar\\:baz"},
-    {"foo:bar\\\\:baz",        "foo",                "bar\\\\:baz"},
-    {"foo\\bar\\baz",          "foo\\bar\\baz",      NULL},
-    {"foo\\\\bar\\\\baz",      "foo\\bar\\baz",      NULL},
-    {"foo\\",                  "foo\\",              NULL},
-    {"foo\\\\",                "foo\\",              NULL},
-    {"foo:bar\\",              "foo",                "bar\\"},
-    {"foo:bar\\\\",            "foo",                "bar\\\\"},
-    {"foo:bar:",               "foo",                "bar:"},
-    {"foo\\::bar\\:",          "foo:",               "bar\\:"},
-    {"pkcs11:foobar",          "pkcs11:foobar",      NULL},
-    {"PKCS11:foobar",          "PKCS11:foobar",      NULL},
-    {"PkCs11:foobar",          "PkCs11:foobar",      NULL},
+    "foo:bar:baz",            "foo",                "bar:baz",
+    "foo\\:bar:baz",          "foo:bar",            "baz",
+    "foo\\\\:bar:baz",        "foo\\",              "bar:baz",
+    "foo:bar\\:baz",          "foo",                "bar\\:baz",
+    "foo:bar\\\\:baz",        "foo",                "bar\\\\:baz",
+    "foo\\bar\\baz",          "foo\\bar\\baz",      NULL,
+    "foo\\\\bar\\\\baz",      "foo\\bar\\baz",      NULL,
+    "foo\\",                  "foo\\",              NULL,
+    "foo\\\\",                "foo\\",              NULL,
+    "foo:bar\\",              "foo",                "bar\\",
+    "foo:bar\\\\",            "foo",                "bar\\\\",
+    "foo:bar:",               "foo",                "bar:",
+    "foo\\::bar\\:",          "foo:",               "bar\\:",
+    "pkcs11:foobar",          "pkcs11:foobar",      NULL,
+    "PKCS11:foobar",          "PKCS11:foobar",      NULL,
+    "PkCs11:foobar",          "PkCs11:foobar",      NULL,
 #ifdef _WIN32
-    {"c:\\foo:bar:baz",        "c:\\foo",            "bar:baz"},
-    {"c:\\foo\\:bar:baz",      "c:\\foo:bar",        "baz"},
-    {"c:\\foo\\\\:bar:baz",    "c:\\foo\\",          "bar:baz"},
-    {"c:\\foo:bar\\:baz",      "c:\\foo",            "bar\\:baz"},
-    {"c:\\foo:bar\\\\:baz",    "c:\\foo",            "bar\\\\:baz"},
-    {"c:\\foo\\bar\\baz",      "c:\\foo\\bar\\baz",  NULL},
-    {"c:\\foo\\\\bar\\\\baz",  "c:\\foo\\bar\\baz",  NULL},
-    {"c:\\foo\\",              "c:\\foo\\",          NULL},
-    {"c:\\foo\\\\",            "c:\\foo\\",          NULL},
-    {"c:\\foo:bar\\",          "c:\\foo",            "bar\\"},
-    {"c:\\foo:bar\\\\",        "c:\\foo",            "bar\\\\"},
-    {"c:\\foo:bar:",           "c:\\foo",            "bar:"},
-    {"c:\\foo\\::bar\\:",      "c:\\foo:",           "bar\\:"},
+    "c:\\foo:bar:baz",        "c:\\foo",            "bar:baz",
+    "c:\\foo\\:bar:baz",      "c:\\foo:bar",        "baz",
+    "c:\\foo\\\\:bar:baz",    "c:\\foo\\",          "bar:baz",
+    "c:\\foo:bar\\:baz",      "c:\\foo",            "bar\\:baz",
+    "c:\\foo:bar\\\\:baz",    "c:\\foo",            "bar\\\\:baz",
+    "c:\\foo\\bar\\baz",      "c:\\foo\\bar\\baz",  NULL,
+    "c:\\foo\\\\bar\\\\baz",  "c:\\foo\\bar\\baz",  NULL,
+    "c:\\foo\\",              "c:\\foo\\",          NULL,
+    "c:\\foo\\\\",            "c:\\foo\\",          NULL,
+    "c:\\foo:bar\\",          "c:\\foo",            "bar\\",
+    "c:\\foo:bar\\\\",        "c:\\foo",            "bar\\\\",
+    "c:\\foo:bar:",           "c:\\foo",            "bar:",
+    "c:\\foo\\::bar\\:",      "c:\\foo:",           "bar\\:",
 #endif
-    {NULL, NULL, NULL}
+    NULL,                     NULL,                 NULL,
   };
-  const struct cert *p;
+  const char **p;
   char *certname, *passphrase;
-  ParameterError err;
-  for(p = &values[0]; p->param; p++) {
-    err = parse_cert_parameter(p->param, &certname, &passphrase);
-    if(!err) {
+  for(p = values; *p; p += 3) {
+    parse_cert_parameter(p[0], &certname, &passphrase);
+    if(p[1]) {
       if(certname) {
-        if(strcmp(p->cert, certname)) {
+        if(strcmp(p[1], certname)) {
           curl_mprintf("expected certname '%s' but got '%s' "
-                       "for -E param '%s'\n", p->cert, certname, p->param);
+                       "for -E param '%s'\n", p[1], certname, p[0]);
           fail("assertion failure");
         }
       }
       else {
         curl_mprintf("expected certname '%s' but got NULL "
-                     "for -E param '%s'\n", p->cert, p->param);
+                     "for -E param '%s'\n", p[1], p[0]);
         fail("assertion failure");
       }
     }
     else {
       if(certname) {
         curl_mprintf("expected certname NULL but got '%s' "
-                     "for -E param '%s'\n", certname, p->param);
+                     "for -E param '%s'\n", certname, p[0]);
         fail("assertion failure");
       }
     }
-    if(p->passwd) {
+    if(p[2]) {
       if(passphrase) {
-        if(strcmp(p->passwd, passphrase)) {
+        if(strcmp(p[2], passphrase)) {
           curl_mprintf("expected passphrase '%s' but got '%s'"
-                       "for -E param '%s'\n", p->passwd, passphrase, p->param);
+                       "for -E param '%s'\n", p[2], passphrase, p[0]);
           fail("assertion failure");
         }
       }
       else {
         curl_mprintf("expected passphrase '%s' but got NULL "
-                     "for -E param '%s'\n", p->passwd, p->param);
+                     "for -E param '%s'\n", p[2], p[0]);
         fail("assertion failure");
       }
     }
     else {
       if(passphrase) {
         curl_mprintf("expected passphrase NULL but got '%s' "
-                     "for -E param '%s'\n", passphrase, p->param);
+                     "for -E param '%s'\n", passphrase, p[0]);
         fail("assertion failure");
       }
     }
     if(certname)
-      curlx_free(certname);
+      free(certname);
     if(passphrase)
-      curlx_free(passphrase);
+      free(passphrase);
   }
 
   UNITTEST_END_SIMPLE

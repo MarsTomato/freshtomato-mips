@@ -15,7 +15,6 @@ TLS-backend:
   - mbedTLS
   - Schannel
   - wolfSSL
-  - Rustls
 Added-in: 7.9.3
 ---
 
@@ -60,12 +59,12 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     curl_easy_setopt(curl, CURLOPT_SSLCERT, "client.pem");
     curl_easy_setopt(curl, CURLOPT_SSLKEY, "key.pem");
     curl_easy_setopt(curl, CURLOPT_KEYPASSWD, "s3cret");
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
 }

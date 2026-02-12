@@ -15,7 +15,7 @@ Added-in: 8.2.0
 
 # NAME
 
-CURLINFO_XFER_ID - ID of the transfer
+CURLINFO_XFER_ID - get the ID of a transfer
 
 # SYNOPSIS
 
@@ -45,16 +45,16 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
     /* Perform the request */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       curl_off_t xfer_id;
-      result = curl_easy_getinfo(curl, CURLINFO_XFER_ID, &xfer_id);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_XFER_ID, &xfer_id);
+      if(!res) {
         printf("Transfer ID: %" CURL_FORMAT_CURL_OFF_T "\n", xfer_id);
       }
     }

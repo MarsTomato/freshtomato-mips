@@ -52,12 +52,12 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "ftp://example.com/file.txt");
 
     /* please ignore the IP in the PASV response */
     curl_easy_setopt(curl, CURLOPT_FTP_SKIP_PASV_IP, 1L);
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     curl_easy_cleanup(curl);
   }

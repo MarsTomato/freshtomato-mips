@@ -25,12 +25,14 @@
 
 #include "hash.h"
 
+#include "memdebug.h" /* LAST include file */
+
 static const size_t slots = 3;
 
 static void t1603_mydtor(void *p)
 {
   /* Data are statically allocated */
-  (void)p;
+ (void)p;
 }
 
 static size_t elem_dtor_calls;

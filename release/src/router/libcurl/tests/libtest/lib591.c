@@ -25,19 +25,17 @@
 
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib591(const char *URL)
 {
   CURL *curl = NULL;
   CURLM *multi = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   int running;
   int msgs_left;
   CURLMsg *msg;
   FILE *upload = NULL;
-  curl_off_t accept_timeout;
-
-  if(curlx_str_number(&libtest_arg2, &accept_timeout, 65535))
-    return TEST_ERR_MAJOR_BAD;
 
   start_test_timing();
 
@@ -51,9 +49,9 @@ static CURLcode test_lib591(const char *URL)
   }
 
   res_global_init(CURL_GLOBAL_ALL);
-  if(result) {
+  if(res) {
     curlx_fclose(upload);
-    return result;
+    return res;
   }
 
   easy_init(curl);
@@ -74,7 +72,7 @@ static CURLcode test_lib591(const char *URL)
   easy_setopt(curl, CURLOPT_FTPPORT, "-");
 
   /* server connection timeout */
-  easy_setopt(curl, CURLOPT_ACCEPTTIMEOUT_MS, (long)(accept_timeout * 1000));
+  easy_setopt(curl, CURLOPT_ACCEPTTIMEOUT_MS, atol(libtest_arg2)*1000);
 
   multi_init(multi);
 
@@ -114,8 +112,8 @@ static CURLcode test_lib591(const char *URL)
 #else
       itimeout = (int)timeout;
 #endif
-      interval.tv_sec = itimeout / 1000;
-      interval.tv_usec = (itimeout % 1000) * 1000;
+      interval.tv_sec = itimeout/1000;
+      interval.tv_usec = (itimeout%1000)*1000;
     }
     else {
       interval.tv_sec = 0;
@@ -129,7 +127,7 @@ static CURLcode test_lib591(const char *URL)
 
   msg = curl_multi_info_read(multi, &msgs_left);
   if(msg)
-    result = msg->data.result;
+    res = msg->data.result;
 
 test_cleanup:
 
@@ -142,5 +140,5 @@ test_cleanup:
   /* close the local file */
   curlx_fclose(upload);
 
-  return result;
+  return res;
 }

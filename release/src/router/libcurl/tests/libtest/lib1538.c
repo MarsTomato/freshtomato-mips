@@ -23,11 +23,13 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1538(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURLcode easyret;
-  CURLMcode mresult;
+  CURLMcode multiret;
   CURLSHcode shareret;
   CURLUcode urlret;
   (void)URL;
@@ -45,9 +47,9 @@ static CURLcode test_lib1538(const char *URL)
   for(easyret = CURLE_OK; easyret <= CURL_LAST; easyret++) {
     curl_mprintf("e%d: %s\n", easyret, curl_easy_strerror(easyret));
   }
-  for(mresult = CURLM_CALL_MULTI_PERFORM; mresult <= CURLM_LAST;
-      mresult++) {
-    curl_mprintf("m%d: %s\n", mresult, curl_multi_strerror(mresult));
+  for(multiret = CURLM_CALL_MULTI_PERFORM; multiret <= CURLM_LAST;
+      multiret++) {
+    curl_mprintf("m%d: %s\n", multiret, curl_multi_strerror(multiret));
   }
   for(shareret = CURLSHE_OK; shareret <= CURLSHE_LAST; shareret++) {
     curl_mprintf("s%d: %s\n", shareret, curl_share_strerror(shareret));
@@ -56,5 +58,5 @@ static CURLcode test_lib1538(const char *URL)
     curl_mprintf("u%d: %s\n", urlret, curl_url_strerror(urlret));
   }
 
-  return result;
+  return res;
 }

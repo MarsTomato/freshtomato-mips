@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 /* write callback that does nothing */
 static size_t write_it(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
@@ -37,7 +39,7 @@ static CURLcode test_lib695(const char *URL)
   curl_mime *mime1 = NULL;
   curl_mime *mime2 = NULL;
   curl_mimepart *part;
-  CURLcode result = TEST_ERR_FAILURE;
+  CURLcode res = TEST_ERR_FAILURE;
 
   /*
    * Check proper rewind when reusing a mime structure.
@@ -69,13 +71,13 @@ static CURLcode test_lib695(const char *URL)
   /* Use first mime structure as top level MIME POST. */
   curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime1);
 
-  /* Perform the request, result gets the return code */
-  result = curl_easy_perform(curl);
+  /* Perform the request, res gets the return code */
+  res = curl_easy_perform(curl);
 
   /* Check for errors */
-  if(result != CURLE_OK)
+  if(res != CURLE_OK)
     curl_mfprintf(stderr, "curl_easy_perform() 1 failed: %s\n",
-                  curl_easy_strerror(result));
+                  curl_easy_strerror(res));
   else {
     /* phase two, create a mime struct using the mime1 handle */
     mime2 = curl_mime_init(curl);
@@ -85,21 +87,21 @@ static CURLcode test_lib695(const char *URL)
     curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime2);
 
     /* Reuse previous mime structure as a child. */
-    result = curl_mime_subparts(part, mime1);
+    res = curl_mime_subparts(part, mime1);
 
-    if(result != CURLE_OK)
+    if(res != CURLE_OK)
       curl_mfprintf(stderr, "curl_mime_subparts() failed: %sn",
-                    curl_easy_strerror(result));
+                    curl_easy_strerror(res));
     else {
       mime1 = NULL;
 
-      /* Perform the request, result gets the return code */
-      result = curl_easy_perform(curl);
+      /* Perform the request, res gets the return code */
+      res = curl_easy_perform(curl);
 
       /* Check for errors */
-      if(result != CURLE_OK)
+      if(res != CURLE_OK)
         curl_mfprintf(stderr, "curl_easy_perform() 2 failed: %s\n",
-                      curl_easy_strerror(result));
+                      curl_easy_strerror(res));
     }
   }
 
@@ -108,5 +110,5 @@ test_cleanup:
   curl_mime_free(mime1);
   curl_mime_free(mime2);
   curl_global_cleanup();
-  return result;
+  return res;
 }

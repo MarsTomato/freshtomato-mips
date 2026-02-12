@@ -23,10 +23,12 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib653(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   curl_mimepart *field = NULL;
   curl_mime *mime = NULL;
 
@@ -44,17 +46,17 @@ static CURLcode test_lib653(const char *URL)
   easy_setopt(curl, CURLOPT_MIMEPOST, mime);
   easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     goto test_cleanup;
 
   /* Alter form and resubmit. */
   curl_mime_data(field, "long value for length change", CURL_ZERO_TERMINATED);
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
   curl_mime_free(mime);
   curl_easy_cleanup(curl);
   curl_global_cleanup();
-  return result; /* return the final return code */
+  return res; /* return the final return code */
 }

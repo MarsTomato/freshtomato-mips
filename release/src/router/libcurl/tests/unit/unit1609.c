@@ -25,12 +25,15 @@
 
 #include "urldata.h"
 #include "connect.h"
+#include "share.h"
+
+#include "memdebug.h" /* LAST include file */
 
 static CURLcode t1609_setup(void)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   global_init(CURL_GLOBAL_ALL);
-  return result;
+  return res;
 }
 
 /* CURLOPT_RESOLVE address parsing test - to test the following defect fix:
@@ -82,7 +85,7 @@ static CURLcode test_unit1609(const char *arg)
   };
 
   static const struct testcase tests[] = {
-    /* spaces are not allowed, for now */
+    /* spaces aren't allowed, for now */
     { "test.com:80:127.0.0.1",
       "test.com", 80, { "127.0.0.1", }
     },
@@ -134,14 +137,14 @@ static CURLcode test_unit1609(const char *arg)
 
     dns = Curl_hash_pick(&multi->dnscache.entries,
                          entry_id, strlen(entry_id) + 1);
-    curlx_free(entry_id);
+    free(entry_id);
     entry_id = NULL;
 
     addr = dns ? dns->addr : NULL;
 
     for(j = 0; j < addressnum; ++j) {
-      uint16_t port = 0;
-      char ipaddress[MAX_IPADR_LEN] = { 0 };
+      int port = 0;
+      char ipaddress[MAX_IPADR_LEN] = {0};
 
       if(!addr && !tests[i].address[j])
         break;

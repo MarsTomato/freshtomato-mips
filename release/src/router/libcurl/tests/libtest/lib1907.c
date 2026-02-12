@@ -23,11 +23,13 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1907(const char *URL)
 {
   char *url_after;
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   char error_buffer[CURL_ERROR_SIZE] = "";
 
   curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -35,18 +37,18 @@ static CURLcode test_lib1907(const char *URL)
   curl_easy_setopt(curl, CURLOPT_URL, URL);
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_buffer);
   curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-  result = curl_easy_perform(curl);
-  if(!result)
+  res = curl_easy_perform(curl);
+  if(!res)
     curl_mfprintf(stderr, "failure expected, "
                   "curl_easy_perform returned %d: <%s>, <%s>\n",
-                  result, curl_easy_strerror(result), error_buffer);
+                  res, curl_easy_strerror(res), error_buffer);
 
-  /* print the used URL */
+  /* print the used url */
   if(!curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL, &url_after))
     curl_mprintf("Effective URL: %s\n", url_after);
 
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

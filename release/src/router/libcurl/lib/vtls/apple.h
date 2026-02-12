@@ -23,6 +23,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "../curl_setup.h"
 
 #ifdef USE_APPLE_SECTRUST

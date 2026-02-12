@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1939(const char *URL)
 {
   CURLM *multi;
@@ -36,7 +38,7 @@ static CURLcode test_lib1939(const char *URL)
     curl = curl_easy_init();
     if(curl) {
       CURLcode c;
-      CURLMcode mresult;
+      CURLMcode m;
 
       /* Crash only happens when using HTTPS */
       c = curl_easy_setopt(curl, CURLOPT_URL, URL);
@@ -46,16 +48,16 @@ static CURLcode test_lib1939(const char *URL)
 
       if(!c) {
 
-        /* We are going to drive the transfer using multi interface here,
+        /* We're going to drive the transfer using multi interface here,
            because we want to stop during the middle. */
-        mresult = curl_multi_add_handle(multi, curl);
+        m = curl_multi_add_handle(multi, curl);
 
-        if(!mresult)
+        if(!m)
           /* Run the multi handle once, just enough to start establishing an
              HTTPS connection. */
-          mresult = curl_multi_perform(multi, &running_handles);
+          m = curl_multi_perform(multi, &running_handles);
 
-        if(mresult)
+        if(m)
           curl_mfprintf(stderr, "curl_multi_perform failed\n");
       }
       /* Close the easy handle *before* the multi handle. Doing it the other

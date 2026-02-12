@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -8,6 +7,7 @@ LIST
 --ftp-alternative-to-user
 </keywords>
 </info>
+#
 # Server-side
 <reply>
 <data mode="text">
@@ -29,6 +29,7 @@ COUNT USER 1
 </servercmd>
 </reply>
 
+#
 # Client-side
 <client>
 <server>
@@ -42,6 +43,7 @@ ftp://%HOSTIP:%FTPPORT/%TESTNUMBER/ --ftp-alternative-to-user "USER replacement"
 </command>
 </client>
 
+#
 # Verify data after the test has been "shot"
 <verify>
 <protocol crlf="yes">

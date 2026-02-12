@@ -31,21 +31,23 @@
 
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1502(const char *URL)
 {
   CURL *curl = NULL;
   CURL *curldupe;
   CURLM *multi = NULL;
   int still_running;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   char redirect[160];
 
   /* DNS cache injection */
   struct curl_slist *dns_cache_list;
 
   res_global_init(CURL_GLOBAL_ALL);
-  if(result) {
-    return result;
+  if(res) {
+    return res;
   }
 
   curl_msnprintf(redirect, sizeof(redirect), "google.com:%s:%s", libtest_arg2,
@@ -146,5 +148,5 @@ test_cleanup:
 
   curl_slist_free_all(dns_cache_list);
 
-  return result;
+  return res;
 }

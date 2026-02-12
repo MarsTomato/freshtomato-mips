@@ -134,12 +134,12 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode ret;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     /* allow whatever auth the server speaks */
     curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
     curl_easy_setopt(curl, CURLOPT_USERPWD, "james:bond");
-    result = curl_easy_perform(curl);
+    ret = curl_easy_perform(curl);
   }
 }
 ~~~

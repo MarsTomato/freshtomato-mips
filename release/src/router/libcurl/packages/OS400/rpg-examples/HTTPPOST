@@ -1,4 +1,4 @@
-      * curl MIME post data and display response
+      * Curl MIME post data and display response
       *
      h DFTACTGRP(*NO) ACTGRP(*NEW)
      h OPTION(*NOSHOWCPY)

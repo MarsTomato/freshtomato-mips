@@ -21,13 +21,20 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
 #ifdef _WIN32
 
+#include <curl/curl.h>
 #include "system_win32.h"
 #include "curlx/version_win32.h"
 #include "curl_sspi.h"
+#include "curlx/warnless.h"
+
+/* The last #include files should be: */
+#include "curl_memory.h"
+#include "memdebug.h"
 
 #ifndef HAVE_IF_NAMETOINDEX
 /* Handle of iphlpapp.dll */
@@ -67,7 +74,7 @@ CURLcode Curl_win32_init(long flags)
     /* highest supported version. */
 
     if(LOBYTE(wsaData.wVersion) != LOBYTE(wVersionRequested) ||
-       HIBYTE(wsaData.wVersion) != HIBYTE(wVersionRequested)) {
+       HIBYTE(wsaData.wVersion) != HIBYTE(wVersionRequested) ) {
       /* Tell the user that we could not find a usable */
 
       /* winsock.dll. */
@@ -92,9 +99,15 @@ CURLcode Curl_win32_init(long flags)
   s_hIpHlpApiDll = curl_load_library(TEXT("iphlpapi.dll"));
   if(s_hIpHlpApiDll) {
     /* Get the address of the if_nametoindex function */
+#ifdef UNDER_CE
+    #define CURL_TEXT(n) TEXT(n)
+#else
+    #define CURL_TEXT(n) (n)
+#endif
     IF_NAMETOINDEX_FN pIfNameToIndex =
       CURLX_FUNCTION_CAST(IF_NAMETOINDEX_FN,
-                          GetProcAddress(s_hIpHlpApiDll, "if_nametoindex"));
+                          GetProcAddress(s_hIpHlpApiDll,
+                                         CURL_TEXT("if_nametoindex")));
 
     if(pIfNameToIndex)
       Curl_if_nametoindex = pIfNameToIndex;
@@ -151,9 +164,13 @@ typedef HMODULE (APIENTRY *LOADLIBRARYEX_FN)(LPCTSTR, HANDLE, DWORD);
 
 /* See function definitions in winbase.h */
 #ifdef UNICODE
-#  define LOADLIBARYEX  "LoadLibraryExW"
+#  ifdef UNDER_CE
+#    define LOADLIBARYEX  L"LoadLibraryExW"
+#  else
+#    define LOADLIBARYEX  "LoadLibraryExW"
+#  endif
 #else
-#  define LOADLIBARYEX  "LoadLibraryExA"
+#  define LOADLIBARYEX    "LoadLibraryExA"
 #endif
 
 /*
@@ -172,7 +189,7 @@ typedef HMODULE (APIENTRY *LOADLIBRARYEX_FN)(LPCTSTR, HANDLE, DWORD);
  */
 static HMODULE curl_load_library(LPCTSTR filename)
 {
-#ifndef CURL_WINDOWS_UWP
+#if !defined(CURL_WINDOWS_UWP) && !defined(UNDER_CE)
   HMODULE hModule = NULL;
   LOADLIBRARYEX_FN pLoadLibraryEx = NULL;
 
@@ -211,8 +228,7 @@ static HMODULE curl_load_library(LPCTSTR filename)
       /* Allocate space for the full DLL path (Room for the null-terminator
          is included in systemdirlen) */
       size_t filenamelen = _tcslen(filename);
-      TCHAR *path = curlx_malloc(sizeof(TCHAR) *
-                                 (systemdirlen + 1 + filenamelen));
+      TCHAR *path = malloc(sizeof(TCHAR) * (systemdirlen + 1 + filenamelen));
       if(path && GetSystemDirectory(path, systemdirlen)) {
         /* Calculate the full DLL path */
         _tcscpy(path + _tcslen(path), TEXT("\\"));
@@ -224,7 +240,7 @@ static HMODULE curl_load_library(LPCTSTR filename)
           pLoadLibraryEx(path, NULL, LOAD_WITH_ALTERED_SEARCH_PATH) :
           LoadLibrary(path);
       }
-      curlx_free(path);
+      free(path);
     }
   }
   return hModule;

@@ -23,6 +23,7 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "../curl_setup.h"
 
 #if !defined(CURL_DISABLE_HTTP) && defined(USE_HTTP3)
@@ -39,11 +40,12 @@ CURLcode Curl_qlogdir(struct Curl_easy *data,
                       size_t scidlen,
                       int *qlogfdp);
 
+
 CURLcode Curl_cf_quic_create(struct Curl_cfilter **pcf,
                              struct Curl_easy *data,
                              struct connectdata *conn,
                              const struct Curl_addrinfo *ai,
-                             uint8_t transport);
+                             int transport);
 
 extern struct Curl_cftype Curl_cft_http3;
 

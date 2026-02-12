@@ -26,12 +26,6 @@
  * one the server supports/wants.
  * </DESC>
  */
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS  /* for fopen() */
-#endif
-#endif
-
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -41,9 +35,9 @@
 
 #ifdef _WIN32
 #undef stat
-#define stat _stati64
+#define stat _stat
 #undef fstat
-#define fstat _fstati64
+#define fstat _fstat
 #define fileno _fileno
 #endif
 
@@ -65,9 +59,9 @@
 /* seek callback function */
 static int my_seek(void *userp, curl_off_t offset, int origin)
 {
-  FILE *fp = (FILE *)userp;
+  FILE *fp = (FILE *) userp;
 
-  if(fseek(fp, (long)offset, origin) == -1)
+  if(fseek(fp, (long) offset, origin) == -1)
     /* could not seek */
     return CURL_SEEKFUNC_CANTSEEK;
 
@@ -91,7 +85,7 @@ static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *stream)
 int main(int argc, char **argv)
 {
   CURL *curl;
-  CURLcode result;
+  CURLcode res;
   FILE *fp;
   struct stat file_info;
 
@@ -109,16 +103,21 @@ int main(int argc, char **argv)
   if(!fp)
     return 2;
 
+#ifdef UNDER_CE
+  /* !checksrc! disable BANNEDFUNC 1 */
+  if(stat(file, &file_info) != 0) {
+#else
   if(fstat(fileno(fp), &file_info) != 0) {
+#endif
     fclose(fp);
     return 1; /* cannot continue */
   }
 
   /* In Windows, this inits the Winsock stuff */
-  result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result) {
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res) {
     fclose(fp);
-    return (int)result;
+    return (int)res;
   }
 
   /* get a curl handle */
@@ -128,13 +127,13 @@ int main(int argc, char **argv)
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_cb);
 
     /* which file to upload */
-    curl_easy_setopt(curl, CURLOPT_READDATA, (void *)fp);
+    curl_easy_setopt(curl, CURLOPT_READDATA, (void *) fp);
 
     /* set the seek function */
     curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, my_seek);
 
     /* pass the file descriptor to the seek callback as well */
-    curl_easy_setopt(curl, CURLOPT_SEEKDATA, (void *)fp);
+    curl_easy_setopt(curl, CURLOPT_SEEKDATA, (void *) fp);
 
     /* enable "uploading" (which means PUT when doing HTTP) */
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
@@ -150,18 +149,18 @@ int main(int argc, char **argv)
 
     /* tell libcurl we can use "any" auth, which lets the lib pick one, but it
        also costs one extra round-trip and possibly sending of all the PUT
-       data twice */
+       data twice!!! */
     curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
 
-    /* set username and password for the authentication */
+    /* set user name and password for the authentication */
     curl_easy_setopt(curl, CURLOPT_USERPWD, "user:password");
 
     /* Now run off and do what you have been told! */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     /* Check for errors */
-    if(result != CURLE_OK)
+    if(res != CURLE_OK)
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(result));
+              curl_easy_strerror(res));
 
     /* always cleanup */
     curl_easy_cleanup(curl);
@@ -169,5 +168,5 @@ int main(int argc, char **argv)
   fclose(fp); /* close the local file */
 
   curl_global_cleanup();
-  return (int)result;
+  return (int)res;
 }

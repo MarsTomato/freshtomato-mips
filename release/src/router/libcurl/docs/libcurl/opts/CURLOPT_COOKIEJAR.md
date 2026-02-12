@@ -58,10 +58,6 @@ libcurl cannot fully protect against attacks where an attacker has write
 access to the same directory where it is directed to save files. This is
 particularly sensitive if you save files using elevated privileges.
 
-libcurl creates the file to store cookies using default file permissions,
-meaning that on *nix systems you may need to restrict your umask to prevent
-other users on the same system to access the file.
-
 # DEFAULT
 
 NULL
@@ -75,13 +71,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/foo.bin");
 
     /* export cookies to this file when closing the handle */
     curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "/tmp/cookies.txt");
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     /* close the handle, write the cookies */
     curl_easy_cleanup(curl);

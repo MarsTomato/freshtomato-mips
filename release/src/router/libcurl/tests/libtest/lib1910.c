@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1910(const char *URL)
 {
-  CURLcode result = TEST_ERR_MAJOR_BAD;
+  CURLcode ret = CURLE_OK;
   CURL *curl;
   start_test_timing();
 
@@ -37,9 +39,9 @@ static CURLcode test_lib1910(const char *URL)
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_USERPWD, "user\nname:pass\nword");
-    result = curl_easy_perform(curl);
+    ret = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
   curl_global_cleanup();
-  return result;
+  return ret;
 }

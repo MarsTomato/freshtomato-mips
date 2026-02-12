@@ -23,14 +23,15 @@
  ***************************************************************************/
 #include "unitcheck.h"
 
-#if defined(_WIN32) || defined(MSDOS)
-
 #include "tool_cfgable.h"
 #include "tool_doswin.h"
 
+#include "memdebug.h" /* LAST include file */
+
+#if defined(_WIN32) || defined(MSDOS)
 static char *getflagstr(int flags)
 {
-  char *buf = curlx_malloc(256);
+  char *buf = malloc(256);
   if(buf) {
     curl_msnprintf(buf, 256, "%s,%s",
                    ((flags & SANITIZE_ALLOW_PATH) ?
@@ -43,7 +44,7 @@ static char *getflagstr(int flags)
 
 static char *getcurlcodestr(int cc)
 {
-  char *buf = curlx_malloc(256);
+  char *buf = malloc(256);
   if(buf) {
     curl_msnprintf(buf, 256, "%s (%d)",
              (cc == SANITIZE_ERR_OK ? "SANITIZE_ERR_OK" :
@@ -179,6 +180,18 @@ static CURLcode test_tool1604(const char *arg)
     { "COM56", 0,
       "COM56", SANITIZE_ERR_OK
     },
+    /* At the moment we expect a maximum path length of 259. I assume MS-DOS
+       has variable max path lengths depending on compiler that are shorter
+       so currently these "good" truncate tests will not run on MS-DOS */
+    { "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+      "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+      "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD"
+      "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE"
+      "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+        0,
+      NULL, SANITIZE_ERR_INVALID_PATH
+    },
     { NULL, 0,
       NULL, SANITIZE_ERR_BAD_ARGUMENT
     },
@@ -199,7 +212,7 @@ static CURLcode test_tool1604(const char *arg)
        ((!output && !data[i].expected_output) ||
         (output && data[i].expected_output &&
          !strcmp(output, data[i].expected_output)))) { /* OK */
-      curlx_free(output);
+      free(output);
       continue;
     }
 
@@ -227,10 +240,10 @@ static CURLcode test_tool1604(const char *arg)
                   data[i].expected_output ? data[i].expected_output : "(null)",
                   expected_ccstr);
 
-    curlx_free(output);
-    curlx_free(flagstr);
-    curlx_free(received_ccstr);
-    curlx_free(expected_ccstr);
+    free(output);
+    free(flagstr);
+    free(received_ccstr);
+    free(expected_ccstr);
   }
   /* END sanitize_file_name */
 #else

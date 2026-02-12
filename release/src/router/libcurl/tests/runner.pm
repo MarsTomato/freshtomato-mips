@@ -101,15 +101,13 @@ use testutil qw(
     logmsg
     runclient
     exerunner
-    subtextfile
-    subchars
     subbase64
     subsha256base64file
     substrippemfile
     subnewlines
     );
 use valgrind;
-use memanalyzer;
+
 
 #######################################################################
 # Global variables set elsewhere but used only by this package
@@ -192,7 +190,7 @@ sub runner_init {
             $SIG{INT} = 'IGNORE';
             $SIG{TERM} = 'IGNORE';
             eval {
-                # some MSYS2 Perl versions do not define SIGUSR1, also missing from Win32 Perl
+                # some msys2 perl versions don't define SIGUSR1, also missing from Win32 Perl
                 $SIG{USR1} = 'IGNORE';
             };
 
@@ -216,7 +214,7 @@ sub runner_init {
             # handle IPC calls
             event_loop();
 
-            # Cannot rely on logmsg here in case it is buffered
+            # Can't rely on logmsg here in case it's buffered
             print "Runner $thisrunnerid exiting\n" if($verbose);
 
             # To reach this point, either the controller has sent
@@ -236,7 +234,7 @@ sub runner_init {
         # Create our pid directory
         mkdir("$LOGDIR/$PIDDIR", 0777);
 
-        # Do not create a separate process
+        # Don't create a separate process
         $thisrunnerid = "integrated";
     }
 
@@ -368,10 +366,6 @@ sub prepro {
                 $data_crlf = "";
             }
             subvariables(\$s, $testnum, "%");
-            if(subtextfile(\$s)) {
-                subvariables(\$s, $testnum, "%");
-            }
-            subchars(\$s);
             subbase64(\$s);
             subsha256base64file(\$s);
             substrippemfile(\$s);
@@ -382,6 +376,7 @@ sub prepro {
     }
     return @out;
 }
+
 
 #######################################################################
 # Load test keywords into %keywords hash
@@ -396,6 +391,7 @@ sub readtestkeywords {
         $keywords{$k} = 1;
     }
 }
+
 
 #######################################################################
 # Return a list of log locks that still exist
@@ -453,7 +449,7 @@ sub torture {
 
     # memanalyze -v is our friend, get the number of allocations made
     my $count=0;
-    my @out = memanalyze("$LOGDIR/$MEMDUMP", 1, 0, 0);
+    my @out = `$memanalyze -v "$LOGDIR/$MEMDUMP"`;
     for(@out) {
         if(/^Operations: (\d+)/) {
             $count = $1;
@@ -526,7 +522,7 @@ sub torture {
         delete $ENV{'CURL_MEMLIMIT'} if($ENV{'CURL_MEMLIMIT'});
 
         if(-r "core") {
-            # there is core file present now!
+            # there's core file present now!
             logmsg " core dumped\n";
             $dumped_core = 1;
             $fail = 2;
@@ -546,14 +542,14 @@ sub torture {
             }
         }
 
-        # verify that it returns a proper error code, does not leak memory
-        # and does not core dump
+        # verify that it returns a proper error code, doesn't leak memory
+        # and doesn't core dump
         if(($ret & 255) || ($ret >> 8) >= 128) {
             logmsg " system() returned $ret\n";
             $fail=1;
         }
         else {
-            my @memdata = memanalyze("$LOGDIR/$MEMDUMP", 0, 0, 0);
+            my @memdata=`$memanalyze "$LOGDIR/$MEMDUMP"`;
             my $leak=0;
             for(@memdata) {
                 if($_ ne "") {
@@ -565,7 +561,7 @@ sub torture {
             if($leak) {
                 logmsg "** MEMORY FAILURE\n";
                 logmsg @memdata;
-                logmsg memanalyze("$LOGDIR/$MEMDUMP", 0, 0, 1);
+                logmsg `$memanalyze -l "$LOGDIR/$MEMDUMP"`;
                 $fail = 1;
             }
         }
@@ -581,6 +577,7 @@ sub torture {
     logmsg "torture OK\n";
     return 0;
 }
+
 
 #######################################################################
 # restore environment variables that were modified in test
@@ -598,6 +595,7 @@ sub restore_test_env {
         }
     }
 }
+
 
 #######################################################################
 # Start the servers needed to run this test case
@@ -634,6 +632,7 @@ sub singletest_startservers {
     return ($why, $error);
 }
 
+
 #######################################################################
 # Generate preprocessed test file
 sub singletest_preprocess {
@@ -656,6 +655,7 @@ sub singletest_preprocess {
     # in case the process changed the file, reload it
     loadtest("$LOGDIR/test${testnum}");
 }
+
 
 #######################################################################
 # Set up the test environment to run this test case
@@ -685,6 +685,7 @@ sub singletest_setenv {
         $ENV{HTTPS_PROXY} = $proxy_address;
     }
 }
+
 
 #######################################################################
 # Check that test environment is fine to run this test case
@@ -722,6 +723,7 @@ sub singletest_precheck {
     }
     return $why;
 }
+
 
 #######################################################################
 # Prepare the test environment to run this test case
@@ -795,19 +797,17 @@ sub singletest_prepare {
     return 0;
 }
 
+
 #######################################################################
 # Run the test command
 sub singletest_run {
     my ($testnum, $testtimings) = @_;
 
     # get the command line options to use
-    my $cmd;
-    my @cmd = getpart("client", "command");
-    if(@cmd) {
-        # allow splitting the command-line to multiple lines
-        $cmd = join(' ', @cmd);
+    my ($cmd, @blaha)= getpart("client", "command");
+    if($cmd) {
+        # make some nice replace operations
         $cmd =~ s/\n//g; # no newlines please
-        chomp $cmd; # no newlines please
         # substitute variables in the command line
     }
     else {
@@ -837,7 +837,6 @@ sub singletest_run {
         $tool = $tool_name . exe_ext('TOOL');
     }
 
-    my $oldmemdebug;
     my $disablevalgrind;
     my $CMDLINE="";
     my $cmdargs;
@@ -883,7 +882,7 @@ sub singletest_run {
                 chomp $dis[0] if($dis[0]);
                 if($dis[0] eq "test-duphandle") {
                     # marked to not run with duphandle
-                    logmsg " $testnum: IGNORED: Cannot run test-duphandle\n";
+                    logmsg " $testnum: IGNORED: Can't run test-duphandle\n";
                     return (-1, 0, 0, "", "", 0);
                 }
             }
@@ -970,9 +969,6 @@ sub singletest_run {
         if((!$cmdhash{'option'}) || ($cmdhash{'option'} !~ /no-q/)) {
             $CMDLINE .= " -q";
         }
-        if($maxtime) {
-            $CMDLINE .= " --max-time $maxtime";
-        }
     }
 
     if(use_valgrind() && !$disablevalgrind) {
@@ -1023,11 +1019,6 @@ sub singletest_run {
     # timestamp starting of test command
     $$testtimings{"timetoolini"} = Time::HiRes::time();
 
-    if($cmdhash{'option'} && ($cmdhash{'option'} =~ /no-memdebug/)) {
-        $oldmemdebug = $ENV{'CURL_MEMDEBUG'};
-        delete $ENV{'CURL_MEMDEBUG'};
-    }
-
     # run the command line we built
     if($torture) {
         $cmdres = torture($CMDLINE,
@@ -1051,16 +1042,12 @@ sub singletest_run {
         ($cmdres, $dumped_core) = normalize_cmdres(runclient("$CMDLINE"));
     }
 
-    # restore contents
-    if($oldmemdebug) {
-        $ENV{'CURL_MEMDEBUG'} = $oldmemdebug;
-    }
-
     # timestamp finishing of test command
     $$testtimings{"timetoolend"} = Time::HiRes::time();
 
     return (0, $cmdres, $dumped_core, $CURLOUT, $tool, use_valgrind() && !$disablevalgrind);
 }
+
 
 #######################################################################
 # Clean up after test command
@@ -1069,7 +1056,7 @@ sub singletest_clean {
 
     if(!$dumped_core) {
         if(-r "core") {
-            # there is core file present now!
+            # there's core file present now!
             $dumped_core = 1;
         }
     }
@@ -1154,21 +1141,16 @@ sub singletest_postcheck {
             logmsg "postcheck $cmd\n" if($verbose);
             my $rc = runclient("$cmd");
             # Must run the postcheck command in torture mode in order
-            # to clean up, but the result cannot be relied upon.
+            # to clean up, but the result can't be relied upon.
             if($rc != 0 && !$torture) {
                 logmsg " $testnum: postcheck FAILED\n";
                 return -1;
             }
         }
     }
-
-    if(checktest("${TESTDIR}/test${testnum}")) {
-        logmsg " $testnum: postcheck FAILED: issue(s) found in test data\n";
-        return -1;
-    }
-
     return 0;
 }
+
 
 ###################################################################
 # Get ready to run a single test case
@@ -1190,7 +1172,7 @@ sub runner_test_preprocess {
     # ignore any error here--if there were one, it would have been
     # caught during the selection phase and this test would not be
     # running now
-    loadtest("${TESTDIR}/test${testnum}", 1);
+    loadtest("${TESTDIR}/test${testnum}");
     readtestkeywords();
 
     ###################################################################
@@ -1226,6 +1208,7 @@ sub runner_test_preprocess {
     }
     return ($why, $error, clearlogs(), \%testtimings);
 }
+
 
 ###################################################################
 # Run a single test case with an environment that already been prepared
@@ -1325,7 +1308,7 @@ sub controlleripccall {
     # Get the name of the function from the reference
     my $cv = svref_2object($funcref);
     my $gv = $cv->GV;
-    # Prepend the name to the function arguments so it is marshalled along with them
+    # Prepend the name to the function arguments so it's marshalled along with them
     unshift @_, $gv->NAME;
     # Marshall the arguments into a flat string
     my $margs = freeze \@_;
@@ -1376,7 +1359,7 @@ sub runnerar {
     my $resarrayref = thaw $buf;
 
     # First argument is runner ID
-    # TODO: remove this; it is unneeded since it is passed in
+    # TODO: remove this; it's unneeded since it's passed in
     unshift @$resarrayref, $runnerid;
     return @$resarrayref;
 }
@@ -1384,7 +1367,7 @@ sub runnerar {
 ###################################################################
 # Returns runner ID if a response from an async call is ready or error
 # First value is ready, second is error, however an error case shows up
-# as ready in Linux, so you cannot trust it.
+# as ready in Linux, so you can't trust it.
 # argument is 0 for nonblocking, undef for blocking, anything else for timeout
 # Called by controller
 sub runnerar_ready {
@@ -1410,7 +1393,7 @@ sub runnerar_ready {
     my $e_in = $r_in;
     if(select(my $r_out=$r_in, undef, my $e_out=$e_in, $blocking) >= 1) {
         for my $fd (0..$maxfileno) {
-            # Return an error condition first in case it is both
+            # Return an error condition first in case it's both
             if(vec($e_out, $fd, 1)) {
                 return (undef, $idbyfileno{$fd});
             }
@@ -1423,6 +1406,7 @@ sub runnerar_ready {
     }
     return (undef, undef);
 }
+
 
 ###################################################################
 # Cleanly abort and exit the runner
@@ -1522,5 +1506,6 @@ sub runner_shutdown {
     close($runnerw);
     undef $runnerw;
 }
+
 
 1;

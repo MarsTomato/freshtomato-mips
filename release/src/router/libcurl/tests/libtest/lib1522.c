@@ -26,6 +26,7 @@
 /* test case and code based on https://github.com/curl/curl/issues/2847 */
 
 #include "testtrace.h"
+#include "memdebug.h"
 
 static int sockopt_callback(void *clientp, curl_socket_t curlfd,
                             curlsocktype purpose)
@@ -49,7 +50,7 @@ static CURLcode test_lib1522(const char *URL)
   static char g_Data[40 * 1024]; /* POST 40KB */
 
   CURLcode code = TEST_ERR_MAJOR_BAD;
-  CURLcode result;
+  CURLcode res;
   struct curl_slist *pHeaderList = NULL;
   CURL *curl = curl_easy_init();
   memset(g_Data, 'A', sizeof(g_Data)); /* send As! */
@@ -78,7 +79,7 @@ static CURLcode test_lib1522(const char *URL)
 
     curl_mprintf("uploadSize = %" CURL_FORMAT_CURL_OFF_T "\n", uploadSize);
 
-    if((size_t)uploadSize == sizeof(g_Data)) {
+    if((size_t) uploadSize == sizeof(g_Data)) {
       curl_mprintf("!!!!!!!!!! PASS\n");
     }
     else {

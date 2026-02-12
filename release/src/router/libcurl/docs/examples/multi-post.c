@@ -25,6 +25,7 @@
  * using the multi interface to do a multipart formpost without blocking
  * </DESC>
  */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -39,9 +40,9 @@ int main(void)
 
   CURL *curl;
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -84,13 +85,13 @@ int main(void)
       curl_multi_add_handle(multi, curl);
 
       do {
-        CURLMcode mresult = curl_multi_perform(multi, &still_running);
+        CURLMcode mc = curl_multi_perform(multi, &still_running);
 
         if(still_running)
           /* wait for activity, timeout or "nothing" */
-          mresult = curl_multi_poll(multi, NULL, 0, 1000, NULL);
+          mc = curl_multi_poll(multi, NULL, 0, 1000, NULL);
 
-        if(mresult)
+        if(mc)
           break;
       } while(still_running);
 

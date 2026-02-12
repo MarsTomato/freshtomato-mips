@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 # also verified by 1156 in libcurl API terms
 
@@ -13,11 +12,11 @@ Resume
 # Server-side
 <reply>
 <data>
-HTTP/1.1 416 Invalid range%CR
-Connection: close%CR
-Content-Length: 0%CR
-Content-Range: */100%CR
-%CR
+HTTP/1.1 416 Invalid range
+Connection: close
+Content-Length: 0
+Content-Range: */100
+
 </data>
 
 # The file data that exists at the start of the test must be included in
@@ -33,11 +32,11 @@ Content-Range: */100%CR
 012345678
 012345678
 012345678
-HTTP/1.1 416 Invalid range%CR
-Connection: close%CR
-Content-Length: 0%CR
-Content-Range: */100%CR
-%CR
+HTTP/1.1 416 Invalid range
+Connection: close
+Content-Length: 0
+Content-Range: */100
+
 </datacheck>
 
 </reply>

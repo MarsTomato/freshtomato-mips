@@ -23,10 +23,12 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1935(const char *URL)
 {
   CURL *curl;
-  CURLcode result = TEST_ERR_MAJOR_BAD;
+  CURLcode res = TEST_ERR_MAJOR_BAD;
   struct curl_slist *connect_to = NULL;
   struct curl_slist *list = NULL;
 
@@ -54,7 +56,7 @@ static CURLcode test_lib1935(const char *URL)
   list = curl_slist_append(list, "Content-Type: application/json");
   test_setopt(curl, CURLOPT_HTTPHEADER, list);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -63,5 +65,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

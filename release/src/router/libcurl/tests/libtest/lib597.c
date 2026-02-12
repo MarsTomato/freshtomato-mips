@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 /*
  * Test case for below scenario:
  *   - Connect to an FTP server using CONNECT_ONLY option
@@ -36,7 +38,7 @@ static CURLcode test_lib597(const char *URL)
 {
   CURL *curl = NULL;
   CURLM *multi = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   int running;
   int msgs_left;
   CURLMsg *msg;
@@ -94,11 +96,11 @@ static CURLcode test_lib597(const char *URL)
 #else
       itimeout = (int)timeout;
 #endif
-      interval.tv_sec = itimeout / 1000;
-      interval.tv_usec = (itimeout % 1000) * 1000;
+      interval.tv_sec = itimeout/1000;
+      interval.tv_usec = (itimeout%1000)*1000;
     }
     else {
-      interval.tv_sec = TEST_HANG_TIMEOUT / 1000 - 1;
+      interval.tv_sec = TEST_HANG_TIMEOUT/1000 - 1;
       interval.tv_usec = 0;
     }
 
@@ -109,7 +111,7 @@ static CURLcode test_lib597(const char *URL)
 
   msg = curl_multi_info_read(multi, &msgs_left);
   if(msg)
-    result = msg->data.result;
+    res = msg->data.result;
 
   multi_remove_handle(multi, curl);
 
@@ -121,5 +123,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

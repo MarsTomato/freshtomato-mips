@@ -58,11 +58,11 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "sftp://example.com/file");
     curl_easy_setopt(curl, CURLOPT_SSH_KNOWNHOSTS,
                      "/home/clarkkent/.ssh/known_hosts");
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
 }

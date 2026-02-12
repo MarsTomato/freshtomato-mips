@@ -398,6 +398,7 @@ An overview of the time values available from curl_easy_getinfo(3)
         |--|--|--|--|--|--|--|--TOTAL
         |--|--|--|--|--|--|--|--REDIRECT
 
+
  CURLINFO_QUEUE_TIME_T(3), CURLINFO_NAMELOOKUP_TIME_T(3),
  CURLINFO_CONNECT_TIME_T(3), CURLINFO_APPCONNECT_TIME_T(3),
  CURLINFO_PRETRANSFER_TIME_T(3), CURLINFO_POSTTRANSFER_TIME_T(3),
@@ -413,16 +414,16 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://www.example.com/");
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(CURLE_OK == result) {
+    if(CURLE_OK == res) {
       char *ct;
       /* ask for the content-type */
-      result = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
+      res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
 
-      if((CURLE_OK == result) && ct)
+      if((CURLE_OK == res) && ct)
         printf("We received Content-Type: %s\n", ct);
     }
 

@@ -27,6 +27,8 @@
 
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURL *t1555_curl;
 
 static int progressCallback(void *arg,
@@ -35,7 +37,7 @@ static int progressCallback(void *arg,
                             double ultotal,
                             double ulnow)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   char buffer[256];
   size_t n = 0;
   (void)arg;
@@ -43,17 +45,17 @@ static int progressCallback(void *arg,
   (void)dlnow;
   (void)ultotal;
   (void)ulnow;
-  result = curl_easy_recv(t1555_curl, buffer, 256, &n);
-  curl_mprintf("curl_easy_recv returned %d\n", result);
-  result = curl_easy_send(t1555_curl, buffer, n, &n);
-  curl_mprintf("curl_easy_send returned %d\n", result);
+  res = curl_easy_recv(t1555_curl, buffer, 256, &n);
+  curl_mprintf("curl_easy_recv returned %d\n", res);
+  res = curl_easy_send(t1555_curl, buffer, n, &n);
+  curl_mprintf("curl_easy_send returned %d\n", res);
 
   return 1;
 }
 
 static CURLcode test_lib1555(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   global_init(CURL_GLOBAL_ALL);
 
@@ -66,7 +68,7 @@ static CURLcode test_lib1555(const char *URL)
   easy_setopt(t1555_curl, CURLOPT_PROGRESSDATA, NULL);
   easy_setopt(t1555_curl, CURLOPT_NOPROGRESS, 0L);
 
-  result = curl_easy_perform(t1555_curl);
+  res = curl_easy_perform(t1555_curl);
 
 test_cleanup:
 
@@ -75,5 +77,5 @@ test_cleanup:
   curl_easy_cleanup(t1555_curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

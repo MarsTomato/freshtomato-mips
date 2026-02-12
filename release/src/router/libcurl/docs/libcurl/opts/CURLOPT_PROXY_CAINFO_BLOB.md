@@ -18,7 +18,7 @@ Protocol:
   - TLS
 TLS-backend:
   - OpenSSL
-  - Rustls
+  - rustls
   - Schannel
 Added-in: 7.77.0
 ---
@@ -69,16 +69,16 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     struct curl_blob blob;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     /* using an HTTPS proxy */
-    curl_easy_setopt(curl, CURLOPT_PROXY, "https://proxy.example:443");
+    curl_easy_setopt(curl, CURLOPT_PROXY, "https://localhost:443");
     blob.data = strpem;
     blob.len = strlen(strpem);
     blob.flags = CURL_BLOB_COPY;
     curl_easy_setopt(curl, CURLOPT_PROXY_CAINFO_BLOB, &blob);
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
 }

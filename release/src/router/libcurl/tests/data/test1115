@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -26,6 +25,7 @@ Content-Length: 0
 
 # Client-side
 <client>
+#
 <server>
 http
 </server>

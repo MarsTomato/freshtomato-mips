@@ -22,7 +22,7 @@
  *
  ***************************************************************************/
 /* <DESC>
- * Get a webpage, extract the title with libxml.
+ * Get a web page, extract the title with libxml.
  * </DESC>
 
  Written by Lars Nilsson
@@ -36,9 +36,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <string>
-
 #include <curl/curl.h>
-
 #include <libxml/HTMLparser.h>
 
 //
@@ -46,16 +44,18 @@
 //
 
 #ifdef _WIN32
-#define COMPARE(a, b) (!_stricmp(a, b))
+#define COMPARE(a, b) (!_stricmp((a), (b)))
 #else
-#define COMPARE(a, b) (!strcasecmp(a, b))
+#define COMPARE(a, b) (!strcasecmp((a), (b)))
 #endif
 
 //
 //  libxml callback context structure
 //
-struct Context {
-  Context() : addTitle(false) {}
+
+struct Context
+{
+  Context(): addTitle(false) { }
 
   bool addTitle;
   std::string title;
@@ -70,13 +70,14 @@ static std::string buffer;
 //
 //  libcurl write callback function
 //
+
 static size_t writer(char *data, size_t size, size_t nmemb,
                      std::string *writerData)
 {
   if(writerData == NULL)
     return 0;
 
-  writerData->append(data, size * nmemb);
+  writerData->append(data, size*nmemb);
 
   return size * nmemb;
 }
@@ -84,9 +85,10 @@ static size_t writer(char *data, size_t size, size_t nmemb,
 //
 //  libcurl connection initialization
 //
+
 static bool init(CURL *&curl, const char *url)
 {
-  CURLcode result;
+  CURLcode res;
 
   curl = curl_easy_init();
 
@@ -95,32 +97,32 @@ static bool init(CURL *&curl, const char *url)
     return false;
   }
 
-  result = curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);
-  if(result != CURLE_OK) {
-    fprintf(stderr, "Failed to set error buffer [%d]\n", result);
+  res = curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);
+  if(res != CURLE_OK) {
+    fprintf(stderr, "Failed to set error buffer [%d]\n", res);
     return false;
   }
 
-  result = curl_easy_setopt(curl, CURLOPT_URL, url);
-  if(result != CURLE_OK) {
+  res = curl_easy_setopt(curl, CURLOPT_URL, url);
+  if(res != CURLE_OK) {
     fprintf(stderr, "Failed to set URL [%s]\n", errorBuffer);
     return false;
   }
 
-  result = curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  if(result != CURLE_OK) {
+  res = curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+  if(res != CURLE_OK) {
     fprintf(stderr, "Failed to set redirect option [%s]\n", errorBuffer);
     return false;
   }
 
-  result = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer);
-  if(result != CURLE_OK) {
+  res = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer);
+  if(res != CURLE_OK) {
     fprintf(stderr, "Failed to set writer [%s]\n", errorBuffer);
     return false;
   }
 
-  result = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
-  if(result != CURLE_OK) {
+  res = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+  if(res != CURLE_OK) {
     fprintf(stderr, "Failed to set write data [%s]\n", errorBuffer);
     return false;
   }
@@ -131,6 +133,7 @@ static bool init(CURL *&curl, const char *url)
 //
 //  libxml start element callback function
 //
+
 static void StartElement(void *voidContext,
                          const xmlChar *name,
                          const xmlChar **attributes)
@@ -147,6 +150,7 @@ static void StartElement(void *voidContext,
 //
 //  libxml end element callback function
 //
+
 static void EndElement(void *voidContext,
                        const xmlChar *name)
 {
@@ -159,6 +163,7 @@ static void EndElement(void *voidContext,
 //
 //  Text handling helper function
 //
+
 static void handleCharacters(Context *context,
                              const xmlChar *chars,
                              int length)
@@ -171,6 +176,7 @@ static void handleCharacters(Context *context,
 //
 //  libxml PCDATA callback function
 //
+
 static void Characters(void *voidContext,
                        const xmlChar *chars,
                        int length)
@@ -183,6 +189,7 @@ static void Characters(void *voidContext,
 //
 //  libxml CDATA callback function
 //
+
 static void cdata(void *voidContext,
                   const xmlChar *chars,
                   int length)
@@ -195,7 +202,9 @@ static void cdata(void *voidContext,
 //
 //  libxml SAX callback structure
 //
-static htmlSAXHandler saxHandler = {
+
+static htmlSAXHandler saxHandler =
+{
   NULL,
   NULL,
   NULL,
@@ -233,6 +242,7 @@ static htmlSAXHandler saxHandler = {
 //
 //  Parse given (assumed to be) HTML text and return the title
 //
+
 static void parseHtml(const std::string &html,
                       std::string &title)
 {
@@ -253,7 +263,7 @@ static void parseHtml(const std::string &html,
 int main(int argc, char *argv[])
 {
   CURL *curl = NULL;
-  CURLcode result;
+  CURLcode res;
   std::string title;
 
   // Ensure one argument is given
@@ -263,9 +273,9 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
-  result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   // Initialize CURL handle
 
@@ -277,10 +287,10 @@ int main(int argc, char *argv[])
 
   // Retrieve content for the URL
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
   curl_easy_cleanup(curl);
 
-  if(result != CURLE_OK) {
+  if(res != CURLE_OK) {
     fprintf(stderr, "Failed to get '%s' [%s]\n", argv[1], errorBuffer);
     return EXIT_FAILURE;
   }
@@ -291,5 +301,5 @@ int main(int argc, char *argv[])
   // Display the extracted title
   printf("Title: %s\n", title.c_str());
 
-  return (int)result;
+  return (int)res;
 }

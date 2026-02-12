@@ -31,13 +31,19 @@
   defined(USE_RUSTLS)
 
 #include "keylog.h"
+#include <curl/curl.h>
 #include "../escape.h"
 #include "../curlx/fopen.h"
+
+/* The last #include files should be: */
+#include "../curl_memory.h"
+#include "../memdebug.h"
 
 /* The fp for the open SSLKEYLOGFILE, or NULL if not open */
 static FILE *keylog_file_fp;
 
-void Curl_tls_keylog_open(void)
+void
+Curl_tls_keylog_open(void)
 {
   char *keylog_file_name;
 
@@ -61,7 +67,8 @@ void Curl_tls_keylog_open(void)
   }
 }
 
-void Curl_tls_keylog_close(void)
+void
+Curl_tls_keylog_close(void)
 {
   if(keylog_file_fp) {
     curlx_fclose(keylog_file_fp);
@@ -69,12 +76,14 @@ void Curl_tls_keylog_close(void)
   }
 }
 
-bool Curl_tls_keylog_enabled(void)
+bool
+Curl_tls_keylog_enabled(void)
 {
   return keylog_file_fp != NULL;
 }
 
-bool Curl_tls_keylog_write_line(const char *line)
+bool
+Curl_tls_keylog_write_line(const char *line)
 {
   /* The current maximum valid keylog line length LF and NUL is 195. */
   size_t linelen;
@@ -102,9 +111,10 @@ bool Curl_tls_keylog_write_line(const char *line)
   return TRUE;
 }
 
-bool Curl_tls_keylog_write(const char *label,
-                         const unsigned char client_random[CLIENT_RANDOM_SIZE],
-                         const unsigned char *secret, size_t secretlen)
+bool
+Curl_tls_keylog_write(const char *label,
+                      const unsigned char client_random[CLIENT_RANDOM_SIZE],
+                      const unsigned char *secret, size_t secretlen)
 {
   size_t pos, i;
   unsigned char line[KEYLOG_LABEL_MAXLEN + 1 + 2 * CLIENT_RANDOM_SIZE + 1 +
@@ -144,4 +154,4 @@ bool Curl_tls_keylog_write(const char *label,
   return TRUE;
 }
 
-#endif /* TLS or QUIC backend */
+#endif  /* TLS or QUIC backend */

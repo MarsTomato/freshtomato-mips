@@ -23,17 +23,13 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1568(const char *URL)
 {
-  CURLcode result = TEST_ERR_MAJOR_BAD;
+  CURLcode ret;
   CURL *curl;
-  curl_off_t port;
-
-  if(curlx_str_number(&libtest_arg2, &port, 0xffff))
-    return result;
-
-  if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK)
-    return result;
+  curl_global_init(CURL_GLOBAL_ALL);
 
   curl = curl_easy_init();
   curl_easy_setopt(curl, CURLOPT_URL, URL);
@@ -43,12 +39,13 @@ static CURLcode test_lib1568(const char *URL)
   curl_easy_setopt(curl, CURLOPT_USERAGENT, "lib1568");
   curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
   curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 50L);
-  curl_easy_setopt(curl, CURLOPT_PORT, (long)port);
+  curl_easy_setopt(curl, CURLOPT_PORT, atol(libtest_arg2));
 
-  result = curl_easy_perform(curl);
+  ret = curl_easy_perform(curl);
 
   curl_easy_cleanup(curl);
+  curl = NULL;
 
   curl_global_cleanup();
-  return result;
+  return ret;
 }

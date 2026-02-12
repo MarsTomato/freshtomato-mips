@@ -23,7 +23,10 @@
  ***************************************************************************/
 #include "first.h"
 
-static int new_fnmatch(void *ptr, const char *pattern, const char *string)
+#include "memdebug.h"
+
+static int new_fnmatch(void *ptr,
+                       const char *pattern, const char *string)
 {
   (void)ptr;
   curl_mfprintf(stderr, "lib574: match string '%s' against pattern '%s'\n",
@@ -33,7 +36,7 @@ static int new_fnmatch(void *ptr, const char *pattern, const char *string)
 
 static CURLcode test_lib574(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
@@ -53,19 +56,19 @@ static CURLcode test_lib574(const char *URL)
   test_setopt(curl, CURLOPT_FNMATCH_FUNCTION, new_fnmatch);
   test_setopt(curl, CURLOPT_TIMEOUT_MS, (long)TEST_HANG_TIMEOUT);
 
-  result = curl_easy_perform(curl);
-  if(result) {
-    curl_mfprintf(stderr, "curl_easy_perform() failed %d\n", result);
+  res = curl_easy_perform(curl);
+  if(res) {
+    curl_mfprintf(stderr, "curl_easy_perform() failed %d\n", res);
     goto test_cleanup;
   }
-  result = curl_easy_perform(curl);
-  if(result) {
-    curl_mfprintf(stderr, "curl_easy_perform() failed %d\n", result);
+  res = curl_easy_perform(curl);
+  if(res) {
+    curl_mfprintf(stderr, "curl_easy_perform() failed %d\n", res);
     goto test_cleanup;
   }
 
 test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
-  return result;
+  return res;
 }

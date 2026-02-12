@@ -41,19 +41,19 @@ int main(int argc, char *argv[])
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, argv[1]);
     curl_easy_setopt(curl, CURLOPT_PROXY, "http://127.0.0.1:80");
     curl_easy_setopt(curl, CURLOPT_NOPROXY, "example.com");
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       /* extract the available proxy authentication types */
       long used;
-      result = curl_easy_getinfo(curl, CURLINFO_USED_PROXY, &used);
-      if(!result) {
-        printf("The proxy was %sused\n", used ? "" : "NOT ");
+      res = curl_easy_getinfo(curl, CURLINFO_USED_PROXY, &used);
+      if(!res) {
+        printf("The proxy was %sused\n", used ? "": "NOT ");
       }
     }
     curl_easy_cleanup(curl);

@@ -21,18 +21,23 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
 #ifdef USE_OPENSSL
 #include <openssl/crypto.h>
 #endif
 
+/* The last 2 #include files should be in this order */
+#include "curl_memory.h"
+#include "memdebug.h"
+
 /* DllMain() must only be defined for Windows DLL builds. */
 #if defined(_WIN32) && !defined(CURL_STATICLIB)
 
 #if defined(USE_OPENSSL) && \
   !defined(OPENSSL_IS_BORINGSSL) && !defined(OPENSSL_IS_AWSLC) && \
-  !defined(LIBRESSL_VERSION_NUMBER)
+  !defined(LIBRESSL_VERSION_NUMBER) && OPENSSL_VERSION_NUMBER >= 0x10100000L
 #define PREVENT_OPENSSL_MEMLEAK
 #endif
 
@@ -59,6 +64,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
   }
   return TRUE;
 }
-#endif /* USE_OPENSSL (non-fork) */
+#endif /* OpenSSL */
 
-#endif /* _WIN32 && !CURL_STATICLIB */
+#endif /* DLL build */

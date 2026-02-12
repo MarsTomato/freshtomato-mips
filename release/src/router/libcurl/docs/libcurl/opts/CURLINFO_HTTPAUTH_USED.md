@@ -15,7 +15,7 @@ Added-in: 8.12.0
 
 # NAME
 
-CURLINFO_HTTPAUTH_USED - used HTTP authentication method
+CURLINFO_HTTPAUTH_USED - get used HTTP authentication method
 
 # SYNOPSIS
 
@@ -42,18 +42,18 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
     curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC | CURLAUTH_DIGEST);
     curl_easy_setopt(curl, CURLOPT_USERNAME, "shrek");
     curl_easy_setopt(curl, CURLOPT_PASSWORD, "swamp");
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       long auth;
-      result = curl_easy_getinfo(curl, CURLINFO_HTTPAUTH_USED, &auth);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_HTTPAUTH_USED, &auth);
+      if(!res) {
         if(!auth)
           printf("No auth used\n");
         else {

@@ -23,7 +23,9 @@
  ***************************************************************************/
 #include "testutil.h"
 
-/* build request URL */
+#include "memdebug.h"
+
+/* build request url */
 char *tutil_suburl(const char *base, int i)
 {
   return curl_maprintf("%s%.4d", base, i);

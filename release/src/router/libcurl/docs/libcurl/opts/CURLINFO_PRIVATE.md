@@ -15,7 +15,7 @@ Added-in: 7.10.3
 
 # NAME
 
-CURLINFO_PRIVATE - private pointer
+CURLINFO_PRIVATE - get the private pointer
 
 # SYNOPSIS
 
@@ -41,19 +41,19 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     void *pointer = (void *)0x2345454;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/foo.bin");
 
     /* set the private pointer */
     curl_easy_setopt(curl, CURLOPT_PRIVATE, pointer);
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     /* extract the private pointer again */
-    result = curl_easy_getinfo(curl, CURLINFO_PRIVATE, &pointer);
+    res = curl_easy_getinfo(curl, CURLINFO_PRIVATE, &pointer);
 
-    if(result)
-      printf("error: %s\n", curl_easy_strerror(result));
+    if(res)
+      printf("error: %s\n", curl_easy_strerror(res));
 
     curl_easy_cleanup(curl);
   }

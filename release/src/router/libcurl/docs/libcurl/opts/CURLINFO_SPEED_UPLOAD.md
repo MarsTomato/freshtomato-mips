@@ -15,7 +15,7 @@ Added-in: 7.4.1
 
 # NAME
 
-CURLINFO_SPEED_UPLOAD - upload speed
+CURLINFO_SPEED_UPLOAD - get upload speed
 
 # SYNOPSIS
 
@@ -42,16 +42,16 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
     /* Perform the request */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       double speed;
-      result = curl_easy_getinfo(curl, CURLINFO_SPEED_UPLOAD, &speed);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_SPEED_UPLOAD, &speed);
+      if(!res) {
         printf("Upload speed %.0f bytes/sec\n", speed);
       }
     }

@@ -56,11 +56,11 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "rtsp://example.com/");
     curl_easy_setopt(curl, CURLOPT_RTSP_STREAM_URI,
                      "rtsp://foo.example.com/twister/video");
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
 }

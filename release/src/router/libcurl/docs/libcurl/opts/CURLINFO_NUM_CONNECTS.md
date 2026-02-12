@@ -14,7 +14,7 @@ Added-in: 7.12.3
 
 # NAME
 
-CURLINFO_NUM_CONNECTS - number of created connections
+CURLINFO_NUM_CONNECTS - get number of created connections
 
 # SYNOPSIS
 
@@ -42,14 +42,14 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    result = curl_easy_perform(curl);
-    if(result == CURLE_OK) {
+    res = curl_easy_perform(curl);
+    if(res == CURLE_OK) {
       long connects;
-      result = curl_easy_getinfo(curl, CURLINFO_NUM_CONNECTS, &connects);
-      if(!result)
+      res = curl_easy_getinfo(curl, CURLINFO_NUM_CONNECTS, &connects);
+      if(!res)
         printf("It needed %ld connects\n", connects);
     }
     curl_easy_cleanup(curl);

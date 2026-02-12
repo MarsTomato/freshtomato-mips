@@ -30,10 +30,12 @@
 
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1512(const char *URL)
 {
-  CURLcode result = CURLE_OK;
-  CURL *curl[2] = { NULL, NULL };
+  CURLcode res = CURLE_OK;
+  CURL *curl[2] = {NULL, NULL};
   const char *port = libtest_arg3;
   const char *address = libtest_arg2;
   char dnsentry[256];
@@ -74,9 +76,9 @@ static CURLcode test_lib1512(const char *URL)
   easy_setopt(curl[0], CURLOPT_RESOLVE, slist);
 
   /* run each transfer */
-  for(i = 0; (i < CURL_ARRAYSIZE(curl)) && !result; i++) {
-    result = curl_easy_perform(curl[i]);
-    if(result)
+  for(i = 0; (i < CURL_ARRAYSIZE(curl)) && !res; i++) {
+    res = curl_easy_perform(curl[i]);
+    if(res)
       goto test_cleanup;
   }
 
@@ -87,5 +89,5 @@ test_cleanup:
   curl_slist_free_all(slist);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

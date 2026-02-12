@@ -63,12 +63,10 @@ INTERNALDOCS =                                  \
  internals/MULTI-EV.md                          \
  internals/NEW-PROTOCOL.md                      \
  internals/PORTING.md                           \
- internals/RATELIMITS.md                        \
  internals/README.md                            \
  internals/SCORECARD.md                         \
  internals/SPLAY.md                             \
  internals/STRPARSE.md                          \
- internals/TIME-KEEPING.md                      \
  internals/TLS-SESSIONS.md                      \
  internals/UINT_SETS.md                         \
  internals/WEBSOCKET.md
@@ -94,7 +92,7 @@ EXTRA_DIST =                                    \
  EARLY-RELEASE.md                               \
  ECH.md                                         \
  EXPERIMENTAL.md                                \
- FAQ.md                                         \
+ FAQ                                            \
  FEATURES.md                                    \
  GOVERNANCE.md                                  \
  HELP-US.md                                     \
@@ -109,8 +107,7 @@ EXTRA_DIST =                                    \
  INSTALL.md                                     \
  INTERNALS.md                                   \
  IPFS.md                                        \
- KNOWN_BUGS.md                                  \
- KNOWN_RISKS.md                                 \
+ KNOWN_BUGS                                     \
  MAIL-ETIQUETTE.md                              \
  MANUAL.md                                      \
  options-in-versions                            \
@@ -122,8 +119,7 @@ EXTRA_DIST =                                    \
  SPONSORS.md                                    \
  SSL-PROBLEMS.md                                \
  SSLCERTS.md                                    \
- THANKS                                         \
- TODO.md                                        \
+ THANKS TODO                                    \
  TheArtOfHttpScripting.md                       \
  URL-SYNTAX.md                                  \
  VERSIONS.md                                    \

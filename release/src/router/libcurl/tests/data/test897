@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -8,6 +7,7 @@ FETCH
 </keywords>
 </info>
 
+#
 # Server-side
 <reply>
 <data crlf="yes">
@@ -21,6 +21,7 @@ POSTFETCH extra stuff sent in the envelope after the body
 </servercmd>
 </reply>
 
+#
 # Client-side
 <client>
 <server>
@@ -34,6 +35,7 @@ IMAP and envelope meta data after body transfer
 </command>
 </client>
 
+#
 # Verify data after the test has been "shot"
 <verify>
 <protocol crlf="yes">
@@ -44,10 +46,10 @@ A004 FETCH 123 BODY[1]
 A005 LOGOUT
 </protocol>
 <file name="%LOGDIR/head-%TESTNUMBER" crlf="yes">
-        _   _ ____  _
-    ___| | | |  _ \| |
-   / __| | | | |_) | |
-  | (__| |_| |  _ {| |___
+        _   _ ____  _%spc%%spc%%spc%%spc%%spc%
+    ___| | | |  _ \| |%spc%%spc%%spc%%spc%
+   / __| | | | |_) | |%spc%%spc%%spc%%spc%
+  | (__| |_| |  _ {| |___%spc%
    \___|\___/|_| \_\_____|
 * OK curl IMAP server ready to serve
 A001 BAD Command

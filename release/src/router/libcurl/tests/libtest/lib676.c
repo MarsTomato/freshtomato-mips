@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib676(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
@@ -46,8 +48,8 @@ static CURLcode test_lib676(const char *URL)
   test_setopt(curl, CURLOPT_COOKIEFILE, libtest_arg2);
   test_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-  result = curl_easy_perform(curl);
-  if(result) {
+  res = curl_easy_perform(curl);
+  if(res) {
     curl_mfprintf(stderr, "retrieve 1 failed\n");
     goto test_cleanup;
   }
@@ -55,8 +57,8 @@ static CURLcode test_lib676(const char *URL)
   /* now clear the cookies */
   test_setopt(curl, CURLOPT_COOKIEFILE, NULL);
 
-  result = curl_easy_perform(curl);
-  if(result)
+  res = curl_easy_perform(curl);
+  if(res)
     curl_mfprintf(stderr, "retrieve 2 failed\n");
 
 test_cleanup:
@@ -64,5 +66,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

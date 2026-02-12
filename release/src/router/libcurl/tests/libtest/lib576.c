@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 struct chunk_data {
   int remains;
   int print_content;
@@ -97,12 +99,12 @@ static long chunk_end(void *ptr)
 static CURLcode test_lib576(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
-  struct chunk_data chunk_data = { 0, 0 };
+  CURLcode res = CURLE_OK;
+  struct chunk_data chunk_data = {0, 0};
   curl_global_init(CURL_GLOBAL_ALL);
   curl = curl_easy_init();
   if(!curl) {
-    result = CURLE_OUT_OF_MEMORY;
+    res = CURLE_OUT_OF_MEMORY;
     goto test_cleanup;
   }
 
@@ -112,11 +114,11 @@ static CURLcode test_lib576(const char *URL)
   test_setopt(curl, CURLOPT_CHUNK_END_FUNCTION, chunk_end);
   test_setopt(curl, CURLOPT_CHUNK_DATA, &chunk_data);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
   if(curl)
     curl_easy_cleanup(curl);
   curl_global_cleanup();
-  return result;
+  return res;
 }

@@ -23,23 +23,22 @@
  ***************************************************************************/
 #include "tool_setup.h"
 
-#include "tool_cfgable.h"
-#include "tool_easysrc.h"
-#include "tool_formparse.h"
-#include "tool_setopt.h"
-
 #ifndef CURL_DISABLE_LIBCURL_OPTION
 
+#include "tool_cfgable.h"
+#include "tool_easysrc.h"
+#include "tool_setopt.h"
 #include "tool_msgs.h"
+#include "memdebug.h" /* keep this as LAST include */
 
 /* Lookup tables for converting setopt values back to symbols */
 /* For enums, values may be in any order. */
 /* For bit masks, put combinations first, then single bits, */
 /* and finally any "NONE" value. */
 
-#define NV(e)     { #e, e }
-#define NV1(e, v) { #e, (v) }
-#define NVEND     { NULL, 0 }         /* sentinel to mark end of list */
+#define NV(e) {#e, e}
+#define NV1(e, v) {#e, (v)}
+#define NVEND {NULL, 0}         /* sentinel to mark end of list */
 
 const struct NameValue setopt_nv_CURLPROXY[] = {
   NV(CURLPROXY_HTTP),
@@ -102,7 +101,7 @@ const struct NameValue setopt_nv_CURL_SSLVERSION[] = {
 };
 
 const struct NameValue setopt_nv_CURL_SSLVERSION_MAX[] = {
-  { "", CURL_SSLVERSION_MAX_NONE },
+  {"", CURL_SSLVERSION_MAX_NONE},
   NV(CURL_SSLVERSION_MAX_DEFAULT),
   NV(CURL_SSLVERSION_MAX_TLSv1_0),
   NV(CURL_SSLVERSION_MAX_TLSv1_1),
@@ -175,7 +174,7 @@ static const struct NameValue setopt_nv_CURLNONZERODEFAULTS[] = {
 
 /* Escape string to C string syntax. Return NULL if out of memory. */
 #define MAX_STRING_LENGTH_OUTPUT 2000
-#define ZERO_TERMINATED          -1
+#define ZERO_TERMINATED -1
 
 static char *c_escape(const char *str, curl_off_t len)
 {
@@ -217,7 +216,7 @@ static char *c_escape(const char *str, curl_off_t len)
                                 /* Octal escape to avoid >2 digit hex. */
                                 (len > 1 && ISXDIGIT(s[1])) ?
                                   "\\%03o" : "\\x%02x",
-                                (unsigned int)*(const unsigned char *)s);
+                                (unsigned int) *(const unsigned char *) s);
       }
     }
   }
@@ -338,9 +337,9 @@ CURLcode tool_setopt_bitmask(CURL *curl, const char *name, CURLoption tag,
     curl_msnprintf(preamble, sizeof(preamble),
                    "curl_easy_setopt(hnd, %s, ", name);
     for(nv = nvlist; nv->name; nv++) {
-      if((nv->value & ~rest) == 0) {
+      if((nv->value & ~ rest) == 0) {
         /* all value flags contained in rest */
-        rest &= ~nv->value;    /* remove bits handled here */
+        rest &= ~ nv->value;    /* remove bits handled here */
         ret = easysrc_addf(&easysrc_code, "%s(long)%s%s",
                            preamble, nv->name, rest ? " |" : ");");
         if(!rest || ret)
@@ -385,7 +384,7 @@ static CURLcode libcurl_generate_slist(struct curl_slist *slist, int *slistno)
     ret = easysrc_addf(&easysrc_data,
                        "slist%d = curl_slist_append(slist%d, \"%s\");",
                        *slistno, *slistno, escaped);
-    curlx_free(escaped);
+    free(escaped);
   }
 
   return ret;
@@ -426,7 +425,8 @@ static CURLcode libcurl_generate_mime_part(CURL *curl,
                          mimeno, submimeno);
       if(!ret)
         /* Avoid freeing in CLEAN. */
-        ret = easysrc_addf(&easysrc_code, "mime%d = NULL;", submimeno);
+        ret = easysrc_addf(&easysrc_code,
+                           "mime%d = NULL;", submimeno);
     }
     break;
 
@@ -438,7 +438,7 @@ static CURLcode libcurl_generate_mime_part(CURL *curl,
         easysrc_addf(&easysrc_code,
                      "curl_mime_data(part%d, \"%s\", CURL_ZERO_TERMINATED);",
                      mimeno, escaped);
-      curlx_free(escaped);
+      free(escaped);
     }
     break;
 
@@ -451,7 +451,7 @@ static CURLcode libcurl_generate_mime_part(CURL *curl,
       ret = easysrc_addf(&easysrc_code,
                          "curl_mime_filename(part%d, NULL);", mimeno);
     }
-    curlx_free(escaped);
+    free(escaped);
     break;
   }
 
@@ -476,28 +476,28 @@ static CURLcode libcurl_generate_mime_part(CURL *curl,
     char *escaped = c_escape(part->encoder, ZERO_TERMINATED);
     ret = easysrc_addf(&easysrc_code, "curl_mime_encoder(part%d, \"%s\");",
                        mimeno, escaped);
-    curlx_free(escaped);
+    free(escaped);
   }
 
   if(!ret && filename) {
     char *escaped = c_escape(filename, ZERO_TERMINATED);
     ret = easysrc_addf(&easysrc_code, "curl_mime_filename(part%d, \"%s\");",
                        mimeno, escaped);
-    curlx_free(escaped);
+    free(escaped);
   }
 
   if(!ret && part->name) {
     char *escaped = c_escape(part->name, ZERO_TERMINATED);
     ret = easysrc_addf(&easysrc_code, "curl_mime_name(part%d, \"%s\");",
                        mimeno, escaped);
-    curlx_free(escaped);
+    free(escaped);
   }
 
   if(!ret && part->type) {
     char *escaped = c_escape(part->type, ZERO_TERMINATED);
     ret = easysrc_addf(&easysrc_code, "curl_mime_type(part%d, \"%s\");",
                        mimeno, escaped);
-    curlx_free(escaped);
+    free(escaped);
   }
 
   if(!ret && part->headers) {
@@ -622,85 +622,62 @@ CURLcode tool_setopt_offt(CURL *curl, const char *name, CURLoption tag,
   if(global->libcurl && !ret && lval) {
     /* we only use this for real if --libcurl was used */
     ret = easysrc_addf(&easysrc_code, "curl_easy_setopt(hnd, %s, (curl_off_t)%"
-                       CURL_FORMAT_CURL_OFF_T ");", name, lval);
+          CURL_FORMAT_CURL_OFF_T ");", name, lval);
   }
 
   return ret;
 }
 
-/* setopt wrapper for setting object and function pointers */
-CURLcode tool_setopt_ptr(CURL *curl, const char *name, CURLoption tag, ...)
+/* setopt wrapper for setting object and function pointer options */
+CURLcode tool_setopt(CURL *curl, struct OperationConfig *config,
+                     bool str, const char *name, CURLoption tag,
+                     ...)
 {
-  void *pval;
   va_list arg;
-  CURLcode result;
+  CURLcode ret = CURLE_OK;
+  void *pval;
+
+  va_start(arg, tag);
 
   DEBUGASSERT(tag >= CURLOPTTYPE_OBJECTPOINT);
   DEBUGASSERT((tag < CURLOPTTYPE_OFF_T) || (tag >= CURLOPTTYPE_BLOB));
+
   /* we never set _BLOB options in the curl tool */
   DEBUGASSERT(tag < CURLOPTTYPE_BLOB);
 
-  va_start(arg, tag);
   /* argument is an object or function pointer */
   pval = va_arg(arg, void *);
 
-  result = curl_easy_setopt(curl, tag, pval);
-  if(global->libcurl && pval && !result) {
-    /* we only use this if --libcurl was used */
-    const char *remark = (tag >= CURLOPTTYPE_FUNCTIONPOINT) ?
-      "function" : "object";
-    result = easysrc_addf(&easysrc_toohard,
-                          "%s was set to a%s %s pointer", name,
-                          (*remark == 'o' ? "n" : ""), remark);
-  }
+  ret = curl_easy_setopt(curl, tag, pval);
 
   va_end(arg);
-  return result;
-}
 
-/* setopt wrapper for setting strings */
-CURLcode tool_setopt_str(CURL *curl, struct OperationConfig *config,
-                         const char *name, CURLoption tag, ...)
-{
-  char *str;
-  va_list arg;
-  CURLcode result;
-  DEBUGASSERT(tag >= CURLOPTTYPE_OBJECTPOINT);
-  DEBUGASSERT((tag < CURLOPTTYPE_OFF_T) || (tag >= CURLOPTTYPE_BLOB));
-  DEBUGASSERT(tag < CURLOPTTYPE_BLOB);
-  DEBUGASSERT(tag < CURLOPTTYPE_FUNCTIONPOINT);
-
-  va_start(arg, tag);
-  /* argument is a string */
-  str = va_arg(arg, char *);
-
-  result = curl_easy_setopt(curl, tag, str);
-  if(global->libcurl && str && !result) {
+  if(global->libcurl && pval && !ret) {
     /* we only use this if --libcurl was used */
-    curl_off_t len = ZERO_TERMINATED;
-    char *escaped;
-    if(tag == CURLOPT_POSTFIELDS)
-      len = curlx_dyn_len(&config->postdata);
-    escaped = c_escape(str, len);
-    if(escaped) {
-      result = easysrc_addf(&easysrc_code,
-                            "curl_easy_setopt(hnd, %s, \"%s\");",
-                            name, escaped);
-      curlx_free(escaped);
+
+    if(!str) {
+      /* function pointers are never printable */
+      const char *remark = (tag >= CURLOPTTYPE_FUNCTIONPOINT) ?
+        "function" : "object";
+      ret = easysrc_addf(&easysrc_toohard,
+                         "%s was set to a%s %s pointer", name,
+                         (*remark == 'o' ? "n" : ""), remark);
     }
-    else
-      result = CURLE_OUT_OF_MEMORY;
+    else {
+      curl_off_t len = ZERO_TERMINATED;
+      char *escaped;
+      if(tag == CURLOPT_POSTFIELDS)
+        len = curlx_dyn_len(&config->postdata);
+      escaped = c_escape(pval, len);
+      if(escaped) {
+        ret = easysrc_addf(&easysrc_code, "curl_easy_setopt(hnd, %s, \"%s\");",
+                           name, escaped);
+        free(escaped);
+      }
+    }
   }
 
-  va_end(arg);
-  return result;
+  return ret;
 }
 
 #endif /* CURL_DISABLE_LIBCURL_OPTION */
-
-/* return TRUE if the error code is "lethal" */
-bool setopt_bad(CURLcode result)
-{
-  return (result && (result != CURLE_NOT_BUILT_IN) &&
-          (result != CURLE_UNKNOWN_OPTION));
-}

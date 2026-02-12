@@ -26,16 +26,15 @@
  * </DESC>
  */
 #include <stdio.h>
-
 #include <curl/curl.h>
 
 int main(void)
 {
   CURL *curl;
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -53,12 +52,12 @@ int main(void)
 
     curl_easy_setopt(curl, CURLOPT_URL, "https://curl.se/");
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     curl_easy_cleanup(curl);
   }
 
   curl_global_cleanup();
 
-  return (int)result;
+  return (int)res;
 }

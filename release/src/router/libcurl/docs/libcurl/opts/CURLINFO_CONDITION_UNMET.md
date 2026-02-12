@@ -16,7 +16,7 @@ Added-in: 7.19.4
 
 # NAME
 
-CURLINFO_CONDITION_UNMET - unmet time conditional or 304 HTTP response
+CURLINFO_CONDITION_UNMET - get info on unmet time conditional or 304 HTTP response.
 
 # SYNOPSIS
 
@@ -46,7 +46,7 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
 
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
@@ -57,13 +57,13 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_TIMECONDITION, CURL_TIMECOND_IFMODSINCE);
 
     /* Perform the request */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       /* check the time condition */
       long unmet;
-      result = curl_easy_getinfo(curl, CURLINFO_CONDITION_UNMET, &unmet);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_CONDITION_UNMET, &unmet);
+      if(!res) {
         printf("The time condition was %sfulfilled\n", unmet?"NOT":"");
       }
     }

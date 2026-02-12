@@ -25,12 +25,6 @@
  * Shows HTTPS usage with client certs and optional ssl engine use.
  * </DESC>
  */
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS  /* for fopen() */
-#endif
-#endif
-
 #include <stdio.h>
 
 #include <curl/curl.h>
@@ -46,12 +40,17 @@
    4.   if you do not use a crypto engine:
    4.1. set pKeyName to the filename of your client key
    4.2. if the format of the key file is DER, set pKeyType to "DER"
+
+   !! verify of the server certificate is not implemented here !!
+
+   **** This example only works with libcurl 7.9.3 and later! ****
+
 */
 
 int main(void)
 {
   CURL *curl = NULL;
-  CURLcode result;
+  CURLcode res;
   FILE *headerfile;
   const char *pPassphrase = NULL;
 
@@ -63,16 +62,16 @@ int main(void)
   const char *pKeyType;
 
 #ifdef USE_ENGINE
-  pKeyName = "rsa_test";
-  pKeyType = "ENG";
+  pKeyName  = "rsa_test";
+  pKeyType  = "ENG";
 #else
-  pKeyName = "testkey.pem";
-  pKeyType = "PEM";
+  pKeyName  = "testkey.pem";
+  pKeyType  = "PEM";
 #endif
 
-  result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result) {
-    return (int)result;
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res) {
+    return (int)res;
   }
 
   headerfile = fopen(pHeaderFile, "wb");
@@ -84,7 +83,7 @@ int main(void)
     goto error;
 
   /* what call to write: */
-  curl_easy_setopt(curl, CURLOPT_URL, "https://secure.site.example/");
+  curl_easy_setopt(curl, CURLOPT_URL, "HTTPS://secure.site.example");
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, headerfile);
 
 #ifdef USE_ENGINE
@@ -104,7 +103,7 @@ int main(void)
 #endif
 
   /* cert is stored PEM coded in file... */
-  /* since PEM is default, we need not set it for PEM */
+  /* since PEM is default, we needn't set it for PEM */
   curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
 
   /* set the cert for client authentication */
@@ -128,12 +127,12 @@ int main(void)
   /* disconnect if we cannot validate server's cert */
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
 
-  /* Perform the request, result gets the return code */
-  result = curl_easy_perform(curl);
+  /* Perform the request, res gets the return code */
+  res = curl_easy_perform(curl);
   /* Check for errors */
-  if(result != CURLE_OK)
+  if(res != CURLE_OK)
     fprintf(stderr, "curl_easy_perform() failed: %s\n",
-            curl_easy_strerror(result));
+            curl_easy_strerror(res));
 
 error:
 
@@ -146,5 +145,5 @@ error:
 
   curl_global_cleanup();
 
-  return (int)result;
+  return (int)res;
 }

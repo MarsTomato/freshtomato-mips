@@ -23,13 +23,21 @@
  * RFC2104 Keyed-Hashing for Message Authentication
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
 #if (defined(USE_CURL_NTLM_CORE) && !defined(USE_WINDOWS_SSPI)) ||      \
   !defined(CURL_DISABLE_AWS) || !defined(CURL_DISABLE_DIGEST_AUTH) ||   \
   defined(USE_SSL)
 
+#include <curl/curl.h>
+
 #include "curl_hmac.h"
+#include "curl_memory.h"
+#include "curlx/warnless.h"
+
+/* The last #include file should be: */
+#include "memdebug.h"
 
 /*
  * Generic HMAC algorithm.
@@ -42,9 +50,10 @@
 static const unsigned char hmac_ipad = 0x36;
 static const unsigned char hmac_opad = 0x5C;
 
-struct HMAC_context *Curl_HMAC_init(const struct HMAC_params *hashparams,
-                                    const unsigned char *key,
-                                    unsigned int keylen)
+struct HMAC_context *
+Curl_HMAC_init(const struct HMAC_params *hashparams,
+               const unsigned char *key,
+               unsigned int keylen)
 {
   size_t i;
   struct HMAC_context *ctxt;
@@ -53,21 +62,21 @@ struct HMAC_context *Curl_HMAC_init(const struct HMAC_params *hashparams,
 
   /* Create HMAC context. */
   i = sizeof(*ctxt) + 2 * hashparams->ctxtsize + hashparams->resultlen;
-  ctxt = curlx_malloc(i);
+  ctxt = malloc(i);
 
   if(!ctxt)
     return ctxt;
 
   ctxt->hash = hashparams;
-  ctxt->hashctxt1 = (void *)(ctxt + 1);
-  ctxt->hashctxt2 = (void *)((char *)ctxt->hashctxt1 + hashparams->ctxtsize);
+  ctxt->hashctxt1 = (void *) (ctxt + 1);
+  ctxt->hashctxt2 = (void *) ((char *) ctxt->hashctxt1 + hashparams->ctxtsize);
 
   /* If the key is too long, replace it by its hash digest. */
   if(keylen > hashparams->maxkeylen) {
     if(hashparams->hinit(ctxt->hashctxt1))
       goto fail;
     hashparams->hupdate(ctxt->hashctxt1, key, keylen);
-    hkey = (unsigned char *)ctxt->hashctxt2 + hashparams->ctxtsize;
+    hkey = (unsigned char *) ctxt->hashctxt2 + hashparams->ctxtsize;
     hashparams->hfinal(hkey, ctxt->hashctxt1);
     key = hkey;
     keylen = hashparams->resultlen;
@@ -94,7 +103,7 @@ struct HMAC_context *Curl_HMAC_init(const struct HMAC_params *hashparams,
   return ctxt;
 
 fail:
-  curlx_free(ctxt);
+  free(ctxt);
   return NULL;
 }
 
@@ -107,6 +116,7 @@ int Curl_HMAC_update(struct HMAC_context *ctxt,
   return 0;
 }
 
+
 int Curl_HMAC_final(struct HMAC_context *ctxt, unsigned char *output)
 {
   const struct HMAC_params *hashparams = ctxt->hash;
@@ -115,12 +125,12 @@ int Curl_HMAC_final(struct HMAC_context *ctxt, unsigned char *output)
      storage. */
 
   if(!output)
-    output = (unsigned char *)ctxt->hashctxt2 + ctxt->hash->ctxtsize;
+    output = (unsigned char *) ctxt->hashctxt2 + ctxt->hash->ctxtsize;
 
   hashparams->hfinal(output, ctxt->hashctxt1);
   hashparams->hupdate(ctxt->hashctxt2, output, hashparams->resultlen);
   hashparams->hfinal(output, ctxt->hashctxt2);
-  curlx_free(ctxt);
+  free(ctxt);
   return 0;
 }
 

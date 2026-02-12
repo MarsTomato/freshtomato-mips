@@ -16,7 +16,7 @@ Added-in: 7.9.4
 
 # NAME
 
-CURLINFO_CONTENT_TYPE - Content-Type of response
+CURLINFO_CONTENT_TYPE - get Content-Type
 
 # SYNOPSIS
 
@@ -49,16 +49,16 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       /* extract the content-type */
       char *ct = NULL;
-      result = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
-      if(!result && ct) {
+      res = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
+      if(!res && ct) {
         printf("Content-Type: %s\n", ct);
       }
     }

@@ -61,14 +61,14 @@ int main(void)
 
   /* this is thread 1 */
   do {
-    CURLMcode mresult;
+    CURLMcode mc;
     int numfds;
 
-    mresult = curl_multi_perform(multi, &still_running);
+    mc = curl_multi_perform(multi, &still_running);
 
-    if(mresult == CURLM_OK) {
+    if(mc == CURLM_OK) {
       /* wait for activity, timeout or wakeup */
-      mresult = curl_multi_poll(multi, NULL, 0, 10000, &numfds);
+      mc = curl_multi_poll(multi, NULL, 0, 10000, &numfds);
     }
 
     if(time_to_die())

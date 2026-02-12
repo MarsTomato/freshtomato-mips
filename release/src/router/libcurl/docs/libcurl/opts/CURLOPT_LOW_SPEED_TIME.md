@@ -44,13 +44,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
     /* abort if slower than 30 bytes/sec during 60 seconds */
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 60L);
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 30L);
-    result = curl_easy_perform(curl);
-    if(CURLE_OPERATION_TIMEDOUT == result) {
+    res = curl_easy_perform(curl);
+    if(CURLE_OPERATION_TIMEDOUT == res) {
       printf("Timeout.\n");
     }
     /* always cleanup */

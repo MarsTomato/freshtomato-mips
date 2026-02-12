@@ -51,11 +51,11 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode ret;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "sending data");
     curl_easy_setopt(curl, CURLOPT_KEEP_SENDING_ON_ERROR, 1L);
-    result = curl_easy_perform(curl);
+    ret = curl_easy_perform(curl);
   }
 }
 ~~~

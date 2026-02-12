@@ -24,7 +24,6 @@
  *
  ***************************************************************************/
 #include "tool_setup.h"
-
 #include "tool_cfgable.h"
 
 void tool_init_stderr(void);

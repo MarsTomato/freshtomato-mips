@@ -23,13 +23,15 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib3105(const char *URL)
 {
   CURL *curl = NULL;
   CURLM *multi = NULL;
   CURLcode i = CURLE_OK;
-  CURLcode result = CURLE_OK;
-  CURLMcode mresult;
+  CURLcode res = CURLE_OK;
+  CURLMcode mc;
 
   global_init(CURL_GLOBAL_ALL);
 
@@ -41,12 +43,11 @@ static CURLcode test_lib3105(const char *URL)
 
   multi_add_handle(multi, curl);
 
-  mresult = curl_multi_remove_handle(multi, curl);
-  if(!mresult)
-    mresult = curl_multi_remove_handle(multi, curl);
+  mc = curl_multi_remove_handle(multi, curl);
+  mc += curl_multi_remove_handle(multi, curl);
 
-  if(mresult) {
-    curl_mfprintf(stderr, "%d was unexpected\n", mresult);
+  if(mc) {
+    curl_mfprintf(stderr, "%d was unexpected\n", mc);
     i = CURLE_FAILED_INIT;
   }
 
@@ -55,8 +56,8 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  if(result)
-    i = result;
+  if(res)
+    i = res;
 
   return i; /* return the final return code */
 }

@@ -29,7 +29,7 @@
 
 #include <curl/curl.h>
 
-static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
+static size_t write_cb(void *ptr,  size_t  size,  size_t  nmemb,  void *stream)
 {
   (void)stream;
   (void)ptr;
@@ -39,11 +39,11 @@ static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
 int main(void)
 {
   CURL *curl;
-  CURLcode result;
+  CURLcode res;
 
-  result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -57,14 +57,14 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
     curl_easy_setopt(curl, CURLOPT_CERTINFO, 1L);
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       struct curl_certinfo *certinfo;
 
-      result = curl_easy_getinfo(curl, CURLINFO_CERTINFO, &certinfo);
+      res = curl_easy_getinfo(curl, CURLINFO_CERTINFO, &certinfo);
 
-      if(!result && certinfo) {
+      if(!res && certinfo) {
         int i;
 
         printf("%d certs!\n", certinfo->num_of_certs);
@@ -74,8 +74,10 @@ int main(void)
 
           for(slist = certinfo->certinfo[i]; slist; slist = slist->next)
             printf("%s\n", slist->data);
+
         }
       }
+
     }
 
     curl_easy_cleanup(curl);
@@ -83,5 +85,5 @@ int main(void)
 
   curl_global_cleanup();
 
-  return (int)result;
+  return (int)res;
 }

@@ -26,19 +26,18 @@
  * </DESC>
  */
 #include <stdio.h>
-
 #include <curl/curl.h>
 
 int main(void)
 {
   CURL *curl;
-  CURLcode result;
+  CURLcode res;
   char *location;
   long response_code;
 
-  result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -46,22 +45,23 @@ int main(void)
 
     /* example.com is redirected, figure out the redirection! */
 
-    /* Perform the request, result gets the return code */
-    result = curl_easy_perform(curl);
+    /* Perform the request, res gets the return code */
+    res = curl_easy_perform(curl);
     /* Check for errors */
-    if(result != CURLE_OK)
+    if(res != CURLE_OK)
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(result));
+              curl_easy_strerror(res));
     else {
-      result = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
-      if((result == CURLE_OK) && ((response_code / 100) != 3)) {
+      res = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+      if((res == CURLE_OK) &&
+         ((response_code / 100) != 3)) {
         /* a redirect implies a 3xx response code */
         fprintf(stderr, "Not a redirect.\n");
       }
       else {
-        result = curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &location);
+        res = curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &location);
 
-        if((result == CURLE_OK) && location) {
+        if((res == CURLE_OK) && location) {
           /* This is the new absolute URL that you could redirect to, even if
            * the Location: response header may have been a relative URL. */
           printf("Redirected to: %s\n", location);
@@ -73,5 +73,5 @@ int main(void)
     curl_easy_cleanup(curl);
   }
   curl_global_cleanup();
-  return (int)result;
+  return (int)res;
 }

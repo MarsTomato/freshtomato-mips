@@ -7,7 +7,6 @@ Help: SOCKS4a proxy on given host + port
 Added: 7.18.0
 Category: proxy
 Multi: single
-Mutexed: proxy socks4 socks5 socks5-hostname
 See-also:
   - socks4
   - socks5
@@ -21,9 +20,8 @@ Example:
 Use the specified SOCKS4a proxy. If the port number is not specified, it is
 assumed at port 1080. This asks the proxy to resolve the hostname.
 
-To specify the proxy on a Unix domain socket, use localhost for host and
-append the absolute path to the domain socket. For example:
-`socks4a://localhost/path/to/socket.sock` (the scheme may be omitted).
+To specify proxy on a Unix domain socket, use localhost for host, e.g.
+`socks4a://localhost/path/to/socket.sock`
 
 This option overrides any previous use of --proxy, as they are mutually
 exclusive.

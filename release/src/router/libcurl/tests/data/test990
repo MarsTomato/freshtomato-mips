@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -8,6 +7,7 @@ HTTP GET
 </keywords>
 </info>
 
+#
 # Server-side
 <reply>
 <data crlf="headers">
@@ -26,6 +26,7 @@ Funny-head: yesyes
 </data>
 </reply>
 
+#
 # Client-side
 <client>
 <server>
@@ -39,6 +40,7 @@ http://%HOSTIP:%HTTPPORT/%TESTNUMBER -w '%output{%LOGDIR/output}%{http_code}\n'
 </command>
 </client>
 
+#
 # Verify data after the test has been "shot"
 <verify>
 <protocol crlf="headers">

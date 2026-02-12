@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1558(const char *URL)
 {
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURL *curl = NULL;
   long protocol = 0;
 
@@ -33,17 +35,17 @@ static CURLcode test_lib1558(const char *URL)
   easy_init(curl);
 
   easy_setopt(curl, CURLOPT_URL, URL);
-  result = curl_easy_perform(curl);
-  if(result) {
+  res = curl_easy_perform(curl);
+  if(res) {
     curl_mfprintf(stderr, "curl_easy_perform() returned %d (%s)\n",
-                  result, curl_easy_strerror(result));
+                  res, curl_easy_strerror(res));
     goto test_cleanup;
   }
 
-  result = curl_easy_getinfo(curl, CURLINFO_PROTOCOL, &protocol);
-  if(result) {
+  res = curl_easy_getinfo(curl, CURLINFO_PROTOCOL, &protocol);
+  if(res) {
     curl_mfprintf(stderr, "curl_easy_getinfo() returned %d (%s)\n",
-                  result, curl_easy_strerror(result));
+                  res, curl_easy_strerror(res));
     goto test_cleanup;
   }
 
@@ -59,5 +61,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result; /* return the final return code */
+  return res; /* return the final return code */
 }

@@ -23,13 +23,18 @@
 #
 """Module for extracting test data from the test data folder and other utils."""
 
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import logging
 import os
 import re
 
 log = logging.getLogger(__name__)
 
+
 REPLY_DATA = re.compile("<reply>[ \t\n\r]*<data[^<]*>(.*?)</data>", re.MULTILINE | re.DOTALL)
+
 
 class ClosingFileHandler(logging.StreamHandler):
     def __init__(self, filename):
@@ -64,23 +69,24 @@ class TestData(object):
         self.data_folder = data_folder
 
     def get_test_data(self, test_number):
-        # Create the test filename
+        # Create the test file name
         filename = os.path.join(self.data_folder,
                                 "test{0}".format(test_number))
 
         log.debug("Parsing file %s", filename)
 
-        with open(filename, "r", encoding='us-ascii') as f:
-            contents = f.read()
+        with open(filename, "rb") as f:
+            contents = f.read().decode("utf-8")
 
         m = REPLY_DATA.search(contents)
         if not m:
-            raise Exception("Could not find a <reply><data> section")
+            raise Exception("Couldn't find a <reply><data> section")
 
-        # Left-strip the data so we do not get a newline before our data.
+        # Left-strip the data so we don't get a newline before our data.
         return m.group(1).lstrip()
+
 
 if __name__ == '__main__':
     td = TestData("./data")
-    data = td.get_test_data(1451)
+    data = td.get_test_data(1)
     print(data)

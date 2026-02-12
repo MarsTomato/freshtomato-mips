@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 /*
  * FTP get with NOBODY but no HEADER
  */
@@ -30,7 +32,7 @@
 static CURLcode test_lib542(const char *URL)
 {
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
@@ -57,13 +59,13 @@ static CURLcode test_lib542(const char *URL)
   /* specify target */
   test_setopt(curl, CURLOPT_URL, URL);
 
-  /* Now run off and do what you have been told! */
-  result = curl_easy_perform(curl);
+  /* Now run off and do what you've been told! */
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

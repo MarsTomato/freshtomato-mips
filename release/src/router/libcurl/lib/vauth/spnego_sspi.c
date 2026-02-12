@@ -23,14 +23,24 @@
  * RFC4178 Simple and Protected GSS-API Negotiation Mechanism
  *
  ***************************************************************************/
+
 #include "../curl_setup.h"
 
 #if defined(USE_WINDOWS_SSPI) && defined(USE_SPNEGO)
 
+#include <curl/curl.h>
+
 #include "vauth.h"
+#include "../urldata.h"
 #include "../curlx/base64.h"
-#include "../curl_trc.h"
+#include "../curlx/warnless.h"
+#include "../curlx/multibyte.h"
+#include "../sendf.h"
 #include "../strerror.h"
+
+/* The last #include files should be: */
+#include "../curl_memory.h"
+#include "../memdebug.h"
 
 /*
  * Curl_auth_is_spnego_supported()
@@ -55,6 +65,7 @@ bool Curl_auth_is_spnego_supported(void)
   if(status == SEC_E_OK) {
     Curl_pSecFn->FreeContextBuffer(SecurityPackage);
   }
+
 
   return status == SEC_E_OK;
 }
@@ -130,10 +141,10 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
     Curl_pSecFn->FreeContextBuffer(SecurityPackage);
 
     /* Allocate our output buffer */
-    nego->output_token = curlx_malloc(nego->token_max);
+    nego->output_token = malloc(nego->token_max);
     if(!nego->output_token)
       return CURLE_OUT_OF_MEMORY;
-  }
+ }
 
   if(!nego->credentials) {
     /* Do we have credentials to use or are we using single sign-on? */
@@ -151,7 +162,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
       nego->p_identity = NULL;
 
     /* Allocate our credentials handle */
-    nego->credentials = curlx_calloc(1, sizeof(CredHandle));
+    nego->credentials = calloc(1, sizeof(CredHandle));
     if(!nego->credentials)
       return CURLE_OUT_OF_MEMORY;
 
@@ -165,7 +176,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
       return CURLE_AUTH_ERROR;
 
     /* Allocate our new context handle */
-    nego->context = curlx_calloc(1, sizeof(CtxtHandle));
+    nego->context = calloc(1, sizeof(CtxtHandle));
     if(!nego->context)
       return CURLE_OUT_OF_MEMORY;
   }
@@ -194,12 +205,12 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
 
 #ifdef SECPKG_ATTR_ENDPOINT_BINDINGS
     /* ssl context comes from Schannel.
-     * When extended protection is used in IIS server,
-     * we have to pass a second SecBuffer to the SecBufferDesc
-     * otherwise IIS will not pass the authentication (401 response).
-     * Minimum supported version is Windows 7.
-     * https://learn.microsoft.com/security-updates/SecurityAdvisories/2009/973811
-     */
+    * When extended protection is used in IIS server,
+    * we have to pass a second SecBuffer to the SecBufferDesc
+    * otherwise IIS will not pass the authentication (401 response).
+    * Minimum supported version is Windows 7.
+    * https://learn.microsoft.com/security-updates/SecurityAdvisories/2009/973811
+    */
     if(nego->sslContext) {
       SEC_CHANNEL_BINDINGS channelBindings;
       SecPkgContext_Bindings pkgBindings;
@@ -238,7 +249,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
                                            &resp_desc, &attrs, NULL);
 
   /* Free the decoded challenge as it is not required anymore */
-  curlx_free(chlg);
+  free(chlg);
 
   if(GSS_ERROR(nego->status)) {
     char buffer[STRERROR_LEN];
@@ -291,11 +302,11 @@ CURLcode Curl_auth_create_spnego_message(struct negotiatedata *nego,
                                          char **outptr, size_t *outlen)
 {
   /* Base64 encode the already generated response */
-  CURLcode result = curlx_base64_encode(nego->output_token,
+  CURLcode result = curlx_base64_encode((const char *)nego->output_token,
                                         nego->output_token_length, outptr,
                                         outlen);
   if(!result && (!*outptr || !*outlen)) {
-    curlx_free(*outptr);
+    free(*outptr);
     result = CURLE_REMOTE_ACCESS_DENIED;
   }
 
@@ -317,14 +328,14 @@ void Curl_auth_cleanup_spnego(struct negotiatedata *nego)
   /* Free our security context */
   if(nego->context) {
     Curl_pSecFn->DeleteSecurityContext(nego->context);
-    curlx_free(nego->context);
+    free(nego->context);
     nego->context = NULL;
   }
 
   /* Free our credentials handle */
   if(nego->credentials) {
     Curl_pSecFn->FreeCredentialsHandle(nego->credentials);
-    curlx_free(nego->credentials);
+    free(nego->credentials);
     nego->credentials = NULL;
   }
 

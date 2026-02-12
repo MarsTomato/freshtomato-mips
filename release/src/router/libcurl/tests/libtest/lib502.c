@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 /*
  * Get a single URL without select().
  */
@@ -31,7 +33,7 @@ static CURLcode test_lib502(const char *URL)
 {
   CURL *curl = NULL;
   CURLM *multi = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   int running;
 
   start_test_timing();
@@ -83,5 +85,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

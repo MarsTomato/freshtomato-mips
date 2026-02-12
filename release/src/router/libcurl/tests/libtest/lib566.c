@@ -23,9 +23,11 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib566(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
 
   double content_length = 3;
@@ -45,12 +47,12 @@ static CURLcode test_lib566(const char *URL)
   test_setopt(curl, CURLOPT_URL, URL);
   test_setopt(curl, CURLOPT_HEADER, 1L);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
-  if(!result) {
+  if(!res) {
     FILE *moo;
-    result = curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD,
-                               &content_length);
+    res = curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD,
+                            &content_length);
 
     moo = curlx_fopen(libtest_arg2, "wb");
     if(moo) {
@@ -64,5 +66,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

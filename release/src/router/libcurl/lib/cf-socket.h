@@ -25,7 +25,8 @@
  ***************************************************************************/
 #include "curl_setup.h"
 
-#include "sockaddr.h" /* required for Curl_sockaddr_storage */
+#include "curlx/nonblock.h" /* for curlx_nonblock() */
+#include "sockaddr.h"
 
 struct Curl_addrinfo;
 struct Curl_cfilter;
@@ -51,12 +52,12 @@ struct Curl_sockaddr_ex {
     struct Curl_sockaddr_storage buf;
   } addr;
 };
-#define curl_sa_addr    addr.sa
+#define curl_sa_addr addr.sa
 #define curl_sa_addrbuf addr.buf
 
 /*
  * Parse interface option, and return the interface name and the host part.
- */
+*/
 CURLcode Curl_parse_interface(const char *input,
                               char **dev, char **iface, char **host);
 
@@ -70,7 +71,7 @@ CURLcode Curl_parse_interface(const char *input,
 CURLcode Curl_socket_open(struct Curl_easy *data,
                           const struct Curl_addrinfo *ai,
                           struct Curl_sockaddr_ex *addr,
-                          uint8_t transport,
+                          int transport,
                           curl_socket_t *sockfd);
 
 int Curl_socket_close(struct Curl_easy *data, struct connectdata *conn,
@@ -102,7 +103,7 @@ CURLcode Curl_cf_tcp_create(struct Curl_cfilter **pcf,
                             struct Curl_easy *data,
                             struct connectdata *conn,
                             const struct Curl_addrinfo *ai,
-                            uint8_t transport);
+                            int transport);
 
 /**
  * Creates a cfilter that opens a UDP socket to the given address
@@ -115,7 +116,7 @@ CURLcode Curl_cf_udp_create(struct Curl_cfilter **pcf,
                             struct Curl_easy *data,
                             struct connectdata *conn,
                             const struct Curl_addrinfo *ai,
-                            uint8_t transport);
+                            int transport);
 
 /**
  * Creates a cfilter that opens a UNIX socket to the given address
@@ -128,7 +129,7 @@ CURLcode Curl_cf_unix_create(struct Curl_cfilter **pcf,
                              struct Curl_easy *data,
                              struct connectdata *conn,
                              const struct Curl_addrinfo *ai,
-                             uint8_t transport);
+                             int transport);
 
 /**
  * Creates a cfilter that keeps a listening socket.

@@ -15,7 +15,7 @@ Added-in: 7.14.1
 
 # NAME
 
-CURLINFO_COOKIELIST - all known cookies
+CURLINFO_COOKIELIST - get all known cookies
 
 # SYNOPSIS
 
@@ -46,19 +46,19 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
     /* enable the cookie engine */
     curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
 
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       /* extract all known cookies */
       struct curl_slist *cookies = NULL;
-      result = curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
-      if(!result && cookies) {
+      res = curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
+      if(!res && cookies) {
         /* a linked list of cookies in cookie file format */
         struct curl_slist *each = cookies;
         while(each) {

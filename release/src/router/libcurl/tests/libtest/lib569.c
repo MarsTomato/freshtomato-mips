@@ -24,13 +24,14 @@
 #include "first.h"
 
 #include "testutil.h"
+#include "memdebug.h"
 
 /*
  * Test Session ID capture
  */
 static CURLcode test_lib569(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
   char *stream_uri = NULL;
   char *rtsp_session_id;
@@ -39,7 +40,7 @@ static CURLcode test_lib569(const char *URL)
 
   FILE *idfile = curlx_fopen(libtest_arg2, "wb");
   if(!idfile) {
-    curl_mfprintf(stderr, "Could not open the Session ID File\n");
+    curl_mfprintf(stderr, "couldn't open the Session ID File\n");
     return TEST_ERR_MAJOR_BAD;
   }
 
@@ -64,11 +65,11 @@ static CURLcode test_lib569(const char *URL)
   test_setopt(curl, CURLOPT_URL, URL);
 
   test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_SETUP);
-  result = curl_easy_perform(curl);
-  if(result != CURLE_BAD_FUNCTION_ARGUMENT) {
+  res = curl_easy_perform(curl);
+  if(res != CURLE_BAD_FUNCTION_ARGUMENT) {
     curl_mfprintf(stderr, "This should have failed. "
                   "Cannot setup without a Transport: header");
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
@@ -76,7 +77,7 @@ static CURLcode test_lib569(const char *URL)
   for(i = 0; i < 3; i++) {
     stream_uri = tutil_suburl(URL, request++);
     if(!stream_uri) {
-      result = TEST_ERR_MAJOR_BAD;
+      res = TEST_ERR_MAJOR_BAD;
       goto test_cleanup;
     }
     test_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
@@ -86,8 +87,8 @@ static CURLcode test_lib569(const char *URL)
     test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_SETUP);
     test_setopt(curl, CURLOPT_RTSP_TRANSPORT,
                 "Fake/NotReal/JustATest;foo=baz");
-    result = curl_easy_perform(curl);
-    if(result)
+    res = curl_easy_perform(curl);
+    if(res)
       goto test_cleanup;
 
     curl_easy_getinfo(curl, CURLINFO_RTSP_SESSION_ID, &rtsp_session_id);
@@ -96,7 +97,7 @@ static CURLcode test_lib569(const char *URL)
 
     stream_uri = tutil_suburl(URL, request++);
     if(!stream_uri) {
-      result = TEST_ERR_MAJOR_BAD;
+      res = TEST_ERR_MAJOR_BAD;
       goto test_cleanup;
     }
     test_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
@@ -104,8 +105,8 @@ static CURLcode test_lib569(const char *URL)
     stream_uri = NULL;
 
     test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_TEARDOWN);
-    result = curl_easy_perform(curl);
-    if(result)
+    res = curl_easy_perform(curl);
+    if(res)
       goto test_cleanup;
 
     /* Clear for the next go-round */
@@ -121,5 +122,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

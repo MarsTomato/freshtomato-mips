@@ -53,7 +53,7 @@ int main(void)
 {
   CURLSHcode sh;
   CURLSH *share = curl_share_init();
-  CURLcode result;
+  CURLcode rc;
   CURL *curl;
 
   sh = curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
@@ -68,7 +68,7 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_SHARE, share);
 
     /* read shmac and sdata from storage */
-    result = curl_easy_ssls_import(curl, NULL, shmac, hlen, sdata, slen);
+    rc = curl_easy_ssls_import(curl, NULL, shmac, hlen, sdata, slen);
 
     /* always cleanup */
     curl_easy_cleanup(curl);

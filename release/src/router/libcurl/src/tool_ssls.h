@@ -24,6 +24,8 @@
  *
  ***************************************************************************/
 #include "tool_setup.h"
+#include "tool_operate.h"
+
 
 CURLcode tool_ssls_load(struct OperationConfig *config,
                         CURLSH *share, const char *filename);

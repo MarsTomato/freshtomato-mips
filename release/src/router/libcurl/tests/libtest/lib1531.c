@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static CURLcode test_lib1531(const char *URL)
 {
   static char const testData[] = ".abc\0xyz";
@@ -33,7 +35,7 @@ static CURLcode test_lib1531(const char *URL)
   int still_running; /* keep number of running handles */
   CURLMsg *msg; /* for picking up messages with the transfer status */
   int msgs_left; /* how many messages are left */
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   start_test_timing();
 
@@ -48,7 +50,7 @@ static CURLcode test_lib1531(const char *URL)
   /* add the individual transfer */
   curl_multi_add_handle(multi, curl);
 
-  /* set the options (I left out a few, you get the point anyway) */
+  /* set the options (I left out a few, you'll get the point anyway) */
   curl_easy_setopt(curl, CURLOPT_URL, URL);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, testDataSize);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, testData);
@@ -61,7 +63,7 @@ static CURLcode test_lib1531(const char *URL)
   do {
     struct timeval timeout;
     int rc; /* select() return code */
-    CURLMcode mresult; /* curl_multi_fdset() return code */
+    CURLMcode mc; /* curl_multi_fdset() return code */
 
     fd_set fdread;
     fd_set fdwrite;
@@ -88,10 +90,10 @@ static CURLcode test_lib1531(const char *URL)
     }
 
     /* get file descriptors from the transfers */
-    mresult = curl_multi_fdset(multi, &fdread, &fdwrite, &fdexcep, &maxfd);
+    mc = curl_multi_fdset(multi, &fdread, &fdwrite, &fdexcep, &maxfd);
 
-    if(mresult != CURLM_OK) {
-      curl_mfprintf(stderr, "curl_multi_fdset() failed, code %d.\n", mresult);
+    if(mc != CURLM_OK) {
+      curl_mfprintf(stderr, "curl_multi_fdset() failed, code %d.\n", mc);
       break;
     }
 
@@ -142,5 +144,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

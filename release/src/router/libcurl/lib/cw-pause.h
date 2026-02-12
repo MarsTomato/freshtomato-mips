@@ -23,9 +23,10 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
-struct Curl_easy;
+#include "sendf.h"
 
 /**
  * The client writer type "cw-pause" that buffers writes for
@@ -34,5 +35,6 @@ struct Curl_easy;
 extern const struct Curl_cwtype Curl_cwt_pause;
 
 CURLcode Curl_cw_pause_flush(struct Curl_easy *data);
+
 
 #endif /* HEADER_CURL_CW_PAUSE_H */

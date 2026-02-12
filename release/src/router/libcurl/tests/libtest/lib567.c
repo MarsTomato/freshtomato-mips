@@ -23,12 +23,14 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 /*
  * Test a simple OPTIONS request with a custom header
  */
 static CURLcode test_lib567(const char *URL)
 {
-  CURLcode result;
+  CURLcode res;
   CURL *curl;
   struct curl_slist *custom_headers = NULL;
 
@@ -57,7 +59,7 @@ static CURLcode test_lib567(const char *URL)
   custom_headers = curl_slist_append(custom_headers, "Test-Number: 567");
   test_setopt(curl, CURLOPT_RTSPHEADER, custom_headers);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -66,5 +68,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

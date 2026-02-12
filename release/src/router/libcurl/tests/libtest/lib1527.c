@@ -29,11 +29,13 @@
 
 #include "first.h"
 
+#include "memdebug.h"
+
 static const char t1527_testdata[] = "Hello Cloud!\n";
 
 static size_t t1527_read_cb(char *ptr, size_t size, size_t nmemb, void *stream)
 {
-  size_t amount = nmemb * size; /* Total bytes curl wants */
+  size_t  amount = nmemb * size; /* Total bytes curl wants */
   if(amount < strlen(t1527_testdata)) {
     return strlen(t1527_testdata);
   }
@@ -45,7 +47,7 @@ static size_t t1527_read_cb(char *ptr, size_t size, size_t nmemb, void *stream)
 static CURLcode test_lib1527(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_FAILED_INIT;
+  CURLcode res = CURLE_FAILED_INIT;
   /* http header list */
   struct curl_slist *hhl = NULL, *tmp = NULL;
 
@@ -85,7 +87,7 @@ static CURLcode test_lib1527(const char *URL)
   test_setopt(curl, CURLOPT_INFILESIZE, (long)strlen(t1527_testdata));
   test_setopt(curl, CURLOPT_HEADEROPT, CURLHEADER_UNIFIED);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -95,5 +97,5 @@ test_cleanup:
 
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

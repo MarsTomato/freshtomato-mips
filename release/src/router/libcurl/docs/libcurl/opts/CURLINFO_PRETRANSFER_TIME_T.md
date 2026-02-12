@@ -16,7 +16,7 @@ Added-in: 7.61.0
 
 # NAME
 
-CURLINFO_PRETRANSFER_TIME_T - time to transfer start
+CURLINFO_PRETRANSFER_TIME_T - get the time until the file transfer start
 
 # SYNOPSIS
 
@@ -49,14 +49,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_off_t pretransfer;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
-    result = curl_easy_perform(curl);
-    if(CURLE_OK == result) {
-      result = curl_easy_getinfo(curl, CURLINFO_PRETRANSFER_TIME_T,
-                                 &pretransfer);
-      if(CURLE_OK == result) {
+    res = curl_easy_perform(curl);
+    if(CURLE_OK == res) {
+      res = curl_easy_getinfo(curl, CURLINFO_PRETRANSFER_TIME_T, &pretransfer);
+      if(CURLE_OK == res) {
         printf("Time: %" CURL_FORMAT_CURL_OFF_T ".%06ld\n",
                pretransfer / 1000000,
                (long)(pretransfer % 1000000));

@@ -17,7 +17,7 @@ TLS-backend:
   - Schannel
   - wolfSSL
   - mbedTLS
-  - Rustls
+  - rustls
 Added-in: 7.52.0
 ---
 
@@ -75,13 +75,13 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     curl_easy_setopt(curl, CURLOPT_PROXY, "https://localhost");
     curl_easy_setopt(curl, CURLOPT_PROXY_SSL_CIPHER_LIST,
                      "ECDHE-ECDSA-CHACHA20-POLY1305:"
                      "ECDHE-RSA-CHACHA20-POLY1305");
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
 }

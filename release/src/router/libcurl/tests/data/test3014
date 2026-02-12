@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -30,7 +29,7 @@ http
 Check if %{num_headers} returns correct number of headers
 </name>
 <command>
-http://%HOSTIP:%HTTPPORT/%TESTNUMBER --write-out '%{num_headers}'
+http://%HOSTIP:%HTTPPORT/1439 --write-out '%{num_headers}'
 </command>
 </client>
 
@@ -47,7 +46,7 @@ testdata
 4
 </stdout>
 <protocol crlf="headers">
-GET /%TESTNUMBER HTTP/1.1
+GET /1439 HTTP/1.1
 Host: %HOSTIP:%HTTPPORT
 User-Agent: curl/%VERSION
 Accept: */*

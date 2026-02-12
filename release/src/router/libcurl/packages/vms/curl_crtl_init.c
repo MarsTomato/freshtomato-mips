@@ -33,7 +33,7 @@
  * will turn on some CRTL features that are not enabled by default.
  *
  * The CRTL features can also be turned on via logical names, but that
- * impacts all programs and some are not ready, willing, or able to handle
+ * impacts all programs and some aren't ready, willing, or able to handle
  * those settings.
  *
  * On VMS versions that are too old to use the feature setting API, this
@@ -78,29 +78,34 @@ struct itmlst_3 {
 #pragma member_alignment restore
 
 #ifdef __VAX
-#define ENABLE  "ENABLE"
+#define ENABLE "ENABLE"
 #define DISABLE "DISABLE"
 #else
 
-#define ENABLE  TRUE
+#define ENABLE TRUE
 #define DISABLE 0
-int decc$feature_get_index(const char *name);
-int decc$feature_set_value(int index, int mode, int value);
+int   decc$feature_get_index (const char *name);
+int   decc$feature_set_value (int index, int mode, int value);
 #endif
 
-int SYS$TRNLNM(const unsigned long *attr,
-               const struct dsc$descriptor_s *table_dsc,
-               struct dsc$descriptor_s *name_dsc,
-               const unsigned char *acmode,
-               const struct itmlst_3 *item_list);
-int SYS$CRELNM(const unsigned long *attr,
-               const struct dsc$descriptor_s *table_dsc,
-               const struct dsc$descriptor_s *name_dsc,
-               const unsigned char *acmode,
-               const struct itmlst_3 *item_list);
+int   SYS$TRNLNM(
+    const unsigned long *attr,
+    const struct dsc$descriptor_s *table_dsc,
+    struct dsc$descriptor_s *name_dsc,
+    const unsigned char *acmode,
+    const struct itmlst_3 *item_list);
+int   SYS$CRELNM(
+    const unsigned long *attr,
+    const struct dsc$descriptor_s *table_dsc,
+    const struct dsc$descriptor_s *name_dsc,
+    const unsigned char *acmode,
+    const struct itmlst_3 *item_list);
+
 
 /* Take all the fun out of simply looking up a logical name */
-static int sys_trnlnm(const char *logname, char *value, int value_len)
+static int sys_trnlnm(const char *logname,
+                      char *value,
+                      int value_len)
 {
   const $DESCRIPTOR(table_dsc, "LNM$FILE_DEV");
   const unsigned long attr = LNM$M_CASE_BLIND;
@@ -135,7 +140,8 @@ static int sys_trnlnm(const char *logname, char *value, int value_len)
 }
 
 /* How to simply create a logical name */
-static int sys_crelnm(const char *logname, const char *value)
+static int sys_crelnm(const char *logname,
+                      const char *value)
 {
   int ret_val;
   const char *proc_table = "LNM$PROCESS_TABLE";
@@ -143,12 +149,12 @@ static int sys_crelnm(const char *logname, const char *value)
   struct dsc$descriptor_s logname_dsc;
   struct itmlst_3 item_list[2];
 
-  proc_table_dsc.dsc$a_pointer = (char *)proc_table;
+  proc_table_dsc.dsc$a_pointer = (char *) proc_table;
   proc_table_dsc.dsc$w_length = strlen(proc_table);
   proc_table_dsc.dsc$b_dtype = DSC$K_DTYPE_T;
   proc_table_dsc.dsc$b_class = DSC$K_CLASS_S;
 
-  logname_dsc.dsc$a_pointer = (char *)logname;
+  logname_dsc.dsc$a_pointer = (char *) logname;
   logname_dsc.dsc$w_length = strlen(logname);
   logname_dsc.dsc$b_dtype = DSC$K_DTYPE_T;
   logname_dsc.dsc$b_class = DSC$K_CLASS_S;
@@ -166,7 +172,8 @@ static int sys_crelnm(const char *logname, const char *value)
   return ret_val;
 }
 
-/* Start of DECC RTL Feature handling */
+
+ /* Start of DECC RTL Feature handling */
 
 /*
 ** Sets default value for a feature
@@ -184,7 +191,7 @@ static void set_feature_default(const char *name, int value)
   index = decc$feature_get_index(name);
 
   if(index > 0)
-    decc$feature_set_value(index, 0, value);
+    decc$feature_set_value (index, 0, value);
 }
 #endif
 
@@ -195,7 +202,7 @@ static void set_features(void)
   int use_unix_settings = 1;
 
   status = sys_trnlnm("GNV$UNIX_SHELL",
-                      unix_shell_name, sizeof(unix_shell_name) - 1);
+                      unix_shell_name, sizeof(unix_shell_name) -1);
   if(!$VMS_STATUS_SUCCESS(status)) {
     use_unix_settings = 0;
   }
@@ -205,6 +212,7 @@ static void set_features(void)
 
   /* We always want the new parse style */
   set_feature_default("DECC$ARGV_PARSE_STYLE", ENABLE);
+
 
   /* Unless we are in POSIX compliant mode, we want the old POSIX root
    * enabled.
@@ -229,14 +237,14 @@ static void set_features(void)
   set_feature_default("DECC$EXEC_FILEATTR_INHERITANCE", 2);
 #endif
 
-  /* Do not display trailing dot after files without type */
+  /* Don't display trailing dot after files without type */
   set_feature_default("DECC$READDIR_DROPDOTNOTYPE", ENABLE);
 
   /* For standard output channels buffer output until terminator */
   /* Gets rid of output logs with single character lines in them. */
   set_feature_default("DECC$STDIO_CTX_EOL", ENABLE);
 
-  /* Fix mv aa.bb aa */
+  /* Fix mv aa.bb aa  */
   set_feature_default("DECC$RENAME_NO_INHERIT", ENABLE);
 
   if(use_unix_settings) {
@@ -255,6 +263,7 @@ static void set_features(void)
 
     set_feature_default("DECC$FILE_OWNER_UNIX", ENABLE);
     set_feature_default("DECC$POSIX_SEEK_STREAM_FILE", ENABLE);
+
   }
   else {
     set_feature_default("DECC$FILENAME_UNIX_REPORT", ENABLE);
@@ -274,11 +283,12 @@ static void set_features(void)
   /* Set strtol to proper behavior */
   set_feature_default("DECC$STRTOL_ERANGE", ENABLE);
 
-  /* Commented here to prevent future bugs: A program or user should */
+  /* Commented here to prevent future bugs:  A program or user should */
   /* never ever enable DECC$POSIX_STYLE_UID. */
   /* It will probably break all code that accesses UIDs */
-  /*  do_not_set_default("DECC$POSIX_STYLE_UID", TRUE); */
+  /*  do_not_set_default ("DECC$POSIX_STYLE_UID", TRUE); */
 }
+
 
 /* Some boilerplate to force this to be a proper LIB$INITIALIZE section */
 
@@ -297,7 +307,7 @@ static void set_features(void)
 #    endif
 #endif
 /* Set our contribution to the LIB$INITIALIZE array */
-void (* const iniarray[])(void) = { set_features };
+void (* const iniarray[])(void) = {set_features };
 #ifndef __VAX
 #    if __INITIAL_POINTER_SIZE
 #        pragma __pointer_size __restore
@@ -305,6 +315,7 @@ void (* const iniarray[])(void) = { set_features };
 #        pragma __required_pointer_size __restore
 #    endif
 #endif
+
 
 /*
 ** Force a reference to LIB$INITIALIZE to ensure it
@@ -314,7 +325,7 @@ int LIB$INITIALIZE(void);
 #ifdef __DECC
 #pragma extern_model strict_refdef
 #endif
-int lib_init_ref = (int)LIB$INITIALIZE;
+    int lib_init_ref = (int) LIB$INITIALIZE;
 #ifdef __DECC
 #pragma extern_model restore
 #pragma standard

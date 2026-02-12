@@ -1,4 +1,4 @@
-      * curl SMTP send source member as attachment
+      * Curl SMTP send source member as attachment
       *
      h DFTACTGRP(*NO) ACTGRP(*NEW)
      h OPTION(*NOSHOWCPY)

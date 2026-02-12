@@ -32,6 +32,8 @@
 #include <arpa/inet.h>
 #endif
 
+#include "memdebug.h"
+
 /* to prevent libcurl from closing our socket */
 static int closesocket_cb(void *clientp, curl_socket_t item)
 {
@@ -63,30 +65,30 @@ static int sockopt_cb(void *clientp,
 }
 
 #ifdef __AMIGA__
-#define my_inet_pton(x, y, z) inet_pton(x, (unsigned char *)y, z)
+#define my_inet_pton(x,y,z) inet_pton(x,(unsigned char *)y,z)
 #else
-#define my_inet_pton(x, y, z) inet_pton(x, y, z)
+#define my_inet_pton(x,y,z) inet_pton(x,y,z)
 #endif
+
 
 /* Expected args: URL IP PORT */
 static CURLcode test_lib1960(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = TEST_ERR_MAJOR_BAD;
+  CURLcode res = TEST_ERR_MAJOR_BAD;
   int status;
   curl_socket_t client_fd = CURL_SOCKET_BAD;
   struct sockaddr_in serv_addr;
-  curl_off_t port;
+  unsigned short port;
 
   if(!strcmp("check", URL))
     return CURLE_OK; /* no output makes it not skipped */
 
-  if(curlx_str_number(&libtest_arg3, &port, 0xffff))
-    return result;
+  port = (unsigned short)atoi(libtest_arg3);
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
-    return result;
+    return TEST_ERR_MAJOR_BAD;
   }
 
   /*
@@ -101,15 +103,14 @@ static CURLcode test_lib1960(const char *URL)
   }
 
   serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons((unsigned short)port);
+  serv_addr.sin_port = htons(port);
 
   if(my_inet_pton(AF_INET, libtest_arg2, &serv_addr.sin_addr) <= 0) {
     curl_mfprintf(stderr, "inet_pton failed\n");
     goto test_cleanup;
   }
 
-  status = connect(client_fd, (struct sockaddr *)&serv_addr,
-                   sizeof(serv_addr));
+  status = connect(client_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
   if(status < 0) {
     curl_mfprintf(stderr, "connection failed\n");
     goto test_cleanup;
@@ -132,7 +133,7 @@ static CURLcode test_lib1960(const char *URL)
   test_setopt(curl, CURLOPT_HEADER, 1L);
   test_setopt(curl, CURLOPT_URL, URL);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
   curl_easy_cleanup(curl);
@@ -140,7 +141,7 @@ test_cleanup:
     sclose(client_fd);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }
 #else
 static CURLcode test_lib1960(const char *URL)

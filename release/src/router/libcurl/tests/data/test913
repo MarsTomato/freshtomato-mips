@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -7,6 +6,7 @@ SIZE
 </keywords>
 </info>
 
+#
 # Server-side
 <reply>
 <servercmd>
@@ -14,6 +14,7 @@ CAPA "SIZE 32"
 </servercmd>
 </reply>
 
+#
 # Client-side
 <client>
 <server>
@@ -33,6 +34,7 @@ smtp://%HOSTIP:%SMTPPORT/%TESTNUMBER --mail-rcpt recipient@example.com --mail-fr
 </command>
 </client>
 
+#
 # Verify data after the test has been "shot"
 <verify>
 # 55 - CURLE_SEND_ERROR
@@ -41,7 +43,7 @@ smtp://%HOSTIP:%SMTPPORT/%TESTNUMBER --mail-rcpt recipient@example.com --mail-fr
 </errorcode>
 <protocol crlf="yes">
 EHLO %TESTNUMBER
-MAIL FROM:%LTsender@example.com%GT SIZE=38
+MAIL FROM:<sender@example.com> SIZE=38
 QUIT
 </protocol>
 </verify>

@@ -23,13 +23,15 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "curl_setup.h"
 
+#include "curl_setup.h"
 #include "hash.h"
 #include "curl_addrinfo.h"
-#include "curlx/timeval.h" /* for curltime, timediff_t */
+#include "curlx/timeval.h" /* for timediff_t */
 #include "asyn.h"
 #include "httpsrr.h"
+
+#include <setjmp.h>
 
 #ifdef USE_HTTPSRR
 # include <stdint.h>
@@ -114,6 +116,7 @@ bool Curl_ipv6works(struct Curl_easy *data);
 #define Curl_ipv6works(x) FALSE
 #endif
 
+
 /* unlink a dns entry, potentially shared with a cache */
 void Curl_resolv_unlink(struct Curl_easy *data,
                         struct Curl_dns_entry **pdns);
@@ -129,7 +132,7 @@ void Curl_dnscache_prune(struct Curl_easy *data);
 /* clear the DNS cache */
 void Curl_dnscache_clear(struct Curl_easy *data);
 
-/* IPv4 thread-safe resolve function used for synch and asynch builds */
+/* IPv4 threadsafe resolve function used for synch and asynch builds */
 struct Curl_addrinfo *Curl_ipv4_resolve_r(const char *hostname, int port);
 
 CURLcode Curl_once_resolved(struct Curl_easy *data,
@@ -172,9 +175,10 @@ Curl_dnscache_mk_entry(struct Curl_easy *data,
  * The returned data *MUST* be "released" with Curl_resolv_unlink() after
  * use, or we will leak memory!
  */
-struct Curl_dns_entry *Curl_dnscache_get(struct Curl_easy *data,
-                                         const char *hostname, int port,
-                                         int ip_version);
+struct Curl_dns_entry *
+Curl_dnscache_get(struct Curl_easy *data,
+                  const char *hostname,
+                  int port, int ip_version);
 
 /*
  * Curl_dnscache_addr() adds `entry` to the cache, increasing its
@@ -192,7 +196,7 @@ CURLcode Curl_loadhostpairs(struct Curl_easy *data);
 CURLcode Curl_resolv_check(struct Curl_easy *data,
                            struct Curl_dns_entry **dns);
 #else
-#define Curl_resolv_check(x, y) CURLE_NOT_BUILT_IN
+#define Curl_resolv_check(x,y) CURLE_NOT_BUILT_IN
 #endif
 CURLcode Curl_resolv_pollset(struct Curl_easy *data,
                              struct easy_pollset *ps);

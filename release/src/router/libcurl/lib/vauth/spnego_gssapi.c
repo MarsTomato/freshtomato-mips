@@ -23,14 +23,24 @@
  * RFC4178 Simple and Protected GSS-API Negotiation Mechanism
  *
  ***************************************************************************/
+
 #include "../curl_setup.h"
 
 #if defined(HAVE_GSSAPI) && defined(USE_SPNEGO)
 
+#include <curl/curl.h>
+
 #include "vauth.h"
+#include "../urldata.h"
 #include "../curlx/base64.h"
 #include "../curl_gssapi.h"
-#include "../curl_trc.h"
+#include "../curlx/warnless.h"
+#include "../curlx/multibyte.h"
+#include "../sendf.h"
+
+/* The last #include files should be: */
+#include "../curl_memory.h"
+#include "../memdebug.h"
 
 #if defined(__GNUC__) && defined(__APPLE__)
 #pragma GCC diagnostic push
@@ -86,7 +96,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
   gss_buffer_desc input_token = GSS_C_EMPTY_BUFFER;
   gss_buffer_desc output_token = GSS_C_EMPTY_BUFFER;
   gss_channel_bindings_t chan_bindings = GSS_C_NO_CHANNEL_BINDINGS;
-#ifdef GSS_C_CHANNEL_BOUND_FLAG
+#ifdef CURL_GSSAPI_HAS_CHANNEL_BINDING
   struct gss_channel_bindings_struct chan;
 #endif
 
@@ -121,12 +131,12 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
       Curl_gss_log_error(data, "gss_import_name() failed: ",
                          major_status, minor_status);
 
-      curlx_free(spn);
+      free(spn);
 
       return CURLE_AUTH_ERROR;
     }
 
-    curlx_free(spn);
+    free(spn);
   }
 
   if(chlg64 && *chlg64) {
@@ -149,7 +159,7 @@ CURLcode Curl_auth_decode_spnego_message(struct Curl_easy *data,
   }
 
   /* Set channel binding data if available */
-#ifdef GSS_C_CHANNEL_BOUND_FLAG
+#ifdef CURL_GSSAPI_HAS_CHANNEL_BINDING
   if(curlx_dyn_len(&nego->channel_binding_data)) {
     memset(&chan, 0, sizeof(struct gss_channel_bindings_struct));
     chan.application_data.length = curlx_dyn_len(&nego->channel_binding_data);

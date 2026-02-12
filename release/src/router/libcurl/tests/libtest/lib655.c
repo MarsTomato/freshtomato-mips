@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static const char *TEST_DATA_STRING = "Test data";
 static int cb_count = 0;
 
@@ -59,7 +61,7 @@ static int resolver_alloc_cb_pass(void *resolver_state, void *reserved,
 static CURLcode test_lib655(const char *URL)
 {
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
@@ -68,7 +70,7 @@ static CURLcode test_lib655(const char *URL)
   curl = curl_easy_init();
   if(!curl) {
     curl_mfprintf(stderr, "curl_easy_init() failed\n");
-    result = TEST_ERR_MAJOR_BAD;
+    res = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
@@ -79,13 +81,13 @@ static CURLcode test_lib655(const char *URL)
   test_setopt(curl, CURLOPT_RESOLVER_START_FUNCTION, resolver_alloc_cb_fail);
 
   /* this should fail */
-  result = curl_easy_perform(curl);
-  if(result != CURLE_ABORTED_BY_CALLBACK) {
+  res = curl_easy_perform(curl);
+  if(res != CURLE_COULDNT_RESOLVE_HOST) {
     curl_mfprintf(stderr, "curl_easy_perform should have returned "
-                  "CURLE_ABORTED_BY_CALLBACK but instead returned error %d\n",
-                  result);
-    if(result == CURLE_OK)
-      result = TEST_ERR_FAILURE;
+                  "CURLE_COULDNT_RESOLVE_HOST but instead returned error %d\n",
+                  res);
+    if(res == CURLE_OK)
+      res = TEST_ERR_FAILURE;
     goto test_cleanup;
   }
 
@@ -95,15 +97,15 @@ static CURLcode test_lib655(const char *URL)
   test_setopt(curl, CURLOPT_RESOLVER_START_FUNCTION, resolver_alloc_cb_pass);
 
   /* this should succeed */
-  result = curl_easy_perform(curl);
-  if(result) {
+  res = curl_easy_perform(curl);
+  if(res) {
     curl_mfprintf(stderr, "curl_easy_perform failed.\n");
     goto test_cleanup;
   }
 
   if(cb_count != 2) {
     curl_mfprintf(stderr, "Unexpected number of callbacks: %d\n", cb_count);
-    result = TEST_ERR_FAILURE;
+    res = TEST_ERR_FAILURE;
     goto test_cleanup;
   }
 
@@ -112,5 +114,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

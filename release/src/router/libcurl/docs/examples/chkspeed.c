@@ -34,11 +34,6 @@
  * dd if=/dev/urandom of=file_1M.bin bs=1M count=1
  *
  */
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS  /* for ctime() */
-#endif
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,7 +64,7 @@ static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *data)
 int main(int argc, char *argv[])
 {
   CURL *curl;
-  CURLcode result;
+  CURLcode res;
   int prtall = 0, prtsep = 0, prttime = 0;
   const char *url = URL_1M;
   char *appname = argv[0];
@@ -161,9 +156,9 @@ int main(int argc, char *argv[])
   }
 
   /* init libcurl */
-  result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   /* init the curl session */
   curl = curl_easy_init();
@@ -181,43 +176,43 @@ int main(int argc, char *argv[])
                      "libcurl-speedchecker/" CHKSPEED_VERSION);
 
     /* get it! */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(CURLE_OK == result) {
+    if(CURLE_OK == res) {
       curl_off_t val;
 
       /* check for bytes downloaded */
-      result = curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD_T, &val);
-      if((CURLE_OK == result) && (val > 0))
+      res = curl_easy_getinfo(curl, CURLINFO_SIZE_DOWNLOAD_T, &val);
+      if((CURLE_OK == res) && (val > 0))
         printf("Data downloaded: %" CURL_FORMAT_CURL_OFF_T " bytes.\n", val);
 
       /* check for total download time */
-      result = curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME_T, &val);
-      if((CURLE_OK == result) && (val > 0))
+      res = curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME_T, &val);
+      if((CURLE_OK == res) && (val > 0))
         printf("Total download time: %" CURL_FORMAT_CURL_OFF_T
                ".%06" CURL_FORMAT_CURL_OFF_T " sec.\n",
                val / 1000000,
                val % 1000000);
 
       /* check for average download speed */
-      result = curl_easy_getinfo(curl, CURLINFO_SPEED_DOWNLOAD_T, &val);
-      if((CURLE_OK == result) && (val > 0))
+      res = curl_easy_getinfo(curl, CURLINFO_SPEED_DOWNLOAD_T, &val);
+      if((CURLE_OK == res) && (val > 0))
         printf("Average download speed: "
                "%" CURL_FORMAT_CURL_OFF_T " kbyte/sec.\n",
                val / 1024);
 
       if(prtall) {
         /* check for name resolution time */
-        result = curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME_T, &val);
-        if((CURLE_OK == result) && (val > 0))
+        res = curl_easy_getinfo(curl, CURLINFO_NAMELOOKUP_TIME_T, &val);
+        if((CURLE_OK == res) && (val > 0))
           printf("Name lookup time: %" CURL_FORMAT_CURL_OFF_T
                  ".%06" CURL_FORMAT_CURL_OFF_T " sec.\n",
                  val / 1000000,
                  val % 1000000);
 
         /* check for connect time */
-        result = curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME_T, &val);
-        if((CURLE_OK == result) && (val > 0))
+        res = curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME_T, &val);
+        if((CURLE_OK == res) && (val > 0))
           printf("Connect time: %" CURL_FORMAT_CURL_OFF_T
                  ".%06" CURL_FORMAT_CURL_OFF_T " sec.\n",
                  val / 1000000,
@@ -226,7 +221,7 @@ int main(int argc, char *argv[])
     }
     else {
       fprintf(stderr, "Error while fetching '%s' : %s\n",
-              url, curl_easy_strerror(result));
+              url, curl_easy_strerror(res));
     }
 
     /* cleanup curl stuff */

@@ -15,7 +15,7 @@ Added-in: 7.10.7
 
 # NAME
 
-CURLINFO_HTTP_CONNECTCODE - CONNECT response code
+CURLINFO_HTTP_CONNECTCODE - get the CONNECT response code
 
 # SYNOPSIS
 
@@ -40,16 +40,16 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
     /* typically CONNECT is used to do HTTPS over HTTP proxies */
     curl_easy_setopt(curl, CURLOPT_PROXY, "http://127.0.0.1");
-    result = curl_easy_perform(curl);
-    if(result == CURLE_OK) {
+    res = curl_easy_perform(curl);
+    if(res == CURLE_OK) {
       long code;
-      result = curl_easy_getinfo(curl, CURLINFO_HTTP_CONNECTCODE, &code);
-      if(!result && code)
+      res = curl_easy_getinfo(curl, CURLINFO_HTTP_CONNECTCODE, &code);
+      if(!res && code)
         printf("The CONNECT response code: %03ld\n", code);
     }
     curl_easy_cleanup(curl);

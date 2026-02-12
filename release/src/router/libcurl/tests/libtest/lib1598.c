@@ -29,6 +29,8 @@
 
 #include "first.h"
 
+#include "memdebug.h"
+
 /*
  * carefully not leak memory on OOM
  */
@@ -55,7 +57,7 @@ static CURLcode test_lib1598(const char *URL)
   static const char *post_data = "xxx=yyy&aaa=bbbbb";
 
   CURL *curl = NULL;
-  CURLcode result = CURLE_FAILED_INIT;
+  CURLcode res = CURLE_FAILED_INIT;
   /* http and proxy header list */
   struct curl_slist *hhl = NULL, *list;
 
@@ -90,7 +92,7 @@ static CURLcode test_lib1598(const char *URL)
   test_setopt(curl, CURLOPT_TRAILERDATA, NULL);
   test_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
@@ -100,5 +102,5 @@ test_cleanup:
 
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

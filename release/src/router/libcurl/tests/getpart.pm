@@ -33,7 +33,6 @@ BEGIN {
     our @EXPORT = qw(
         compareparts
         fulltest
-        checktest
         getpart
         getpartattr
         loadarray
@@ -47,13 +46,13 @@ BEGIN {
 use Memoize;
 
 my @xml;      # test data file contents
-my $xmlfile;  # test data filename
+my $xmlfile;  # test data file name
 
 my $warning=0;
 my $trace=0;
 
 # Normalize the part function arguments for proper caching. This includes the
-# filename in the arguments since that is an implied parameter that affects the
+# file name in the arguments since that is an implied parameter that affects the
 # return value.  Any error messages will only be displayed the first time, but
 # those are disabled by default anyway, so should never been seen outside
 # development.
@@ -76,10 +75,9 @@ sub testcaseattr {
     for(@xml) {
         if(($_ =~ /^ *\<testcase ([^>]*)/)) {
             my $attr=$1;
-            while($attr =~ s/ *([^=]*)= *(\"([^\"]*)\"|\'([^\']*)\')//) {
+            while($attr =~ s/ *([^=]*)= *(\"([^\"]*)\"|([^\> ]*))//) {
                 my ($var, $cont)=($1, $2);
                 $cont =~ s/^\"(.*)\"$/$1/;
-                $cont =~ s/^\'(.*)\'$/$1/;
                 $hash{$var}=$cont;
             }
         }
@@ -103,25 +101,24 @@ sub getpartattr {
         if(!$inside && ($_ =~ /^ *\<$section/)) {
             $inside++;
         }
-        if((1 == $inside) && (($_ =~ /^ *\<$part ([^>]*)/) ||
-                              !(defined($part)))
+        if((1 ==$inside) && ( ($_ =~ /^ *\<$part ([^>]*)/) ||
+                              !(defined($part)) )
              ) {
             $inside++;
             my $attr=$1;
 
-            while($attr =~ s/ *([^=]*)= *(\"([^\"]*)\"|\'([^\']*)\')//) {
+            while($attr =~ s/ *([^=]*)= *(\"([^\"]*)\"|([^\> ]*))//) {
                 my ($var, $cont)=($1, $2);
                 $cont =~ s/^\"(.*)\"$/$1/;
-                $cont =~ s/^\'(.*)\'$/$1/;
                 $hash{$var}=$cont;
             }
             last;
         }
-        # detect end of section when part was not found
-        elsif((1 == $inside) && ($_ =~ /^ *\<\/$section\>/)) {
+        # detect end of section when part wasn't found
+        elsif((1 ==$inside) && ($_ =~ /^ *\<\/$section\>/)) {
             last;
         }
-        elsif((2 == $inside) && ($_ =~ /^ *\<\/$part/)) {
+        elsif((2 ==$inside) && ($_ =~ /^ *\<\/$part/)) {
             $inside--;
         }
     }
@@ -219,7 +216,7 @@ sub partexists {
 # memoize('partexists', NORMALIZER => 'normalize_part');  # cache each result
 
 sub loadtest {
-    my ($file, $original)=@_;
+    my ($file)=@_;
 
     if(defined $xmlfile && $file eq $xmlfile) {
         # This test is already loaded
@@ -230,25 +227,16 @@ sub loadtest {
     $xmlfile = "";
 
     if(open(my $xmlh, "<", "$file")) {
-        if($original) {
-            binmode $xmlh, ':crlf';
-        }
-        else {
-            binmode $xmlh; # for crapage systems, use binary
-        }
+        binmode $xmlh; # for crapage systems, use binary
         while(<$xmlh>) {
             push @xml, $_;
         }
         close($xmlh);
-        if(!@xml) {
-            print STDERR "file $file is empty!\n";
-            return 1;
-        }
     }
     else {
         # failure
         if($warning) {
-            print STDERR "file $file would not open!\n";
+            print STDERR "file $file wouldn't open!\n";
         }
         return 1;
     }
@@ -256,54 +244,10 @@ sub loadtest {
     return 0;
 }
 
+
 # Return entire document as list of lines
 sub fulltest {
     return @xml;
-}
-
-sub eol_detect {
-    my ($content) = @_;
-
-    my $cr = () = $content =~ /\r/g;
-    my $lf = () = $content =~ /\n/g;
-
-    if($cr > 0 && $lf == 0) {
-        return "cr";
-    }
-    elsif($cr == 0 && $lf > 0) {
-        return "lf";
-    }
-    elsif($cr == 0 && $lf == 0) {
-        return "bin";
-    }
-    elsif($cr == $lf) {
-        return "crlf";
-    }
-
-    return "";
-}
-
-sub checktest {
-    my ($file) = @_;
-
-    if(open(my $xmlh, '<', $file)) {
-        binmode $xmlh; # we want the raw data to check original newlines
-        my $content = do { local $/; <$xmlh> };
-        close($xmlh);
-
-        if(index($content, '<?xml version="1.0" encoding="US-ASCII"?>') != 0) {
-            print STDERR "*** getpart.pm: $xmlfile is missing the XML prolog.\n";
-            return 1;
-        }
-
-        my $eol = eol_detect($content);
-        if($eol eq '') {
-            print STDERR "*** getpart.pm: $xmlfile has mixed newlines. Replace significant carriage return with %CR macro, or convert to consistent newlines.\n";
-            return 1;
-        }
-    }
-
-    return 0;
 }
 
 # write the test to the given file
@@ -320,7 +264,7 @@ sub savetest {
     else {
         # failure
         if($warning) {
-            print STDERR "file $file would not open!\n";
+            print STDERR "file $file wouldn't open!\n";
         }
         return 1;
     }
@@ -331,6 +275,7 @@ sub savetest {
 # Strip off all lines that match the specified pattern and return
 # the new array.
 #
+
 sub striparray {
     my ($pattern, $arrayref) = @_;
 
@@ -407,7 +352,7 @@ sub writearray {
     my ($filename, $arrayref)=@_;
 
     open(my $temp, ">", "$filename") || die "Failure writing file";
-    binmode($temp,":raw");  # Cygwin fix
+    binmode($temp,":raw");  # Cygwin fix by Kevin Roth
     for(@$arrayref) {
         print $temp $_;
     }
@@ -429,5 +374,6 @@ sub loadarray {
     }
     return @array;
 }
+
 
 1;

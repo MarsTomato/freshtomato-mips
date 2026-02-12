@@ -23,13 +23,16 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 struct t1541_transfer_status {
   CURL *curl;
   int hd_count;
   int bd_count;
+  CURLcode result;
 };
 
-#define KN(a) a, #a
+#define KN(a)   a, #a
 
 static void t1541_geterr(const char *name, CURLcode val, int lineno)
 {
@@ -51,9 +54,9 @@ static void check_time(CURL *curl, int key, const char *name,
                        const char *where)
 {
   curl_off_t tval;
-  CURLcode result = curl_easy_getinfo(curl, (CURLINFO)key, &tval);
-  if(result) {
-    t1541_geterr(name, result, __LINE__);
+  CURLcode res = curl_easy_getinfo(curl, (CURLINFO)key, &tval);
+  if(res) {
+    t1541_geterr(name, res, __LINE__);
   }
   else
     report_time(name, where, tval, tval > 0);
@@ -63,9 +66,9 @@ static void check_time0(CURL *curl, int key, const char *name,
                         const char *where)
 {
   curl_off_t tval;
-  CURLcode result = curl_easy_getinfo(curl, (CURLINFO)key, &tval);
-  if(result) {
-    t1541_geterr(name, result, __LINE__);
+  CURLcode res = curl_easy_getinfo(curl, (CURLINFO)key, &tval);
+  if(res) {
+    t1541_geterr(name, res, __LINE__);
   }
   else
     report_time(name, where, tval, !tval);
@@ -107,7 +110,7 @@ static size_t t1541_write_cb(char *ptr, size_t size, size_t nmemb, void *userp)
 static CURLcode test_lib1541(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   struct t1541_transfer_status st;
 
   start_test_timing();
@@ -127,7 +130,7 @@ static CURLcode test_lib1541(const char *URL)
 
   easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
   check_time(curl, KN(CURLINFO_CONNECT_TIME_T), "done");
   check_time(curl, KN(CURLINFO_PRETRANSFER_TIME_T), "done");
@@ -143,5 +146,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result; /* return the final return code */
+  return res; /* return the final return code */
 }

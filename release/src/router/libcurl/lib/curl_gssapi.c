@@ -21,18 +21,20 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
 #ifdef HAVE_GSSAPI
 
 #include "curl_gssapi.h"
-#include "curl_trc.h"
-#include "curlx/strcopy.h"
+#include "sendf.h"
 
 #ifdef DEBUGBUILD
 #if defined(HAVE_GSSGNU) || !defined(_WIN32)
-#define Curl_gss_alloc malloc  /* freed via the GSS API gss_release_buffer() */
-#define Curl_gss_free  free    /* pair of the above */
+/* To avoid memdebug macro replacement, wrap the name in parentheses to call
+   the original version. It is freed via the GSS API gss_release_buffer(). */
+#define Curl_gss_alloc (malloc)
+#define Curl_gss_free  (free)
 #define CURL_GSS_STUB
 /* For correctness this would be required for all platforms, not only Windows,
    but, as of v1.22.1, MIT Kerberos uses a special allocator only for Windows,
@@ -48,6 +50,10 @@
 #define CURL_GSS_STUB
 #endif
 #endif /* DEBUGBUILD */
+
+/* The last 2 #include files should be in this order */
+#include "curl_memory.h"
+#include "memdebug.h"
 
 #ifdef __GNUC__
 #define CURL_ALIGN8  __attribute__((aligned(8)))
@@ -154,7 +160,7 @@ stub_gss_init_sec_context(OM_uint32 *min,
     }
 
     /* Server response, either D (RA==) or C (Qw==) */
-    if(((char *)input_token->value)[0] == 'D') {
+    if(((char *) input_token->value)[0] == 'D') {
       /* Done */
       switch(ctx->sent) {
       case STUB_GSS_KRB5:
@@ -170,7 +176,7 @@ stub_gss_init_sec_context(OM_uint32 *min,
       }
     }
 
-    if(((char *)input_token->value)[0] != 'C') {
+    if(((char *) input_token->value)[0] != 'C') {
       /* We only support Done or Continue */
       *min = STUB_GSS_SERVER_ERR;
       return GSS_S_FAILURE;
@@ -202,7 +208,7 @@ stub_gss_init_sec_context(OM_uint32 *min,
       return GSS_S_FAILURE;
     }
 
-    ctx = curlx_calloc(1, sizeof(*ctx));
+    ctx = calloc(1, sizeof(*ctx));
     if(!ctx) {
       *min = STUB_GSS_NO_MEMORY;
       return GSS_S_FAILURE;
@@ -219,18 +225,18 @@ stub_gss_init_sec_context(OM_uint32 *min,
     else if(ctx->have_ntlm)
       ctx->sent = STUB_GSS_NTLM1;
     else {
-      curlx_free(ctx);
+      free(ctx);
       *min = STUB_GSS_NO_MECH;
       return GSS_S_FAILURE;
     }
 
-    curlx_strcopy(ctx->creds, sizeof(ctx->creds), creds, strlen(creds));
+    strcpy(ctx->creds, creds);
     ctx->flags = req_flags;
   }
 
   token = Curl_gss_alloc(length);
   if(!token) {
-    curlx_free(ctx);
+    free(ctx);
     *min = STUB_GSS_NO_MEMORY;
     return GSS_S_FAILURE;
   }
@@ -244,14 +250,14 @@ stub_gss_init_sec_context(OM_uint32 *min,
                                     &target_desc, &name_type);
     if(GSS_ERROR(major_status)) {
       Curl_gss_free(token);
-      curlx_free(ctx);
+      free(ctx);
       *min = STUB_GSS_NO_MEMORY;
       return GSS_S_FAILURE;
     }
 
     if(strlen(creds) + target_desc.length + 5 >= sizeof(ctx->creds)) {
       Curl_gss_free(token);
-      curlx_free(ctx);
+      free(ctx);
       *min = STUB_GSS_NO_MEMORY;
       return GSS_S_FAILURE;
     }
@@ -267,7 +273,7 @@ stub_gss_init_sec_context(OM_uint32 *min,
 
   if(used >= length) {
     Curl_gss_free(token);
-    curlx_free(ctx);
+    free(ctx);
     *min = STUB_GSS_NO_MEMORY;
     return GSS_S_FAILURE;
   }
@@ -302,7 +308,7 @@ stub_gss_delete_sec_context(OM_uint32 *min,
     return GSS_S_FAILURE;
   }
 
-  curlx_free(*context);
+  free(*context);
   *context = NULL;
   *min = 0;
 
@@ -386,8 +392,7 @@ OM_uint32 Curl_gss_delete_sec_context(OM_uint32 *min,
 
 #define GSS_LOG_BUFFER_LEN 1024
 static size_t display_gss_error(OM_uint32 status, int type,
-                                char *buf, size_t len)
-{
+                                char *buf, size_t len) {
   OM_uint32 maj_stat;
   OM_uint32 min_stat;
   OM_uint32 msg_ctx = 0;
@@ -428,7 +433,7 @@ static size_t display_gss_error(OM_uint32 status, int type,
 void Curl_gss_log_error(struct Curl_easy *data, const char *prefix,
                         OM_uint32 major, OM_uint32 minor)
 {
-  char buf[GSS_LOG_BUFFER_LEN] = "";
+  char buf[GSS_LOG_BUFFER_LEN];
   size_t len = 0;
 
   if(major != GSS_S_FAILURE)

@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 /*
  * Source code in here hugely as reported in bug report 651464 by
  * Christopher R. Palmer.
@@ -33,7 +35,7 @@
 static CURLcode test_lib504(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
   CURLM *multi = NULL;
   fd_set rd, wr, exc;
   int running;
@@ -67,12 +69,12 @@ static CURLcode test_lib504(const char *URL)
     multi_perform(multi, &running);
 
     while(running) {
-      CURLMcode mresult;
+      CURLMcode mres;
       int num;
-      mresult = curl_multi_wait(multi, NULL, 0, TEST_HANG_TIMEOUT, &num);
-      if(mresult != CURLM_OK) {
-        curl_mprintf("curl_multi_wait() returned %d\n", mresult);
-        result = TEST_ERR_MAJOR_BAD;
+      mres = curl_multi_wait(multi, NULL, 0, TEST_HANG_TIMEOUT, &num);
+      if(mres != CURLM_OK) {
+        curl_mprintf("curl_multi_wait() returned %d\n", mres);
+        res = TEST_ERR_MAJOR_BAD;
         goto test_cleanup;
       }
 
@@ -89,9 +91,9 @@ static CURLcode test_lib504(const char *URL)
       CURLMsg *msg = curl_multi_info_read(multi, &numleft);
       curl_mfprintf(stderr, "Expected: not running\n");
       if(msg && !numleft)
-        result = TEST_ERR_SUCCESS; /* this is where we should be */
+        res = TEST_ERR_SUCCESS; /* this is where we should be */
       else
-        result = TEST_ERR_FAILURE; /* not correct */
+        res = TEST_ERR_FAILURE; /* not correct */
       break; /* done */
     }
     curl_mfprintf(stderr, "running == %d\n", running);
@@ -120,5 +122,5 @@ test_cleanup:
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

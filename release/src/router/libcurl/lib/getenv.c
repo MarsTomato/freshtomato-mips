@@ -21,11 +21,17 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
+
 #include "curl_setup.h"
 
-char *curl_getenv(const char *variable)
+#include <curl/curl.h>
+#include "curl_memory.h"
+
+#include "memdebug.h"
+
+static char *GetEnv(const char *variable)
 {
-#if defined(CURL_WINDOWS_UWP) || \
+#if defined(CURL_WINDOWS_UWP) || defined(UNDER_CE) || \
   defined(__ORBIS__) || defined(__PROSPERO__) /* PlayStation 4 and 5 */
   (void)variable;
   return NULL;
@@ -39,9 +45,9 @@ char *curl_getenv(const char *variable)
   const DWORD max = 32768; /* max env var size from MSCRT source */
 
   for(;;) {
-    tmp = curlx_realloc(buf, rc);
+    tmp = realloc(buf, rc);
     if(!tmp) {
-      curlx_free(buf);
+      free(buf);
       return NULL;
     }
 
@@ -52,7 +58,7 @@ char *curl_getenv(const char *variable)
        Since getenv does not make that distinction we ignore it as well. */
     rc = GetEnvironmentVariableA(variable, buf, bufsize);
     if(!rc || rc == bufsize || rc > max) {
-      curlx_free(buf);
+      free(buf);
       return NULL;
     }
 
@@ -64,6 +70,11 @@ char *curl_getenv(const char *variable)
   }
 #else
   char *env = getenv(variable);
-  return (env && env[0]) ? curlx_strdup(env) : NULL;
+  return (env && env[0]) ? strdup(env) : NULL;
 #endif
+}
+
+char *curl_getenv(const char *v)
+{
+  return GetEnv(v);
 }

@@ -26,7 +26,6 @@
  * </DESC>
  */
 #include <stdio.h>
-
 #include <curl/curl.h>
 
 #if !defined(_WIN32) && !defined(MSDOS) && !defined(__AMIGA__)
@@ -39,9 +38,9 @@ int main(void)
   /* Windows/MS-DOS users need to find how to use if_nametoindex() */
   CURL *curl;
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
@@ -51,18 +50,18 @@ int main(void)
     my_scope_id = (long)if_nametoindex("eth0");
     curl_easy_setopt(curl, CURLOPT_ADDRESS_SCOPE, my_scope_id);
 
-    /* Perform the request, result gets the return code */
-    result = curl_easy_perform(curl);
+    /* Perform the request, res gets the return code */
+    res = curl_easy_perform(curl);
     /* Check for errors */
-    if(result != CURLE_OK)
+    if(res != CURLE_OK)
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
-              curl_easy_strerror(result));
+              curl_easy_strerror(res));
 
     /* always cleanup */
     curl_easy_cleanup(curl);
   }
   curl_global_cleanup();
-  return (int)result;
+  return (int)res;
 #else
   return 0;
 #endif

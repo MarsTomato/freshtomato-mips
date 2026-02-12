@@ -55,7 +55,7 @@ struct mqttd_configurable {
   int testnum;
 };
 
-#define REQUEST_DUMP   "server.input"
+#define REQUEST_DUMP  "server.input"
 #define CONFIG_VERSION 5
 
 static struct mqttd_configurable m_config;
@@ -73,7 +73,7 @@ static void mqttd_resetdefaults(void)
 
 static void mqttd_getconfig(void)
 {
-  FILE *fp = curlx_fopen(configfile, FOPEN_READTEXT);
+  FILE *fp = fopen(configfile, FOPEN_READTEXT);
   mqttd_resetdefaults();
   if(fp) {
     char buffer[512];
@@ -81,15 +81,10 @@ static void mqttd_getconfig(void)
     while(fgets(buffer, sizeof(buffer), fp)) {
       char key[32];
       char value[32];
-      const char *pval;
-      curl_off_t num;
       if(sscanf(buffer, "%31s %31s", key, value) == 2) {
         if(!strcmp(key, "version")) {
-          pval = value;
-          if(!curlx_str_number(&pval, &num, 0xff)) {
-            m_config.version = (unsigned char)num;
-            logmsg("version [%d] set", m_config.version);
-          }
+          m_config.version = byteval(value);
+          logmsg("version [%d] set", m_config.version);
         }
         else if(!strcmp(key, "PUBLISH-before-SUBACK")) {
           logmsg("PUBLISH-before-SUBACK set");
@@ -100,18 +95,12 @@ static void mqttd_getconfig(void)
           m_config.short_publish = TRUE;
         }
         else if(!strcmp(key, "error-CONNACK")) {
-          pval = value;
-          if(!curlx_str_number(&pval, &num, 0xff)) {
-            m_config.error_connack = (unsigned char)num;
-            logmsg("error-CONNACK = %d", m_config.error_connack);
-          }
+          m_config.error_connack = byteval(value);
+          logmsg("error-CONNACK = %d", m_config.error_connack);
         }
         else if(!strcmp(key, "Testnum")) {
-          pval = value;
-          if(!curlx_str_number(&pval, &num, INT_MAX)) {
-            m_config.testnum = (int)num;
-            logmsg("testnum = %d", m_config.testnum);
-          }
+          m_config.testnum = atoi(value);
+          logmsg("testnum = %d", m_config.testnum);
         }
         else if(!strcmp(key, "excessive-remaining")) {
           logmsg("excessive-remaining set");
@@ -119,7 +108,7 @@ static void mqttd_getconfig(void)
         }
       }
     }
-    curlx_fclose(fp);
+    fclose(fp);
   }
   else {
     logmsg("No config file '%s' to read", configfile);
@@ -152,10 +141,11 @@ static void logprotocol(mqttdir dir,
           prefix, (int)remlen, data);
 }
 
+
 /* return 0 on success */
 static int connack(FILE *dump, curl_socket_t fd)
 {
-  unsigned char packet[] = {
+  unsigned char packet[]={
     MQTT_MSG_CONNACK, 0x02,
     0x00, 0x00
   };
@@ -178,7 +168,7 @@ static int connack(FILE *dump, curl_socket_t fd)
 /* return 0 on success */
 static int suback(FILE *dump, curl_socket_t fd, unsigned short packetid)
 {
-  unsigned char packet[] = {
+  unsigned char packet[]={
     MQTT_MSG_SUBACK, 0x03,
     0, 0, /* filled in below */
     0x00
@@ -201,7 +191,7 @@ static int suback(FILE *dump, curl_socket_t fd, unsigned short packetid)
 /* return 0 on success */
 static int puback(FILE *dump, curl_socket_t fd, unsigned short packetid)
 {
-  unsigned char packet[] = {
+  unsigned char packet[]={
     MQTT_MSG_PUBACK, 0x00,
     0, 0 /* filled in below */
   };
@@ -224,7 +214,7 @@ static int puback(FILE *dump, curl_socket_t fd, unsigned short packetid)
 /* return 0 on success */
 static int disconnect(FILE *dump, curl_socket_t fd)
 {
-  unsigned char packet[] = {
+  unsigned char packet[]={
     MQTT_MSG_DISCONNECT, 0x00,
   };
   ssize_t rc = swrite(fd, (char *)packet, sizeof(packet));
@@ -282,6 +272,7 @@ static size_t encode_length(size_t packetlen,
   return bytes;
 }
 
+
 static size_t decode_length(unsigned char *buffer,
                             size_t buflen, size_t *lenbytes)
 {
@@ -301,6 +292,7 @@ static size_t decode_length(unsigned char *buffer,
 
   return len;
 }
+
 
 /* return 0 on success */
 static int publish(FILE *dump,
@@ -363,7 +355,7 @@ static int publish(FILE *dump,
   return 1;
 }
 
-#define MAX_TOPIC_LENGTH     65535
+#define MAX_TOPIC_LENGTH 65535
 #define MAX_CLIENT_ID_LENGTH 32
 
 static char topic[MAX_TOPIC_LENGTH + 1];
@@ -405,7 +397,7 @@ static int fixedheader(curl_socket_t fd,
 
 static curl_socket_t mqttit(curl_socket_t fd)
 {
-  size_t buff_size = 10 * 1024;
+  size_t buff_size = 10*1024;
   unsigned char *buffer = NULL;
   ssize_t rc;
   unsigned char byte;
@@ -427,7 +419,7 @@ static curl_socket_t mqttit(curl_socket_t fd)
     0x04              /* protocol level */
   };
   snprintf(dumpfile, sizeof(dumpfile), "%s/%s", logdir, REQUEST_DUMP);
-  dump = curlx_fopen(dumpfile, "ab");
+  dump = fopen(dumpfile, "ab");
   if(!dump)
     goto end;
 
@@ -479,7 +471,8 @@ static curl_socket_t mqttit(curl_socket_t fd)
     }
 
     if(byte == MQTT_MSG_CONNECT) {
-      logprotocol(FROM_CLIENT, "CONNECT", remaining_length, dump, buffer, rc);
+      logprotocol(FROM_CLIENT, "CONNECT", remaining_length,
+                  dump, buffer, rc);
 
       if(memcmp(protocol, buffer, sizeof(protocol))) {
         logmsg("Protocol preamble mismatch");
@@ -559,7 +552,7 @@ static curl_socket_t mqttit(curl_socket_t fd)
       memcpy(topic, &buffer[4], topic_len);
       topic[topic_len] = 0;
 
-      /* there is a QoS byte (two bits) after the topic */
+      /* there's a QoS byte (two bits) after the topic */
 
       logmsg("SUBSCRIBE to '%s' [%d]", topic, packet_id);
       stream = test2fopen(testno, logdir);
@@ -568,7 +561,7 @@ static curl_socket_t mqttit(curl_socket_t fd)
         error = errno;
         logmsg("fopen() failed with error (%d) %s",
                error, curlx_strerror(error, errbuf, sizeof(errbuf)));
-        logmsg("Could not open test file %ld", testno);
+        logmsg("Couldn't open test file %ld", testno);
         goto end;
       }
       error = getpart(&data, &datalen, "reply", "data", stream);
@@ -603,7 +596,8 @@ static curl_socket_t mqttit(curl_socket_t fd)
       size_t topiclen;
 
       logmsg("Incoming PUBLISH");
-      logprotocol(FROM_CLIENT, "PUBLISH", remaining_length, dump, buffer, rc);
+      logprotocol(FROM_CLIENT, "PUBLISH", remaining_length,
+                  dump, buffer, rc);
 
       topiclen = (size_t)(buffer[1 + bytes] << 8) | buffer[2 + bytes];
       logmsg("Got %zu bytes topic", topiclen);
@@ -631,9 +625,9 @@ end:
   if(buffer)
     free(buffer);
   if(dump)
-    curlx_fclose(dump);
+    fclose(dump);
   if(stream)
-    curlx_fclose(stream);
+    fclose(stream);
   return CURL_SOCKET_BAD;
 }
 
@@ -674,7 +668,7 @@ static bool mqttd_incoming(curl_socket_t listenfd)
     FD_ZERO(&fds_write);
     FD_ZERO(&fds_err);
 
-    /* there is always a socket to wait for */
+    /* there's always a socket to wait for */
 #ifdef __DJGPP__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warith-conversion"
@@ -740,8 +734,6 @@ static int test_mqttd(int argc, char *argv[])
   server_port = 1883; /* MQTT default port */
 
   while(argc > arg) {
-    const char *opt;
-    curl_off_t num;
     if(!strcmp("--version", argv[arg])) {
       printf("mqttd IPv4%s\n",
 #ifdef USE_IPV6
@@ -749,7 +741,7 @@ static int test_mqttd(int argc, char *argv[])
 #else
              ""
 #endif
-      );
+             );
       return 0;
     }
     else if(!strcmp("--pidfile", argv[arg])) {
@@ -795,12 +787,13 @@ static int test_mqttd(int argc, char *argv[])
     else if(!strcmp("--port", argv[arg])) {
       arg++;
       if(argc > arg) {
-        opt = argv[arg];
-        if(curlx_str_number(&opt, &num, 0xffff)) {
-          fprintf(stderr, "mqttd: invalid --port argument (%s)\n", argv[arg]);
+        int inum = atoi(argv[arg]);
+        if(inum && ((inum < 1025) || (inum > 65535))) {
+          fprintf(stderr, "mqttd: invalid --port argument (%s)\n",
+                  argv[arg]);
           return 0;
         }
-        server_port = (unsigned short)num;
+        server_port = (unsigned short)inum;
         arg++;
       }
     }
@@ -821,6 +814,11 @@ static int test_mqttd(int argc, char *argv[])
 
   snprintf(loglockfile, sizeof(loglockfile), "%s/%s/mqtt-%s.lock",
            logdir, SERVERLOGS_LOCKDIR, ipv_inuse);
+
+#ifdef _WIN32
+  if(win32_init())
+    return 2;
+#endif
 
   CURLX_SET_BINMODE(stdin);
   CURLX_SET_BINMODE(stdout);

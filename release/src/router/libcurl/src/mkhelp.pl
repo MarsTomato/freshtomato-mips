@@ -78,6 +78,7 @@ if($c)
 
     print <<HEAD
 #include <zlib.h>
+#include <memdebug.h> /* keep this as LAST include */
 static const unsigned char hugehelpgz[] = {
   /* This mumbo-jumbo is the huge help text compressed with gzip.
      Thanks to this operation, the size of this data shrank from $gzip
@@ -104,13 +105,13 @@ HEAD
 static voidpf zalloc_func(voidpf opaque, unsigned int items, unsigned int size)
 {
   (void)opaque;
-  /* not a typo, keep it curlx_calloc() */
-  return (voidpf)curlx_calloc(items, size);
+  /* not a typo, keep it calloc() */
+  return (voidpf) calloc(items, size);
 }
 static void zfree_func(voidpf opaque, voidpf ptr)
 {
   (void)opaque;
-  curlx_free(ptr);
+  free(ptr);
 }
 
 #define HEADERLEN 10
@@ -135,7 +136,7 @@ void hugehelp(void)
   if(inflateInit2(&z, -MAX_WBITS) != Z_OK)
     return;
 
-  buf = curlx_malloc(BUF_SIZE);
+  buf = malloc(BUF_SIZE);
   if(buf) {
     while(1) {
       z.avail_out = BUF_SIZE;
@@ -149,7 +150,7 @@ void hugehelp(void)
       else
         break;    /* error */
     }
-    curlx_free(buf);
+    free(buf);
   }
   inflateEnd(&z);
 }
@@ -175,7 +176,7 @@ void showhelp(const char *trigger, const char *arg, const char *endarg)
   if(inflateInit2(&z, -MAX_WBITS) != Z_OK)
     return;
 
-  buf = curlx_malloc(BUF_SIZE);
+  buf = malloc(BUF_SIZE);
   if(buf) {
     while(1) {
       z.avail_out = BUF_SIZE;
@@ -191,7 +192,7 @@ void showhelp(const char *trigger, const char *arg, const char *endarg)
       else
         break;    /* error */
     }
-    curlx_free(buf);
+    free(buf);
   }
   inflateEnd(&z);
 }

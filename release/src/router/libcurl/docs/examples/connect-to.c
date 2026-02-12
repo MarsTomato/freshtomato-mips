@@ -26,7 +26,6 @@
  * </DESC>
  */
 #include <stdio.h>
-
 #include <curl/curl.h>
 
 int main(void)
@@ -34,14 +33,14 @@ int main(void)
   struct curl_slist *host;
   CURL *curl;
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   /*
     Each single string should be written using the format
     HOST:PORT:CONNECT-TO-HOST:CONNECT-TO-PORT where HOST is the host of the
-    request, PORT is the port of the request, CONNECT-TO-HOST is the hostname
+    request, PORT is the port of the request, CONNECT-TO-HOST is the host name
     to connect to, and CONNECT-TO-PORT is the port to connect to.
    */
   /* instead of curl.se:443, it resolves and uses example.com:443 but in other
@@ -54,15 +53,15 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(curl, CURLOPT_URL, "https://curl.se/");
 
-    /* since this connects to the wrong host, checking the hostname in the
+    /* since this connects to the wrong host, checking the host name in the
        server certificate fails, so unless we disable the check libcurl
        returns CURLE_PEER_FAILED_VERIFICATION */
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 
-    /* Letting the wrong hostname in the certificate be okay, the transfer
+    /* Letting the wrong host name in the certificate be okay, the transfer
        goes through but (most likely) causes a 404 or similar because it sends
        an unknown name in the Host: header field */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
     /* always cleanup */
     curl_easy_cleanup(curl);
@@ -72,5 +71,5 @@ int main(void)
 
   curl_global_cleanup();
 
-  return (int)result;
+  return (int)res;
 }

@@ -23,6 +23,8 @@
  ***************************************************************************/
 #include "first.h"
 
+#include "memdebug.h"
+
 static curl_socket_t opensocket(void *clientp,
                                 curlsocktype purpose,
                                 struct curl_sockaddr *address)
@@ -37,7 +39,7 @@ static curl_socket_t opensocket(void *clientp,
 static CURLcode test_lib1530(const char *URL)
 {
   CURL *curl = NULL;
-  CURLcode result = CURLE_FAILED_INIT;
+  CURLcode res = CURLE_FAILED_INIT;
   (void)URL;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
@@ -56,12 +58,12 @@ static CURLcode test_lib1530(const char *URL)
   test_setopt(curl, CURLOPT_VERBOSE, 1L);
   test_setopt(curl, CURLOPT_OPENSOCKETFUNCTION, opensocket);
 
-  result = curl_easy_perform(curl);
+  res = curl_easy_perform(curl);
 
 test_cleanup:
 
   curl_easy_cleanup(curl);
   curl_global_cleanup();
 
-  return result;
+  return res;
 }

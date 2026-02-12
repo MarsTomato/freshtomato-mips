@@ -15,7 +15,7 @@ Added-in: 7.20.0
 
 # NAME
 
-CURLINFO_RTSP_SESSION_ID - RTSP session ID
+CURLINFO_RTSP_SESSION_ID - get RTSP session ID
 
 # SYNOPSIS
 
@@ -46,10 +46,10 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "rtsp://rtsp.example.com");
-    result = curl_easy_perform(curl);
-    if(result == CURLE_OK) {
+    res = curl_easy_perform(curl);
+    if(res == CURLE_OK) {
       char *id;
       curl_easy_getinfo(curl, CURLINFO_RTSP_SESSION_ID, &id);
     }

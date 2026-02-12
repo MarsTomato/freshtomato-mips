@@ -26,22 +26,20 @@
  * </DESC>
  */
 #include <stdio.h>
-
 #include <curl/curl.h>
 
 int main(void)
 {
   CURL *curl;
 
-  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
-    return (int)result;
+  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
+  if(res)
+    return (int)res;
 
   curl = curl_easy_init();
   if(curl) {
-    const char *urls[] = {
-      "https://example.com/",
-      "https://curl.se/",
+    const char *urls[] = { "https://example.com",
+      "https://curl.se",
       "https://www.example/",
       NULL /* end of list */
     };
@@ -56,12 +54,12 @@ int main(void)
     while(urls[i]) {
       curl_easy_setopt(curl, CURLOPT_URL, urls[i]);
 
-      /* Perform the request, result gets the return code */
-      result = curl_easy_perform(curl);
+      /* Perform the request, res gets the return code */
+      res = curl_easy_perform(curl);
       /* Check for errors */
-      if(result != CURLE_OK)
+      if(res != CURLE_OK)
         fprintf(stderr, "curl_easy_perform() failed: %s\n",
-                curl_easy_strerror(result));
+                curl_easy_strerror(res));
       i++;
     }
     /* always cleanup */

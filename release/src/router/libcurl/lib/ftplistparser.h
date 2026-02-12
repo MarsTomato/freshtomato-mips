@@ -65,13 +65,13 @@ struct WildcardData {
   unsigned char state; /* wildcard_states */
 };
 
-void Curl_wildcard_init(struct WildcardData *wc);
+CURLcode Curl_wildcard_init(struct WildcardData *wc);
 void Curl_wildcard_dtor(struct WildcardData **wcp);
 
 struct Curl_easy;
 
-#else /* CURL_DISABLE_FTP */
+#else
+/* FTP is disabled */
 #define Curl_wildcard_dtor(x)
-#endif /* !CURL_DISABLE_FTP */
-
+#endif /* CURL_DISABLE_FTP */
 #endif /* HEADER_CURL_FTPLISTPARSER_H */

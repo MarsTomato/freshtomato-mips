@@ -16,7 +16,7 @@ Added-in: 7.55.0
 
 # NAME
 
-CURLINFO_SIZE_UPLOAD_T - number of uploaded bytes
+CURLINFO_SIZE_UPLOAD_T - get the number of uploaded bytes
 
 # SYNOPSIS
 
@@ -41,16 +41,16 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
 
     /* Perform the request */
-    result = curl_easy_perform(curl);
+    res = curl_easy_perform(curl);
 
-    if(!result) {
+    if(!res) {
       curl_off_t ul;
-      result = curl_easy_getinfo(curl, CURLINFO_SIZE_UPLOAD_T, &ul);
-      if(!result) {
+      res = curl_easy_getinfo(curl, CURLINFO_SIZE_UPLOAD_T, &ul);
+      if(!res) {
         printf("Uploaded %" CURL_FORMAT_CURL_OFF_T " bytes\n", ul);
       }
     }

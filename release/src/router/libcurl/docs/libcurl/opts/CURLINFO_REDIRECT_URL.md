@@ -17,7 +17,7 @@ Added-in: 7.18.2
 
 # NAME
 
-CURLINFO_REDIRECT_URL - URL a redirect would go to
+CURLINFO_REDIRECT_URL - get the URL a redirect would go to
 
 # SYNOPSIS
 
@@ -47,10 +47,10 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
-    CURLcode result;
+    CURLcode res;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-    result = curl_easy_perform(curl);
-    if(result == CURLE_OK) {
+    res = curl_easy_perform(curl);
+    if(res == CURLE_OK) {
       char *url = NULL;
       curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &url);
       if(url)

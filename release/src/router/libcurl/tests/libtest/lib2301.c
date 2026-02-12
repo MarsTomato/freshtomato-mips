@@ -46,7 +46,9 @@ static size_t t2301_write_cb(char *b, size_t size, size_t nitems, void *p)
   unsigned char *buffer = (unsigned char *)b;
   size_t i;
   size_t sent;
-  unsigned char pong[] = { 0x8a, 0x0 };
+  unsigned char pong[] = {
+    0x8a, 0x0
+  };
   size_t incoming = nitems;
   curl_mfprintf(stderr, "Called CURLOPT_WRITEFUNCTION with %zu bytes: ",
                 nitems);
@@ -71,7 +73,7 @@ static CURLcode test_lib2301(const char *URL)
 {
 #ifndef CURL_DISABLE_WEBSOCKETS
   CURL *curl;
-  CURLcode result = CURLE_OK;
+  CURLcode res = CURLE_OK;
 
   global_init(CURL_GLOBAL_ALL);
 
@@ -85,17 +87,17 @@ static CURLcode test_lib2301(const char *URL)
     curl_easy_setopt(curl, CURLOPT_WS_OPTIONS, CURLWS_RAW_MODE);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, t2301_write_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, curl);
-    result = curl_easy_perform(curl);
-    curl_mfprintf(stderr, "curl_easy_perform() returned %d\n", result);
+    res = curl_easy_perform(curl);
+    curl_mfprintf(stderr, "curl_easy_perform() returned %d\n", res);
 #if 0
-    if(result == CURLE_OK)
+    if(res == CURLE_OK)
       t2301_websocket(curl);
 #endif
     /* always cleanup */
     curl_easy_cleanup(curl);
   }
   curl_global_cleanup();
-  return result;
+  return res;
 #else
   NO_SUPPORT_BUILT_IN
 #endif
