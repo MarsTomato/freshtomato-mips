@@ -1,11 +1,14 @@
 /*
-	Tomato GUI
-	Copyright (C) 2006-2010 Jonathan Zarate
-	http://www.polarcloud.com/tomato/
-
-	For use with Tomato Firmware only.
-	No part of this file may be used without permission.
-*/
+ * Tomato GUI
+ * Copyright (C) 2006-2010 Jonathan Zarate
+ * http://www.polarcloud.com/tomato/
+ *
+ * For use with Tomato Firmware only.
+ * No part of this file may be used without permission.
+ *
+ * Fixes/updates (C) 2018 - 2026 pedro
+ * https://freshtomato.org/
+ */
 
 // -----------------------------------------------------------------------------
 
@@ -15,6 +18,8 @@ var serviceLastUp = [];
 var countButton = 0;
 
 // -----------------------------------------------------------------------------
+
+var xoboui = null;
 
 Array.prototype.find = function(v) {
 	for (var i = 0; i < this.length; ++i)
@@ -2643,9 +2648,6 @@ function navi() {
 /* CIFS-BEGIN */
 			['CIFS Client',			'cifs.asp'],
 /* CIFS-END */
-/* SDHC-BEGIN */
-			['SDHC/MMC',			'sdhc.asp'],
-/* SDHC-END */
 			['Configuration',		'config.asp'],
 			['Debugging',			'debug.asp'],
 /* JFFS2-BEGIN */
@@ -2887,6 +2889,8 @@ function peekaboo(id, show) {
 		var name = e.name;
 		o.type = show ? 'text' : 'password';
 		o.value = e.value;
+		/* preserve placeholder when swapping input types */
+		try { o.placeholder = e.placeholder; } catch (ex) {}
 		o.size = e.size;
 		o.maxLength = e.maxLength;
 		o.autocomplete = e.autocomplete;
@@ -2962,22 +2966,20 @@ function toggleVisibility(where, whichone) {
 
 function spinOUI(x, which) {
 	E(which).style.display = (x ? 'inline-block' : 'none');
-	if (!x)
-		cmd = null;
+	if (!x) xoboui = null;
 }
 
 function searchOUI(n, i) {
-	if (cmd)
-		return;
+	if (xoboui) return;
 
 	spinOUI(1, 'gW_'+i);
 
-	cmd = new XmlHttp();
-	cmd.onCompleted = function(text, xml) {
+	xoboui = new XmlHttp();
+	xoboui.onCompleted = function(text, xml) {
 		eval(text);
 		displayOUI(i);
 	}
-	cmd.onError = function(x) {
+	xoboui.onError = function(x) {
 		cmdresult = 'ERROR: '+x;
 		displayOUI(i);
 	}
@@ -2987,8 +2989,8 @@ function searchOUI(n, i) {
 /* STUBBY-BEGIN */
 	var WGET="/usr/bin/wget -T 6 -q "
 /* STUBBY-END */
-	var commands = WGET+'http://api.macvendors.com/'+n+' -O /tmp/oui.txt \n /bin/cat /tmp/oui.txt';
-	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
+	var c = WGET+'http://api.macvendors.com/'+n+' -O /tmp/oui.txt \n /bin/cat /tmp/oui.txt';
+	xoboui.post('shell.cgi', 'action=execute&command='+escapeCGI(c.replace(/\r/g, '')));
 }
 
 function displayOUI(i) {
@@ -2996,7 +2998,7 @@ function displayOUI(i) {
 	if (cmdresult.indexOf('bad address') != -1)
 		cmdresult = 'No Internet! Check your Network/DNS settings!';
 	else if (cmdresult.indexOf('Not Found') == -1)
-		cmdresult = 'Manufacturer: \n'+cmdresult;
+		cmdresult = 'Manufacturer: \n'+escapeHTML(cmdresult);
 	else
 		cmdresult = 'Manufacturer not found!';
 
@@ -3064,13 +3066,13 @@ function insOvl() {
 
 	if (typeof(nvram) != 'undefined' && nvram.os_updated == 1) {
 		cntDiv.innerHTML = '<div id="overlay-top">Thank you for updating to the latest FreshTomato!<br><br>Your router is now secure and up-to-date. ❤️<br><br>'+
-		                   'I have difficult news to share:<br>In recent months donations have dropped to a very low level, and on top of that I am now facing serious personal financial difficulties. Without steady support I simply cannot continue active development and maintenance of FreshTomato full-time.<br><br>'+
-		                   'Unless a sufficient number of regular monthly supporters appears (enough for a project of this size and importance), I will very sadly be forced to put the entire project <b style="font-size:1.1em">on hold</b> – possibly permanently.<br>'+
-		                   'If FreshTomato is valuable to you and you want to see it live and grow, please strongly consider becoming a recurring supporter today.<br><br>'+
-		                   'Thank you for understanding.'+
+		                   'I want to sincerely thank you for the exceptional response in recent months – your donations have increased significantly and this support means the world to me.<br><br>'+
+		                   'To keep FreshTomato alive, actively developed and constantly improved, please do not stop supporting the project with regular monthly contributions.<br><br>'+
+		                   'In return, I promise to continue delivering outstanding, feature-rich and rock-solid FreshTomato firmware that you can rely on.<br><br>'+
+		                   'Thank you for being part of this journey!'+
 		                   '</div><div id="overlay-buttons">'+
-		                   '<div class="overlay-buttons-in"><input id="overlay-left-btn" type="button" value="Become a supporter"></div>'+
-		                   '<div class="overlay-buttons-in"><input id="overlay-right-btn" type="button" value="Continue for now"></div>'+
+		                   '<div class="overlay-buttons-in"><input id="overlay-left-btn" type="button" value="Support FreshTomato"></div>'+
+		                   '<div class="overlay-buttons-in"><input id="overlay-right-btn" type="button" value="Continue"></div>'+
 		                   '</div>';
 
 		function updateAndRedirect() {
