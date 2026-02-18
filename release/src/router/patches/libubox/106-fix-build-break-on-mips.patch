@@ -1,0 +1,11 @@
+--- libubox/usock.c
++++ libubox/usock.c
+@@ -186,7 +186,7 @@
+ {
+ 	int socktype = ((type & 0xff) == USOCK_TCP) ? SOCK_STREAM : SOCK_DGRAM;
+ 	bool server = !!(type & USOCK_SERVER);
+-	struct addrinfo *result, *rp;
++	struct addrinfo *result, *rp = NULL;
+ 	struct addrinfo hints = {
+ 		.ai_family = (type & USOCK_IPV6ONLY) ? AF_INET6 :
+ 			(type & USOCK_IPV4ONLY) ? AF_INET : AF_UNSPEC,
