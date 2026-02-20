@@ -1842,7 +1842,6 @@ dropbear-clean:
 	$(call unpatch_files,dropbear)
 
 zlib/stamp-h1:
-	$(call patch_files,zlib)
 	cd zlib && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPLAGS="-Os -Wall -fPIC -ffunction-sections -fdata-sections" \
@@ -1868,7 +1867,6 @@ zlib-clean:
 	-@$(MAKE) -C zlib clean
 	@rm -f zlib/stamp-h1 zlib/Makefile zlib/zconf.h zlib/zlib.pc
 	@rm -rf zlib/staged
-	$(call unpatch_files,zlib)
 
 sqlite/Makefile:
 	cd sqlite && \
@@ -2534,9 +2532,9 @@ libpng: libpng/build/Makefile
 	@$(MAKE) -C libpng/build DESTDIR=$(TOP)/libpng/staged install
 
 libpng-install:
-	install -D libpng/build/libpng16.so.16.54.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.54.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.54.0
-	cd $(INSTALLDIR)/libpng/usr/lib && ln -sf libpng16.so.16.54.0 libpng16.so && ln -sf libpng16.so.16.54.0 libpng16.so.16
+	install -D libpng/build/libpng16.so.16.55.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.55.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.55.0
+	cd $(INSTALLDIR)/libpng/usr/lib && ln -sf libpng16.so.16.55.0 libpng16.so && ln -sf libpng16.so.16.55.0 libpng16.so.16
 
 libpng-clean:
 	@rm -rf libpng/build
