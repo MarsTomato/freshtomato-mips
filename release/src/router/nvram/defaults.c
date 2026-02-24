@@ -1415,7 +1415,6 @@ const defaults_t defaults[] = {
 #else
 	{ "vpns1_crypt",		"tls"				},
 #endif
-	{ "vpns1_comp",			"-1"				},
 	{ "vpns1_cipher",		"AES-128-CBC"			},
 #ifdef TCONFIG_OPTIMIZE_SIZE_MORE
 	{ "vpns1_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
@@ -1461,7 +1460,6 @@ const defaults_t defaults[] = {
 #else
 	{ "vpns2_crypt",		"tls"				},
 #endif
-	{ "vpns2_comp",			"-1"				},
 	{ "vpns2_cipher",		"AES-128-CBC"			},
 #ifdef TCONFIG_OPTIMIZE_SIZE_MORE
 	{ "vpns2_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
@@ -1510,7 +1508,6 @@ const defaults_t defaults[] = {
 	{ "vpnc1_rg",			"0"				},
 	{ "vpnc1_firewall",		"auto"				},
 	{ "vpnc1_crypt",		"tls"				},
-	{ "vpnc1_comp",			"-1"				},
 	{ "vpnc1_cipher",		"default"			},
 #ifdef TCONFIG_OPTIMIZE_SIZE_MORE
 	{ "vpnc1_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
@@ -1549,7 +1546,6 @@ const defaults_t defaults[] = {
 	{ "vpnc2_rg",			"0"				},
 	{ "vpnc2_firewall",		"auto"				},
 	{ "vpnc2_crypt",		"tls"				},
-	{ "vpnc2_comp",			"-1"				},
 	{ "vpnc2_cipher",		"default"			},
 #ifdef TCONFIG_OPTIMIZE_SIZE_MORE
 	{ "vpnc2_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
@@ -1589,7 +1585,6 @@ const defaults_t defaults[] = {
 	{ "vpnc3_rg",			"0"				},
 	{ "vpnc3_firewall",		"auto"				},
 	{ "vpnc3_crypt",		"tls"				},
-	{ "vpnc3_comp",			"-1"				},
 	{ "vpnc3_cipher",		"default"			},
 #ifdef TCONFIG_OPTIMIZE_SIZE_MORE
 	{ "vpnc3_ncp_ciphers",	"AES-128-GCM:AES-256-GCM:AES-128-CBC:AES-256-CBC"},
