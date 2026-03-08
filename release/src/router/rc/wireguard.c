@@ -92,50 +92,57 @@ static void free_domain_list(domain_list_t *list)
 }
 
 /* add domain to the list */
-static int add_domain(domain_list_t *list, const char *domain)
+static void add_domain(domain_list_t *list, const char *domain)
 {
-	char **temp_domains;
+	char **newdomains;
+	int newcap;
 
 	/* check if increase the array size is needed */
 	if (list->count >= list->capacity - 1) { /* -1 for NULL at the end */
-		list->capacity *= 2;
-		temp_domains = (char**)realloc(list->domains, list->capacity * sizeof(char*));
-		if (!temp_domains)
-			return -1;
-
-		list->domains = temp_domains;
+		newcap = list->capacity * 2;
+		newdomains = realloc(list->domains, newcap * sizeof(char*));
+		if (!newdomains) {
+			logmsg(LOG_WARNING, "%s: realloc failed (capacity=%d, domain='%s') - skipping domain (out of memory)", __FUNCTION__, newcap, domain);
+			return;
+		}
+		list->domains = newdomains;
+		list->capacity = newcap;
+		logmsg(LOG_DEBUG, "%s: capacity increased to %d", __FUNCTION__, list->capacity);
 	}
 
 	/* allocate memory for the new domain */
 	list->domains[list->count] = (char*)malloc((strlen(domain) + 1) * sizeof(char));
-	if (!list->domains[list->count])
-		return -1;
+	if (!list->domains[list->count]) {
+		logmsg(LOG_WARNING, "%s: malloc failed for domain '%s' (out of memory) - skipping", __FUNCTION__, domain);
+		return;
+	}
 
 	/* copy domain */
 	strlcpy(list->domains[list->count], domain, strlen(domain) + 1);
 	list->count++;
 
-	return 0;
+	if (list->count < list->capacity)
+		list->domains[list->count] = NULL;
 }
 
-static void update_dnsmasq_ipset(const char *tag, domain_list_t *list, int add)
+/* add/remove domains in dnsmasq config file */
+static void update_dnsmasq_ipset(const char *tag, domain_list_t *list, const int add)
 {
 	FILE *fp_read, *fp_write;
-	char line[MAX_LINE], new_line[MAX_LINE];
-	char temp_file[64], domain_entry[128];
-	char *pos, *tag_pos;
-	int found, tag_found, i, domain_count = 0;
+	char line[MAX_LINE], new_line[MAX_LINE], line_backup[MAX_LINE];
+	char temp_file[BUF_SIZE_64], domain_entry[BUF_SIZE_128];
+	char *pos, *tag_pos, *saveptr;
+	int found, tag_found, i, domain_count = 0, truncated;
 
-	/* count domains if adding */
+	if (!tag || !*tag)
+		return;
+
+	/* list and domains are required only when adding entries */
 	if (add) {
-		if (!list || !list->domains || list->count == 0)
+		if ((!list) || (!list->domains) || (list->count == 0))
 			return;
 
-		if (list->domains && list->count < list->capacity)
-			list->domains[list->count] = NULL;
-
-		while (list->domains[domain_count] != NULL)
-		domain_count++;
+		domain_count = list->count;
 	}
 
 	if (!f_exists(dmipset))
@@ -147,8 +154,7 @@ static void update_dnsmasq_ipset(const char *tag, domain_list_t *list, int add)
 	}
 
 	/* create temporary file path */
-	memset(temp_file, 0, sizeof(temp_file));
-	snprintf(temp_file, sizeof(temp_file), "%s.tmp", dmipset);
+	snprintf(temp_file, BUF_SIZE_64, "%s.tmp", dmipset);
 	if (!(fp_write = fopen(temp_file, "w"))) {
 		logmsg(LOG_WARNING, "cannot open file for writing: %s (%s)", temp_file, strerror(errno));
 		fclose(fp_read);
@@ -156,7 +162,6 @@ static void update_dnsmasq_ipset(const char *tag, domain_list_t *list, int add)
 	}
 
 	/* process existing file */
-	memset(line, 0, MAX_LINE);
 	while (fgets(line, MAX_LINE, fp_read)) {
 		/* remove newline */
 		pos = strchr(line, '\n');
@@ -181,13 +186,18 @@ static void update_dnsmasq_ipset(const char *tag, domain_list_t *list, int add)
 
 		/* extract domain */
 		*pos = '\0';
-		memset(domain_entry, 0, sizeof(domain_entry));
-		strlcpy(domain_entry, line + 7, sizeof(domain_entry));
+		memset(domain_entry, 0, BUF_SIZE_128);
+		strlcpy(domain_entry, line + 7, BUF_SIZE_128);
 		*pos = '/';
 
-		/* check if this domain should be processed */
+		/* note: found is intentionally not checked when removing (add=0).
+		 * tag is removed from ALL matching lines in the file, regardless of
+		 * the domain list. list/domains are used only to scope additions,
+		 * not removals - removing a tag cleans it globally across all domains.
+		 */
 		found = 0;
 		if (add && list->domains) {
+			/* no rewind needed — list->domains is an in-memory array */
 			for (i = 0; i < domain_count; i++) {
 				if (strcmp(domain_entry, list->domains[i]) == 0) {
 					found = 1;
@@ -200,55 +210,82 @@ static void update_dnsmasq_ipset(const char *tag, domain_list_t *list, int add)
 		tag_pos = pos + 1;
 		tag_found = 0;
 
+		/* backup original line before strtok_r destroys it */
+		strlcpy(line_backup, line, MAX_LINE);
+
 		/* create a copy to work with */
+		truncated = 0;
 		memset(new_line, 0, MAX_LINE);
-		strlcpy(new_line, "ipset=/", MAX_LINE);
-		strlcat(new_line, domain_entry, MAX_LINE);
-		strlcat(new_line, "/", MAX_LINE);
+		if ((strlcpy(new_line, "ipset=/", MAX_LINE) >= MAX_LINE) || (strlcat(new_line, domain_entry, MAX_LINE) >= MAX_LINE) || (strlcat(new_line, "/", MAX_LINE) >= MAX_LINE)) {
+			logmsg(LOG_WARNING, "ipset line too long for domain: %s, keeping original", domain_entry);
+			fprintf(fp_write, "%s\n", line_backup);
+			continue;
+		}
 
 		/* parse and rebuild tags */
-		pos = strtok(tag_pos, ",");
-		while (pos) {
+		pos = strtok_r(tag_pos, ",", &saveptr);
+		while (pos && !truncated) {
 			if (strcmp(pos, tag) == 0) {
 				tag_found = 1;
 				if (!add) {
-					/* skip this tag when removing */
-					pos = strtok(NULL, ",");
+					/* intentional: remove tag globally, not scoped to domain list */
+					pos = strtok_r(NULL, ",", &saveptr);
 					continue;
 				}
 			}
 
 			/* add tag to new line */
-			if (strlen(new_line) > strlen("ipset=/") + strlen(domain_entry) + 1)
-				strlcat(new_line, ",", MAX_LINE);
+			if (strlen(new_line) > strlen("ipset=/") + strlen(domain_entry) + 1) {
+				if (strlcat(new_line, ",", MAX_LINE) >= MAX_LINE) {
+					logmsg(LOG_WARNING, "ipset line too long for domain: %s, keeping original", domain_entry);
+					fprintf(fp_write, "%s\n", line_backup);
+					truncated = 1;
+					break;
+				}
+			}
 
-			strlcat(new_line, pos, MAX_LINE);
-			pos = strtok(NULL, ",");
+			if (strlcat(new_line, pos, MAX_LINE) >= MAX_LINE) {
+				logmsg(LOG_WARNING, "ipset line too long for domain: %s, keeping original", domain_entry);
+				fprintf(fp_write, "%s\n", line_backup);
+				truncated = 1;
+				break;
+			}
+
+			pos = strtok_r(NULL, ",", &saveptr);
 		}
+
+		if (truncated)
+			continue;
 
 		/* add our tag if adding and not found, and this domain is in our list */
 		if (add && found && !tag_found) {
-			if (strlen(new_line) > strlen("ipset=/") + strlen(domain_entry) + 1)
-				strlcat(new_line, ",", MAX_LINE);
+			if (strlen(new_line) > strlen("ipset=/") + strlen(domain_entry) + 1) {
+				if (strlcat(new_line, ",", MAX_LINE) >= MAX_LINE) {
+					logmsg(LOG_WARNING, "ipset line too long for domain: %s, keeping original", domain_entry);
+					fprintf(fp_write, "%s\n", line_backup);
+					continue;
+				}
+			}
 
-			strlcat(new_line, tag, MAX_LINE);
+			if (strlcat(new_line, tag, MAX_LINE) >= MAX_LINE) {
+				logmsg(LOG_WARNING, "ipset line too long for domain: %s, keeping original", domain_entry);
+				fprintf(fp_write, "%s\n", line_backup);
+				continue;
+			}
 		}
 
 		/* write line if it has tags after the domain */
 		if (strlen(new_line) > strlen("ipset=/") + strlen(domain_entry) + 1)
 			fprintf(fp_write, "%s\n", new_line);
-
 	}
 
 	/* add new entries for domains not found in file */
 	if (add && list->domains) {
-		rewind(fp_read); /* reset file pointer to beginning */
-
 		for (i = 0; i < domain_count; i++) {
 			found = 0;
+			rewind(fp_read); /* reset file pointer to beginning */
 
 			/* check if domain was already processed */
-			memset(line, 0, MAX_LINE);
 			while (fgets(line, MAX_LINE, fp_read)) {
 				pos = strchr(line, '\n');
 				if (pos)
@@ -317,8 +354,7 @@ static int replace_in_file(const char *filename, const char *old_str, const char
 		return -1;
 	}
 
-	memset(tmp_filename, 0, FILENAME_MAX);
-	snprintf(tmp_filename, FILENAME_MAX, "/tmp/%s.tmp", filename);
+	snprintf(tmp_filename, FILENAME_MAX, "%s.tmp", filename);
 	if (!(fp_out = fopen(tmp_filename, "w"))) {
 		logmsg(LOG_WARNING, "could not create temporary file: %s (%s)", tmp_filename, strerror(errno));
 		fclose(fp_in);
@@ -348,7 +384,7 @@ static int replace_in_file(const char *filename, const char *old_str, const char
 
 	if (rename(tmp_filename, filename) != 0) {
 		logmsg(LOG_WARNING, "failed to overwrite %s: %s", filename, strerror(errno));
-		eval("rm", "-rf", tmp_filename);
+		unlink(tmp_filename);
 		return -1;
 	}
 
@@ -464,100 +500,119 @@ static void wg_build_firewall(const int unit, const char *port) {
 	}
 }
 
-static void wg_build_routing(const int unit, const char *fwmark, const char *fwmark_mask, const char *wgrouting_mark) {
+static void wg_build_routing(const int unit, const char *fwmark_mask, const char *wgrouting_mark) {
 	FILE *fp;
 	char *enable, *type, *value, *kswitch;
 	char *nv, *nvp, *b;
 	char buffer[BUF_SIZE_64];
-	int policy;
+	int policy, rules_count;
 	domain_list_t my_domains;
 
-	memset(buffer, 0, BUF_SIZE_64);
 	snprintf(buffer, BUF_SIZE_64, WG_FW_DIR"/wg%d-fw-routing.sh", unit);
 
-	/* script with routing policy rules */
-	if ((fp = fopen(buffer, "w"))) {
-		fprintf(fp, "#!/bin/sh\n"
-		            "\n# Routing\n"
-		            "iptables -t mangle -A PREROUTING -m set --match-set %s dst,src -j MARK --set-mark %s\n",
-		            wgrouting_mark, fwmark_mask);
-
-		if (init_domain_list(&my_domains) != 0) {
-			logmsg(LOG_WARNING, "cannot initialize domain list");
-			fclose(fp);
-			eval("rm", "-rf", buffer);
-			return;
-		}
-
-		/* example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0> (enabled<type<domain_or_IP<kill_switch>) */
-		nv = nvp = strdup(getNVRAMVar("wg%d_routing_val", unit));
-
-		while (nvp && (b = strsep(&nvp, ">")) != NULL) {
-			enable = type = value = kswitch = NULL;
-
-			/* enable<type<domain_or_IP<kill_switch> */
-			if ((vstrsep(b, "<", &enable, &type, &value, &kswitch)) < 4)
-				continue;
-
-			/* check if rule is enabled and type is set and IP/domain is set */
-			if ((atoi(enable) != 1) || (*type == '\0') || (*value == '\0'))
-				continue;
-
-			policy = atoi(type);
-			switch (policy) {
-			case 1: /* from source */
-				logmsg(LOG_INFO, "type: %d - add %s (wg%d)", policy, value, unit);
-				if (strstr(value, "-")) /* range */
-					fprintf(fp, "iptables -t mangle -A PREROUTING -m iprange --src-range %s -j MARK --set-mark %s\n", value, fwmark_mask);
-				else
-					fprintf(fp, "iptables -t mangle -A PREROUTING -s %s -j MARK --set-mark %s\n", value, fwmark_mask);
-				break;
-			case 2: /* to destination */
-				logmsg(LOG_INFO, "type: %d - add %s (wg%d)", policy, value, unit);
-				fprintf(fp, "iptables -t mangle -A PREROUTING -d %s -j MARK --set-mark %s\n", value, fwmark_mask);
-				break;
-			case 3: /* to domain */
-				logmsg(LOG_INFO, "type: %d - add %s (wg%d)", policy, value, unit);
-				add_domain(&my_domains, value);
-				restart_dnsmasq = 1;
-				break;
-			default:
-				continue;
-			}
-		}
-		if (nv)
-			free(nv);
-
-		fclose(fp);
-		chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
-
-		if (my_domains.count) {
-			update_dnsmasq_ipset(wgrouting_mark, &my_domains, 1);
-			free_domain_list(&my_domains);
-		}
-
-		restart_fw = 1;
+	if (!(fp = fopen(buffer, "w"))) {
+		logmsg(LOG_WARNING, "cannot open file for writing: %s (%s)", dmipset, strerror(errno));
+		return;
 	}
+
+	/* script with routing policy rules */
+	fprintf(fp, "#!/bin/sh\n"
+	            "\n# Routing\n"
+	            "iptables -t mangle -A PREROUTING -m set --match-set %s dst,src -j MARK --set-mark %s\n",
+	            wgrouting_mark, fwmark_mask);
+
+	if (init_domain_list(&my_domains) != 0) {
+		logmsg(LOG_WARNING, "cannot initialize domain list");
+		fclose(fp);
+		eval("rm", "-f", buffer);
+		return;
+	}
+
+	logmsg(LOG_INFO, "start adding routing rules for wg%d (if any) ...", unit);
+	rules_count = 0;
+
+	/* example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0> (enabled<type<domain_or_IP<kill_switch>) */
+	nv = nvp = strdup(getNVRAMVar("wg%d_routing_val", unit));
+	if (!nv) {
+		logmsg(LOG_WARNING, "%s: strdup failed for wg%d routing_val (out of memory)", __FUNCTION__, unit);
+		fclose(fp);
+		eval("rm", "-f", buffer);
+		free_domain_list(&my_domains);
+		return;
+	}
+	while ((b = strsep(&nvp, ">")) != NULL) {
+		enable = type = value = kswitch = NULL;
+
+		/* enable<type<domain_or_IP<kill_switch> */
+		if ((vstrsep(b, "<", &enable, &type, &value, &kswitch)) < 4)
+			continue;
+
+		/* check if rule is enabled and type is set and IP/domain is set */
+		if ((atoi(enable) != 1) || (*type == '\0') || (*value == '\0'))
+			continue;
+
+		policy = atoi(type);
+		switch (policy) {
+		case 1: /* from source */
+			logmsg(LOG_INFO, "type: %d - add %s (wg%d)", policy, value, unit);
+			if (strstr(value, "-")) /* range */
+				fprintf(fp, "iptables -t mangle -A PREROUTING -m iprange --src-range %s -j MARK --set-mark %s\n", value, fwmark_mask);
+			else
+				fprintf(fp, "iptables -t mangle -A PREROUTING -s %s -j MARK --set-mark %s\n", value, fwmark_mask);
+			rules_count++;
+			break;
+		case 2: /* to destination */
+			logmsg(LOG_INFO, "type: %d - add %s (wg%d)", policy, value, unit);
+			fprintf(fp, "iptables -t mangle -A PREROUTING -d %s -j MARK --set-mark %s\n", value, fwmark_mask);
+			rules_count++;
+			break;
+		case 3: /* to domain */
+			logmsg(LOG_INFO, "type: %d - add %s (wg%d)", policy, value, unit);
+			add_domain(&my_domains, value);
+			restart_dnsmasq = 1;
+			rules_count++;
+			break;
+		default:
+			continue;
+		}
+	}
+	if (nv)
+		free(nv);
+
+	if (rules_count > 0)
+		logmsg(LOG_INFO, "added %d routing rule(s) for wg%d", rules_count, unit);
+
+	fclose(fp);
+	chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
+
+	if (my_domains.count) {
+		update_dnsmasq_ipset(wgrouting_mark, &my_domains, 1);
+	}
+	free_domain_list(&my_domains);
+
+	restart_fw = 1;
 }
 
 static int wg_quick_iface(char *iface, const char *file, const int up)
 {
 	char buffer[BUF_SIZE_32];
 	char *up_down = (up == 1 ? "up" : "down");
-	FILE *f;
+	FILE *fp;
 
 	/* copy config to wg dir with proper name */
-	memset(buffer, 0, BUF_SIZE_32);
 	snprintf(buffer, BUF_SIZE_32, WG_DIR"/%s.conf", iface);
-	if ((f = fopen(buffer, "w")) != NULL) {
-		if (fappend(f, file) < 0) {
-			logmsg(LOG_WARNING, "fappend failed for %s", buffer);
-			fclose(f);
-			return -1;
-		}
-	}
-	else
+
+	if (!(fp = fopen(buffer, "w"))) {
 		logmsg(LOG_WARNING, "unable to open wireguard configuration file %s for interface %s!", file, iface);
+		return -1;
+	}
+
+	if (fappend(fp, file) < 0) {
+		logmsg(LOG_WARNING, "fappend failed for %s", buffer);
+		fclose(fp);
+		return -1;
+	}
+	fclose(fp);
 
 	/* set up/down wireguard IF */
 	if (eval("wg-quick", up_down, buffer, iface, "--norestart")) {
@@ -1191,7 +1246,7 @@ static void wg_routing_policy(char *iface, char *route, char *fwmark, const int 
 
 		eval("ipset", "create", wgrouting_mark, "hash:ip");
 
-		wg_build_routing(atoi(&iface[2]), fwmark, fwmark_mask, wgrouting_mark);
+		wg_build_routing(atoi(&iface[2]), fwmark_mask, wgrouting_mark);
 
 		logmsg(LOG_INFO, "completed routing policy configuration for wireguard - interface %s - table %s", iface, fwmark);
 	}
@@ -1796,21 +1851,22 @@ void stop_wireguard(const int unit)
 		logmsg(LOG_INFO, "wireguard (%s) stopped", iface);
 }
 
-void write_wg_dnsmasq_config(FILE* f)
+void write_wg_dnsmasq_config(FILE* fp)
 {
-	char buf[BUF_SIZE], device[BUF_SIZE_32];
-	char *pos, *fn;
+	char buf[BUF_SIZE];
+	char *pos, *fn, *saveptr, *endptr, ch;
 	DIR *dir;
 	struct dirent *file;
-	int cur;
+	int cur, num;
 
 	/* add interface(s) to dns config */
 	strlcpy(buf, nvram_safe_get("wg_adns"), BUF_SIZE);
-	for (pos = strtok(buf, ","); pos != NULL; pos = strtok(NULL, ",")) {
-		cur = atoi(pos);
-		if (cur || cur == 0) {
+	for (pos = strtok_r(buf, ",", &saveptr); pos != NULL; pos = strtok_r(NULL, ",", &saveptr)) {
+		errno = 0;
+		cur = (int)strtol(pos, &endptr, 10);
+		if (errno == 0 && endptr != pos && *endptr == '\0' && cur >= 0) {
 			logmsg(LOG_DEBUG, "*** %s: adding server wg%d interface to Dnsmasq config", __FUNCTION__, cur);
-			fprintf(f, "interface=wg%d\n", cur);
+			fprintf(fp, "interface=wg%d\n", cur);
 		}
 	}
 
@@ -1824,10 +1880,9 @@ void write_wg_dnsmasq_config(FILE* f)
 		if (fn[0] == '.')
 			continue;
 
-		if (sscanf(fn, "%s.conf", device) == 1) {
-			memset(buf, 0, BUF_SIZE);
+		if (sscanf(fn, "wg%d.con%c", &num, &ch) == 2 && ch == 'f') {
 			snprintf(buf, BUF_SIZE, "%s/%s", WG_DNS_DIR, fn);
-			if (fappend(f, buf) == -1) {
+			if (fappend(fp, buf) == -1) {
 				logmsg(LOG_WARNING, "fappend failed for %s (%s)", buf, strerror(errno));
 				continue;
 			}
