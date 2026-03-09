@@ -375,7 +375,7 @@ const defaults_t defaults[] = {
 	/* WAN H/W parameters */
 	{ "wan_hwname",			""				},	/* WAN driver name (e.g. et1) */
 	{ "wan_hwaddr",			""				},	/* WAN interface MAC address */
-	{ "wan_checker",		"1.1.1.1"			},	/* backup IP for connection checking */
+	{ "wan_checker",		"1.0.0.1"			},	/* backup IP for connection checking */
 	{ "wan_iface",			""				},
 	{ "wan_ifname",			""				},
 	{ "wan_ifnameX",		NULL				},	/* real wan if; see wan.c:start_wan */
