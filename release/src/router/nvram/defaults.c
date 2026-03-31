@@ -1498,6 +1498,7 @@ const defaults_t defaults[] = {
 	{ "vpnc_eas",			""				},
 	{ "vpnc1_poll",			"0"				},
 	{ "vpnc1_tchk",			"0"				},	/* check if tunnel is up */
+	{ "vpnc1_tunchk",		""				},	/* IP to check the tunnel */
 	{ "vpnc1_if",			"tun"				},
 	{ "vpnc1_bridge",		"1"				},
 	{ "vpnc1_nat",			"1"				},
@@ -1536,6 +1537,7 @@ const defaults_t defaults[] = {
 	{ "vpnc1_prio",			""				},
 	{ "vpnc2_poll",			"0"				},
 	{ "vpnc2_tchk",			"0"				},	/* check if tunnel is up */
+	{ "vpnc2_tunchk",		""				},	/* IP to check the tunnel */
 	{ "vpnc2_if",			"tun"				},
 	{ "vpnc2_bridge",		"1"				},
 	{ "vpnc2_nat",			"1"				},
@@ -1575,6 +1577,7 @@ const defaults_t defaults[] = {
 #ifdef TCONFIG_BCMARM
 	{ "vpnc3_poll",			"0"				},
 	{ "vpnc3_tchk",			"0"				},	/* check if tunnel is up */
+	{ "vpnc3_tunchk",		""				},	/* IP to check the tunnel */
 	{ "vpnc3_if",			"tun"				},
 	{ "vpnc3_bridge",		"1"				},
 	{ "vpnc3_nat",			"1"				},
@@ -1663,6 +1666,7 @@ const defaults_t defaults[] = {
 	{"wg0_enable",			"0"				},
 	{"wg0_poll",			"0"				},
 	{"wg0_tchk",			"0"				},	/* check if tunnel is up */
+	{"wg0_tunchk",			""				},	/* IP to check the tunnel */
 	{"wg0_sleep",			"1"				},	/* delay at startup */
 	{"wg0_file",			""				},
 	{"wg0_key",			""				},
@@ -1693,6 +1697,7 @@ const defaults_t defaults[] = {
 	{"wg1_enable",			"0"				},
 	{"wg1_poll",			"0"				},
 	{"wg1_tchk",			"0"				},	/* check if tunnel is up */
+	{"wg2_tunchk",			""				},	/* IP to check the tunnel */
 	{"wg1_sleep",			"1"				},	/* delay at startup */
 	{"wg1_file",			""				},
 	{"wg1_key",			""				},
@@ -1723,6 +1728,7 @@ const defaults_t defaults[] = {
 	{"wg2_enable",			"0"				},
 	{"wg2_poll",			"0"				},
 	{"wg2_tchk",			"0"				},	/* check if tunnel is up */
+	{"wg3_tunchk",			""				},	/* IP to check the tunnel */
 	{"wg2_sleep",			"1"				},	/* delay at startup */
 	{"wg2_file",			""				},
 	{"wg2_key",			""				},
