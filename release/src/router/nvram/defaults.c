@@ -1697,7 +1697,7 @@ const defaults_t defaults[] = {
 	{"wg1_enable",			"0"				},
 	{"wg1_poll",			"0"				},
 	{"wg1_tchk",			"0"				},	/* check if tunnel is up */
-	{"wg2_tunchk",			""				},	/* IP to check the tunnel */
+	{"wg1_tunchk",			""				},	/* IP to check the tunnel */
 	{"wg1_sleep",			"1"				},	/* delay at startup */
 	{"wg1_file",			""				},
 	{"wg1_key",			""				},
@@ -1728,7 +1728,7 @@ const defaults_t defaults[] = {
 	{"wg2_enable",			"0"				},
 	{"wg2_poll",			"0"				},
 	{"wg2_tchk",			"0"				},	/* check if tunnel is up */
-	{"wg3_tunchk",			""				},	/* IP to check the tunnel */
+	{"wg2_tunchk",			""				},	/* IP to check the tunnel */
 	{"wg2_sleep",			"1"				},	/* delay at startup */
 	{"wg2_file",			""				},
 	{"wg2_key",			""				},

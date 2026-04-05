@@ -334,6 +334,11 @@ ifneq ($(TCONFIG_ROAM),y)
 	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/ROAM-BEGIN/,/ROAM-END/d"
 endif
 
+# Only include AC stuff if needed
+ifeq ($(filter y,$(TCONFIG_BLINK) $(TCONFIG_BCMARM)),)
+	sed -i $(INSTALLDIR)/www/wireless.js -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
+endif
+
 # Add "beta" tag if needed
 ifeq ($(TOMATO_EXPERIMENTAL),1)
 	cd $(INSTALLDIR)/www && \
@@ -552,6 +557,11 @@ ifeq ($(TCONFIG_OPENVPN),y)
  else
 	sed -i $(INSTALLDIR)/www/isup.jsx -e "/BCMARM-NO-BEGIN/,/BCMARM-NO-END/d"
  endif
+endif
+
+# add porthealth only on ARM routers
+ifneq ($(TCONFIG_BCMARM),y)
+	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
 endif
 
 # add a note about WL Survey issue only on ARM routers
