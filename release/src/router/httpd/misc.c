@@ -212,11 +212,13 @@ void asp_lanip(int argc, char **argv)
  */
 void asp_psup(int argc, char **argv)
 {
-	int i;
-	char buf[16];
 	const char isup[] = "isup.";
 	const char c[] = "=parseInt('";
 	const char e[] = "');\n";
+#if defined(TCONFIG_OPENVPN) || defined(TCONFIG_WIREGUARD)
+	int i;
+	char buf[16];
+#endif
 
 	if (argc != 1)
 		return;
@@ -267,7 +269,7 @@ void asp_psup(int argc, char **argv)
 #ifdef TCONFIG_WIREGUARD
 		for (i = 0; i < WG_INTERFACE_COUNT; i++) {
 			snprintf(buf, sizeof(buf), "wg%d", i);
-			web_printf("%swireguard%d%s%d%s", isup, i, c, pidof(buf) > 0, e);
+			web_printf("%swireguard%d%s%d%s", isup, i, c, wg_status(buf), e);
 		}
 #endif
 	}
