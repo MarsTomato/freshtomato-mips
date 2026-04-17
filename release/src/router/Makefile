@@ -1879,11 +1879,11 @@ sqlite: sqlite/Makefile
 
 sqlite-install:
 ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
-	install -D sqlite/staged/usr/lib/libsqlite3.so.3.51.3 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.51.3
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.51.3
+	install -D sqlite/staged/usr/lib/libsqlite3.so.3.53.0 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.0
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.0
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
-		ln -sf libsqlite3.so.3.51.3 libsqlite3.so.0 && \
-		ln -sf libsqlite3.so.3.51.3 libsqlite3.so
+		ln -sf libsqlite3.so.3.53.0 libsqlite3.so.0 && \
+		ln -sf libsqlite3.so.3.53.0 libsqlite3.so
 endif
 	@true
 
@@ -2528,9 +2528,9 @@ libpng: libpng/build/Makefile
 	@$(MAKE) -C libpng/build DESTDIR=$(TOP)/libpng/staged install
 
 libpng-install:
-	install -D libpng/build/libpng16.so.16.56.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.56.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.56.0
-	cd $(INSTALLDIR)/libpng/usr/lib && ln -sf libpng16.so.16.56.0 libpng16.so && ln -sf libpng16.so.16.56.0 libpng16.so.16
+	install -D libpng/build/libpng16.so.16.58.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.58.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.58.0
+	cd $(INSTALLDIR)/libpng/usr/lib && ln -sf libpng16.so.16.58.0 libpng16.so && ln -sf libpng16.so.16.58.0 libpng16.so.16
 
 libpng-clean:
 	@rm -rf libpng/build
