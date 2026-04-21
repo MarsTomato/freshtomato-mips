@@ -1342,7 +1342,10 @@ nettle: nettle/stamp-h1
 nettle-clean:
 	-@$(MAKE) -C nettle clean
 	@rm -f nettle/stamp-h1
-	@rm -rf nettle/include nettle/lib nettle/bin nettle/share
+	@rm -rf nettle/include nettle/bin nettle/share
+ifneq ($(TCONFIG_BCMARM),y)
+	@rm -rf nettle/lib
+endif
 
 dnsmasq:
 	@$(SEP)
@@ -2487,9 +2490,9 @@ libxml2: libxml2/static/Makefile libxml2/build/Makefile
 
 libxml2-install:
 ifeq ($(TCONFIG_BCMARM),y)
-	install -D libxml2/staged/usr/lib/libxml2.so.16.1.2 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.2
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.2
-	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.1.2 libxml2.so.16 && ln -sf libxml2.so.16.1.2 libxml2.so
+	install -D libxml2/staged/usr/lib/libxml2.so.16.1.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.3
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.16.1.3
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.16.1.3 libxml2.so.16 && ln -sf libxml2.so.16.1.3 libxml2.so
 else
 	install -D libxml2/staged/usr/lib/libxml2.so.2.13.7 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
 	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.7
