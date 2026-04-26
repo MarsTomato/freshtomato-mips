@@ -202,13 +202,15 @@ EXIT:
  * @param	stream	file stream
  * @return	number of items successfully read
  */
-int safe_fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
+size_t safe_fread(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
 	size_t ret = 0;
+
 	do {
 		clearerr(stream);
 		ret += fread((char *)ptr + (ret * size), size, nmemb - ret, stream);
 	} while (ret < nmemb && ferror(stream) && errno == EINTR);
+
 	return ret;
 }
 
@@ -220,9 +222,10 @@ int safe_fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
  * @param	stream	file stream
  * @return	number of items successfully written
  */
-int safe_fwrite(const void *ptr, size_t size, int nmemb, FILE *stream)
+size_t safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
-	int ret = 0;
+	size_t ret = 0;
+
 	do {
 		clearerr(stream);
 		ret += fwrite((char *)ptr + (ret * size), size, nmemb - ret, stream);
