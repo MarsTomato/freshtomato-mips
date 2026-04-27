@@ -332,6 +332,38 @@ int _vstrsep(char *buf, const char *sep, ...)
 	return n;
 }
 
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+/* Find partition with defined name and return partition number as an integer */
+int getMTD(const char *name)
+{
+	char line[128], dev[32], size[32], esize[32], part_name[64];
+	int mtdnum, device = -1;
+	FILE *fp;
+
+	if (!name)
+		return -1;
+
+	if (!(fp = fopen("/proc/mtd", "r")))
+		return -1;
+
+	while (fgets(line, sizeof(line), fp)) {
+		if (sscanf(line, "%31s %31s %31s \"%63[^\"]\"", dev, size, esize, part_name) != 4)
+			continue;
+
+		if (strcmp(part_name, name) != 0)
+			continue;
+
+		if (sscanf(dev, "mtd%d:", &mtdnum) == 1) {
+			device = mtdnum;
+			break;
+		}
+	}
+	fclose(fp);
+
+	return device;
+}
+#endif
+
 #ifndef WL_BSS_INFO_VERSION
 #error WL_BSS_INFO_VERSION
 #endif

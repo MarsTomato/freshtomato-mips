@@ -456,4 +456,9 @@ extern char *shrink_space(char *dest, const char *src, int n);
 /* mdu.c/ddns.c */
 #define MDU_STOP_FN		"/var/lib/mdu/mdu-stop"
 
+/* shutils.h */
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+extern int getMTD(const char *name);
+#endif
+
 #endif /* __SHARED_H__ */
