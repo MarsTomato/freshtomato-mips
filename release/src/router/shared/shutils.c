@@ -234,38 +234,88 @@ size_t safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 	return ret;
 }
 
+/* ether_atoe() helper */
+static int hexval(unsigned char c)
+{
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	if (c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+	if (c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+
+	return -1;
+}
+
 /*
  * Convert Ethernet address string representation to binary data
- * @param	a	string in xx:xx:xx:xx:xx:xx notation
- * @param	e	binary data
- * @return	TRUE if conversion was successful and FALSE otherwise
+ * @param a  string in xx:xx:xx:xx:xx:xx notation
+ * @param e  binary data
+ * @return   TRUE if conversion was successful and FALSE otherwise
  */
 int ether_atoe(const char *a, unsigned char *e)
 {
-	char *x;
 	int i;
 
-	i = 0;
-	while (1) {
-		e[i++] = (unsigned char) strtoul(a, &x, 16);
-		if (a == x) break;
-		if (i == ETHER_ADDR_LEN) return 1;
-		if (*x == 0) break;
-		a = x + 1;
+	if (!a || !e)
+		return 0;
+
+	for (i = 0; i < ETHER_ADDR_LEN; i++) {
+		int hi = hexval((unsigned char)a[0]);
+		int lo = hexval((unsigned char)a[1]);
+
+		if (hi < 0 || lo < 0)
+			goto fail;
+
+		e[i] = (unsigned char)((hi << 4) | lo);
+		a += 2;
+
+		if (i < ETHER_ADDR_LEN - 1) {
+			if (*a++ != ':')
+				goto fail;
+		}
+		else if (*a) {
+			goto fail;
+		}
 	}
-	memset(e, 0, sizeof(e));
+
+	return 1;
+
+fail:
+	memset(e, 0, ETHER_ADDR_LEN);
+
 	return 0;
 }
 
 /*
  * Convert Ethernet address binary data to string representation
- * @param	e	binary data
- * @param	a	string in xx:xx:xx:xx:xx:xx notation
- * @return	a
+ * @param e       binary Ethernet address
+ * @param a       output buffer
+ * @return        string
  */
 char *ether_etoa(const unsigned char *e, char *a)
 {
-	sprintf(a, "%02X:%02X:%02X:%02X:%02X:%02X", e[0], e[1], e[2], e[3], e[4], e[5]);
+	static const char hex[] = "0123456789ABCDEF";
+	char *p = a;
+	int i;
+
+	if (!a) return NULL;
+
+	if (!e) {
+		a[0] = '\0';
+		return a;
+	}
+
+	for (i = 0; i < ETHER_ADDR_LEN; i++) {
+		if (i)
+			*p++ = ':';
+
+		*p++ = hex[e[i] >> 4];
+		*p++ = hex[e[i] & 0x0F];
+	}
+
+	*p = '\0';
+
 	return a;
 }
 
