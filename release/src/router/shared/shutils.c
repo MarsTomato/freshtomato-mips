@@ -571,67 +571,71 @@ get_bridged_interfaces(char *bridge_name)
  * Search a string backwards for a set of characters
  * This is the reverse version of strspn()
  *
- * @param	s	string to search backwards
- * @param	accept	set of chars for which to search
- * @return	number of characters in the trailing segment of s
- *		which consist only of characters from accept.
+ * @param  s       string to search backwards
+ * @param  accept  set of chars for which to search
+ * @return         number of characters in the trailing segment of s
+ *                 which consist only of characters from accept
  */
-static size_t
-sh_strrspn(const char *s, const char *accept)
+static size_t sh_strrspn(const char *s, const char *accept)
 {
 	const char *p;
-	size_t accept_len = strlen(accept);
-	int i;
+	size_t accept_len, count;
 
-
-	if (s[0] == '\0')
+	if (s == NULL || accept == NULL)
 		return 0;
 
+	accept_len = strlen(accept);
 	p = s + strlen(s);
-	i = 0;
+	count = 0;
 
-	do {
-		p--;
-		if (memchr(accept, *p, accept_len) == NULL)
+	while (p != s) {
+		--p;
+		if (memchr(accept, (unsigned char)*p, accept_len) == NULL)
 			break;
-		i++;
-	} while (p != s);
 
-	return i;
+		++count;
+	}
+
+	return count;
 }
 
 /*
  * Parse the unit and subunit from an interface string such as wlXX or wlXX.YY
  *
- * @param	ifname	interface string to parse
- * @param	unit	pointer to return the unit number, may pass NULL
- * @param	subunit	pointer to return the subunit number, may pass NULL
- * @return	Returns 0 if the string ends with digits or digits.digits, -1 otherwise.
- *		If ifname ends in digits.digits, then unit and subuint are set
- *		to the first and second values respectively. If ifname ends
- *		in just digits, unit is set to the value, and subunit is set
- *		to -1. On error both unit and subunit are -1. NULL may be passed
- *		for unit and/or subuint to ignore the value.
+ * @param  ifname   interface string to parse
+ * @param  unit     pointer to return the unit number, may pass NULL
+ * @param  subunit  pointer to return the subunit number, may pass NULL
+ * @return          Returns 0 if the string ends with digits or digits.digits, -1 otherwise.
+ *                  If ifname ends in digits.digits, then unit and subuint are set
+ *                  to the first and second values respectively. If ifname ends
+ *                  in just digits, unit is set to the value, and subunit is set
+ *                  to -1. On error both unit and subunit are -1. NULL may be passed
+ *                  for unit and/or subuint to ignore the value.
  */
-int
-get_ifname_unit(const char* ifname, int *unit, int *subunit)
+int get_ifname_unit(const char *ifname, int *unit, int *subunit)
 {
 	const char digits[] = "0123456789";
 	char str[64];
 	char *p;
-	size_t ifname_len = strlen(ifname);
-	size_t len;
+	size_t ifname_len, len;
 	unsigned long val;
+	int u, su;
+
+	u = -1;
+	su = -1;
 
 	if (unit)
 		*unit = -1;
 	if (subunit)
 		*subunit = -1;
 
-	if (ifname_len + 1 > sizeof(str))
+	if (ifname == NULL)
 		return -1;
 
-	strcpy(str, ifname);
+	if (strlcpy(str, ifname, sizeof(str)) >= sizeof(str))
+		return -1;
+
+	ifname_len = strlen(str);
 
 	/* find the trailing digit chars */
 	len = sh_strrspn(str, digits);
@@ -642,39 +646,49 @@ get_ifname_unit(const char* ifname, int *unit, int *subunit)
 
 	/* point to the beginning of the last integer and convert */
 	p = str + (ifname_len - len);
-	val = strtoul(p, NULL, 10);
 
-	/* if we are at the beginning of the string, or the previous
-	 * character is not a '.', then we have the unit number and
-	 * we are done parsing
-	 */
+	errno = 0;
+	val = strtoul(p, NULL, 10);
+	if (errno == ERANGE || val > INT_MAX)
+		return -1;
+
+	/* no ".subunit" suffix: trailing number is the unit */
 	if (p == str || p[-1] != '.') {
+		u = (int)val;
+
 		if (unit)
-			*unit = val;
-		return 0;
-	} else {
+			*unit = u;
 		if (subunit)
-			*subunit = val;
+			*subunit = su;
+
+		return 0;
 	}
 
-	/* chop off the '.NNN' and get the unit number */
+	/* trailing number is subunit */
+	su = (int)val;
+
+	/* chop off the ".NNN" and get the unit number */
 	p--;
-	p[0] = '\0';
+	*p = '\0';
 
-	/* find the trailing digit chars */
+	/* find the trailing digit chars before the dot */
 	len = sh_strrspn(str, digits);
-
-	/* fail if there were no trailing digits */
 	if (len == 0)
 		return -1;
 
-	/* point to the beginning of the last integer and convert */
 	p = p - len;
-	val = strtoul(p, NULL, 10);
 
-	/* save the unit number */
+	errno = 0;
+	val = strtoul(p, NULL, 10);
+	if (errno == ERANGE || val > INT_MAX)
+		return -1;
+
+	u = (int)val;
+
 	if (unit)
-		*unit = val;
+		*unit = u;
+	if (subunit)
+		*subunit = su;
 
 	return 0;
 }
@@ -684,113 +698,116 @@ get_ifname_unit(const char* ifname, int *unit, int *subunit)
  */
 char *find_in_list(const char *haystack, const char *needle)
 {
-	const char *ptr = haystack;
-	int needle_len = 0;
-	int haystack_len = 0;
-	int len = 0;
+	const char *ptr;
+	size_t needle_len, len;
 
 	if (!haystack || !needle || !*haystack || !*needle)
 		return NULL;
 
 	needle_len = strlen(needle);
-	haystack_len = strlen(haystack);
+	ptr = haystack;
 
-	while (*ptr != 0 && ptr < &haystack[haystack_len])
-	{
+	while (*ptr) {
 		/* consume leading spaces */
 		ptr += strspn(ptr, " ");
+		if (!*ptr)
+			break;
 
 		/* what's the length of the next word */
 		len = strcspn(ptr, " ");
 
-		if ((needle_len == len) && (!strncmp(needle, ptr, len)))
-			return (char*) ptr;
+		if (needle_len == len && strncmp(needle, ptr, len) == 0)
+			return (char *)ptr;
 
 		ptr += len;
 	}
+
 	return NULL;
 }
 
+/*
+ * Remove the specified word from the list.
 
-/**
- *	remove_from_list
- *	Remove the specified word from the list.
-
- *	@param name word to be removed from the list
- *	@param list Space separated list to modify
- *	@param listsize Max size the list can occupy
-
- *	@return	error code
+ * @param  name      word to be removed from the list
+ * @param  list      Space separated list to modify
+ * @param  listsize  Max size the list can occupy
+ * @return           error code
  */
 int remove_from_list(const char *name, char *list, int listsize)
 {
-	int namelen = 0;
-	char *occurrence = list;
+	char *occurrence;
+	size_t namelen, tail_len;
 
-	if (!list || !name || (listsize <= 0))
+	if (list == NULL || name == NULL || listsize <= 0 || *name == '\0')
+		return EINVAL;
+
+	/* ensure list is NUL-terminated within listsize */
+	if (strnlen(list, (size_t)listsize) == (size_t)listsize)
 		return EINVAL;
 
 	namelen = strlen(name);
-	occurrence = find_in_list(occurrence, name);
 
-	if (!occurrence)
+	occurrence = find_in_list(list, name);
+	if (occurrence == NULL)
 		return EINVAL;
 
-	/* last item in list? */
-	if (occurrence[namelen] == 0)
-	{
-		/* only item in list? */
+	/* last item in list */
+	if (occurrence[namelen] == '\0') {
 		if (occurrence != list)
 			occurrence--;
-		occurrence[0] = 0;
-	}
-	else if (occurrence[namelen] == ' ')
-	{
-		strncpy(occurrence, &occurrence[namelen+1 /* space */],
-		        strlen(&occurrence[namelen+1 /* space */]) +1 /* terminate */);
+
+		*occurrence = '\0';
+		return 0;
 	}
 
-	return 0;
+	/* first or middle item, followed by a space */
+	if (occurrence[namelen] == ' ') {
+		tail_len = strlen(&occurrence[namelen + 1]) + 1;
+		memmove(occurrence, &occurrence[namelen + 1], tail_len);
+		return 0;
+	}
+
+	return EINVAL;
 }
 
-/**
- *		add_to_list
- *	Add the specified interface(string) to the list as long as
- *	it will fit in the space left in the list.
-
- *	NOTE: If item is already in list, it won't be added again.
-
- *	@param name Name of interface to be added to the list
- *	@param list List to modify
- *	@param listsize Max size the list can occupy
-
- *	@return	error code
+/*
+ * Add the specified interface(string) to the list as long as
+ * it will fit in the space left in the list.
+ *
+ * NOTE: If item is already in list, it won't be added again.
+ *
+ * @param  name      Name of interface to be added to the list
+ * @param  list      List to modify
+ * @param  listsize  Max size the list can occupy
+ * @return           error code
  */
 int add_to_list(const char *name, char *list, int listsize)
 {
-	int listlen = 0;
-	int namelen = 0;
+	size_t listlen;
+	size_t namelen;
+	size_t need_space;
 
-	if (!list || !name || (listsize <= 0))
+	if (list == NULL || name == NULL || listsize <= 0 || *name == '\0')
 		return EINVAL;
 
-	listlen = strlen(list);
+	listlen = strnlen(list, (size_t)listsize);
+	if (listlen == (size_t)listsize)
+		return EINVAL;
+
 	namelen = strlen(name);
 
-	/* is the item already in the list? */
 	if (find_in_list(list, name))
 		return 0;
 
-	if (listsize <= listlen + namelen + 1 /* space */ + 1 /* NULL */)
+	need_space = (listlen != 0 && list[listlen - 1] != ' ') ? 1 : 0;
+
+	if (namelen >= (size_t)listsize - listlen - need_space)
 		return EMSGSIZE;
 
-	/* add a space if the list isn't empty and it doesn't already have space */
-	if (list[0] != 0 && list[listlen-1] != ' ')
-	{
-		list[listlen++] = 0x20;
-	}
+	if (need_space)
+		list[listlen++] = ' ';
 
-	strncpy(&list[listlen], name, namelen + 1 /* terminate */);
+	memcpy(&list[listlen], name, namelen + 1);
 
 	return 0;
 }
