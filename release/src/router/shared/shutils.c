@@ -1,21 +1,32 @@
 /*
- * Copyright 2005, Broadcom Corporation
- * All Rights Reserved.
+ * Shell-like utility functions
  *
- * THIS SOFTWARE IS OFFERED "AS IS", AND BROADCOM GRANTS NO WARRANTIES OF ANY
- * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
- * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
- * FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
+ * Copyright (C) 2012, Broadcom Corporation. All Rights Reserved.
  * 
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ * $Id: shutils.c 337155 2012-06-06 12:17:08Z $
+ *
  * Fixes/updates (C) 2018 - 2026 pedro
  * https://freshtomato.org/
  *
  */
 
 
-# ifndef _GNU_SOURCE
-#  define _GNU_SOURCE
-# endif
+#ifndef _GNU_SOURCE
+ #define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -31,30 +42,44 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <sys/ioctl.h>
-#include <sys/time.h>
-//	#include <net/ethernet.h>
 #include <syslog.h>
-
 #include <wlioctl.h>
+#if 0
+ #include <sys/time.h>
+ #include <assert.h>
+ #include <sys/sysinfo.h>
+ #include <sys/mman.h>
+ #include <typedefs.h>
+#endif /* 0 */
+
 #include <bcmnvram.h>
 
-#include "shutils.h"
-#include "shared.h"
+#include <shutils.h>
+#ifdef TCONFIG_BCMBSD
+ #include <dirent.h>
+ #include <ctype.h>
+#endif
+
+#ifndef WL_BSS_INFO_VERSION
+ #error WL_BSS_INFO_VERSION
+#endif
 
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
 #define LOGMSG_NVDEBUG	"shutils_debug"
 
+
 /*
  * Concatenates NULL-terminated list of arguments into a single
  * commmand and executes it
- * @param	argv	argument list
- * @param	path	NULL, ">output", or ">>output"
- * @param	timeout	seconds to wait before timing out or 0 for no timeout
- * @param	ppid	NULL to wait for child termination or pointer to pid
- * @return	return value of executed command or errno
  *
- * Ref: http://www.open-std.org/jtc1/sc22/WG15/docs/rr/9945-2/9945-2-28.html
+ * @param  argv     argument list
+ * @param  path     NULL, ">output", or ">>output"
+ * @param  timeout  seconds to wait before timing out or 0 for no timeout
+ * @param  ppid     NULL to wait for child termination or pointer to pid
+ * @return          return value of executed command or errno
+ *
+ * Ref: https://www.open-std.org/jtc1/sc22/WG15/docs/rr/9945-2/9945-2-28.html
  */
 int _eval(char *const argv[], const char *path, int timeout, int *ppid)
 {
@@ -70,11 +95,11 @@ int _eval(char *const argv[], const char *path, int timeout, int *ppid)
 	char s[256];
 
 	if (!ppid) {
-		// block SIGCHLD
+		/* block SIGCHLD */
 		sigemptyset(&set);
 		sigaddset(&set, SIGCHLD);
 		sigprocmask(SIG_BLOCK, &set, &sigmask);
-		// without this we cannot rely on waitpid() to tell what happened to our children
+		/*  without this we cannot rely on waitpid() to tell what happened to our children */
 		chld = signal(SIGCHLD, SIG_DFL);
 	}
 
@@ -85,7 +110,7 @@ int _eval(char *const argv[], const char *path, int timeout, int *ppid)
 		goto EXIT;
 	}
 	if (pid != 0) {
-		// parent
+		/* parent */
 		if (ppid) {
 			*ppid = pid;
 			return 0;
@@ -101,22 +126,22 @@ int _eval(char *const argv[], const char *path, int timeout, int *ppid)
 		if (WIFEXITED(status)) status = WEXITSTATUS(status);
 EXIT:
 		if (!ppid) {
-			// restore signals
+			/* restore signals */
 			sigprocmask(SIG_SETMASK, &sigmask, NULL);
 			signal(SIGCHLD, chld);
-			// reap zombies
+			/* reap zombies */
 			chld_reap(0);
 		}
 		return status;
 	}
-	
-	// child
 
-	// reset signal handlers
+	/* child */
+
+	/* reset signal handlers */
 	for (sig = 0; sig < (_NSIG - 1); sig++)
 		signal(sig, SIG_DFL);
 
-	// unblock signals if called from signal handler
+	/* unblock signals if called from signal handler */
 	sigemptyset(&set);
 	sigprocmask(SIG_SETMASK, &set, NULL);
 
@@ -133,36 +158,39 @@ EXIT:
 		pid = getpid();
 
 		cprintf("_eval +%ld pid=%d ", get_uptime(), pid);
-		for (n = 0; argv[n]; ++n) cprintf("%s ", argv[n]);
+		for (n = 0; argv[n]; ++n)
+			cprintf("%s ", argv[n]);
+
 		cprintf("\n");
-		
-		if ((fd = open("/dev/console", O_RDWR)) >= 0) {
+
+		if ((fd = open("/dev/console", O_RDWR | O_NONBLOCK)) >= 0) {
 			dup2(fd, STDIN_FILENO);
 			dup2(fd, STDOUT_FILENO);
 			dup2(fd, STDERR_FILENO);
 		}
 		else {
 			sprintf(s, "/tmp/eval.%d", pid);
-			if ((fd = open(s, O_CREAT|O_RDWR, 0600)) >= 0) {
+			if ((fd = open(s, O_CREAT | O_RDWR | O_NONBLOCK, 0600)) >= 0) {
 				dup2(fd, STDOUT_FILENO);
 				dup2(fd, STDERR_FILENO);
 			}
 		}
-		if (fd > STDERR_FILENO) close(fd);
+		if (fd > STDERR_FILENO)
+			close(fd);
 	}
 
-	// Redirect stdout & stderr to <path>
+	/* Redirect stdout & stderr to <path> */
 	if (path) {
-		flags = O_WRONLY | O_CREAT;
+		flags = O_WRONLY | O_CREAT | O_NONBLOCK;
 		if (*path == '>') {
 			++path;
 			if (*path == '>') {
 				++path;
-				// >>path, append
+				/* >>path, append */
 				flags |= O_APPEND;
 			}
 			else {
-				// >path, overwrite
+				/* >path, overwrite */
 				flags |= O_TRUNC;
 			}
 		}
@@ -189,18 +217,20 @@ EXIT:
 
 	alarm(timeout);
 	execvp(argv[0], argv);
-	
+
 	logerr(__FUNCTION__, __LINE__, argv[0]);
+
 	_exit(errno);
 }
 
 /*
  * fread() with automatic retry on syscall interrupt
- * @param	ptr	location to store to
- * @param	size	size of each element of data
- * @param	nmemb	number of elements
- * @param	stream	file stream
- * @return	number of items successfully read
+ *
+ * @param  ptr     location to store to
+ * @param  size    size of each element of data
+ * @param  nmemb   number of elements
+ * @param  stream  file stream
+ * @return         number of items successfully read
  */
 size_t safe_fread(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
@@ -216,11 +246,12 @@ size_t safe_fread(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 
 /*
  * fwrite() with automatic retry on syscall interrupt
- * @param	ptr	location to read from
- * @param	size	size of each element of data
- * @param	nmemb	number of elements
- * @param	stream	file stream
- * @return	number of items successfully written
+ *
+ * @param  ptr     location to read from
+ * @param  size    size of each element of data
+ * @param  nmemb   number of elements
+ * @param  stream  file stream
+ * @return         number of items successfully written
  */
 size_t safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
@@ -249,9 +280,10 @@ static int hexval(unsigned char c)
 
 /*
  * Convert Ethernet address string representation to binary data
- * @param a  string in xx:xx:xx:xx:xx:xx notation
- * @param e  binary data
- * @return   TRUE if conversion was successful and FALSE otherwise
+ *
+ * @param  a  string in xx:xx:xx:xx:xx:xx notation
+ * @param  e  binary data
+ * @return    TRUE if conversion was successful and FALSE otherwise
  */
 int ether_atoe(const char *a, unsigned char *e)
 {
@@ -289,9 +321,10 @@ fail:
 
 /*
  * Convert Ethernet address binary data to string representation
- * @param e       binary Ethernet address
- * @param a       output buffer
- * @return        string
+ *
+ * @param  e  binary Ethernet address
+ * @param  a  output buffer
+ * @return    string
  */
 char *ether_etoa(const unsigned char *e, char *a)
 {
@@ -319,253 +352,50 @@ char *ether_etoa(const unsigned char *e, char *a)
 	return a;
 }
 
-void cprintf(const char *format, ...)
+#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
+static int get_cmds_size(char **cmds)
 {
-	FILE *f;
-	va_list args;
+	int i = 0;
+	for(; cmds[i]; ++i);
 
-#ifdef DEBUG_NOISY
-	{
+	return i;
+}
+
+int _cpu_eval(int *ppid, char *cmds[])
+{
+	int ncmds = 0, n = 0, i;
+	int maxn = get_cmds_size(cmds)
+#ifdef SMP
+	           + 4;
 #else
-	if (nvram_match("debug_cprintf", "1")) {
+	           + 1;
 #endif
-		if ((f = fopen("/dev/console", "w")) != NULL) {
-			va_start(args, format);
-			vfprintf(f, format, args);
-			va_end(args);
-			fclose(f);
-		}
-	}
-#if 1	
-	if (nvram_match("debug_cprintf_file", "1")) {
-//		char s[32];
-//		sprintf(s, "/tmp/cprintf.%d", getpid());
-//		if ((f = fopen(s, "a")) != NULL) {
-		if ((f = fopen("/tmp/cprintf", "a")) != NULL) {
-			va_start(args, format);
-			vfprintf(f, format, args);
-			va_end(args);
-			fclose(f);
-		}
-	}
+	char *cpucmd[maxn];
+
+	for (i = 0; i < maxn; ++i)
+		cpucmd[i]=NULL;
+
+#ifdef SMP
+	cpucmd[ncmds++] = "taskset";
+	cpucmd[ncmds++] = "-c";
+	if(!strcmp(cmds[n], CPU0) || !strcmp(cmds[n], CPU1)) {
+		cpucmd[ncmds++] = cmds[n++];
+	} else
+		cpucmd[ncmds++] = CPU0;
+#else
+	if(strcmp(cmds[n], CPU0) && strcmp(cmds[n], CPU1))
+		cpucmd[ncmds++] = cmds[n++];
+	else
+		n++;
 #endif
-#if 0
-	if (nvram_match("debug_cprintf_log", "1")) {
-		char s[512];
-		
-		va_start(args, format);
-		vsnprintf(s, sizeof(s), format, args);
-		s[sizeof(s) - 1] = 0;
-		va_end(args);
-		
-		if ((s[0] != '\n') || (s[1] != 0)) syslog(LOG_DEBUG, "%s", s);
-	}
-#endif
+	for (; cmds[n]; cpucmd[ncmds++] = cmds[n++]);
+
+	return _eval(cpucmd, NULL, 0, ppid);;
 }
-
-int _vstrsep(char *buf, const char *sep, ...)
-{
-	va_list ap;
-	char **p;
-	int n;
-
-	n = 0;
-	va_start(ap, sep);
-	while ((p = va_arg(ap, char **)) != NULL) {
-		if ((*p = strsep(&buf, sep)) == NULL)
-			break;
-
-		++n;
-	}
-	va_end(ap);
-
-	return n;
-}
-
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
-/* Find partition with defined name and return partition number as an integer */
-int getMTD(const char *name)
-{
-	char line[128], dev[32], size[32], esize[32], part_name[64];
-	int mtdnum, device = -1;
-	FILE *fp;
-
-	if (!name)
-		return -1;
-
-	if (!(fp = fopen("/proc/mtd", "r")))
-		return -1;
-
-	while (fgets(line, sizeof(line), fp)) {
-		if (sscanf(line, "%31s %31s %31s \"%63[^\"]\"", dev, size, esize, part_name) != 4)
-			continue;
-
-		if (strcmp(part_name, name) != 0)
-			continue;
-
-		if (sscanf(dev, "mtd%d:", &mtdnum) == 1) {
-			device = mtdnum;
-			break;
-		}
-	}
-	fclose(fp);
-
-	return device;
-}
-#endif
-
-#ifndef WL_BSS_INFO_VERSION
-#error WL_BSS_INFO_VERSION
-#endif
+#endif /* TCONFIG_BCMARM && TCONFIG_BCMSMP */
 
 #if WL_BSS_INFO_VERSION >= 108
 // xref (all): nas, wlconf
-
-#ifndef MAX_NVPARSE
-#define MAX_NVPARSE 255
-#endif
-
-#if 0
-/*
- * Get the ip configuration index if it exists given the
- * eth name.
- *
- * @param	wl_ifname 	pointer to eth interface name
- * @return	index or -1 if not found
- */
-int
-get_ipconfig_index(char *eth_ifname)
-{
-	char varname[64];
-	char varval[64];
-	char *ptr;
-	char wl_ifname[NVRAM_MAX_PARAM_LEN];
-	int index;
-
-	/* Bail if we get a NULL or empty string */
-
-	if (!eth_ifname) return -1;
-	if (!*eth_ifname) return -1;
-
-	/* Look up wl name from the eth name */
-	if (osifname_to_nvifname(eth_ifname, wl_ifname, sizeof(wl_ifname)) != 0)
-		return -1;
-
-	snprintf(varname, sizeof(varname), "%s_ipconfig_index", wl_ifname);
-
-	ptr = nvram_get(varname);
-
-	if (ptr) {
-	/* Check ipconfig_index pointer to see if it is still pointing
-	 * the correct lan config block
-	 */
-		if (*ptr) {
-			int index;
-			char *ifname;
-			char buf[64];
-			index = atoi(ptr);
-
-			snprintf(buf, sizeof(buf), "lan%d_ifname", index);
-
-			ifname = nvram_get(buf);
-
-			if (ifname) {
-				if  (!(strcmp(ifname, wl_ifname)))
-					return index;
-			}
-			nvram_unset(varname);
-		}
-	}
-
-	/* The index pointer may not have been configured if the
-	 * user enters the variables manually. Do a brute force search
-	 *  of the lanXX_ifname variables
-	 */
-	for (index = 0; index < MAX_NVPARSE; index++) {
-		snprintf(varname, sizeof(varname), "lan%d_ifname", index);
-		if (nvram_match(varname, wl_ifname)) {
-			/* if a match is found set up a corresponding index pointer for wlXX */
-			snprintf(varname, sizeof(varname), "%s_ipconfig_index", wl_ifname);
-			snprintf(varval, sizeof(varval), "%d", index);
-			nvram_set(varname, varval);
-			nvram_commit();
-			return index;
-		};
-	}
-	return -1;
-}
-
-/*
- * Set the ip configuration index given the eth name
- * Updates both wlXX_ipconfig_index and lanYY_ifname.
- *
- * @param	eth_ifname 	pointer to eth interface name
- * @return	0 if successful -1 if not.
- */
-int
-set_ipconfig_index(char *eth_ifname, int index)
-{
-	char varname[255];
-	char varval[16];
-	char wl_ifname[NVRAM_MAX_PARAM_LEN];
-
-	/* Bail if we get a NULL or empty string */
-
-	if (!eth_ifname) return -1;
-	if (!*eth_ifname) return -1;
-
-	if (index >= MAX_NVPARSE) return -1;
-
-	/* Look up wl name from the eth name only if the name contains
-	   eth
-	*/
-
-	if (osifname_to_nvifname(eth_ifname, wl_ifname, sizeof(wl_ifname)) != 0)
-		return -1;
-
-	snprintf(varname, sizeof(varname), "%s_ipconfig_index", wl_ifname);
-	snprintf(varval, sizeof(varval), "%d", index);
-	nvram_set(varname, varval);
-
-	snprintf(varname, sizeof(varname), "lan%d_ifname", index);
-	nvram_set(varname, wl_ifname);
-
-	nvram_commit();
-
-	return 0;
-}
-
-/*
- * Get interfaces belonging to a specific bridge.
- *
- * @param	bridge_name 	pointer to bridge interface name
- * @return	list of interfaces belonging to the bridge or NULL
- *              if not found/empty
- */
-char *
-get_bridged_interfaces(char *bridge_name)
-{
-	static char interfaces[255];
-	char *ifnames = NULL;
-	char bridge[64];
-
-	if (!bridge_name) return NULL;
-
-	memset(interfaces, 0, sizeof(interfaces));
-	snprintf(bridge, sizeof(bridge), "%s_ifnames", bridge_name);
-
-	ifnames = nvram_get(bridge);
-
-	if (ifnames)
-		strncpy(interfaces, ifnames, sizeof(interfaces));
-	else
-		return NULL;
-
-	return  interfaces;
-
-}
-
-#endif	// 0
 
 /*
  * Search a string backwards for a set of characters
@@ -812,207 +642,283 @@ int add_to_list(const char *name, char *list, int listsize)
 	return 0;
 }
 
-/* Utility function to remove duplicate entries in a space separated list */
-
+/*
+ * Remove duplicate words from a space-separated list in place.
+ *
+ * The function walks through the input list and builds a temporary output
+ * list containing only the first occurrence of each word. Duplicate entries
+ * are skipped. The resulting list is then copied back into the original
+ * buffer.
+ *
+ * @param  inlist       Space-separated list to deduplicate in place
+ * @param  inlist_size  Max size the list can occupy
+ * @return              Pointer to the modified input list on success, NULL on error
+ */
 char *remove_dups(char *inlist, int inlist_size)
 {
-	char name[256], *next = NULL;
-	char *outlist;
+	char name[256];
+	char *next, *outlist;
+	int ret;
 
-	if (!inlist_size) return NULL;
-	if (!inlist) return NULL;
-
-	outlist = (char *) malloc(inlist_size);
-	if (!outlist) return NULL;
-	memset(outlist, 0, inlist_size);
-
-	foreach(name, inlist, next) {
-		if (!find_in_list(outlist, name)) {
-			if (strlen(outlist) == 0) {
-				snprintf(outlist, inlist_size, "%s", name);
-			} else {
-				strncat(outlist, " ",  inlist_size - strlen(outlist));
-				strncat(outlist, name, inlist_size - strlen(outlist));
-			}
-		}
-	}
-	strncpy(inlist, outlist, inlist_size);
-
-	free(outlist);
-	return inlist;
-}
-
-char *find_smallest_in_list(char *haystack) {
-	char *ptr = haystack;
-	char *smallest = ptr;
-	int haystack_len = strlen(haystack);
-	int len = 0;
-
-	if (!haystack || !*haystack || !haystack_len)
+	if (inlist == NULL || inlist_size <= 0)
 		return NULL;
 
-	while (*ptr != 0 && ptr < &haystack[haystack_len]) {
-		/* consume leading spaces */
-		ptr += strspn(ptr, " ");
+	if (strnlen(inlist, (size_t)inlist_size) == (size_t)inlist_size)
+		return NULL;
 
-		/* what's the length of the next word */
-		len = strcspn(ptr, " ");
+	outlist = (char *)malloc((size_t)inlist_size);
+	if (outlist == NULL)
+		return NULL;
 
-		/* if this item/word is 'smaller', update our pointer */
-		if ((strncmp(smallest, ptr, len) > 0)) {
-			smallest = ptr;
+	memset(outlist, 0, (size_t)inlist_size);
+
+	next = NULL;
+
+	foreach(name, inlist, next) {
+		if (name[0] == '\0')
+			continue;
+
+		ret = add_to_list(name, outlist, inlist_size);
+		if (ret != 0) {
+			free(outlist);
+			return NULL;
 		}
-
-		ptr += len;
 	}
-	return (char*) smallest;
-}
 
-char *sort_list(char *inlist, int inlist_size) {
-	char *tmplist;
-	char tmp[IFNAMSIZ];
+	strlcpy(inlist, outlist, (size_t)inlist_size);
 
-	if (!inlist_size) return NULL;
-	if (!inlist) return NULL;
+	free(outlist);
 
-	tmplist = (char *) malloc(inlist_size);
-	if (!tmplist) return NULL;
-	memset(tmplist, 0, inlist_size);
-
-	char *b;
-	int len;
-	while ((b = find_smallest_in_list(inlist)) != NULL) {
-		len = strcspn(b, " ");
-		snprintf(tmp, len + 1, "%s", b);
-
-		add_to_list(tmp, tmplist, inlist_size);
-		remove_from_list(tmp, inlist, inlist_size);
-
-	}
-	strncpy(inlist, tmplist, inlist_size);
-
-	free(tmplist);
 	return inlist;
 }
 
 /*
-	 return true/false if any wireless interface has URE enabled.
-*/
-int
-ure_any_enabled(void)
+ * Find the lexicographically smallest word in a space-separated list.
+ *
+ * The function scans a NUL-terminated, space-separated list and returns
+ * a pointer to the first occurrence of the smallest word. Leading and
+ * repeated spaces are ignored. The returned pointer refers to the original
+ * input buffer.
+ *
+ * @param  haystack  Space-separated list to search
+ * @return           Pointer to the smallest word in haystack, NULL on error
+ *                   or if the list is empty
+ */
+char *find_smallest_in_list(char *haystack)
 {
-	char *temp;
-	char nv_param[NVRAM_MAX_PARAM_LEN];
+	char *ptr;
+	char *smallest;
+	size_t len, smallest_len, cmp_len;
+	int ret;
 
-	sprintf(nv_param, "ure_disable");
-	temp = nvram_safe_get(nv_param);
-	if (temp && (strncmp(temp, "0", 1) == 0))
-		return 1;
-	else
-		return 0;
+	if (haystack == NULL)
+		return NULL;
+
+	ptr = haystack + strspn(haystack, " ");
+	if (*ptr == '\0')
+		return NULL;
+
+	smallest = ptr;
+	smallest_len = strcspn(ptr, " ");
+	ptr += smallest_len;
+
+	while (*ptr != '\0') {
+		/* consume leading spaces */
+		ptr += strspn(ptr, " ");
+		if (*ptr == '\0')
+			break;
+
+		/* what's the length of the next word */
+		len = strcspn(ptr, " ");
+		cmp_len = (len < smallest_len) ? len : smallest_len;
+
+		ret = strncmp(ptr, smallest, cmp_len);
+		if (ret < 0 || (ret == 0 && len < smallest_len)) {
+			smallest = ptr;
+			smallest_len = len;
+		}
+
+		ptr += len;
+	}
+
+	return smallest;
 }
 
-#define WLMBSS_DEV_NAME	"wlmbss"
-#define WL_DEV_NAME "wl"
-#define WDS_DEV_NAME	"wds"
-
-/**
- *	 nvifname_to_osifname()
- *  The intent here is to provide a conversion between the OS interface name
- *  and the device name that we keep in NVRAM.
- * This should eventually be placed in a Linux specific file with other
- * OS abstraction functions.
-
- * @param nvifname pointer to ifname to be converted
- * @param osifname_buf storage for the converted osifname
- * @param osifname_buf_len length of storage for osifname_buf
+/*
+ * Sort a space-separated list in place.
+ *
+ * The function repeatedly finds the lexicographically smallest word in the
+ * input list, appends it to a temporary list, and removes it from the input
+ * list. When all words have been moved, the sorted temporary list is copied
+ * back into the original buffer.
+ *
+ * @param  inlist       Space-separated list to sort in place
+ * @param  inlist_size  Max size the list can occupy
+ * @return              Pointer to the sorted input list on success, NULL on error
  */
-int
-nvifname_to_osifname(const char *nvifname, char *osifname_buf,
-                     int osifname_buf_len)
+char *sort_list(char *inlist, int inlist_size)
+{
+	char *tmplist;
+	char tmp[IFNAMSIZ];
+	char *b;
+	size_t len;
+
+	if (inlist == NULL || inlist_size <= 0)
+		return NULL;
+
+	/* Ensure input list is NUL-terminated within inlist_size. */
+	if (strnlen(inlist, (size_t)inlist_size) == (size_t)inlist_size)
+		return NULL;
+
+	tmplist = (char *)malloc((size_t)inlist_size);
+	if (tmplist == NULL)
+		return NULL;
+
+	memset(tmplist, 0, (size_t)inlist_size);
+
+	while ((b = find_smallest_in_list(inlist)) != NULL) {
+		len = strcspn(b, " ");
+
+		if (len >= sizeof(tmp)) {
+			free(tmplist);
+			return NULL;
+		}
+
+		memcpy(tmp, b, len);
+		tmp[len] = '\0';
+
+		if (add_to_list(tmp, tmplist, inlist_size) != 0) {
+			free(tmplist);
+			return NULL;
+		}
+
+		if (remove_from_list(tmp, inlist, inlist_size) != 0) {
+			free(tmplist);
+			return NULL;
+		}
+	}
+
+	strlcpy(inlist, tmplist, (size_t)inlist_size);
+
+	free(tmplist);
+
+	return inlist;
+}
+
+/*
+ * Convert an internal/NVRAM interface name to the OS interface name.
+ *
+ * Some interface names are already OS-facing and are copied directly.
+ * Otherwise, the function looks up the corresponding "<nvifname>_ifname"
+ * NVRAM variable and copies its value to the output buffer.
+ *
+ * @param  nvifname          Internal/NVRAM interface name to convert
+ * @param  osifname_buf      Output buffer for the OS interface name
+ * @param  osifname_buf_len  Size of osifname_buf
+ * @return                   0 on success, -1 on error
+ */
+int nvifname_to_osifname(const char *nvifname, char *osifname_buf, int osifname_buf_len)
 {
 	char varname[NVRAM_MAX_PARAM_LEN];
 	char *ptr;
+	size_t buflen;
+	int ret;
 
-	memset(osifname_buf, 0, osifname_buf_len);
-
-	/* Bail if we get a NULL or empty string */
-	if ((!nvifname) || (!*nvifname) || (!osifname_buf)) {
+	if (nvifname == NULL || *nvifname == '\0' ||
+	    osifname_buf == NULL || osifname_buf_len <= 0)
 		return -1;
-	}
+
+	buflen = (size_t)osifname_buf_len;
+	osifname_buf[0] = '\0';
 
 	if (strstr(nvifname, "eth") || strstr(nvifname, ".")) {
-		strncpy(osifname_buf, nvifname, osifname_buf_len);
+		if (strlcpy(osifname_buf, nvifname, buflen) >= buflen)
+			return -1;
 		return 0;
 	}
 
-	snprintf(varname, sizeof(varname), "%s_ifname", nvifname);
+	ret = snprintf(varname, sizeof(varname), "%s_ifname", nvifname);
+	if (ret < 0 || (size_t)ret >= sizeof(varname))
+		return -1;
+
 	ptr = nvram_get(varname);
-	if (ptr) {
-		/* Bail if the string is empty */
-		if (!*ptr) return -1;
-		strncpy(osifname_buf, ptr, osifname_buf_len);
-		return 0;
-	}
+	if (ptr == NULL || *ptr == '\0')
+		return -1;
 
-	return -1;
+	if (strlcpy(osifname_buf, ptr, buflen) >= buflen)
+		return -1;
+
+	return 0;
 }
 
-/* osifname_to_nvifname()
- * Convert the OS interface name to the name we use internally(NVRAM, GUI, etc.)
- * This is the Linux version of this function
-
- * @param osifname pointer to osifname to be converted
- * @param nvifname_buf storage for the converted ifname
- * @param nvifname_buf_len length of storage for nvifname_buf
+/*
+ * Convert an OS interface name to the internal/NVRAM interface name.
+ *
+ * Some interface names are already internal-facing and are copied directly.
+ * Otherwise, the function searches known primary and multi-instance wireless
+ * NVRAM interface mappings and returns the matching wlX or wlX.Y name.
+ *
+ * @param  osifname          OS interface name to convert
+ * @param  nvifname_buf      Output buffer for the internal/NVRAM name
+ * @param  nvifname_buf_len  Size of nvifname_buf
+ * @return                   0 on success, -1 on error
  */
-int
-osifname_to_nvifname(const char *osifname, char *nvifname_buf,
-                     int nvifname_buf_len)
+int osifname_to_nvifname(const char *osifname, char *nvifname_buf, int nvifname_buf_len)
 {
 	char varname[NVRAM_MAX_PARAM_LEN];
-	int pri, sec;
+	size_t buflen;
+	int pri, sec, ret;
 
-	/* Bail if we get a NULL or empty string */
-
-	if ((!osifname) || (!*osifname) || (!nvifname_buf))
-	{
+	if (osifname == NULL || *osifname == '\0' ||
+	    nvifname_buf == NULL || nvifname_buf_len <= 0)
 		return -1;
-	}
 
-	memset(nvifname_buf, 0, nvifname_buf_len);
+	buflen = (size_t)nvifname_buf_len;
+	nvifname_buf[0] = '\0';
 
 	if (strstr(osifname, "wl") || strstr(osifname, "br") ||
-	     strstr(osifname, "wds")) {
-		strncpy(nvifname_buf, osifname, nvifname_buf_len);
+	    strstr(osifname, "wds")) {
+		if (strlcpy(nvifname_buf, osifname, buflen) >= buflen)
+			return -1;
 		return 0;
 	}
 
 	/* look for interface name on the primary interfaces first */
 	for (pri = 0; pri < MAX_NVPARSE; pri++) {
-		snprintf(varname, sizeof(varname),
-					"wl%d_ifname", pri);
+		ret = snprintf(varname, sizeof(varname), "wl%d_ifname", pri);
+		if (ret < 0 || (size_t)ret >= sizeof(varname))
+			return -1;
+
 		if (nvram_match(varname, (char *)osifname)) {
-					snprintf(nvifname_buf, nvifname_buf_len, "wl%d", pri);
-					return 0;
-				}
+			ret = snprintf(nvifname_buf, buflen, "wl%d", pri);
+			if (ret < 0 || (size_t)ret >= buflen)
+				return -1;
+
+			return 0;
+		}
 	}
 
 	/* look for interface name on the multi-instance interfaces */
-	for (pri = 0; pri < MAX_NVPARSE; pri++)
+	for (pri = 0; pri < MAX_NVPARSE; pri++) {
 		for (sec = 0; sec < MAX_NVPARSE; sec++) {
-			snprintf(varname, sizeof(varname),
-					"wl%d.%d_ifname", pri, sec);
+			ret = snprintf(varname, sizeof(varname),
+			               "wl%d.%d_ifname", pri, sec);
+			if (ret < 0 || (size_t)ret >= sizeof(varname))
+				return -1;
+
 			if (nvram_match(varname, (char *)osifname)) {
-				snprintf(nvifname_buf, nvifname_buf_len, "wl%d.%d", pri, sec);
+				ret = snprintf(nvifname_buf, buflen, "wl%d.%d", pri, sec);
+				if (ret < 0 || (size_t)ret >= buflen)
+					return -1;
+
 				return 0;
 			}
 		}
+	}
 
 	return -1;
 }
-
-#endif	// #if WL_BSS_INFO_VERSION >= 108
+#endif /* #if WL_BSS_INFO_VERSION >= 108 */
 
 void killall_tk_period_wait(const char *name, int wait_ds) /* time in deciseconds (1/10 sec) */
 {
@@ -1041,7 +947,7 @@ void killall_and_waitfor(const char *name, int loop, int killtime)
 	killall_tk_period_wait(name, killtime); /* wait time in deciseconds (1/10 sec) */
 	while ((pid = pidof(name)) > 0 && (loop-- > 0)) {
 		logmsg(LOG_WARNING, "killing %s ...", name);
-		/* Reap the zombie if it has terminated */
+		/* reap the zombie if it has terminated */
 		waitpid(pid, NULL, WNOHANG);
 		sleep(1);
 	}
@@ -1060,35 +966,269 @@ int kill_pidfile_s(char *pidfile, int sig)
 	return -1;
 }
 
+int _vstrsep(char *buf, const char *sep, ...)
+{
+	va_list ap;
+	char **p;
+	int n;
+
+	n = 0;
+	va_start(ap, sep);
+	while ((p = va_arg(ap, char **)) != NULL) {
+		if ((*p = strsep(&buf, sep)) == NULL)
+			break;
+
+		++n;
+	}
+	va_end(ap);
+
+	return n;
+}
+
 void dbg(const char * format, ...)
 {
 	FILE *f;
 	int nfd;
 	va_list args;
 
-	if (((nfd = open("/dev/console", O_WRONLY | O_NONBLOCK)) > 0) &&
-	    (f = fdopen(nfd, "w")))
-	{
+	if (((nfd = open("/dev/console", O_WRONLY | O_NONBLOCK)) > 0) && (f = fdopen(nfd, "w"))) {
 		va_start(args, format);
 		vfprintf(f, format, args);
 		va_end(args);
 		fclose(f);
 	}
-	else
-	{
+	else {
 		va_start(args, format);
 		vfprintf(stderr, format, args);
 		va_end(args);
 	}
 
-	if (nfd != -1) close(nfd);
+	if (nfd != -1)
+		close(nfd);
 }
 
+void cprintf(const char *format, ...)
+{
+	FILE *f;
+	int nfd;
+	va_list args;
+
+#ifdef DEBUG_NOISY
+	{
+#else
+	if (nvram_match("debug_cprintf", "1")) {
+#endif
+		if ((nfd = open("/dev/console", O_WRONLY | O_NONBLOCK)) >= 0) {
+			if ((f = fdopen(nfd, "w")) != NULL) {
+				va_start(args, format);
+				vfprintf(f, format, args);
+				va_end(args);
+				fclose(f);
+			}
+			else {
+				close(nfd);
+			}
+		}
+	}
+
+	if (nvram_match("debug_cprintf_file", "1")) {
+		if ((f = fopen("/tmp/cprintf", "a")) != NULL) {
+			va_start(args, format);
+			vfprintf(f, format, args);
+			va_end(args);
+			fclose(f);
+		}
+	}
+}
+
+/*
+ * Convert an Ethernet address to a printable string.
+ *
+ * The function formats the address as uppercase hexadecimal octets separated
+ * by colons. The returned pointer refers to a static internal buffer and is
+ * overwritten by each subsequent call.
+ *
+ * @param  n  Ethernet address to convert
+ * @return    Pointer to the formatted address string, or NULL on error
+ */
+#ifdef CONFIG_BCMWL5
+char *wl_ether_etoa(const struct ether_addr *n)
+{
+	static char etoa_buf[ETHER_ADDR_LEN * 3];
+	int ret;
+
+	if (n == NULL)
+		return NULL;
+
+	ret = snprintf(etoa_buf, sizeof(etoa_buf),
+	               "%02X:%02X:%02X:%02X:%02X:%02X",
+	               n->octet[0] & 0xff, n->octet[1] & 0xff,
+	               n->octet[2] & 0xff, n->octet[3] & 0xff,
+	               n->octet[4] & 0xff, n->octet[5] & 0xff);
+	if (ret < 0 || (size_t)ret >= sizeof(etoa_buf))
+		return NULL;
+
+	return etoa_buf;
+}
+#endif /* CONFIG_BCMWL5 */
+
+/* Find partition with defined name and return partition number as an integer */
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+int getMTD(const char *name)
+{
+	char line[128], dev[32], size[32], esize[32], part_name[64];
+	int mtdnum, device = -1;
+	FILE *fp;
+
+	if (!name)
+		return -1;
+
+	if (!(fp = fopen("/proc/mtd", "r")))
+		return -1;
+
+	while (fgets(line, sizeof(line), fp)) {
+		if (sscanf(line, "%31s %31s %31s \"%63[^\"]\"", dev, size, esize, part_name) != 4)
+			continue;
+
+		if (strcmp(part_name, name) != 0)
+			continue;
+
+		if (sscanf(dev, "mtd%d:", &mtdnum) == 1) {
+			device = mtdnum;
+			break;
+		}
+	}
+	fclose(fp);
+
+	return device;
+}
+#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+
+/*
+ * Return the process ID for a process started with the specified pathname.
+ *
+ * The function scans /proc, reads each process cmdline, and compares the
+ * first command-line entry with the requested name. Command-line arguments
+ * are ignored.
+ *
+ * @param  name  Pathname used to start the process, without arguments
+ * @return       Process ID on success, -1 on error or if not found
+ */
+#ifdef TCONFIG_BCMBSD
+pid_t get_pid_by_name(const char *name)
+{
+	DIR *dir;
+	struct dirent *next;
+	pid_t pid;
+	size_t n;
+
+	if (name == NULL || *name == '\0')
+		return -1;
+
+	dir = opendir("/proc");
+	if (dir == NULL) {
+		logerr(__FUNCTION__, __LINE__, "/proc");
+		return -1;
+	}
+
+	pid = -1;
+
+	while ((next = readdir(dir)) != NULL) {
+		FILE *fp;
+		char filename[256];
+		char buffer[256];
+		char *endptr;
+		long val;
+		int ret;
+
+		if (!isdigit((unsigned char)next->d_name[0]))
+			continue;
+
+		val = strtol(next->d_name, &endptr, 10);
+		if (*endptr != '\0' || val <= 0)
+			continue;
+
+		ret = snprintf(filename, sizeof(filename),
+		               "/proc/%s/cmdline", next->d_name);
+		if (ret < 0 || (size_t)ret >= sizeof(filename))
+			continue;
+
+		fp = fopen(filename, "r");
+		if (fp == NULL)
+			continue;
+
+		n = fread(buffer, 1, sizeof(buffer) - 1, fp);
+		fclose(fp);
+
+		if (n == 0)
+			continue;
+
+		buffer[n] = '\0';
+
+		if (strcmp(name, buffer) == 0) {
+			pid = (pid_t)val;
+			break;
+		}
+	}
+
+	closedir(dir);
+
+	return pid;
+}
+#endif /* TCONFIG_BCMBSD */
+
+/* ============================ UNUSED ============================ */
+
 #if 0
+#define T(x)		__TXT(x)
+#define __TXT(s)	L ## s
+
+#ifndef B_L
+ #define B_L		T(__FILE__),__LINE__
+ #define B_ARGS		file, line
+#endif /* B_L */
+
+#define bfree(B_ARGS, p) free(p)
+#define balloc(B_ARGS, num) malloc(num)
+#define brealloc(B_ARGS, p, num) realloc(p, num)
+
+#ifndef max
+ #define max(a,b)  (((a) > (b)) ? (a) : (b))
+#endif /* max */
+
+#ifndef min
+ #define min(a,b)  (((a) < (b)) ? (a) : (b))
+#endif /* min */
+
+#define STR_REALLOC		0x1	/* Reallocate the buffer as required */
+#define STR_INC			64	/* Growth increment */
+
+typedef struct {
+	char *s;			/* Pointer to buffer */
+	int size;			/* Current buffer size */
+	int max;			/* Maximum buffer size */
+	int count;			/* Buffer count */
+	int flags;			/* Allocation flags */
+} strbuf_t;
+
+/*
+ * Sprintf formatting flags
+ */
+enum flag {
+	flag_none = 0,
+	flag_minus = 1,
+	flag_plus = 2,
+	flag_space = 4,
+	flag_hash = 8,
+	flag_zero = 16,
+	flag_short = 32,
+	flag_long = 64
+};
+
 /*
  * Reads file and returns contents
- * @param	fd	file descriptor
- * @return	contents of file or NULL if an error occurred
+ * @param  fd file descriptor
+ * @return contents of file or NULL if an error occurred
  */
 char *fd2str(int fd)
 {
@@ -1108,13 +1248,14 @@ char *fd2str(int fd)
 	close(fd);
 	if (buf)
 		buf[count] = '\0';
+
 	return buf;
 }
 
 /*
  * Reads file and returns contents
- * @param	path	path to file
- * @return	contents of file or NULL if an error occurred
+ * @param  path path to file
+ * @return contents of file or NULL if an error occurred
  */
 char *file2str(const char *path)
 {
@@ -1130,11 +1271,10 @@ char *file2str(const char *path)
 
 /*
  * Waits for a file descriptor to change status or unblocked signal
- * @param	fd	file descriptor
- * @param	timeout	seconds to wait before timing out or 0 for no timeout
- * @return	1 if descriptor changed status or 0 if timed out or -1 on error
+ * @param  fd       file descriptor
+ * @param  timeout  seconds to wait before timing out or 0 for no timeout
+ * @return          1 if descriptor changed status or 0 if timed out or -1 on error
  */
-
 int waitfor(int fd, int timeout)
 {
 	fd_set rfds;
@@ -1145,12 +1285,7 @@ int waitfor(int fd, int timeout)
 	return select(fd + 1, &rfds, NULL, NULL, (timeout > 0) ? &tv : NULL);
 }
 
-/*
- * Kills process whose PID is stored in plaintext in pidfile
- * @param	pidfile	PID file
- * @return	0 on success and errno on failure
- */
-int kill_pidfile(char *pidfile)
+int kill_pidfile_s_rm(char *pidfile, int sig)
 {
 	FILE *fp;
 	char buf[256];
@@ -1159,10 +1294,572 @@ int kill_pidfile(char *pidfile)
 		if (fgets(buf, sizeof(buf), fp)) {
 			pid_t pid = strtoul(buf, NULL, 0);
 			fclose(fp);
-			return kill(pid, SIGTERM);
+			unlink(pidfile);
+			return kill(pid, sig);
 		}
 		fclose(fp);
-  	}
+	}
 	return errno;
 }
-#endif	// 0
+
+/*
+ * Get the ip configuration index if it exists given the
+ * eth name.
+ *
+ * @param  wl_ifname  pointer to eth interface name
+ * @return            index or -1 if not found
+ */
+int get_ipconfig_index(char *eth_ifname)
+{
+	char varname[64];
+	char varval[64];
+	char *ptr;
+	char wl_ifname[NVRAM_MAX_PARAM_LEN];
+	int index;
+
+	/* Bail if we get a NULL or empty string */
+
+	if (!eth_ifname) return -1;
+	if (!*eth_ifname) return -1;
+
+	/* Look up wl name from the eth name */
+	if (osifname_to_nvifname(eth_ifname, wl_ifname, sizeof(wl_ifname)) != 0)
+		return -1;
+
+	snprintf(varname, sizeof(varname), "%s_ipconfig_index", wl_ifname);
+
+	ptr = nvram_get(varname);
+
+	if (ptr) {
+	/* Check ipconfig_index pointer to see if it is still pointing
+	 * the correct lan config block
+	 */
+		if (*ptr) {
+			int index;
+			char *ifname;
+			char buf[64];
+			index = atoi(ptr);
+
+			snprintf(buf, sizeof(buf), "lan%d_ifname", index);
+
+			ifname = nvram_get(buf);
+
+			if (ifname) {
+				if  (!(strcmp(ifname, wl_ifname)))
+					return index;
+			}
+			nvram_unset(varname);
+		}
+	}
+
+	/* The index pointer may not have been configured if the
+	 * user enters the variables manually. Do a brute force search
+	 *  of the lanXX_ifname variables
+	 */
+	for (index = 0; index < MAX_NVPARSE; index++) {
+		snprintf(varname, sizeof(varname), "lan%d_ifname", index);
+		if (nvram_match(varname, wl_ifname)) {
+			/* if a match is found set up a corresponding index pointer for wlXX */
+			snprintf(varname, sizeof(varname), "%s_ipconfig_index", wl_ifname);
+			snprintf(varval, sizeof(varval), "%d", index);
+			nvram_set(varname, varval);
+			nvram_commit();
+			return index;
+		};
+	}
+	return -1;
+}
+
+/*
+ * Set the ip configuration index given the eth name
+ * Updates both wlXX_ipconfig_index and lanYY_ifname.
+ *
+ * @param  eth_ifname  pointer to eth interface name
+ * @return             0 if successful -1 if not.
+ */
+int set_ipconfig_index(char *eth_ifname, int index)
+{
+	char varname[255];
+	char varval[16];
+	char wl_ifname[NVRAM_MAX_PARAM_LEN];
+
+	/* Bail if we get a NULL or empty string */
+
+	if (!eth_ifname) return -1;
+	if (!*eth_ifname) return -1;
+
+	if (index >= MAX_NVPARSE) return -1;
+
+	/* Look up wl name from the eth name only if the name contains eth */
+
+	if (osifname_to_nvifname(eth_ifname, wl_ifname, sizeof(wl_ifname)) != 0)
+		return -1;
+
+	snprintf(varname, sizeof(varname), "%s_ipconfig_index", wl_ifname);
+	snprintf(varval, sizeof(varval), "%d", index);
+	nvram_set(varname, varval);
+
+	snprintf(varname, sizeof(varname), "lan%d_ifname", index);
+	nvram_set(varname, wl_ifname);
+
+	nvram_commit();
+
+	return 0;
+}
+
+/*
+ * Get interfaces belonging to a specific bridge.
+ *
+ * @param  bridge_name  pointer to bridge interface name
+ * @return              list of interfaces belonging to the bridge or NULL if not found/empty
+ */
+char *get_bridged_interfaces(char *bridge_name)
+{
+	static char interfaces[255];
+	char *ifnames = NULL;
+	char bridge[64];
+
+	if (!bridge_name) return NULL;
+
+	memset(interfaces, 0, sizeof(interfaces));
+	snprintf(bridge, sizeof(bridge), "%s_ifnames", bridge_name);
+
+	ifnames = nvram_get(bridge);
+
+	if (ifnames)
+		strncpy(interfaces, ifnames, sizeof(interfaces));
+	else
+		return NULL;
+
+	return  interfaces;
+
+}
+
+/* description: parse va and do system */
+#define CMD_BUFSIZE		256
+int doSystem(char *fmt, ...)
+{
+	va_list vargs;
+	char *cmd = NULL;
+	int rc = 0;
+
+	va_start(vargs, fmt);
+	if (fmtValloc(&cmd, CMD_BUFSIZE, fmt, vargs) >= CMD_BUFSIZE) {
+		fprintf(stderr, "doSystem: lost data, buffer overflow\n");
+	}
+	va_end(vargs);
+
+	if(cmd) {
+		if (!strncmp(cmd, "iwpriv", 6))
+			logmsg(LOG_DEBUG, "*** %s: %s", __FUNCTION__, cmd);
+		rc = system(cmd);
+		bfree(B_L, cmd);
+	}	
+	return rc;
+}
+
+/* Print out message on console */
+void dbgprintf(const char * format, ...)
+{
+	FILE *f;
+	int nfd;
+	va_list args;
+
+	if ((nfd = open("/dev/console", O_WRONLY | O_NONBLOCK)) > 0) {
+		if ((f = fdopen(nfd, "w")) != NULL) {
+			va_start(args, format);
+			vfprintf(f, format, args);
+			va_end(args);
+			fclose(f);
+		}
+		close(nfd);
+	}
+}
+
+/* return true/false if any wireless interface has URE enabled */
+int ure_any_enabled(void)
+{
+	char *temp;
+	char nv_param[NVRAM_MAX_PARAM_LEN];
+
+	snprintf(nv_param, NVRAM_MAX_PARAM_LEN, "ure_disable");
+	temp = nvram_safe_get(nv_param);
+	if (temp && (strncmp(temp, "0", 1) == 0))
+		return 1;
+	else
+		return 0;
+}
+
+/*
+ * Concatenates NULL-terminated list of arguments into a single
+ * commmand and executes it
+ * @param  argv  argument list
+ * @return       stdout of executed command or NULL if an error occurred
+ */
+char *_backtick(char *const argv[])
+{
+	int filedes[2];
+	pid_t pid;
+	int status;
+	char *buf = NULL;
+
+	/* create pipe */
+	if (pipe(filedes) == -1) {
+		logerr(__FUNCTION__, __LINE__, argv[0]);
+		return NULL;
+	}
+
+	switch (pid = fork()) {
+	case -1:	/* error */
+		return NULL;
+	case 0:		/* child */
+		close(filedes[0]);	/* close read end of pipe */
+		dup2(filedes[1], 1);	/* redirect stdout to write end of pipe */
+		close(filedes[1]);	/* close write end of pipe */
+		execvp(argv[0], argv);
+		exit(errno);
+		break;
+	default:	/* parent */
+		close(filedes[1]);	/* close write end of pipe */
+		buf = fd2str(filedes[0]);
+		waitpid(pid, &status, 0);
+		break;
+	}
+
+	return buf;
+}
+
+/* Add a character to a string buffer */
+static void put_char(strbuf_t *buf, char c)
+{
+	if (buf->count >= (buf->size - 1)) {
+		if (! (buf->flags & STR_REALLOC))
+			return;
+
+		buf->size += STR_INC;
+		if (buf->size > buf->max && buf->size > STR_INC) {
+			/* Caller should increase the size of the calling buffer */
+			buf->size -= STR_INC;
+			return;
+		}
+		if (buf->s == NULL)
+			buf->s = balloc(B_L, buf->size * sizeof(char));
+		else
+			buf->s = brealloc(B_L, buf->s, buf->size * sizeof(char));
+	}
+	buf->s[buf->count] = c;
+
+	if (c != '\0')
+		++buf->count;
+}
+
+/* Add a string to a string buffer */
+static void put_string(strbuf_t *buf, char *s, int len, int width, int prec, enum flag f)
+{
+	int i;
+
+	if (len < 0) { 
+		len = strnlen(s, (prec >= 0 ? (unsigned int)prec : ULONG_MAX));
+	}
+	else if (prec >= 0 && prec < len) { 
+		len = prec; 
+	}
+	if (width > len && !(f & flag_minus)) {
+		for (i = len; i < width; ++i) { 
+			put_char(buf, ' '); 
+		}
+	}
+	for (i = 0; i < len; ++i) { 
+		put_char(buf, s[i]); 
+	}
+	if (width > len && f & flag_minus) {
+		for (i = len; i < width; ++i) { 
+			put_char(buf, ' '); 
+		}
+	}
+}
+
+/* Add a long to a string buffer */
+static void put_ulong(strbuf_t *buf, unsigned long int value, int base, int upper, char *prefix, int width, int prec, enum flag f)
+{
+	unsigned long x, x2;
+	int len, zeros, i;
+
+	for (len = 1, x = 1; x < ULONG_MAX / base; ++len, x = x2) {
+		x2 = x * base;
+		if (x2 > value) { 
+			break; 
+		}
+	}
+	zeros = (prec > len) ? prec - len : 0;
+	width -= zeros + len;
+	if (prefix != NULL) { 
+		width -= strnlen(prefix, ULONG_MAX); 
+	}
+	if (!(f & flag_minus)) {
+		if (f & flag_zero) {
+			for (i = 0; i < width; ++i) { 
+				put_char(buf, '0'); 
+			}
+		}
+		else {
+			for (i = 0; i < width; ++i) { 
+				put_char(buf, ' '); 
+			}
+		}
+	}
+	if (prefix != NULL) { 
+		put_string(buf, prefix, -1, 0, -1, flag_none); 
+	}
+	for (i = 0; i < zeros; ++i) { 
+		put_char(buf, '0'); 
+	}
+	for ( ; x > 0; x /= base) {
+		int digit = (value / x) % base;
+		put_char(buf, (char) ((digit < 10 ? '0' : (upper ? 'A' : 'a') - 10) +
+			digit));
+	}
+	if (f & flag_minus) {
+		for (i = 0; i < width; ++i) { 
+			put_char(buf, ' '); 
+		}
+	}
+}
+
+/*
+ * Dynamic sprintf implementation. Supports dynamic buffer allocation.
+ * This function can be called multiple times to grow an existing allocated
+ * buffer. In this case, msize is set to the size of the previously allocated
+ * buffer. The buffer will be realloced, as required. If msize is set, we
+ * return the size of the allocated buffer for use with the next call. For
+ * the first call, msize can be set to -1.
+ */
+static int dsnprintf(char **s, int size, char *fmt, va_list arg, int msize)
+{
+	strbuf_t buf;
+	char c;
+
+	assert(s);
+	assert(fmt);
+
+	memset(&buf, 0, sizeof(buf));
+	buf.s = *s;
+
+	if (*s == NULL || msize != 0) {
+		buf.max = size;
+		buf.flags |= STR_REALLOC;
+		if (msize != 0) {
+			buf.size = max(msize, 0);
+		}
+		if (*s != NULL && msize != 0) {
+			buf.count = strlen(*s);
+		}
+	} else {
+		buf.size = size;
+	}
+
+	while ((c = *fmt++) != '\0') {
+		if (c != '%' || (c = *fmt++) == '%') {
+			put_char(&buf, c);
+		} else {
+			enum flag f = flag_none;
+			int width = 0;
+			int prec = -1;
+			for ( ; c != '\0'; c = *fmt++) {
+				if (c == '-') { 
+					f |= flag_minus; 
+				} else if (c == '+') { 
+					f |= flag_plus; 
+				} else if (c == ' ') { 
+					f |= flag_space; 
+				} else if (c == '#') { 
+					f |= flag_hash; 
+				} else if (c == '0') { 
+					f |= flag_zero; 
+				} else {
+					break;
+				}
+			}
+			if (c == '*') {
+				width = va_arg(arg, int);
+				if (width < 0) {
+					f |= flag_minus;
+					width = -width;
+				}
+				c = *fmt++;
+			} else {
+				for ( ; isdigit((int)c); c = *fmt++) {
+					width = width * 10 + (c - '0');
+				}
+			}
+			if (c == '.') {
+				f &= ~flag_zero;
+				c = *fmt++;
+				if (c == '*') {
+					prec = va_arg(arg, int);
+					c = *fmt++;
+				} else {
+					for (prec = 0; isdigit((int)c); c = *fmt++) {
+						prec = prec * 10 + (c - '0');
+					}
+				}
+			}
+			if (c == 'h' || c == 'l') {
+				f |= (c == 'h' ? flag_short : flag_long);
+				c = *fmt++;
+			}
+			if (c == 'd' || c == 'i') {
+				long int value;
+				if (f & flag_short) {
+					value = (short int) va_arg(arg, int);
+				} else if (f & flag_long) {
+					value = va_arg(arg, long int);
+				} else {
+					value = va_arg(arg, int);
+				}
+				if (value >= 0) {
+					if (f & flag_plus) {
+						put_ulong(&buf, value, 10, 0, ("+"), width, prec, f);
+					} else if (f & flag_space) {
+						put_ulong(&buf, value, 10, 0, (" "), width, prec, f);
+					} else {
+						put_ulong(&buf, value, 10, 0, NULL, width, prec, f);
+					}
+				} else {
+					put_ulong(&buf, -value, 10, 0, ("-"), width, prec, f);
+				}
+			} else if (c == 'o' || c == 'u' || c == 'x' || c == 'X') {
+				unsigned long int value;
+				if (f & flag_short) {
+					value = (unsigned short int) va_arg(arg, unsigned int);
+				} else if (f & flag_long) {
+					value = va_arg(arg, unsigned long int);
+				} else {
+					value = va_arg(arg, unsigned int);
+				}
+				if (c == 'o') {
+					if (f & flag_hash && value != 0) {
+						put_ulong(&buf, value, 8, 0, ("0"), width, prec, f);
+					} else {
+						put_ulong(&buf, value, 8, 0, NULL, width, prec, f);
+					}
+				} else if (c == 'u') {
+					put_ulong(&buf, value, 10, 0, NULL, width, prec, f);
+				} else {
+					if (f & flag_hash && value != 0) {
+						if (c == 'x') {
+							put_ulong(&buf, value, 16, 0, ("0x"), width, 
+								prec, f);
+						} else {
+							put_ulong(&buf, value, 16, 1, ("0X"), width, 
+								prec, f);
+						}
+					} else {
+						/* 04 Apr 02 BgP -- changed so that %X correctly outputs
+						 * uppercase hex digits when requested.
+						 * put_ulong(&buf, value, 16, 0, NULL, width, prec, f);
+						 */
+						put_ulong(&buf, value, 16, ('X' == c) , NULL, width, prec, f);
+					}
+				}
+
+			} else if (c == 'c') {
+				char value = va_arg(arg, int);
+				put_char(&buf, value);
+
+			} else if (c == 's' || c == 'S') {
+				char *value = va_arg(arg, char *);
+				if (value == NULL) {
+					put_string(&buf, ("(null)"), -1, width, prec, f);
+				} else if (f & flag_hash) {
+					put_string(&buf,
+						value + 1, (char) *value, width, prec, f);
+				} else {
+					put_string(&buf, value, -1, width, prec, f);
+				}
+			} else if (c == 'p') {
+				void *value = va_arg(arg, void *);
+				put_ulong(&buf,
+					(unsigned long int) value, 16, 0, ("0x"), width, prec, f);
+			} else if (c == 'n') {
+				if (f & flag_short) {
+					short int *value = va_arg(arg, short int *);
+					*value = buf.count;
+				} else if (f & flag_long) {
+					long int *value = va_arg(arg, long int *);
+					*value = buf.count;
+				} else {
+					int *value = va_arg(arg, int *);
+					*value = buf.count;
+				}
+			} else {
+				put_char(&buf, c);
+			}
+		}
+	}
+	if (buf.s == NULL) {
+		put_char(&buf, '\0');
+	}
+
+	/* If the user requested a dynamic buffer (*s == NULL), ensure it is returned */
+	if (*s == NULL || msize != 0) {
+		*s = buf.s;
+	}
+
+	if (*s != NULL && size > 0) {
+		if (buf.count < size) {
+			(*s)[buf.count] = '\0';
+		} else {
+			(*s)[buf.size - 1] = '\0';
+		}
+	}
+
+	if (msize != 0) {
+		return buf.size;
+	}
+	return buf.count;
+}
+
+/*
+ * sprintf and vsprintf are bad, ok. You can easily clobber memory. Use
+ * fmtAlloc and fmtValloc instead! These functions do _not_ support floating
+ * point, like %e, %f, %g...
+ */
+int fmtAlloc(char **s, int n, char *fmt, ...)
+{
+	va_list	ap;
+	int		result;
+
+	assert(s);
+	assert(fmt);
+
+	*s = NULL;
+	va_start(ap, fmt);
+	result = dsnprintf(s, n, fmt, ap, 0);
+	va_end(ap);
+	return result;
+}
+
+/* A vsprintf replacement */
+int fmtValloc(char **s, int n, char *fmt, va_list arg)
+{
+	assert(s);
+	assert(fmt);
+
+	*s = NULL;
+	return dsnprintf(s, n, fmt, arg, 0);
+}
+
+int swap_check()
+{
+	struct sysinfo info;
+
+	sysinfo(&info);
+
+	if (info.totalswap > 0)
+		return 1;
+	else
+		return 0;
+}
+
+#endif /* 0 */

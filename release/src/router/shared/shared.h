@@ -453,12 +453,15 @@ extern int is_number(char *a);
 extern int isspacex(char c);
 extern char *shrink_space(char *dest, const char *src, int n);
 
+/* shutils.c */
+#ifdef TCONFIG_BCMBSD
+ extern pid_t get_pid_by_name(const char *name); /* Returns the process ID */
+#endif
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+ extern int getMTD(const char *name); /* Find partition with defined name and return partition number as an integer */
+#endif
+
 /* mdu.c/ddns.c */
 #define MDU_STOP_FN		"/var/lib/mdu/mdu-stop"
-
-/* shutils.h */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
-extern int getMTD(const char *name);
-#endif
 
 #endif /* __SHARED_H__ */
