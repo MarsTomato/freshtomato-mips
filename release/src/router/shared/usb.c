@@ -278,7 +278,43 @@ extern void volume_id_free_buffer();
 extern int volume_id_probe_ext();
 extern int volume_id_probe_vfat();
 extern int volume_id_probe_ntfs();
+#ifdef TCONFIG_BCMARM
+ #ifdef HFS
+ extern int volume_id_probe_hfs_hfsplus();
+ #endif
+extern int volume_id_probe_exfat();
+#endif /* TCONFIG_BCMARM */
 extern int volume_id_probe_linux_swap();
+
+/* magic for ext2/3/4 detection */
+int check_magic(const unsigned char *buf, const char *magic)
+{
+	unsigned char compat = buf[0];
+	unsigned char incompat = buf[4];
+	unsigned char ro_compat = buf[8];
+
+	if (!strncmp(magic, "ext3_chk", 8)) {
+		if (!(compat & 4))
+			return 0;
+		if (incompat >= 0x40)
+			return 0;
+		if (ro_compat >= 8)
+			return 0;
+		return 1;
+	}
+
+	if (!strncmp(magic, "ext4_chk", 8)) {
+		if (!(compat & 4))
+			return 0;
+		if (incompat >= 0x40)
+			return 1;
+		if (ro_compat > 7)
+			return 1;
+		return 0;
+	}
+
+	return 0;
+}
 
 /* Put the label in *label and uuid in *uuid.
  * Return fstype if determined.
@@ -287,6 +323,7 @@ char *find_label_or_uuid(char *dev_name, char *label, size_t label_sz, char *uui
 {
 	struct volume_id id;
 	char *fstype = NULL;
+	const unsigned char *ext_flags = NULL;
 
 	memset(&id, 0x00, sizeof(id));
 	if (label) *label = 0;
@@ -302,13 +339,41 @@ char *find_label_or_uuid(char *dev_name, char *label, size_t label_sz, char *uui
 	/* detect vfat */
 	else if (!id.error && volume_id_probe_vfat(&id) == 0)
 		fstype = "vfat";
-	/* detect ext2/3 */
-	else if (!id.error && volume_id_probe_ext(&id) == 0)
-		fstype = ((id.sbbuf[0x460] & 0x0008 /* JOURNAL_DEV */) != 0 ||
-		          (id.sbbuf[0x45c] & 0x0004 /* HAS_JOURNAL */) != 0) ? "ext3" : "ext2";
+	/* detect ext2/3/4 */
+	else if (!id.error && volume_id_probe_ext(&id) == 0) {
+		if (id.sbbuf[0x438] == 0x53 && id.sbbuf[0x439] == 0xEF) {
+			ext_flags = &id.sbbuf[0x45c];
+
+			if (check_magic(ext_flags, "ext3_chk"))
+				fstype = "ext3";
+			else if (check_magic(ext_flags, "ext4_chk"))
+				fstype = "ext4";
+			else
+				fstype = "ext2";
+		}
+	}
 	/* detect ntfs */
 	else if (!id.error && volume_id_probe_ntfs(&id) == 0)
 		fstype = "ntfs";
+#ifdef TCONFIG_BCMARM
+ #ifdef HFS
+	/* detect hfs */
+	else if (!id.error && volume_id_probe_hfs_hfsplus(&id) == 0) {
+		if ((!memcmp(id.sbbuf + 1032, "HFSJ", 4)) || (!memcmp(id.sbbuf + 1032, "H+", 2)) ||
+		    (!memcmp(id.sbbuf + 1024, "H+", 2)) || (!memcmp(id.sbbuf + 1024, "HX", 2))) {
+			if (id.sbbuf[1025] == 0x58)
+				fstype = "hfsplus"; /* hfs+jx */
+			else
+				fstype = "hfsplus"; /* hfs+j */
+		}
+		else
+			fstype = "hfs";
+	}
+ #endif
+	/* detect exfat */
+	else if (!id.error && volume_id_probe_exfat(&id) == 0)
+		fstype = "exfat";
+#endif /* TCONFIG_BCMARM */
 	/* -> unknown FS */
 	else if (!id.error)
 		fstype = "unknown";
