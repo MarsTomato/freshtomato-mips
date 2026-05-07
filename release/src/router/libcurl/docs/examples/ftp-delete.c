@@ -29,7 +29,7 @@
 
 #include <curl/curl.h>
 
-static size_t write_cb(void *buffer, size_t size, size_t nmemb, void *stream)
+static size_t write_cb(char *buffer, size_t size, size_t nmemb, void *stream)
 {
   (void)buffer;
   (void)stream;
@@ -43,7 +43,7 @@ int main(void)
   struct curl_slist *headerlist = NULL;
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -72,7 +72,7 @@ int main(void)
     /* clean up the FTP commands list */
     curl_slist_free_all(headerlist);
 
-    if(CURLE_OK != result) {
+    if(result != CURLE_OK) {
       /* we failed */
       fprintf(stderr, "curl told us %d\n", result);
     }

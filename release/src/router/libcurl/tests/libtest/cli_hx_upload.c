@@ -64,10 +64,10 @@ static size_t my_write_u_cb(char *buf, size_t nitems, size_t buflen,
                             void *userdata)
 {
   struct transfer_u *t = userdata;
-  size_t blen = (nitems * buflen);
+  curl_off_t blen = nitems * buflen;
   size_t nwritten;
 
-  curl_mfprintf(stderr, "[t-%zu] RECV %zu bytes, "
+  curl_mfprintf(stderr, "[t-%zu] RECV %" CURL_FORMAT_CURL_OFF_T " bytes, "
                 "total=%" CURL_FORMAT_CURL_OFF_T ", "
                 "pause_at=%" CURL_FORMAT_CURL_OFF_T "\n",
                 t->idx, blen, t->recv_size, t->pause_at);
@@ -79,13 +79,13 @@ static size_t my_write_u_cb(char *buf, size_t nitems, size_t buflen,
       return 0;
   }
 
-  nwritten = fwrite(buf, nitems, buflen, t->out);
-  if(nwritten < blen) {
+  nwritten = fwrite(buf, buflen, nitems, t->out);
+  if(nwritten < nitems) {
     curl_mfprintf(stderr, "[t-%zu] write failure\n", t->idx);
     return 0;
   }
-  t->recv_size += (curl_off_t)nwritten;
-  return (size_t)nwritten;
+  t->recv_size += blen;
+  return (size_t)blen;
 }
 
 static size_t my_read_cb(char *buf, size_t nitems, size_t buflen,
@@ -122,7 +122,7 @@ static size_t my_read_cb(char *buf, size_t nitems, size_t buflen,
                   "%" CURL_FORMAT_CURL_OFF_T " bytes\n", t->idx, t->send_size);
     return CURL_READFUNC_ABORT;
   }
-  return (size_t)nread;
+  return nread;
 }
 
 static int my_progress_u_cb(void *userdata,
@@ -158,7 +158,7 @@ static int setup_hx_upload(CURL *curl, const char *url, struct transfer_u *t,
   if(use_earlydata)
     curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_EARLYDATA);
 
-  if(!strcmp("MIME", t->method)) {
+  if(t->method && !strcmp("MIME", t->method)) {
     curl_mimepart *part;
     t->mime = curl_mime_init(curl);
     part = curl_mime_addpart(t->mime);

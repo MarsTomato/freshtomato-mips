@@ -40,7 +40,6 @@ my %whitelist = (
     'https://curl.se/dev/secprocess.html' => 1,
     'https://curl.se/dev/sourceactivity.html' => 1,
     'https://curl.se/docs/' => 1,
-    'https://curl.se/docs/bugbounty.html' => 1,
     'https://curl.se/docs/caextract.html' => 1,
     'https://curl.se/docs/copyright.html' => 1,
     'https://curl.se/docs/http-cookies.html' => 1,
@@ -155,7 +154,7 @@ sub storelink {
 sub findlinks {
     my ($f) = @_;
     my $line = 1;
-    open(F, "<:crlf", "$f") ||
+    open(F, "<:crlf", $f) ||
         return;
 
     # is it a markdown extension?

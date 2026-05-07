@@ -33,7 +33,7 @@
 static bool has_trailing_slash(const char *input)
 {
   size_t len = strlen(input);
-  return (len && input[len - 1] == '/');
+  return len && input[len - 1] == '/';
 }
 
 static char *ipfs_gateway(void)
@@ -127,7 +127,7 @@ CURLcode ipfs_url_rewrite(CURLU *uh, const char *protocol, char **url,
     goto clean;
 
   /* We might have a --ipfs-gateway argument. Check it first and use it. Error
-   * if we do have something but if it is an invalid url.
+   * if we do have something but if it is an invalid URL.
    */
   if(config->ipfs_gateway) {
     if(!curl_url_set(gatewayurl, CURLUPART_URL, config->ipfs_gateway,
@@ -166,7 +166,8 @@ CURLcode ipfs_url_rewrite(CURLU *uh, const char *protocol, char **url,
   /* get gateway parts */
   if(curl_url_get(gatewayurl, CURLUPART_HOST, &gwhost, CURLU_URLDECODE) ||
      curl_url_get(gatewayurl, CURLUPART_SCHEME, &gwscheme, CURLU_URLDECODE) ||
-     curl_url_get(gatewayurl, CURLUPART_PORT, &gwport, CURLU_URLDECODE) ||
+     curl_url_get(gatewayurl, CURLUPART_PORT, &gwport,
+                  CURLU_URLDECODE | CURLU_DEFAULT_PORT) ||
      curl_url_get(gatewayurl, CURLUPART_PATH, &gwpath, CURLU_URLDECODE))
     goto clean;
 
@@ -181,7 +182,7 @@ CURLcode ipfs_url_rewrite(CURLU *uh, const char *protocol, char **url,
      curl_url_set(uh, CURLUPART_PORT, gwport, CURLU_URLENCODE))
     goto clean;
 
-  /* if the input path is just a slash, clear it */
+  /* if the input path is a slash, clear it */
   if(inputpath && (inputpath[0] == '/') && !inputpath[1])
     *inputpath = '\0';
 
@@ -194,7 +195,7 @@ CURLcode ipfs_url_rewrite(CURLU *uh, const char *protocol, char **url,
     goto clean;
 
   /* Free whatever it has now, rewriting is next */
-  tool_safefree(*url);
+  curlx_safefree(*url);
 
   if(curl_url_get(uh, CURLUPART_URL, &cloneurl, CURLU_URLENCODE)) {
     goto clean;

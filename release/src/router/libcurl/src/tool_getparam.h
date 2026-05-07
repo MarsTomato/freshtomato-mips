@@ -317,8 +317,10 @@ typedef enum {
 #define ARG_BOOL 1 /* accepts a --no-[name] prefix */
 #define ARG_STRG 2 /* requires an argument */
 #define ARG_FILE 3 /* requires an argument, usually a filename */
+#define ARG_SECS 4 /* requires a time in seconds */
+#define ARG_UNUM 5 /* requires a non-negative number */
 
-#define ARG_TYPEMASK 0x03
+#define ARG_TYPEMASK 0x07
 #define ARGTYPE(x)   ((x) & ARG_TYPEMASK)
 
 #define ARG_DEPR  0x10 /* deprecated option */
@@ -336,6 +338,7 @@ struct LongShort {
 typedef enum {
   PARAM_OK = 0,
   PARAM_OPTION_UNKNOWN,
+  PARAM_CONFIG_OPTION_UNKNOWN,
   PARAM_REQUIRES_PARAMETER,
   PARAM_BAD_USE,
   PARAM_HELP_REQUESTED,
@@ -372,9 +375,10 @@ ParameterError getparameter(const char *flag, const char *nextarg,
                             int max_recursive);
 
 #ifdef UNITTESTS
-ParameterError parse_cert_parameter(const char *cert_parameter,
-                                    char **certname,
-                                    char **passphrase);
+UNITTEST ParameterError parse_cert_parameter(const char *cert_parameter,
+                                             char **certname,
+                                             char **passphrase);
+UNITTEST ParameterError GetSizeParameter(const char *arg, curl_off_t *out);
 #endif
 
 ParameterError parse_args(int argc, argv_item_t argv[]);

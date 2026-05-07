@@ -35,7 +35,7 @@
  * https://github.com/curl/curl/blob/curl-7_88_1/docs/examples/threaded-ssl.c
  */
 
-/* Requires: HAVE_PTHREAD_H */
+/* Requires: HAVE_THREADS_POSIX */
 /* Also requires TLS support to run */
 
 #include <stdio.h>
@@ -88,7 +88,7 @@ int main(void)
 
   /* Must initialize libcurl before any threads are started */
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   for(i = 0; i < NUMT; i++) {

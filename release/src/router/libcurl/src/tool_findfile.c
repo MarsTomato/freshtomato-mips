@@ -62,7 +62,7 @@ static const struct finder conf_list[] = {
 
 static char *checkhome(const char *home, const char *fname, bool dotscore)
 {
-  const char pref[2] = { '.', '_' };
+  static const char pref[2] = { '.', '_' };
   int i;
   for(i = 0; i < (dotscore ? 2 : 1); i++) {
     char *c;
@@ -74,7 +74,7 @@ static char *checkhome(const char *home, const char *fname, bool dotscore)
       int fd = curlx_open(c, O_RDONLY);
       if(fd >= 0) {
         char *path = curlx_strdup(c);
-        close(fd);
+        curlx_close(fd);
         curl_free(c);
         return path;
       }
@@ -145,6 +145,6 @@ char *findfile(const char *fname, int dotscore)
         return checkhome(home, fname, FALSE);
     }
   }
-#endif /* PWD-stuff */
+#endif /* HAVE_GETPWUID && HAVE_GETEUID */
   return NULL;
 }

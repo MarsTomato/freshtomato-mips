@@ -27,6 +27,10 @@
 #include <locale.h> /* for setlocale() */
 #endif
 
+#if defined(UNITTESTS) && !defined(BUILDING_LIBCURL)
+#include "tool_stderr.h"  /* for tool_init_stderr() */
+#endif
+
 int select_wrapper(int nfds, fd_set *rd, fd_set *wr, fd_set *exc,
                    struct timeval *tv)
 {
@@ -83,7 +87,7 @@ int cgetopt(int argc, const char * const argv[], const char *optstring)
   }
   else {
     const char *opt = strchr(optstring, arg[optpos]);
-    coptopt = arg[optpos];
+    coptopt = (unsigned char)arg[optpos];
     if(!opt) {
       if(!arg[++optpos]) {
         coptind++;
@@ -122,7 +126,7 @@ int cgetopt(int argc, const char * const argv[], const char *optstring)
   }
 }
 
-#ifdef CURLDEBUG
+#ifdef CURL_MEMDEBUG
 static void memory_tracking_init(void)
 {
   const char *env;
@@ -147,7 +151,7 @@ static void memory_tracking_init(void)
 /* returns a hexdump in a static memory area */
 char *hexdump(const unsigned char *buf, size_t len)
 {
-  static char dump[200 * 3 + 1];
+  static char dump[(200 * 3) + 1];
   char *p = dump;
   size_t i;
   if(len > 200)
@@ -163,7 +167,7 @@ CURLcode ws_send_ping(CURL *curl, const char *send_payload)
   size_t sent;
   CURLcode result = curl_ws_send(curl, send_payload, strlen(send_payload),
                                  &sent, 0, CURLWS_PING);
-  curl_mfprintf(stderr, "ws: curl_ws_send returned %u, sent %zu\n",
+  curl_mfprintf(stderr, "ws: curl_ws_send returned %d, sent %zu\n",
                 result, sent);
   return result;
 }
@@ -175,7 +179,7 @@ CURLcode ws_recv_pong(CURL *curl, const char *expected_payload)
   char buffer[256];
   CURLcode result = curl_ws_recv(curl, buffer, sizeof(buffer), &rlen, &meta);
   if(result) {
-    curl_mfprintf(stderr, "ws: curl_ws_recv returned %u, received %zu\n",
+    curl_mfprintf(stderr, "ws: curl_ws_recv returned %d, received %zu\n",
                   result, rlen);
     return result;
   }
@@ -201,7 +205,7 @@ void ws_close(CURL *curl)
 {
   size_t sent;
   CURLcode result = curl_ws_send(curl, "", 0, &sent, 0, CURLWS_CLOSE);
-  curl_mfprintf(stderr, "ws: curl_ws_send returned %u, sent %zu\n",
+  curl_mfprintf(stderr, "ws: curl_ws_send returned %d, sent %zu\n",
                 result, sent);
 }
 #endif /* CURL_DISABLE_WEBSOCKETS */
@@ -215,7 +219,7 @@ int main(int argc, const char **argv)
   const char *env;
   size_t tmp;
 
-  CURLX_SET_BINMODE(stdout);
+  CURL_BINMODE(stdout);
 
   memory_tracking_init();
 #ifdef _WIN32
@@ -275,6 +279,10 @@ int main(int argc, const char **argv)
     if(!curlx_str_number(&env, &num, INT_MAX) && num > 0)
       testnum = (int)num;
   }
+
+#if defined(UNITTESTS) && !defined(BUILDING_LIBCURL)
+  tool_init_stderr();
+#endif
 
   result = entry_func(URL);
   curl_mfprintf(stderr, "Test ended with result %d\n", result);

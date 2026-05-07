@@ -286,7 +286,7 @@ sub fixDyn
 		fixDynDep("php-cgi", "libxml2.so.2.13.7");
 	}
 	else {
-		fixDynDep("php-cgi", "libxml2.so.16.1.2");
+		fixDynDep("php-cgi", "libxml2.so.16.1.3");
 	}
 	fixDynDep("php-cgi", "libpng16.so.16.58.0");
 	fixDynDep("php-cgi", "libiconv.so.2.7.1");
@@ -307,7 +307,7 @@ sub fixDyn
 		fixDynDep("php-cli", "libxml2.so.2.13.7");
 	}
 	else {
-		fixDynDep("php-cli", "libxml2.so.16.1.2");
+		fixDynDep("php-cli", "libxml2.so.16.1.3");
 	}
 	fixDynDep("php-cli", "libpng16.so.16.58.0");
 	fixDynDep("php-cli", "libiconv.so.2.7.1");
@@ -328,7 +328,7 @@ sub fixDyn
 		fixDynDep("php-fpm", "libxml2.so.2.13.7");
 	}
 	else {
-		fixDynDep("php-fpm", "libxml2.so.16.1.2");
+		fixDynDep("php-fpm", "libxml2.so.16.1.3");
 	}
 	fixDynDep("php-fpm", "libpng16.so.16.58.0");
 	fixDynDep("php-fpm", "libiconv.so.2.7.1");
@@ -402,7 +402,7 @@ sub fixDyn
 # avahi
 	fixDynDep("avahi-daemon", "libavahi-core.so.7.1.0");
 	fixDynDep("avahi-daemon", "libavahi-common.so.3.5.4");
-	fixDynDep("avahi-daemon", "libexpat.so.1.11.3");
+	fixDynDep("avahi-daemon", "libexpat.so.1.12.0");
 	fixDynDep("avahi-daemon", "libdaemon.so.0.5.0");
 
 	fixDynDep("xtables-legacy-multi", "libxtables.so");
@@ -730,7 +730,7 @@ if ($is_arm ne "y") { # MIPS only (ARM - bigger)
 	genSO("${root}/usr/lib/libavformat.so.54", "${router}/ffmpeg/libavformat/libavformat.a", "${stripshared}", "-L${router}/ffmpeg/libavutil -L${router}/ffmpeg/libavcodec -L${router}/zlib");
 }
 
-genSO("${root}/usr/lib/libexpat.so.1.11.3", "${router}/expat/static/libexpat.a", "${stripshared}");
+genSO("${root}/usr/lib/libexpat.so.1.12.0", "${router}/expat/static/libexpat.a", "${stripshared}");
 genSO("${root}/usr/lib/libavutil.so.51", "${router}/ffmpeg/libavutil/libavutil.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libzebra.so", "${router}/zebra/lib/libzebra.a", "${stripshared}");
 genSO("${root}/usr/lib/libnfnetlink.so.0.2.0", "${router}/libnfnetlink/src/.libs/libnfnetlink.a", "${stripshared}");
@@ -756,7 +756,7 @@ if ($is_arm ne "y") { # MIPS
 	genSO("${root}/usr/lib/libxml2.so.2.13.7", "${router}/libxml2/staged/usr/lib/libxml2.a", "${stripshared}", "-L${router}/zlib");
 }
 else {
-	genSO("${root}/usr/lib/libxml2.so.16.1.2", "${router}/libxml2/staged/usr/lib/libxml2.a", "${stripshared}", "-L${router}/zlib");
+	genSO("${root}/usr/lib/libxml2.so.16.1.3", "${router}/libxml2/staged/usr/lib/libxml2.a", "${stripshared}", "-L${router}/zlib");
 }
 genSO("${root}/usr/lib/libpcre.so.1.2.13", "${router}/pcre/.libs/libpcre.a", "${stripshared}");
 genSO("${root}/usr/lib/libpcre2-8.so.0.15.0", "${router}/pcre2/staged/usr/lib/libpcre2-8.a", "${stripshared}");

@@ -22,7 +22,6 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
-
 #include "curl_md5.h"
 
 static CURLcode test_unit1601(const char *arg)
@@ -35,7 +34,7 @@ static CURLcode test_unit1601(const char *arg)
   static const char string1[] = "1";
   static const char string2[] = "hello-you-fool";
   unsigned char output[MD5_DIGEST_LEN];
-  unsigned char *testp = output;
+  const unsigned char *testp = output;
 
   Curl_md5it(output, (const unsigned char *)string1, strlen(string1));
 

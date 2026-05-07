@@ -22,23 +22,22 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
-
 #include "urldata.h"
 #include "uint-bset.h"
 #include "curl_trc.h"
 
-static void check_set(const char *name, unsigned int capacity,
-                      const unsigned int *s, size_t slen)
+static void check_set(const char *name, uint32_t capacity,
+                      const uint32_t *s, size_t slen)
 {
   struct uint32_bset bset;
   size_t i, j;
-  unsigned int n, c;
+  uint32_t n, c;
 
   curl_mfprintf(stderr, "test %s, capacity=%u, %zu numbers\n",
                 name, capacity, slen);
   Curl_uint32_bset_init(&bset);
   fail_unless(!Curl_uint32_bset_resize(&bset, capacity), "bset resize failed");
-  c = Curl_uint32_bset_capacity(&bset);
+  c = uint32_bset_capacity(&bset);
   fail_unless(c == (((capacity + 63) / 64) * 64), "wrong capacity");
 
   Curl_uint32_bset_clear(&bset);
@@ -69,7 +68,7 @@ static void check_set(const char *name, unsigned int capacity,
   }
 
   /* Adding capacity number does not work (0 - capacity-1) */
-  c = Curl_uint32_bset_capacity(&bset);
+  c = uint32_bset_capacity(&bset);
   fail_unless(!Curl_uint32_bset_add(&bset, c), "add out of range worked");
   /* The count it correct */
   c = Curl_uint32_bset_count(&bset);
@@ -110,7 +109,7 @@ static void check_set(const char *name, unsigned int capacity,
   fail_unless(!Curl_uint32_bset_resize(&bset, capacity / 2),
               "resize half failed");
   /* halved the size, what numbers remain in set? */
-  c = Curl_uint32_bset_capacity(&bset);
+  c = uint32_bset_capacity(&bset);
   n = 0;
   for(i = 0; i < slen; ++i) {
     if(s[i] < c)
@@ -127,11 +126,11 @@ static CURLcode test_unit3211(const char *arg)
 {
   UNITTEST_BEGIN_SIMPLE
 
-  static const unsigned int s1[] = {
+  static const uint32_t s1[] = {
     /* spread numbers, some at slot edges */
     0, 1, 4, 17, 63, 64, 65, 66, 90, 99,
   };
-  static const unsigned int s2[] = {
+  static const uint32_t s2[] = {
     /* set with all bits in slot1 set */
     64, 65, 66, 67, 68, 69, 70, 71,
     72, 73, 74, 75, 76, 77, 78, 79,

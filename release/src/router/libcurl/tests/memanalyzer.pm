@@ -68,7 +68,7 @@ sub memanalyze {
     $memsum = 0; # the total number of memory allocated over the lifetime
     $maxmem = 0; # the high water mark
 
-    open(my $fileh, "<", "$file") or return ();
+    open(my $fileh, "<", $file) or return ();
 
     if($showlimit) {
         while(<$fileh>) {
@@ -154,7 +154,6 @@ sub memanalyze {
 
                     $sizeataddr{$addr}=-1; # set -1 to mark as freed
                     $getmem{$addr}="$source:$linenum";
-
                 }
             }
             elsif($function =~ /malloc\((\d*)\) = 0x([0-9a-f]*)/) {
@@ -380,7 +379,6 @@ sub memanalyze {
                     push @res, "FREEADDRINFO ($source:$linenum)\n";
                 }
             }
-
         }
         else {
             push @res, "Not recognized prefix line: $line\n";

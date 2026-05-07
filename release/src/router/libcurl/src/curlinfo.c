@@ -34,12 +34,12 @@
 #include "multihandle.h" /* for ENABLE_WAKEUP */
 #include "tool_xattr.h" /* for USE_XATTR */
 #include "curl_sha512_256.h" /* for CURL_HAVE_SHA512_256 */
-#include "asyn.h" /* for CURLRES_ARES */
+#include "asyn.h" /* for USE_RESOLV_ARES, USE_RESOLV_THREADED */
 #include "fake_addrinfo.h" /* for USE_FAKE_GETADDRINFO */
 
 #include <stdio.h>
 
-#if defined(USE_QUICHE) || defined(USE_OPENSSL)
+#ifdef USE_OPENSSL
 #include <openssl/opensslconf.h> /* for OPENSSL_NO_OCSP */
 #endif
 
@@ -145,6 +145,13 @@ static const char *disabled[] = {
   "ON"
 #endif
   ,
+  "resolv-threaded: "
+#ifndef USE_RESOLV_THREADED
+  "OFF"
+#else
+  "ON"
+#endif
+  ,
   "typecheck: "
 #ifdef CURL_DISABLE_TYPECHECK
   "OFF"
@@ -234,8 +241,8 @@ static const char *disabled[] = {
 #endif
   ,
   "override-dns: "
-#if defined(CURLDEBUG) &&                                       \
-  (defined(CURLRES_ARES) || defined(USE_FAKE_GETADDRINFO))
+#if defined(CURL_MEMDEBUG) &&                              \
+  (defined(USE_RESOLV_ARES) || defined(USE_FAKE_GETADDRINFO))
   "ON"
 #else
   "OFF"
@@ -249,15 +256,14 @@ static const char *disabled[] = {
 #endif
   ,
   "cert-status: "
-#if defined(USE_GNUTLS) || \
-  ((defined(USE_QUICHE) || defined(USE_OPENSSL)) && !defined(OPENSSL_NO_OCSP))
+#if defined(USE_GNUTLS) || (defined(USE_OPENSSL) && !defined(OPENSSL_NO_OCSP))
   "ON"
 #else
   "OFF"
 #endif
 };
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
   size_t i;
 

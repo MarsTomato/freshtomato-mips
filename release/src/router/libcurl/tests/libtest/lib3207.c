@@ -23,10 +23,6 @@
  ***************************************************************************/
 #include "first.h"
 
-#ifdef USE_THREADS_POSIX
-#include <pthread.h>
-#endif
-
 #include "curl_threads.h"
 
 #define THREAD_SIZE     16
@@ -46,7 +42,7 @@ static size_t write_memory_callback(char *contents, size_t size,
   /* append the data to contents */
   size_t realsize = size * nmemb;
   struct Ctx *mem = (struct Ctx *)userp;
-  char *data = (char *)curlx_malloc(realsize + 1);
+  char *data = curlx_malloc(realsize + 1);
   struct curl_slist *item_append = NULL;
   if(!data) {
     curl_mprintf("not enough memory (malloc returned NULL)\n");
@@ -66,7 +62,7 @@ static size_t write_memory_callback(char *contents, size_t size,
   return realsize;
 }
 
-#if defined(USE_THREADS_POSIX) || defined(USE_THREADS_WIN32)
+#ifdef USE_THREADS
 static CURL_THREAD_RETURN_T CURL_STDCALL test_thread(void *ptr)
 #else
 static unsigned int test_thread(void *ptr)
@@ -111,7 +107,7 @@ test_cleanup:
   return 0;
 }
 
-#if defined(USE_THREADS_POSIX) || defined(USE_THREADS_WIN32)
+#ifdef USE_THREADS
 
 static void t3207_test_lock(CURL *curl, curl_lock_data data,
                             curl_lock_access laccess, void *useptr)

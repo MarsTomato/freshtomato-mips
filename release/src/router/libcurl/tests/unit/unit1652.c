@@ -22,7 +22,6 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
-
 #include "urldata.h"
 #include "curl_trc.h"
 
@@ -36,7 +35,7 @@ static char input[4096];
 static char output[4096];
 
 /*
- * This debugf callback is simply dumping the string into the static buffer
+ * This debugf callback dumps the string into the static buffer
  * for the unit test to inspect. Since we know that we are only dealing with
  * text we can afford the luxury of skipping the type check here.
  */
@@ -76,7 +75,7 @@ static void t1652_stop(struct Curl_easy *easy)
 static int verify(const char *info, const char *two)
 {
   /* the 'info' one has a newline appended */
-  char *nl = strchr(info, '\n');
+  const char *nl = strchr(info, '\n');
   if(!nl)
     return 1; /* nope */
   return strncmp(info, two, nl - info);
@@ -88,9 +87,9 @@ static CURLcode test_unit1652(const char *arg)
 
   UNITTEST_BEGIN(t1652_setup(&easy))
 
-#if defined(CURL_GNUC_DIAG) && !defined(__clang__)
+#if defined(CURL_HAVE_DIAG) && !defined(__clang__)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat"
+#pragma GCC diagnostic ignored "-Wformat"  /* for GCC v5 to v8 */
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 #if __GNUC__ >= 7
 #pragma GCC diagnostic ignored "-Wformat-overflow"
@@ -103,7 +102,7 @@ static CURLcode test_unit1652(const char *arg)
   fail_unless(verify(output, input) == 0, "Simple string test");
 
   /* Injecting a few different variables with a format */
-  Curl_infof(easy, "%s %u testing %lu", input, 42, 43L);
+  Curl_infof(easy, "%s %d testing %ld", input, 42, 43L);
   fail_unless(verify(output, "Simple Test 42 testing 43\n") == 0,
               "Format string");
 
@@ -157,7 +156,7 @@ static CURLcode test_unit1652(const char *arg)
   fail_unless(output[sizeof(output) - 1] == '\0',
               "Truncation of infof input 3");
 
-#if defined(CURL_GNUC_DIAG) && !defined(__clang__)
+#if defined(CURL_HAVE_DIAG) && !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
 

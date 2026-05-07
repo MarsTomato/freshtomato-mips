@@ -25,7 +25,7 @@ in the HSTS cache, it upgrades the transfer to use HTTPS. Each HSTS cache
 entry has an individual lifetime after which the upgrade is no longer
 performed.
 
-Specify a "" filename (zero length) to avoid loading/saving and make curl just
+Specify a "" filename (zero length) to avoid loading/saving and make curl
 handle HSTS in memory.
 
 You may want to restrict your umask to prevent other users on the same system
@@ -33,3 +33,6 @@ to access the created file.
 
 If this option is used several times, curl loads contents from all the
 files but the last one is used for saving.
+
+Since curl 8.20.0, curl keeps no more than the most recently added 10,000
+unique HSTS hostnames.

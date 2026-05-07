@@ -33,13 +33,13 @@ static size_t write_tse_cb(char *ptr, size_t size, size_t nmemb, void *opaque)
   (void)ptr;
   if(!tse_found_tls_session) {
     struct curl_tlssessioninfo *tlssession;
-    CURLcode rc;
+    CURLcode result;
 
-    rc = curl_easy_getinfo(curl, CURLINFO_TLS_SSL_PTR, &tlssession);
-    if(rc) {
+    result = curl_easy_getinfo(curl, CURLINFO_TLS_SSL_PTR, &tlssession);
+    if(result) {
       curl_mfprintf(stderr, "curl_easy_getinfo(CURLINFO_TLS_SSL_PTR) "
-                    "failed: %s\n", curl_easy_strerror(rc));
-      return rc;
+                    "failed: %s\n", curl_easy_strerror(result));
+      return result;
     }
     if(tlssession->backend == CURLSSLBACKEND_NONE) {
       curl_mfprintf(stderr, "curl_easy_getinfo(CURLINFO_TLS_SSL_PTR) "
@@ -221,7 +221,7 @@ static CURLcode test_cli_tls_session_reuse(const char *URL)
         curl_multi_remove_handle(multi, msg->easy_handle);
         curl_easy_cleanup(msg->easy_handle);
         --ongoing;
-        curl_mfprintf(stderr, "transfer #%" CURL_FORMAT_CURL_OFF_T" retiring "
+        curl_mfprintf(stderr, "transfer #%" CURL_FORMAT_CURL_OFF_T " retiring "
                       "(%d now running)\n", xfer_id, running_handles);
       }
     }

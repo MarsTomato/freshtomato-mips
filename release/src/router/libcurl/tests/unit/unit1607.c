@@ -22,9 +22,9 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
-
 #include "urldata.h"
 #include "connect.h"
+#include "curl_addrinfo.h"
 
 static CURLcode t1607_setup(void)
 {
@@ -206,6 +206,9 @@ static CURLcode test_unit1607(const char *arg)
         problem = true;
         break;
       }
+
+      if(!addr)
+        break;
 
       addr = addr->ai_next;
     }

@@ -60,7 +60,7 @@
 #define INADDR_NONE 0xffffffff
 #endif
 
-static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
+static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *stream)
 {
   size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
   return written;
@@ -100,11 +100,11 @@ int main(void)
 {
   CURL *curl;
   CURLcode result;
-  struct sockaddr_in servaddr;  /*  socket address structure  */
+  struct sockaddr_in servaddr;  /* socket address structure */
   curl_socket_t sockfd;
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -141,7 +141,7 @@ int main(void)
     /* no progress meter please */
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
 
-    /* send all data to this function  */
+    /* send all data to this function */
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
 
     /* call this function to get a socket */
@@ -163,7 +163,7 @@ int main(void)
 
     close(sockfd);
 
-    if(result) {
+    if(result != CURLE_OK) {
       printf("libcurl error: %d\n", result);
       return 4;
     }

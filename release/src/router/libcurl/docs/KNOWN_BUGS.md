@@ -53,6 +53,13 @@ fail, resulting in error SEC_E_BUFFER_TOO_SMALL or SEC_E_MESSAGE_ALTERED.
 
 [curl issue 15801](https://github.com/curl/curl/issues/15801)
 
+## Native CA roots incomplete on Windows with OpenSSL (or fork)
+
+Certain Windows installations may be missing CA roots.
+
+[curl issue 20897](https://github.com/curl/curl/issues/20897)
+[curl issue 12303](https://github.com/curl/curl/issues/12303)
+
 # Email protocols
 
 ## IMAP `SEARCH ALL` truncated response
@@ -106,6 +113,21 @@ would do if you used `-T` file.
 
 See [curl issue 12171](https://github.com/curl/curl/issues/12171)
 
+## Windows stdin relay accepts unauthenticated local connections
+
+curl features a Windows-only stdin relay in `src/tool_doswin.c` that creates a
+loopback TCP listener and spawns a thread to accept the first incoming
+connection, then forwards stdin to it. There is no authentication or peer
+validation on the accepted socket. A local attacker can race to connect to the
+ephemeral loopback port (discoverable via local port enumeration/scan) before
+curl connects, causing the thread to send stdin/upload data to the attacker or
+to disrupt the transfer.
+
+The function should verify the client-side with a random number similar to the
+socketpair emulation function in libcurl. It cannot verify the source address
+and port since there is this widespread habit on Windows to run tools that
+MITM even local TCP connections for security.
+
 # Build and portability issues
 
 ## OS400 port requires deprecated IBM library
@@ -147,8 +169,8 @@ See [curl issue 6972](https://github.com/curl/curl/issues/6972)
 ## long paths are not fully supported on Windows
 
 curl on Windows cannot access long paths (paths longer than 260 characters).
-However, as a workaround, the Windows path prefix `\\?\` which disables all
-path interpretation may work to allow curl to access the path. For example:
+As a workaround, the Windows path prefix `\\?\` which disables all path
+interpretation may work to allow curl to access the path. For example:
 `\\?\c:\longpath`.
 
 See [curl issue 8361](https://github.com/curl/curl/issues/8361)
@@ -181,9 +203,9 @@ libcurl are not equipped for that at the moment except when built with
 _UNICODE and UNICODE defined. Except for Cygwin, Windows cannot use UTF-8 as a
 locale.
 
- https://curl.se/bug/?i=345
- https://curl.se/bug/?i=731
- https://curl.se/bug/?i=3747
+https://curl.se/bug/?i=345
+https://curl.se/bug/?i=731
+https://curl.se/bug/?i=3747
 
 NTLM authentication and Unicode
 
@@ -348,6 +370,18 @@ authenticated username and reports the supported data-protection level, but
 then immediately deletes the negotiated SSPI security context and frees the
 credentials before returning. The negotiated context is not stored on the
 connection and is therefore never used to protect later SOCKS5 traffic.
+
+## cannot use absolute Unix domain filename for SOCKS on Windows
+
+curl supports using a Unix domain socket path for speaking SOCKS to a proxy,
+by providing a filename in the URL used for `-x` (`CURLOPT_PROXY`), but that
+path cannot be a proper absolute Windows path with a drive letter etc.
+
+A solution for this probably requires that we add and provide a
+`--unix-socket` (`CURLOPT_UNIX_SOCKET_PATH`) option alternative for proxy
+communication.
+
+See [curl issue 19825](https://github.com/curl/curl/issues/19825)
 
 # Internals
 

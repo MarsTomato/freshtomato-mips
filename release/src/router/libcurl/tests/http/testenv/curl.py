@@ -27,22 +27,21 @@
 import json
 import logging
 import os
-import sys
-import time
-from functools import cmp_to_key
-from threading import Thread
-
-import psutil
 import re
 import shutil
 import subprocess
-from statistics import mean, fmean
-from datetime import timedelta, datetime, timezone
-from typing import List, Optional, Dict, Union, Any
+import sys
+import time
+from datetime import datetime, timedelta, timezone
+from functools import cmp_to_key
+from statistics import fmean, mean
+from threading import Thread
+from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlparse
 
-from .env import Env
+import psutil
 
+from .env import Env
 
 log = logging.getLogger(__name__)
 
@@ -515,7 +514,7 @@ class ExecResult:
         s = self._stats[idx]
 
         url = s['url_effective']
-        # connect time is sometimes reported as 0 by openssl-quic (sigh)
+
         self.check_stat_positive_or_0(s, idx, 'time_connect')
         # all stat keys which reporting timings
         all_keys = {
@@ -526,7 +525,7 @@ class ExecResult:
         }
         # stat keys where we expect a positive value
         ref_tl = []
-        # time_queue has it's own start timestamp. Other timers start *after*
+        # time_queue has its own start timestamp. Other timers start *after*
         # queueing is done. queue duration might therefore be anywhere.
         somewhere_keys = ['time_queue']
         exact_match = True
@@ -630,6 +629,7 @@ class CurlClient:
                  with_dtrace: bool = False,
                  with_perf: bool = False,
                  with_flame: bool = False,
+                 force_resolv: bool = True,
                  socks_args: Optional[List[str]] = None):
         self.env = env
         self._timeout = timeout if timeout else env.test_timeout
@@ -659,6 +659,7 @@ class CurlClient:
         self._silent = silent
         self._run_env = run_env
         self._server_addr = server_addr if server_addr else '127.0.0.1'
+        self._force_resolv = force_resolv
         self._rmrf(self._run_dir)
         self._mkpath(self._run_dir)
 
@@ -671,34 +672,37 @@ class CurlClient:
 
     def _rmf(self, path):
         if os.path.exists(path):
-            return os.remove(path)
+            os.remove(path)
 
     def _rmrf(self, path):
         if os.path.exists(path):
-            return shutil.rmtree(path)
+            shutil.rmtree(path)
 
     def _mkpath(self, path):
         if not os.path.exists(path):
-            return os.makedirs(path)
+            os.makedirs(path)
 
     def get_proxy_args(self, proto: str = 'http/1.1',
                        proxys: bool = True, tunnel: bool = False,
-                       use_ip: bool = False):
-        proxy_name = self._server_addr if use_ip else self.env.proxy_domain
+                       use_ip: bool = False, use_ipv6: bool = False):
+        proxy_name = '[::1]' if use_ipv6 else \
+            self._server_addr if use_ip else self.env.proxy_domain
         if proxys:
             pport = self.env.pts_port(proto) if tunnel else self.env.proxys_port
             xargs = [
                 '--proxy', f'https://{proxy_name}:{pport}/',
-                '--resolve', f'{proxy_name}:{pport}:{self._server_addr}',
                 '--proxy-cacert', self.env.ca.cert_file,
             ]
+            if self._force_resolv and not use_ip and not use_ipv6:
+                xargs.extend(['--resolve', f'{proxy_name}:{pport}:{self._server_addr}'])
             if proto == 'h2':
                 xargs.append('--proxy-http2')
         else:
             xargs = [
                 '--proxy', f'http://{proxy_name}:{self.env.proxy_port}/',
-                '--resolve', f'{proxy_name}:{self.env.proxy_port}:{self._server_addr}',
             ]
+            if self._force_resolv and not use_ip and not use_ipv6:
+                xargs.extend(['--resolve', f'{proxy_name}:{self.env.proxy_port}:{self._server_addr}'])
         if tunnel:
             xargs.append('--proxytunnel')
         return xargs
@@ -724,7 +728,8 @@ class CurlClient:
                       with_tcpdump: bool = False,
                       no_save: bool = False,
                       limit_rate: Optional[str] = None,
-                      extra_args: Optional[List[str]] = None):
+                      extra_args: Optional[List[str]] = None,
+                      url_options: Optional[Dict[str,List[str]]] = None):
         if extra_args is None:
             extra_args = []
         if no_save:
@@ -742,6 +747,7 @@ class CurlClient:
             ])
         return self._raw(urls, alpn_proto=alpn_proto, options=extra_args,
                          with_stats=with_stats,
+                         url_options=url_options,
                          with_headers=with_headers,
                          with_profile=with_profile,
                          with_tcpdump=with_tcpdump)
@@ -1041,10 +1047,10 @@ class CurlClient:
                         try:
                             p.wait(timeout=ptimeout)
                             break
-                        except subprocess.TimeoutExpired:
+                        except subprocess.TimeoutExpired as e:
                             if end_at and datetime.now() >= end_at:
                                 p.kill()
-                                raise subprocess.TimeoutExpired(cmd=args, timeout=self._timeout)
+                                raise subprocess.TimeoutExpired(cmd=args, timeout=self._timeout) from e
                             profile.sample()
                             ptimeout = 0.01
                     exitcode = p.returncode
@@ -1083,7 +1089,7 @@ class CurlClient:
 
     def _raw(self, urls, intext='', timeout=None, options=None, insecure=False,
              alpn_proto: Optional[str] = None,
-             force_resolve=True,
+             url_options=None,
              with_stats=False,
              with_headers=True,
              def_tracing=True,
@@ -1091,8 +1097,8 @@ class CurlClient:
              with_tcpdump=False):
         args = self._complete_args(
             urls=urls, timeout=timeout, options=options, insecure=insecure,
-            alpn_proto=alpn_proto, force_resolve=force_resolve,
-            with_headers=with_headers, def_tracing=def_tracing)
+            alpn_proto=alpn_proto, with_headers=with_headers,
+            def_tracing=def_tracing, url_options=url_options)
         r = self._run(args, intext=intext, with_stats=with_stats,
                       with_profile=with_profile, with_tcpdump=with_tcpdump)
         if r.exit_code == 0 and with_headers:
@@ -1100,15 +1106,18 @@ class CurlClient:
         return r
 
     def _complete_args(self, urls, timeout=None, options=None,
-                       insecure=False, force_resolve=True,
-                       alpn_proto: Optional[str] = None,
+                       insecure=False, alpn_proto: Optional[str] = None,
+                       url_options=None,
                        with_headers: bool = True,
                        def_tracing: bool = True):
+        url_sep = []
         if not isinstance(urls, list):
             urls = [urls]
 
         if options is not None and '--resolve' in options:
             force_resolve = False
+        else:
+            force_resolve = self._force_resolv
 
         args = [self._curl, "-s", "--path-as-is"]
         if 'CURL_TEST_EVENT' in os.environ:
@@ -1129,7 +1138,13 @@ class CurlClient:
             active_options = options[options.index('--next') + 1:]
 
         for url in urls:
-            u = urlparse(urls[0])
+            args.extend(url_sep)
+            if url_options is not None:
+                url_sep = ['--next']
+
+            u = urlparse(url)
+            if url_options is not None and url in url_options:
+                args.extend(url_options[url])
             if options:
                 args.extend(options)
             if alpn_proto is not None:
@@ -1141,7 +1156,7 @@ class CurlClient:
                 pass
             elif insecure:
                 args.append('--insecure')
-            elif active_options and ("--cacert" in active_options or \
+            elif active_options and ("--cacert" in active_options or
                     "--capath" in active_options):
                 pass
             elif u.hostname:
