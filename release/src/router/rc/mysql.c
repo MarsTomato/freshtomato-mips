@@ -22,6 +22,7 @@
 #define mysql_pid		"/var/run/mysqld.pid"
 #define mysql_log		"/var/log/mysql.log"
 #define mysql_dflt_dir		"/tmp/mysql"
+#define mysql_ready_timeout	30
 
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
@@ -115,6 +116,35 @@ static int mysql_eval_bin_pwd(const char *dir, const char *name, char *argv[], c
 	}
 
 	return rc;
+}
+
+static int mysql_wait_ready(const char *dir, const char *password, int timeout)
+{
+	char *argv[8];
+	int i;
+	int rc;
+
+	if (timeout <= 0)
+		timeout = 1;
+
+	for (i = 0; i < timeout; ++i) {
+		argv[1] = "-uroot";
+		argv[2] = "--socket=/var/run/mysqld.sock";
+		argv[3] = "ping";
+		argv[4] = NULL;
+
+		if (password)
+			rc = mysql_eval_bin_pwd(dir, "mysqladmin", argv, NULL, password);
+		else
+			rc = mysql_eval_bin(dir, "mysqladmin", argv, NULL, 0);
+
+		if (rc == 0)
+			return 0;
+
+		sleep(1);
+	}
+
+	return ETIMEDOUT;
 }
 
 static int mysql_to_hex(char *dst, size_t dstlen, const char *src)
@@ -439,36 +469,57 @@ void start_mysql(int force)
 			logmsg(LOG_ERR, "%s: failed to start mysqld for password initialization: %d", __FUNCTION__, rc);
 			goto END;
 		}
-		sleep(2);
+
+		rc = mysql_wait_ready(pbi, NULL, mysql_ready_timeout);
+		if (rc != 0) {
+			logmsg(LOG_ERR, "%s: mysqld did not become ready for password initialization: %d", __FUNCTION__, rc);
+			killall_tk_period_wait("mysqld", 50);
+			eval("rm", "-f", mysql_pid);
+			goto END;
+		}
 
 		f_write_string(mysql_log, "=========mysql --execute password update====================", FW_APPEND | FW_NEWLINE, 0);
 
 		rc = mysql_to_hex(pass_hex, sizeof(pass_hex), nvram_safe_get("mysql_passwd"));
 		if (rc != 0) {
 			logmsg(LOG_ERR, "%s: mysql password is too long", __FUNCTION__);
+			killall_tk_period_wait("mysqld", 50);
+			sleep(1);
+			eval("rm", "-f", mysql_pid, mysql_passwd);
 			goto END;
 		}
 
-		if (f_exists(mysql_passwd))
-			unlink(mysql_passwd);
-
-		f_write_string(mysql_passwd, "use mysql;", FW_CREATE | FW_NEWLINE, 0600);
 		if (pass_hex[0])
 			rc = snprintf(sql, sizeof(sql), "update user set password=password(0x%s) where user='root';", pass_hex);
 		else
 			rc = snprintf(sql, sizeof(sql), "update user set password=password('') where user='root';");
 		if ((rc < 0) || (rc >= (int)sizeof(sql))) {
 			logmsg(LOG_ERR, "%s: password SQL is too long", __FUNCTION__);
-			unlink(mysql_passwd);
+			killall_tk_period_wait("mysqld", 50);
+			sleep(1);
+			eval("rm", "-f", mysql_pid, mysql_passwd);
 			goto END;
 		}
-		f_write_string(mysql_passwd, sql, FW_APPEND | FW_NEWLINE, 0);
-		f_write_string(mysql_passwd, "flush privileges;", FW_APPEND | FW_NEWLINE, 0);
+
+		if (f_exists(mysql_passwd))
+			unlink(mysql_passwd);
+
+		if ((f_write_string(mysql_passwd, "use mysql;", FW_CREATE | FW_NEWLINE, 0600) < 0) ||
+		    (f_write_string(mysql_passwd, sql, FW_APPEND | FW_NEWLINE, 0) < 0) ||
+		    (f_write_string(mysql_passwd, "flush privileges;", FW_APPEND | FW_NEWLINE, 0) < 0)) {
+			logerr(__FUNCTION__, __LINE__, mysql_passwd);
+			killall_tk_period_wait("mysqld", 50);
+			sleep(1);
+			eval("rm", "-f", mysql_pid, mysql_passwd);
+			goto END;
+		}
 
 		rc = snprintf(sql, sizeof(sql), "source %s", mysql_passwd);
 		if ((rc < 0) || (rc >= (int)sizeof(sql))) {
 			logmsg(LOG_ERR, "%s: mysql source command is too long", __FUNCTION__);
-			unlink(mysql_passwd);
+			killall_tk_period_wait("mysqld", 50);
+			sleep(1);
+			eval("rm", "-f", mysql_pid, mysql_passwd);
 			goto END;
 		}
 
@@ -519,7 +570,12 @@ void start_mysql(int force)
 	}
 
 	if (anyhost == 1) {
-		sleep(3);
+		rc = mysql_wait_ready(pbi, nvram_safe_get("mysql_passwd"), mysql_ready_timeout);
+		if (rc != 0) {
+			logmsg(LOG_ERR, "%s: mysqld did not become ready: %d", __FUNCTION__, rc);
+			goto END;
+		}
+
 		f_write_string(mysql_log, "=========mysql --execute allow-anyhost====================", FW_APPEND | FW_NEWLINE, 0);
 
 		argv[1] = "-uroot";
