@@ -1882,11 +1882,11 @@ sqlite: sqlite/Makefile
 
 sqlite-install:
 ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
-	install -D sqlite/staged/usr/lib/libsqlite3.so.3.53.0 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.0
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.0
+	install -D sqlite/staged/usr/lib/libsqlite3.so.3.53.1 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.1
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.1
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
-		ln -sf libsqlite3.so.3.53.0 libsqlite3.so.0 && \
-		ln -sf libsqlite3.so.3.53.0 libsqlite3.so
+		ln -sf libsqlite3.so.3.53.1 libsqlite3.so.0 && \
+		ln -sf libsqlite3.so.3.53.1 libsqlite3.so
 endif
 	@true
 
@@ -3884,8 +3884,8 @@ expat: expat/static/Makefile expat/build/Makefile
 	@$(MAKE) -C expat/build DESTDIR=$(TOP)/expat/staged install
 
 expat-install:
-	install -D expat/build/libexpat.so.1.12.0 $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.12.0
-	cd $(INSTALLDIR)/expat/usr/lib && $(STRIP) libexpat.so.1.12.0 && ln -sf libexpat.so.1.12.0 libexpat.so.1
+	install -D expat/build/libexpat.so.1.12.1 $(INSTALLDIR)/expat/usr/lib/libexpat.so.1.12.1
+	cd $(INSTALLDIR)/expat/usr/lib && $(STRIP) libexpat.so.1.12.1 && ln -sf libexpat.so.1.12.1 libexpat.so.1
 
 expat-clean:
 	@rm -rf expat/static
