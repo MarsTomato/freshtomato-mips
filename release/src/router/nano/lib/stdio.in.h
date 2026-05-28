@@ -1,6 +1,6 @@
 /* A GNU-like <stdio.h>.
 
-   Copyright (C) 2004, 2007-2025 Free Software Foundation, Inc.
+   Copyright (C) 2004, 2007-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -122,6 +122,20 @@
 # endif
 #endif
 
+/* _GL_ATTRIBUTE_DEALLOC_FREE declares that the function returns pointers that
+   can be freed via 'free'; it can be used only after declaring 'free'.  */
+/* Applies to: functions.  Cannot be used on inline functions.  */
+#ifndef _GL_ATTRIBUTE_DEALLOC_FREE
+# if defined __cplusplus && defined __GNUC__ && !defined __clang__
+/* Work around GCC bug <https://gcc.gnu.org/PR108231> */
+#  define _GL_ATTRIBUTE_DEALLOC_FREE \
+     _GL_ATTRIBUTE_DEALLOC ((void (*) (void *)) free, 1)
+# else
+#  define _GL_ATTRIBUTE_DEALLOC_FREE \
+     _GL_ATTRIBUTE_DEALLOC (free, 1)
+# endif
+#endif
+
 /* The __attribute__ feature is available in gcc versions 2.5 and later.
    The __-protected variants of the attributes 'format' and 'printf' are
    accepted by gcc versions 2.6.4 (effectively 2.7) and later.
@@ -231,6 +245,50 @@
 
 /* The definition of _GL_WARN_ON_USE is copied here.  */
 
+/* Make _GL_ATTRIBUTE_DEALLOC_FREE work, even though <stdlib.h> may not have
+   been included yet.  */
+#if @GNULIB_FREE_POSIX@
+# if (@REPLACE_FREE@ && !defined free \
+      && !(defined __cplusplus && defined GNULIB_NAMESPACE))
+/* We can't do '#define free rpl_free' here.  */
+#  if defined __cplusplus && (__GLIBC__ + (__GLIBC_MINOR__ >= 14) > 2)
+_GL_EXTERN_C void rpl_free (void *) _GL_ATTRIBUTE_NOTHROW;
+#  else
+_GL_EXTERN_C void rpl_free (void *);
+#  endif
+#  undef _GL_ATTRIBUTE_DEALLOC_FREE
+#  define _GL_ATTRIBUTE_DEALLOC_FREE _GL_ATTRIBUTE_DEALLOC (rpl_free, 1)
+# else
+#  if defined _MSC_VER && !defined free
+_GL_EXTERN_C
+#   if defined _DLL
+     __declspec (dllimport)
+#   endif
+     void __cdecl free (void *);
+#  else
+#   if defined __cplusplus && (__GLIBC__ + (__GLIBC_MINOR__ >= 14) > 2)
+_GL_EXTERN_C void free (void *) _GL_ATTRIBUTE_NOTHROW;
+#   else
+_GL_EXTERN_C void free (void *);
+#   endif
+#  endif
+# endif
+#else
+# if defined _MSC_VER && !defined free
+_GL_EXTERN_C
+#   if defined _DLL
+     __declspec (dllimport)
+#   endif
+     void __cdecl free (void *);
+# else
+#  if defined __cplusplus && (__GLIBC__ + (__GLIBC_MINOR__ >= 14) > 2)
+_GL_EXTERN_C void free (void *) _GL_ATTRIBUTE_NOTHROW;
+#  else
+_GL_EXTERN_C void free (void *);
+#  endif
+# endif
+#endif
+
 /* Macros for stringification.  */
 #define _GL_STDIO_STRINGIZE(token) #token
 #define _GL_STDIO_MACROEXPAND_AND_STRINGIZE(token) _GL_STDIO_STRINGIZE(token)
@@ -273,24 +331,24 @@
 
 #if (defined _WIN32 && !defined __CYGWIN__) && !defined _UCRT
 /* Workarounds against msvcrt bugs.  */
-_GL_FUNCDECL_SYS (gl_consolesafe_fwrite, size_t,
+_GL_FUNCDECL_SYS (_gl_consolesafe_fwrite, size_t,
                   (const void *ptr, size_t size, size_t nmemb, FILE *fp),
                   _GL_ARG_NONNULL ((1, 4)));
 # if defined __MINGW32__
-_GL_FUNCDECL_SYS (gl_consolesafe_fprintf, int,
+_GL_FUNCDECL_SYS (_gl_consolesafe_fprintf, int,
                   (FILE *restrict fp, const char *restrict format, ...),
                   _GL_ATTRIBUTE_FORMAT_PRINTF_STANDARD (2, 3)
                   _GL_ARG_NONNULL ((1, 2)));
-_GL_FUNCDECL_SYS (gl_consolesafe_printf, int,
+_GL_FUNCDECL_SYS (_gl_consolesafe_printf, int,
                   (const char *restrict format, ...),
                   _GL_ATTRIBUTE_FORMAT_PRINTF_STANDARD (1, 2)
                   _GL_ARG_NONNULL ((1)));
-_GL_FUNCDECL_SYS (gl_consolesafe_vfprintf, int,
+_GL_FUNCDECL_SYS (_gl_consolesafe_vfprintf, int,
                   (FILE *restrict fp,
                    const char *restrict format, va_list args),
                   _GL_ATTRIBUTE_FORMAT_PRINTF_STANDARD (2, 0)
                   _GL_ARG_NONNULL ((1, 2)));
-_GL_FUNCDECL_SYS (gl_consolesafe_vprintf, int,
+_GL_FUNCDECL_SYS (_gl_consolesafe_vprintf, int,
                   (const char *restrict format, va_list args),
                   _GL_ATTRIBUTE_FORMAT_PRINTF_STANDARD (1, 0)
                   _GL_ARG_NONNULL ((1)));
@@ -338,7 +396,7 @@ _GL_CXXALIAS_SYS (dprintf, int, (int fd, const char *restrict format, ...));
 _GL_CXXALIASWARN (dprintf);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef dprintf
+# undef dprintf /* https://lists.gnu.org/r/bug-gnulib/2025-11/msg00254.html */
 # if HAVE_RAW_DECL_DPRINTF
 _GL_WARN_ON_USE (dprintf, "dprintf is unportable - "
                  "use gnulib module dprintf for portability");
@@ -360,7 +418,6 @@ _GL_CXXALIAS_SYS (fclose, int, (FILE *stream));
 _GL_CXXALIASWARN (fclose);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef fclose
 /* Assume fclose is always declared.  */
 _GL_WARN_ON_USE (fclose, "fclose is not always POSIX compliant - "
                  "use gnulib module fclose for portable POSIX compliance");
@@ -447,7 +504,6 @@ _GL_FUNCDECL_SYS (fdopen, FILE *,
 #  endif
 # endif
 # if defined GNULIB_POSIXCHECK
-#  undef fdopen
 /* Assume fdopen is always declared.  */
 _GL_WARN_ON_USE (fdopen, "fdopen on native Windows platforms is not POSIX compliant - "
                  "use gnulib module fdopen for portability");
@@ -488,7 +544,6 @@ _GL_CXXALIAS_SYS (fflush, int, (FILE *gl_stream));
 _GL_CXXALIASWARN (fflush);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef fflush
 /* Assume fflush is always declared.  */
 _GL_WARN_ON_USE (fflush, "fflush is not always POSIX compliant - "
                  "use gnulib module fflush for portable POSIX compliance");
@@ -581,7 +636,6 @@ _GL_FUNCDECL_SYS (fopen, FILE *,
                   _GL_ARG_NONNULL ((1, 2)) _GL_ATTRIBUTE_DEALLOC (fclose, 1));
 # endif
 # if defined GNULIB_POSIXCHECK
-#  undef fopen
 /* Assume fopen is always declared.  */
 _GL_WARN_ON_USE (fopen, "fopen on native Windows platforms is not POSIX compliant - "
                  "use gnulib module fopen for portability");
@@ -637,13 +691,10 @@ _GL_CXXALIASWARN (fprintf);
 #elif defined __MINGW32__ && !defined _UCRT && __USE_MINGW_ANSI_STDIO
 # if !(defined __cplusplus && defined GNULIB_NAMESPACE)
 #  undef fprintf
-#  define fprintf gl_consolesafe_fprintf
+#  define fprintf _gl_consolesafe_fprintf
 # endif
 #endif
 #if !@GNULIB_FPRINTF_POSIX@ && defined GNULIB_POSIXCHECK
-# if !GNULIB_overrides_fprintf
-#  undef fprintf
-# endif
 /* Assume fprintf is always declared.  */
 _GL_WARN_ON_USE (fprintf, "fprintf is not always POSIX compliant - "
                  "use gnulib module fprintf-posix for portable "
@@ -673,7 +724,6 @@ _GL_CXXALIAS_SYS (fpurge, int, (FILE *gl_stream));
 _GL_CXXALIASWARN (fpurge);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef fpurge
 # if HAVE_RAW_DECL_FPURGE
 _GL_WARN_ON_USE (fpurge, "fpurge is not always present - "
                  "use gnulib module fpurge for portability");
@@ -761,7 +811,6 @@ _GL_CXXALIAS_SYS (freopen, FILE *,
 _GL_CXXALIASWARN (freopen);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef freopen
 /* Assume freopen is always declared.  */
 _GL_WARN_ON_USE (freopen,
                  "freopen on native Windows platforms is not POSIX compliant - "
@@ -868,7 +917,6 @@ _GL_CXXALIASWARN (fseeko);
 #elif defined GNULIB_POSIXCHECK
 # define _GL_FSEEK_WARN /* Category 1, above.  */
 # undef fseek
-# undef fseeko
 # if HAVE_RAW_DECL_FSEEKO
 _GL_WARN_ON_USE (fseeko, "fseeko is unportable - "
                  "use gnulib module fseeko for portability");
@@ -932,7 +980,6 @@ _GL_CXXALIASWARN (ftello);
 #elif defined GNULIB_POSIXCHECK
 # define _GL_FTELL_WARN /* Category 1, above.  */
 # undef ftell
-# undef ftello
 # if HAVE_RAW_DECL_FTELLO
 _GL_WARN_ON_USE (ftello, "ftello is unportable - "
                  "use gnulib module ftello for portability");
@@ -996,7 +1043,7 @@ _GL_CXXALIASWARN (fwrite);
 #elif (defined _WIN32 && !defined __CYGWIN__) && !defined _UCRT
 # if !(defined __cplusplus && defined GNULIB_NAMESPACE)
 #  undef fwrite
-#  define fwrite gl_consolesafe_fwrite
+#  define fwrite _gl_consolesafe_fwrite
 # endif
 #endif
 
@@ -1081,7 +1128,6 @@ _GL_CXXALIAS_SYS (getdelim, ssize_t,
 _GL_CXXALIASWARN (getdelim);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef getdelim
 # if HAVE_RAW_DECL_GETDELIM
 _GL_WARN_ON_USE (getdelim, "getdelim is unportable - "
                  "use gnulib module getdelim for portability");
@@ -1135,7 +1181,6 @@ _GL_CXXALIAS_SYS (getline, ssize_t,
 _GL_CXXALIASWARN (getline);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef getline
 # if HAVE_RAW_DECL_GETLINE
 _GL_WARN_ON_USE (getline, "getline is unportable - "
                  "use gnulib module getline for portability");
@@ -1145,7 +1190,6 @@ _GL_WARN_ON_USE (getline, "getline is unportable - "
 /* It is very rare that the developer ever has full control of stdin,
    so any use of gets warrants an unconditional warning; besides, C11
    removed it.  */
-#undef gets
 #if HAVE_RAW_DECL_GETS && !defined __cplusplus
 _GL_WARN_ON_USE (gets, "gets is a security hole - use fgets instead");
 #endif
@@ -1258,7 +1302,6 @@ _GL_FUNCDECL_SYS (pclose, int, (FILE *stream), _GL_ARG_NONNULL ((1)));
 _GL_CXXALIAS_SYS (pclose, int, (FILE *stream));
 _GL_CXXALIASWARN (pclose);
 #elif defined GNULIB_POSIXCHECK
-# undef pclose
 # if HAVE_RAW_DECL_PCLOSE
 _GL_WARN_ON_USE (pclose, "pclose is unportable - "
                  "use gnulib module pclose for more portability");
@@ -1282,7 +1325,6 @@ _GL_CXXALIAS_SYS (perror, void, (const char *string));
 _GL_CXXALIASWARN (perror);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef perror
 /* Assume perror is always declared.  */
 _GL_WARN_ON_USE (perror, "perror is not always POSIX compliant - "
                  "use gnulib module perror for portability");
@@ -1319,7 +1361,6 @@ _GL_FUNCDECL_SYS (popen, FILE *,
                   _GL_ATTRIBUTE_MALLOC);
 # endif
 # if defined GNULIB_POSIXCHECK
-#  undef popen
 #  if HAVE_RAW_DECL_POPEN
 _GL_WARN_ON_USE (popen, "popen is buggy on some platforms - "
                  "use gnulib module popen or pipe for more portability");
@@ -1388,13 +1429,10 @@ _GL_CXXALIASWARN (printf);
 #elif defined __MINGW32__ && !defined _UCRT && __USE_MINGW_ANSI_STDIO
 # if !(defined __cplusplus && defined GNULIB_NAMESPACE)
 #  undef printf
-#  define printf gl_consolesafe_printf
+#  define printf _gl_consolesafe_printf
 # endif
 #endif
 #if !@GNULIB_PRINTF_POSIX@ && defined GNULIB_POSIXCHECK
-# if !GNULIB_overrides_printf
-#  undef printf
-# endif
 /* Assume printf is always declared.  */
 _GL_WARN_ON_USE (printf, "printf is not always POSIX compliant - "
                  "use gnulib module printf-posix for portable "
@@ -1488,7 +1526,6 @@ _GL_CXXALIAS_SYS (remove, int, (const char *name));
 _GL_CXXALIASWARN (remove);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef remove
 /* Assume remove is always declared.  */
 _GL_WARN_ON_USE (remove, "remove cannot handle directories on some platforms - "
                  "use gnulib module remove for more portability");
@@ -1513,7 +1550,6 @@ _GL_CXXALIAS_SYS (rename, int,
 _GL_CXXALIASWARN (rename);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef rename
 /* Assume rename is always declared.  */
 _GL_WARN_ON_USE (rename, "rename is buggy on some platforms - "
                  "use gnulib module rename for more portability");
@@ -1541,7 +1577,6 @@ _GL_CXXALIAS_SYS (renameat, int,
 # endif
 _GL_CXXALIASWARN (renameat);
 #elif defined GNULIB_POSIXCHECK
-# undef renameat
 # if HAVE_RAW_DECL_RENAMEAT
 _GL_WARN_ON_USE (renameat, "renameat is not portable - "
                  "use gnulib module renameat for portability");
@@ -1635,7 +1670,6 @@ _GL_CXXALIAS_SYS (snprintf, int,
 _GL_CXXALIASWARN (snprintf);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef snprintf
 # if HAVE_RAW_DECL_SNPRINTF
 _GL_WARN_ON_USE (snprintf, "snprintf is unportable - "
                  "use gnulib module snprintf for portability");
@@ -1691,7 +1725,6 @@ _GL_CXXALIAS_SYS (sprintf, int,
 _GL_CXXALIASWARN (sprintf);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef sprintf
 /* Assume sprintf is always declared.  */
 _GL_WARN_ON_USE (sprintf, "sprintf is not always POSIX compliant - "
                  "use gnulib module sprintf-posix for portable "
@@ -1746,7 +1779,6 @@ _GL_FUNCDECL_SYS (tmpfile, FILE *, (void),
                                    _GL_ATTRIBUTE_MALLOC);
 # endif
 # if defined GNULIB_POSIXCHECK
-#  undef tmpfile
 #  if HAVE_RAW_DECL_TMPFILE
 _GL_WARN_ON_USE (tmpfile, "tmpfile is not usable on mingw - "
                  "use gnulib module tmpfile for portability");
@@ -1834,6 +1866,26 @@ _GL_CXXALIAS_SYS (vasprintf, int,
 _GL_CXXALIASWARN (vasprintf);
 #endif
 
+#if @GNULIB_VAPRINTF@
+/* Write formatted output to a string dynamically allocated with malloc().
+   Return the resulting string.  Upon memory allocation error, or some
+   other error, return NULL, with errno set.  */
+_GL_FUNCDECL_SYS (aprintf, char *,
+                  (const char *format, ...),
+                  _GL_ATTRIBUTE_FORMAT_PRINTF_STANDARD (1, 2)
+                  _GL_ARG_NONNULL ((1))
+                  _GL_ATTRIBUTE_MALLOC _GL_ATTRIBUTE_DEALLOC_FREE);
+_GL_CXXALIAS_SYS (aprintf, char *,
+                  (const char *format, ...));
+_GL_FUNCDECL_SYS (vaprintf, char *,
+                  (const char *format, va_list args),
+                  _GL_ATTRIBUTE_FORMAT_PRINTF_STANDARD (1, 0)
+                  _GL_ARG_NONNULL ((1))
+                  _GL_ATTRIBUTE_MALLOC _GL_ATTRIBUTE_DEALLOC_FREE);
+_GL_CXXALIAS_SYS (vaprintf, char *,
+                  (const char *format, va_list args));
+#endif
+
 #if @GNULIB_VDZPRINTF@
 /* Prints formatted output to file descriptor FD.
    Returns the number of bytes written to the file descriptor.  Upon
@@ -1880,7 +1932,6 @@ _GL_CXXALIAS_SYS_CAST (vdprintf, int,
 _GL_CXXALIASWARN (vdprintf);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef vdprintf
 # if HAVE_RAW_DECL_VDPRINTF
 _GL_WARN_ON_USE (vdprintf, "vdprintf is unportable - "
                  "use gnulib module vdprintf for portability");
@@ -1945,13 +1996,10 @@ _GL_CXXALIASWARN (vfprintf);
 #elif defined __MINGW32__ && !defined _UCRT && __USE_MINGW_ANSI_STDIO
 # if !(defined __cplusplus && defined GNULIB_NAMESPACE)
 #  undef vfprintf
-#  define vfprintf gl_consolesafe_vfprintf
+#  define vfprintf _gl_consolesafe_vfprintf
 # endif
 #endif
 #if !@GNULIB_VFPRINTF_POSIX@ && defined GNULIB_POSIXCHECK
-# if !GNULIB_overrides_vfprintf
-#  undef vfprintf
-# endif
 /* Assume vfprintf is always declared.  */
 _GL_WARN_ON_USE (vfprintf, "vfprintf is not always POSIX compliant - "
                  "use gnulib module vfprintf-posix for portable "
@@ -2031,13 +2079,10 @@ _GL_CXXALIASWARN (vprintf);
 #elif defined __MINGW32__ && !defined _UCRT && __USE_MINGW_ANSI_STDIO
 # if !(defined __cplusplus && defined GNULIB_NAMESPACE)
 #  undef vprintf
-#  define vprintf gl_consolesafe_vprintf
+#  define vprintf _gl_consolesafe_vprintf
 # endif
 #endif
 #if !@GNULIB_VPRINTF_POSIX@ && defined GNULIB_POSIXCHECK
-# if !GNULIB_overrides_vprintf
-#  undef vprintf
-# endif
 /* Assume vprintf is always declared.  */
 _GL_WARN_ON_USE (vprintf, "vprintf is not always POSIX compliant - "
                  "use gnulib module vprintf-posix for portable "
@@ -2116,7 +2161,6 @@ _GL_CXXALIAS_SYS (vsnprintf, int,
 _GL_CXXALIASWARN (vsnprintf);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef vsnprintf
 # if HAVE_RAW_DECL_VSNPRINTF
 _GL_WARN_ON_USE (vsnprintf, "vsnprintf is unportable - "
                  "use gnulib module vsnprintf for portability");
@@ -2169,7 +2213,6 @@ _GL_CXXALIAS_SYS_CAST (vsprintf, int,
 _GL_CXXALIASWARN (vsprintf);
 # endif
 #elif defined GNULIB_POSIXCHECK
-# undef vsprintf
 /* Assume vsprintf is always declared.  */
 _GL_WARN_ON_USE (vsprintf, "vsprintf is not always POSIX compliant - "
                  "use gnulib module vsprintf-posix for portable "

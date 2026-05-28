@@ -84,6 +84,7 @@ char *f_argv[32];
 int f_argc = -1;
 
 static void save_cookie(void);
+static void error(const char *fmt, ...);
 
 /* this should be in nvram so you can add/edit/remove checkers, but we have so little nvram it's impossible... */
 static char services[][2][23] = { /* remember: the number in the third square bracket must be (len + 1) of the longest string */
@@ -164,8 +165,9 @@ static void trimamp(char *s)
 
 static const char *get_option(const char *name)
 {
-	char *p;
+	char *p, *key_end, *entry, *value;
 	int i, n;
+	size_t entry_len;
 	FILE *f;
 	const char *c;
 	char s[384];
@@ -176,26 +178,55 @@ static const char *get_option(const char *name)
 			if ((f = fopen(c, "r")) != NULL) {
 				while (fgets(s, sizeof(s), f)) {
 					p = s;
-					if ((s[0] == '-') && (s[1] == '-'))
+
+					/* trim leading whitespace */
+					while (*p && isspace((unsigned char)*p))
+						++p;
+
+					if ((*p == '\0') || (*p == '#')) /* blank line or comment */
+						continue;
+
+					/* trim trailing whitespace (handles \n and \r\n) */
+					key_end = p + strlen(p) - 1;
+					while (key_end > p && isspace((unsigned char)*key_end))
+						--key_end;
+
+					*(key_end + 1) = '\0';
+
+					/* optional -- prefix */
+					if ((p[0] == '-') && (p[1] == '-'))
 						p += 2;
 
-					if ((c = strchr(p, ' ')) != NULL) {
-						n = strlen(p);
-						if (p[n - 1] == '\n')
-							p[n - 1] = 0;
+					/* find end of key (first whitespace) */
+					key_end = p;
+					while (*key_end && !isspace((unsigned char)*key_end))
+						++key_end;
 
-						n = strlen(c + 1);
-						if (n <= 0)
-							continue;
-						if (n >= MAX_OPTION_LENGTH)
-							exit(88);
-						if ((p = strdup(p)) == NULL)
-							exit(99);
+					if (*key_end == '\0') /* empty option - ignore */
+						continue;
 
-						f_argv[f_argc++] = p;
-						if ((unsigned int)f_argc >= ASIZE(f_argv))
-							break;
+					*key_end = '\0';
+					value = key_end + 1;
+					while (*value && isspace((unsigned char)*value))
+						++value;
+
+					if (*value == '\0') /* key with only spaces after it */
+						continue;
+
+					if (strlen(value) >= MAX_OPTION_LENGTH)
+						exit(88);
+
+					entry_len = strlen(p) + 1 + strlen(value) + 1;
+					entry = malloc(entry_len);
+					if (!entry) {
+						fclose(f);
+						error(M_ERROR_MEM_ALLOC);
 					}
+					snprintf(entry, entry_len, "%s %s", p, value);
+
+					f_argv[f_argc++] = entry;
+					if ((unsigned int)f_argc >= ASIZE(f_argv))
+						break;
 				}
 				fclose(f);
 			}
@@ -221,6 +252,7 @@ static const char *get_option(const char *name)
 			}
 		}
 	}
+
 	return NULL;
 }
 
@@ -353,14 +385,13 @@ static int curl_dump_cb(CURL *handle, curl_infotype type, char *data, size_t siz
 			++out;
 		}
 	}
-	*out = '\0'; /* null-terminate the modified string (for convenience) */
 
 	/* adjust the size after removing '\r' */
-	size = out - data; 
+	size = out - data;
 
-	if (data[size - 1] == '\n')
+	if (size > 0 && data[size - 1] == '\n')
 		size -= 1;
-	if (is_info && data[size - 1] == ':')
+	if (size > 0 && is_info && data[size - 1] == ':')
 		size -= 1;
 
 	/* write timestamp and prefix to file */
@@ -532,6 +563,10 @@ static char *curl_resolve_ip(const unsigned int ssl, const char *url, const char
 static long _http_req(const unsigned int ssl, int static_host, const char *host, const char *req, const char *query, const char *header, int auth, char *data, char **body)
 {
 	logmsg(LOG_DEBUG, "*** %s: IN host=[%s] query=[%s] ssl=[%d] header=[%s] auth=[%d] data=[%s] req=[%s] ifname=[%s]", __FUNCTION__, host, query, ssl, header, auth, data ? data : "NULL", req, ifname);
+
+	/* always start with a valid empty body so callers can safely strstr/strchr */
+	if (body)
+		*body = "";
 
 #ifdef USE_LIBCURL
 	FILE *curl_wbuf = NULL;
@@ -910,7 +945,6 @@ connected:
 		*body = body_start;
 
 	return i;
-
 #endif /* USE_LIBCURL */
 }
 
@@ -922,6 +956,10 @@ static long http_req(const unsigned int ssl, int static_host, const char *host, 
 static int read_tmaddr(const char *name, long *tm, char *addr)
 {
 	char s[192];
+	struct in_addr ipv4;
+#ifdef TCONFIG_IPV6
+	struct in6_addr ipv6;
+#endif
 
 	logmsg(LOG_DEBUG, "*** %s: IN cachename: %s", __FUNCTION__, name);
 
@@ -929,13 +967,14 @@ static int read_tmaddr(const char *name, long *tm, char *addr)
 	if (f_read_string(name, s, sizeof(s)) > 0) {
 		if (sscanf(s, "%ld,%63s", tm, addr) == 2) {
 			logmsg(LOG_DEBUG, "*** %s: tm=%ld addr=%s", __FUNCTION__, *tm, addr);
-			if (*tm > 0 && (inet_pton(AF_INET, addr, &(struct in_addr){0}) == 1 ||
+
+			if (*tm > 0 && (inet_pton(AF_INET, addr, &ipv4) == 1
 #ifdef TCONFIG_IPV6
-			                inet_pton(AF_INET6, addr, &(struct in6_addr){0}) == 1))
-#else
-			                0))
+			                || inet_pton(AF_INET6, addr, &ipv6) == 1
 #endif
+			   )) {
 				return 1;
+			}
 		}
 		else
 			logmsg(LOG_DEBUG, "*** %s: unknown=%s", __FUNCTION__, s);
@@ -1783,7 +1822,14 @@ static void update_cloudflare(const unsigned int ssl)
 		}
 
 		found += strlen(find);
-		*strchr(found, '"') = '\0'; /* truncate at closing quote */
+		{
+			char *quote = strchr(found, '"');
+			if (quote == NULL) {
+				free(body_copy);
+				error(M_UNKNOWN_RESPONSE__D, -1);
+			}
+			*quote = '\0'; /* truncate at closing quote */
+		}
 
 		snprintf(query, QUARTER_BLOB, "/client/v4/zones/%s/dns_records/%s", zone, found);
 	}
@@ -2057,7 +2103,7 @@ int main(int argc, char *argv[])
 		if (no_wan_mode == 1) {
 			logmsg(LOG_DEBUG, "*** %s: checking for no WAN mode - true, using custom interface: %s", __FUNCTION__, nvram_safe_get("ddnsx_custom_if"));
 			memset(ifname, 0, sizeof(ifname)); /* reset */
-			snprintf(ifname, sizeof(ifname), nvram_safe_get("ddnsx_custom_if"));
+			snprintf(ifname, sizeof(ifname), "%s", nvram_safe_get("ddnsx_custom_if"));
 		}
 	}
 

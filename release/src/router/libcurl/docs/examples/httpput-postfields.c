@@ -32,7 +32,7 @@
 
 static const char olivertwist[] =
   "Among other public buildings in a certain town, which for many reasons "
-  "it will be prudent to refrain from mentioning, and to which I will assign "
+  "it is prudent to refrain from mentioning, and to which I assign "
   "no fictitious name, there is one anciently common to most towns, great or "
   "small: to ___, a workhouse; and in this workhouse was born; on a day and "
   "date which I need not trouble myself to repeat, inasmuch as it can be of "
@@ -47,11 +47,11 @@ static const char olivertwist[] =
  * CURLOPT_POSTFIELDS to the URL given as an argument.
  */
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
   CURL *curl;
   CURLcode result;
-  char *url;
+  const char *url;
 
   if(argc < 2)
     return 1;
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 
   /* In Windows, this inits the Winsock stuff */
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   /* get a curl handle */

@@ -154,7 +154,7 @@
  #include "l2tp.h"
  
  struct tunnel_list tunnels;
-@@ -704,6 +707,14 @@ static struct tunnel *l2tp_call (char *h
+@@ -712,6 +715,14 @@ static struct tunnel *l2tp_call (char *h
      struct call *tmp = NULL;
      struct hostent *hp;
      struct in_addr addr;
@@ -169,7 +169,7 @@
      port = htons (port);
      hp = gethostbyname (host);
      if (!hp)
-@@ -1929,3 +1940,95 @@ int main (int argc, char *argv[])
+@@ -1938,3 +1949,95 @@ int main (int argc, char *argv[])
      network_thread ();
      return 0;
  }

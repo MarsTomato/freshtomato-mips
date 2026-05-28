@@ -25,6 +25,31 @@ const char ovpnc_dir[]   = "/tmp/ovpnclientconfig";
 const char openssl_dir[] = "/tmp/openssl";
 
 #ifdef TCONFIG_KEYGEN
+/*
+ * validate domain name contains only safe characters
+ * prevents command injection when wan_domain is interpolated into shell commands
+ */
+static int is_safe_domain_arg(const char *s)
+{
+	const unsigned char *p;
+	size_t len = 0;
+
+	if (s == NULL || *s == '\0' || *s == '-')
+		return 0;
+
+	for (p = (const unsigned char *)s; *p != '\0'; ++p) {
+		unsigned char c = *p;
+
+		if (++len > 253)
+			return 0;
+
+		if (!is_ascii_alnum(c) && c != '.' && c != '-')
+			return 0;
+	}
+
+	return 1;
+}
+
 static void put_to_file(const char *filePath, const char *content)
 {
 	FILE *fkey;
@@ -75,7 +100,7 @@ static void prepareCAGeneration(const int serverNum, const int is_ecdh)
 		syslog(LOG_WARNING, "No CA KEY was saved for server %d, regenerating ...", serverNum);
 
 		memset(tmp, 0, sizeof(tmp));
-		if ((p = nvram_safe_get("wan_domain")) && (strcmp(p, "")))
+		if ((p = nvram_safe_get("wan_domain")) && (strcmp(p, "")) && is_safe_domain_arg(p))
 			snprintf(tmp, sizeof(tmp), ".%s", p);
 
 		memset(buffer2, 0, sizeof(buffer2));
@@ -136,7 +161,7 @@ static void generateKey(const char *prefix, const int userid, const int is_ecdh)
 	snprintf(serial, sizeof(serial), "%d", userid);
 
 	memset(tmp, 0, sizeof(tmp));
-	if ((p = nvram_safe_get("wan_domain")) && (strcmp(p, "")))
+	if ((p = nvram_safe_get("wan_domain")) && (strcmp(p, "")) && is_safe_domain_arg(p))
 		snprintf(tmp, sizeof(tmp), ".%s", p);
 
 	memset(subj_buf, 0, sizeof(subj_buf));
@@ -384,20 +409,6 @@ void wo_ovpn_genclientconfig(char *url)
 	strlcpy(buffer, getNVRAMVar("vpns%d_proto", server), sizeof(buffer));
 	str_replace(buffer, "-server", "-client");
 	fprintf(fp, "proto %s\n", buffer);
-
-	/* Compression */
-	memset(buffer, 0, sizeof(buffer));
-	strlcpy(buffer, getNVRAMVar("vpns%d_comp", server), sizeof(buffer));
-	if (strcmp(buffer, "-1")) {
-		if ((!strcmp(buffer, "lz4")) || (!strcmp(buffer, "lz4-v2")))
-			fprintf(fp, "compress %s\n", buffer);
-		else if (!strcmp(buffer, "yes"))
-			fprintf(fp, "compress lzo\n");
-		else if (!strcmp(buffer, "adaptive"))
-			fprintf(fp, "comp-lzo adaptive\n");
-		else if (!strcmp(buffer, "no"))
-			fprintf(fp, "compress\n"); /* disable, but can be overriden */
-	}
 
 	/* Interface */
 	fprintf(fp, "dev %s\n", getNVRAMVar("vpns%d_if", server));

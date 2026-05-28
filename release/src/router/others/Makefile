@@ -42,6 +42,13 @@ ifneq ($(TCONFIG_BBT),y)
 	sed -i $(INSTALLDIR)/usr/sbin/mwwatchdog -e "/BBT-BEGIN/,/BBT-END/d"
 endif
 
+# Only add IPv6 support to mwwatchdog if IPv6 is configured in.
+ifneq ($(TCONFIG_IPV6),y)
+	sed -i $(INSTALLDIR)/usr/sbin/mwwatchdog -e "/IPV6-BEGIN/,/IPV6-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/mwwatchdog -e "/IPV6NO-BEGIN/,/IPV6NO-END/d"
+endif
+
 # ntp2ip
 ifeq ($(or $(TCONFIG_DNSCRYPT),$(TCONFIG_STUBBY)),y)
 	install -m 0700 ntp2ip $(INSTALLDIR)/usr/sbin
@@ -184,17 +191,18 @@ endif
 
 # clean up
 	cd $(INSTALLDIR)/usr/sbin && \
-		for F in tomatoanon adblock ttb optware-install.sh entware-install.sh vpnrouting.sh mymotd switch4g; do \
+		for F in tomatoanon adblock ttb optware-install.sh entware-install.sh vpnrouting.sh mymotd switch4g mwwatchdog; do \
 			[ -f $(INSTALLDIR)/usr/sbin/$$F ] && sed -i $$F \
 			-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d" \
 			-e "/STUBBYNO-BEGIN/d"	-e "/STUBBYNO-END/d" \
 			-e "/BCMARM-BEGIN/d"	-e "/BCMARM-END/d" \
 			-e "/BCMARMNO-BEGIN/d"	-e "/BCMARMNO-END/d" \
 			-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
+			-e "/IPV6-BEGIN/d"	-e "/IPV6-END/d" \
+			-e "/IPV6NO-BEGIN/d"	-e "/IPV6NO-END/d" \
 			|| true; \
 		done
 
-ifneq ($(TCONFIG_BCMARM),y)
 	cd $(INSTALLDIR)/usr/sbin && \
 		for F in switch3g switch4g wwansignal mwwatchdog ntp2ip tomatoanon adblock ttb mymotd sysinfo-helper linkagg webmon_bkp optware-install.sh entware-install.sh updown-client.sh vpnrouting.sh cru sysinfo stealthMode gencert.sh; do \
 			[ -f $(INSTALLDIR)/usr/sbin/$$F ] && { \
@@ -211,6 +219,5 @@ ifeq ($(or $(TCONFIG_BT),$(TCONFIG_NGINX)),y)
 			} || true; \
 	done
 endif
-endif # TCONFIG_BCMARM
 
 clean:

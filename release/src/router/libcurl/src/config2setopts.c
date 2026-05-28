@@ -40,6 +40,10 @@
 #include "tool_helpers.h"
 #include "tool_version.h"
 
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h> /* IPPROTO_IPV6 */
+#endif
+
 #define BUFFER_SIZE 102400L
 
 #ifdef IP_TOS
@@ -48,14 +52,14 @@ static int get_address_family(curl_socket_t sockfd)
   struct sockaddr addr;
   curl_socklen_t addrlen = sizeof(addr);
   memset(&addr, 0, sizeof(addr));
-  if(getsockname(sockfd, (struct sockaddr *)&addr, &addrlen) == 0)
+  if(getsockname(sockfd, &addr, &addrlen) == 0)
     return addr.sa_family;
   return AF_UNSPEC;
 }
 #endif
 
 #ifndef SOL_IP
-#  define SOL_IP IPPROTO_IP
+#define SOL_IP IPPROTO_IP
 #endif
 
 #if defined(IP_TOS) || defined(IPV6_TCLASS) || defined(SO_PRIORITY)
@@ -178,9 +182,13 @@ static CURLcode url_proto_and_rewrite(char **url,
   return result;
 }
 
-static CURLcode ssh_setopts(struct OperationConfig *config, CURL *curl)
+static CURLcode ssh_setopts(struct OperationConfig *config, CURL *curl,
+                            const char *use_proto)
 {
   CURLcode result;
+
+  if(use_proto != proto_scp && use_proto != proto_sftp)
+    return CURLE_OK;
 
   /* SSH and SSL private key uses same command-line option */
   MY_SETOPT_STR(curl, CURLOPT_SSH_PRIVATE_KEYFILE, config->key);
@@ -200,13 +208,20 @@ static CURLcode ssh_setopts(struct OperationConfig *config, CURL *curl)
 
   if(!config->insecure_ok) {
     char *known = config->knownhosts;
-    if(!known)
-      known = findfile(".ssh/known_hosts", FALSE);
+    if(!known) {
+      char *found = findfile(".ssh/known_hosts", FALSE);
+      if(found) {
+        known = curlx_strdup(found);
+        curl_free(found);
+        if(!known)
+          return CURLE_OUT_OF_MEMORY;
+      }
+    }
     if(known) {
       result = my_setopt_str(curl, CURLOPT_SSH_KNOWNHOSTS, known);
       if(result) {
         config->knownhosts = NULL;
-        curl_free(known);
+        curlx_free(known);
         return result;
       }
       /* store it in global to avoid repeated checks */
@@ -221,13 +236,6 @@ static CURLcode ssh_setopts(struct OperationConfig *config, CURL *curl)
   }
   return CURLE_OK; /* ignore if SHA256 did not work */
 }
-
-#ifdef CURL_CA_EMBED
-#ifndef CURL_DECLARED_CURL_CA_EMBED
-#define CURL_DECLARED_CURL_CA_EMBED
-extern const unsigned char curl_ca_embed[];
-#endif
-#endif
 
 static long tlsversion(unsigned char mintls,
                        unsigned char maxtls)
@@ -252,7 +260,7 @@ static long tlsversion(unsigned char mintls,
     tlsver = CURL_SSLVERSION_TLSv1_2;
     break;
   case 4:
-  default: /* just in case */
+  default: /* in case */
     tlsver = CURL_SSLVERSION_TLSv1_3;
     break;
   }
@@ -269,7 +277,7 @@ static long tlsversion(unsigned char mintls,
     tlsver |= CURL_SSLVERSION_MAX_TLSv1_2;
     break;
   case 4:
-  default: /* just in case */
+  default: /* in case */
     tlsver |= CURL_SSLVERSION_MAX_TLSv1_3;
     break;
   }
@@ -277,7 +285,7 @@ static long tlsversion(unsigned char mintls,
 }
 
 /* only called if libcurl supports TLS */
-static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
+static CURLcode ssl_ca_setopts(struct OperationConfig *config, CURL *curl)
 {
   CURLcode result = CURLE_OK;
 
@@ -294,10 +302,11 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
     MY_SETOPT_STR(curl, CURLOPT_PROXY_CAPATH,
                   (config->proxy_capath ? config->proxy_capath :
                    config->capath));
-    if(result && config->proxy_capath) {
+    if((result == CURLE_NOT_BUILT_IN) || (result == CURLE_UNKNOWN_OPTION)) {
       warnf("ignoring %s, not supported by libcurl with %s",
-            config->proxy_capath ? "--proxy-capath" : "--capath",
+            "setting the CA path for the proxy",
             ssl_backend());
+      result = CURLE_OK;
     }
   }
   if(result)
@@ -311,9 +320,10 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
     blob.flags = CURL_BLOB_NOCOPY;
     notef("Using embedded CA bundle (%zu bytes)", blob.len);
     result = curl_easy_setopt(curl, CURLOPT_CAINFO_BLOB, &blob);
-    if(result == CURLE_NOT_BUILT_IN) {
+    if((result == CURLE_NOT_BUILT_IN) || (result == CURLE_UNKNOWN_OPTION)) {
       warnf("ignoring %s, not supported by libcurl with %s",
             "embedded CA bundle", ssl_backend());
+      result = CURLE_OK;
     }
   }
   if(!config->proxy_cacert && !config->proxy_capath) {
@@ -323,12 +333,20 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
     blob.flags = CURL_BLOB_NOCOPY;
     notef("Using embedded CA bundle, for proxies (%zu bytes)", blob.len);
     result = curl_easy_setopt(curl, CURLOPT_PROXY_CAINFO_BLOB, &blob);
-    if(result == CURLE_NOT_BUILT_IN) {
+    if((result == CURLE_NOT_BUILT_IN) || (result == CURLE_UNKNOWN_OPTION)) {
       warnf("ignoring %s, not supported by libcurl with %s",
             "embedded CA bundle", ssl_backend());
+      result = CURLE_OK;
     }
   }
 #endif
+  return result;
+}
+
+/* only called if libcurl supports TLS */
+static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
+{
+  CURLcode result = CURLE_OK;
 
   if(config->crlfile)
     MY_SETOPT_STR(curl, CURLOPT_CRLFILE, config->crlfile);
@@ -483,20 +501,69 @@ static CURLcode ssl_setopts(struct OperationConfig *config, CURL *curl)
   return CURLE_OK;
 }
 
-/* only called for HTTP transfers */
-static CURLcode http_setopts(struct OperationConfig *config, CURL *curl)
+static CURLcode cookie_setopts(struct OperationConfig *config, CURL *curl)
 {
-  CURLcode result;
+  CURLcode result = CURLE_OK;
+  if(config->cookies) {
+    struct dynbuf cookies;
+    struct curl_slist *cl;
+
+    /* The maximum size needs to match MAX_NAME in cookie.h */
+#define MAX_COOKIE_LINE 8200
+    curlx_dyn_init(&cookies, MAX_COOKIE_LINE);
+    for(cl = config->cookies; cl; cl = cl->next) {
+      if(cl == config->cookies)
+        result = curlx_dyn_add(&cookies, cl->data);
+      else
+        result = curlx_dyn_addf(&cookies, ";%s%s",
+                                ISBLANK(cl->data[0]) ? "" : " ", cl->data);
+      if(result) {
+        warnf("skipped provided cookie, the cookie header "
+              "would go over %d bytes", MAX_COOKIE_LINE);
+        return result;
+      }
+    }
+
+    result = my_setopt_str(curl, CURLOPT_COOKIE, curlx_dyn_ptr(&cookies));
+    curlx_dyn_free(&cookies);
+    if(result)
+      return result;
+  }
+
+  if(config->cookiefiles) {
+    struct curl_slist *cfl;
+
+    for(cfl = config->cookiefiles; cfl; cfl = cfl->next)
+      MY_SETOPT_STR(curl, CURLOPT_COOKIEFILE, cfl->data);
+  }
+
+  if(config->cookiejar)
+    MY_SETOPT_STR(curl, CURLOPT_COOKIEJAR, config->cookiejar);
+
+  my_setopt_long(curl, CURLOPT_COOKIESESSION, config->cookiesession);
+
+  return result;
+}
+
+/* only for HTTP transfers */
+static CURLcode http_setopts(struct OperationConfig *config, CURL *curl,
+                             const char *use_proto)
+{
+  CURLcode result = CURLE_OK;
   long postRedir = 0;
+
+  if(use_proto != proto_http && use_proto != proto_https)
+    return CURLE_OK;
 
   my_setopt_long(curl, CURLOPT_FOLLOWLOCATION, config->followlocation);
   my_setopt_long(curl, CURLOPT_UNRESTRICTED_AUTH, config->unrestricted_auth);
+#ifndef CURL_DISABLE_AWS
   MY_SETOPT_STR(curl, CURLOPT_AWS_SIGV4, config->aws_sigv4);
+#endif
   my_setopt_long(curl, CURLOPT_AUTOREFERER, config->autoreferer);
 
   if(config->proxyheaders) {
     my_setopt_slist(curl, CURLOPT_PROXYHEADER, config->proxyheaders);
-    my_setopt_long(curl, CURLOPT_HEADEROPT, CURLHEADER_SEPARATE);
   }
 
   my_setopt_long(curl, CURLOPT_MAXREDIRS, config->maxredirs);
@@ -530,50 +597,15 @@ static CURLcode http_setopts(struct OperationConfig *config, CURL *curl)
     my_setopt_long(curl, CURLOPT_EXPECT_100_TIMEOUT_MS,
                    config->expect100timeout_ms);
 
-  return result;
-}
-
-static CURLcode cookie_setopts(struct OperationConfig *config, CURL *curl)
-{
-  CURLcode result = CURLE_OK;
-  if(config->cookies) {
-    struct dynbuf cookies;
-    struct curl_slist *cl;
-
-    /* The maximum size needs to match MAX_NAME in cookie.h */
-#define MAX_COOKIE_LINE 8200
-    curlx_dyn_init(&cookies, MAX_COOKIE_LINE);
-    for(cl = config->cookies; cl; cl = cl->next) {
-      if(cl == config->cookies)
-        result = curlx_dyn_add(&cookies, cl->data);
-      else
-        result = curlx_dyn_addf(&cookies, ";%s%s",
-                                ISBLANK(cl->data[0]) ? "" : " ", cl->data);
-      if(result) {
-        warnf("skipped provided cookie, the cookie header "
-              "would go over %u bytes", MAX_COOKIE_LINE);
-        return result;
-      }
-    }
-
-    result = my_setopt_str(curl, CURLOPT_COOKIE, curlx_dyn_ptr(&cookies));
-    curlx_dyn_free(&cookies);
-    if(result)
-      return result;
-  }
-
-  if(config->cookiefiles) {
-    struct curl_slist *cfl;
-
-    for(cfl = config->cookiefiles; cfl; cfl = cfl->next)
-      MY_SETOPT_STR(curl, CURLOPT_COOKIEFILE, cfl->data);
-  }
-
-  if(config->cookiejar)
-    MY_SETOPT_STR(curl, CURLOPT_COOKIEJAR, config->cookiejar);
-
-  my_setopt_long(curl, CURLOPT_COOKIESESSION, config->cookiesession);
-
+  if(!result)
+    result = cookie_setopts(config, curl);
+  if(result)
+    return result;
+  /* Enable header separation when using a proxy with HTTPS or proxytunnel
+   * to prevent --header content from leaking into CONNECT requests */
+  if((config->proxy || config->proxyheaders) &&
+     (use_proto == proto_https || config->proxytunnel))
+    my_setopt_long(curl, CURLOPT_HEADEROPT, CURLHEADER_SEPARATE);
   return result;
 }
 
@@ -602,9 +634,14 @@ static void tcp_setopts(struct OperationConfig *config, CURL *curl)
     my_setopt_long(curl, CURLOPT_TCP_KEEPALIVE, 0);
 }
 
-static CURLcode ftp_setopts(struct OperationConfig *config, CURL *curl)
+static CURLcode ftp_setopts(struct OperationConfig *config, CURL *curl,
+                            const char *use_proto)
 {
   CURLcode result;
+
+  if(use_proto != proto_ftp && use_proto != proto_ftps)
+    return CURLE_OK;
+
   MY_SETOPT_STR(curl, CURLOPT_FTPPORT, config->ftpport);
 
   if(config->disable_epsv)
@@ -749,6 +786,61 @@ static CURLcode tls_srp_setopts(struct OperationConfig *config, CURL *curl)
   return result;
 }
 
+static CURLcode setopt_post(struct OperationConfig *config, CURL *curl)
+{
+  CURLcode result = CURLE_OK;
+  switch(config->httpreq) {
+  case TOOL_HTTPREQ_SIMPLEPOST:
+    if(config->resume_from) {
+      errorf("cannot mix --continue-at with --data");
+      result = CURLE_FAILED_INIT;
+    }
+    else {
+      MY_SETOPT_STR(curl, CURLOPT_POSTFIELDS,
+                    curlx_dyn_ptr(&config->postdata));
+      my_setopt_offt(curl, CURLOPT_POSTFIELDSIZE_LARGE,
+                     curlx_dyn_len(&config->postdata));
+    }
+    break;
+  case TOOL_HTTPREQ_MIMEPOST:
+    /* free previous remainders */
+    curl_mime_free(config->mimepost);
+    config->mimepost = NULL;
+    if(config->resume_from) {
+      errorf("cannot mix --continue-at with --form");
+      result = CURLE_FAILED_INIT;
+    }
+    else {
+      result = tool2curlmime(curl, config->mimeroot, &config->mimepost);
+      if(!result)
+        result = my_setopt_mimepost(curl, CURLOPT_MIMEPOST, config->mimepost);
+    }
+    break;
+  default:
+    break;
+  }
+  return result;
+}
+
+static void buffersize(struct OperationConfig *config, CURL *curl)
+{
+#ifdef DEBUGBUILD
+  char *env = getenv("CURL_BUFFERSIZE");
+  if(env) {
+    curl_off_t num;
+    const char *p = env;
+    if(!curlx_str_number(&p, &num, LONG_MAX))
+      my_setopt_long(curl, CURLOPT_BUFFERSIZE, (long)num);
+    return;
+  }
+#endif
+  if(config->recvpersecond && (config->recvpersecond < BUFFER_SIZE))
+    /* use a smaller sized buffer for better sleeps */
+    my_setopt_long(curl, CURLOPT_BUFFERSIZE, (long)config->recvpersecond);
+  else
+    my_setopt_long(curl, CURLOPT_BUFFERSIZE, BUFFER_SIZE);
+}
+
 CURLcode config2setopts(struct OperationConfig *config,
                         struct per_transfer *per,
                         CURL *curl,
@@ -763,36 +855,21 @@ CURLcode config2setopts(struct OperationConfig *config,
   if(result)
     return result;
 
-#ifndef DEBUGBUILD
-  /* On most modern OSes, exiting works thoroughly,
-     we will clean everything up via exit(), so do not bother with
-     slow cleanups. Crappy ones might need to skip this.
-     Note: avoid having this setopt added to the --libcurl source
-     output. */
-  result = curl_easy_setopt(curl, CURLOPT_QUICK_EXIT, 1L);
-  if(result)
-    return result;
+  if(TRUE
+#ifdef DEBUGBUILD
+    && getenv("CURL_QUICK_EXIT")
 #endif
+    ) {
+    /* QUICK_EXIT allows for running threads to be detached and not
+     * joined. Preferably in non-debug runs. */
+    result = curl_easy_setopt(curl, CURLOPT_QUICK_EXIT, 1L);
+    if(result)
+      return result;
+  }
 
   gen_trace_setopts(config, curl);
 
-  {
-#ifdef DEBUGBUILD
-    char *env = getenv("CURL_BUFFERSIZE");
-    if(env) {
-      curl_off_t num;
-      const char *p = env;
-      if(!curlx_str_number(&p, &num, LONG_MAX))
-        my_setopt_long(curl, CURLOPT_BUFFERSIZE, (long)num);
-    }
-    else
-#endif
-      if(config->recvpersecond && (config->recvpersecond < BUFFER_SIZE))
-        /* use a smaller sized buffer for better sleeps */
-        my_setopt_long(curl, CURLOPT_BUFFERSIZE, (long)config->recvpersecond);
-      else
-        my_setopt_long(curl, CURLOPT_BUFFERSIZE, BUFFER_SIZE);
-  }
+  buffersize(config, curl);
 
   MY_SETOPT_STR(curl, CURLOPT_URL, per->url);
   my_setopt_long(curl, CURLOPT_NOPROGRESS,
@@ -827,36 +904,7 @@ CURLcode config2setopts(struct OperationConfig *config,
   my_setopt_ptr(curl, CURLOPT_ERRORBUFFER, per->errorbuffer);
   my_setopt_long(curl, CURLOPT_TIMEOUT_MS, config->timeout_ms);
 
-  switch(config->httpreq) {
-  case TOOL_HTTPREQ_SIMPLEPOST:
-    if(config->resume_from) {
-      errorf("cannot mix --continue-at with --data");
-      result = CURLE_FAILED_INIT;
-    }
-    else {
-      MY_SETOPT_STR(curl, CURLOPT_POSTFIELDS,
-                    curlx_dyn_ptr(&config->postdata));
-      my_setopt_offt(curl, CURLOPT_POSTFIELDSIZE_LARGE,
-                     curlx_dyn_len(&config->postdata));
-    }
-    break;
-  case TOOL_HTTPREQ_MIMEPOST:
-    /* free previous remainders */
-    curl_mime_free(config->mimepost);
-    config->mimepost = NULL;
-    if(config->resume_from) {
-      errorf("cannot mix --continue-at with --form");
-      result = CURLE_FAILED_INIT;
-    }
-    else {
-      result = tool2curlmime(curl, config->mimeroot, &config->mimepost);
-      if(!result)
-        my_setopt_mimepost(curl, CURLOPT_MIMEPOST, config->mimepost);
-    }
-    break;
-  default:
-    break;
-  }
+  result = setopt_post(config, curl);
   if(result)
     return result;
 
@@ -874,19 +922,11 @@ CURLcode config2setopts(struct OperationConfig *config,
                   config->useragent : CURL_NAME "/" CURL_VERSION);
   }
 
-  if(use_proto == proto_http || use_proto == proto_https) {
-    result = http_setopts(config, curl);
-    if(!result)
-      result = cookie_setopts(config, curl);
-    if(result)
-      return result;
-  }
-
-  if(use_proto == proto_ftp || use_proto == proto_ftps) {
-    result = ftp_setopts(config, curl);
-    if(result)
-      return result;
-  }
+  result = http_setopts(config, curl, use_proto);
+  if(!result)
+    result = ftp_setopts(config, curl, use_proto);
+  if(result)
+    return result;
 
   my_setopt_long(curl, CURLOPT_LOW_SPEED_LIMIT, config->low_speed_limit);
   my_setopt_long(curl, CURLOPT_LOW_SPEED_TIME, config->low_speed_time);
@@ -901,13 +941,14 @@ CURLcode config2setopts(struct OperationConfig *config,
   MY_SETOPT_STR(curl, CURLOPT_KEYPASSWD, config->key_passwd);
   MY_SETOPT_STR(curl, CURLOPT_PROXY_KEYPASSWD, config->proxy_key_passwd);
 
-  if(use_proto == proto_scp || use_proto == proto_sftp) {
-    result = ssh_setopts(config, curl);
-    if(setopt_bad(result))
-      return result;
-  }
+  result = ssh_setopts(config, curl, use_proto);
+  if(setopt_bad(result))
+    return result;
+
   if(feature_ssl) {
-    result = ssl_setopts(config, curl);
+    result = ssl_ca_setopts(config, curl);
+    if(!result)
+      result = ssl_setopts(config, curl);
     if(setopt_bad(result))
       return result;
   }

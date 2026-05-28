@@ -235,6 +235,7 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@ @CURL_CFLAG_EXTRAS@
 CFLAG_CURL_SYMBOL_HIDING = @CFLAG_CURL_SYMBOL_HIDING@
+CLANG_TIDY = @CLANG_TIDY@
 CONFIGURE_OPTIONS = @CONFIGURE_OPTIONS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
@@ -444,12 +445,12 @@ CURLX_C = \
   ../../lib/curlx/inet_pton.c \
   ../../lib/curlx/multibyte.c \
   ../../lib/curlx/nonblock.c \
+  ../../lib/curlx/snprintf.c \
   ../../lib/curlx/strcopy.c \
   ../../lib/curlx/strerr.c \
   ../../lib/curlx/strparse.c \
   ../../lib/curlx/timediff.c \
   ../../lib/curlx/timeval.c \
-  ../../lib/curlx/version_win32.c \
   ../../lib/curlx/wait.c \
   ../../lib/curlx/warnless.c \
   ../../lib/curlx/winapi.c
@@ -783,11 +784,8 @@ uninstall-am:
 $(BUNDLE).c: $(top_srcdir)/scripts/mk-unity.pl Makefile.inc $(FIRST_C) $(UTILS_C) $(CURLX_C) $(TOOLX_C) $(TESTS_C)
 	@PERL@ $(top_srcdir)/scripts/mk-unity.pl --include $(UTILS_C) $(CURLX_C) $(TOOLX_C) --test $(TESTS_C) > $(BUNDLE).c
 
-# ignore generated C files since they play by slightly different rules!
 checksrc:
-	$(CHECKSRC)(@PERL@ $(top_srcdir)/scripts/checksrc.pl -D$(srcdir) \
-	  -W$(srcdir)/$(BUNDLE).c \
-	  $(srcdir)/*.[ch])
+	$(CHECKSRC)(@PERL@ $(top_srcdir)/scripts/checksrc.pl -D$(srcdir) -W$(srcdir)/$(BUNDLE).c $(FIRST_C) $(FIRST_H) $(UTILS_C) $(UTILS_H) $(TESTS_C))
 
 @NOT_CURL_CI_TRUE@all-local: checksrc
 

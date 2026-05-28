@@ -1,10 +1,10 @@
 /**************************************************************************
  *   rcfile.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2025 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2026 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014 Mike Frysinger                                    *
  *   Copyright (C) 2019 Brand Huntsman                                    *
- *   Copyright (C) 2014-2021 Benno Schulenberg                            *
+ *   Copyright (C) 2014-2021, 2024 Benno Schulenberg                      *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -111,6 +111,7 @@ static const rcoption rcopts[] = {
 	{"showcursor", SHOW_CURSOR},
 	{"smarthome", SMART_HOME},
 	{"softwrap", SOFTWRAP},
+	{"solosidescroll", SOLO_SIDESCROLL},
 	{"stateflags", STATEFLAGS},
 	{"tabsize", 0},
 	{"tabstospaces", TABS_TO_SPACES},
@@ -338,6 +339,12 @@ keystruct *strtosc(const char *input)
 	else if (!strcmp(input, "down") ||
 	         !strcmp(input, "nextline"))
 		s->func = do_down;
+#ifndef NANO_TINY
+	else if (!strcmp(input, "scrollleft"))
+		s->func = do_scroll_left;
+	else if (!strcmp(input, "scrollright"))
+		s->func = do_scroll_right;
+#endif
 #if !defined(NANO_TINY) || defined(ENABLE_HELP)
 	else if (!strcmp(input, "scrollup"))
 		s->func = do_scroll_up;
@@ -1732,16 +1739,16 @@ void do_rcfiles(void)
 		nanorc = get_full_path(custom_nanorc);
 		if (nanorc == NULL || access(nanorc, F_OK) != 0)
 			die(_("Specified rcfile does not exist\n"));
-	} else
-		nanorc = mallocstrcpy(nanorc, SYSCONFDIR "/nanorc");
+		if (is_good_file(nanorc))
+			parse_one_nanorc();
+	} else {
+		const char *xdgconfdir;
 
-	if (is_good_file(nanorc))
-		parse_one_nanorc();
-
-	if (custom_nanorc == NULL) {
-		const char *xdgconfdir = getenv("XDG_CONFIG_HOME");
+		if (have_nanorc(SYSCONFDIR, "/nanorc"))
+			parse_one_nanorc();
 
 		get_homedir();
+		xdgconfdir = getenv("XDG_CONFIG_HOME");
 
 		/* Now try to find a nanorc file in the user's home directory or in the
 		 * XDG configuration directories, and process the first one found. */

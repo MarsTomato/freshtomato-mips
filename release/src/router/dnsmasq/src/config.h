@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2025 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2026 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
 */
 
 #define FTABSIZ 150 /* max number of outstanding requests (default) */
-#define MAX_PROCS 20 /* default max no children for TCP requests */
+#define MAX_PROCS 30 /* default max no children for TCP requests */
 #define CHILD_LIFETIME 150 /* secs 'till terminated (RFC1035 suggests > 120s) */
 #define TCP_MAX_QUERIES 100 /* Maximum number of queries per incoming TCP connection */
 #define TCP_TIMEOUT 5 /* timeout waiting to connect to an upstream server - double this for answer */
@@ -43,7 +43,7 @@
 #define PING_CACHE_TIME 30 /* Ping test assumed to be valid this long. */
 #define DECLINE_BACKOFF 600 /* disable DECLINEd static addresses for this long */
 #define DHCP_PACKET_MAX 16384 /* hard limit on DHCP packet size */
-#define SMALLDNAME 50 /* most domain names are smaller than this */
+#define SMALLDNAME 75 /* most domain names are smaller than this */
 #define CNAME_CHAIN 10 /* chains longer than this atr dropped for loop protection */
 #define DNSSEC_MIN_TTL 60 /* DNSKEY and DS records in cache last at least this long */
 #define HOSTSFILE "/etc/hosts"

@@ -1,6 +1,6 @@
 # stdio_h.m4
-# serial 75
-dnl Copyright (C) 2007-2025 Free Software Foundation, Inc.
+# serial 76
+dnl Copyright (C) 2007-2026 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -182,6 +182,7 @@ AC_DEFUN([gl_STDIO_H_REQUIRE_DEFAULTS],
     gl_MODULE_INDICATOR_INIT_VARIABLE([GNULIB_STDIO_H_SIGPIPE])
     gl_MODULE_INDICATOR_INIT_VARIABLE([GNULIB_SZPRINTF])
     gl_MODULE_INDICATOR_INIT_VARIABLE([GNULIB_TMPFILE])
+    gl_MODULE_INDICATOR_INIT_VARIABLE([GNULIB_VAPRINTF])
     gl_MODULE_INDICATOR_INIT_VARIABLE([GNULIB_VASPRINTF])
     gl_MODULE_INDICATOR_INIT_VARIABLE([GNULIB_VASZPRINTF])
     gl_MODULE_INDICATOR_INIT_VARIABLE([GNULIB_VFSCANF])
@@ -208,6 +209,8 @@ AC_DEFUN([gl_STDIO_H_REQUIRE_DEFAULTS],
     gl_MODULE_INDICATOR_INIT_VARIABLE([GNULIB_MDA_TEMPNAM], [1])
   ])
   m4_require(GL_MODULE_INDICATOR_PREFIX[_STDIO_H_MODULE_INDICATOR_DEFAULTS])
+  dnl Make sure the shell variable for GNULIB_FREE_POSIX is initialized.
+  gl_STDLIB_H_REQUIRE_DEFAULTS
   AC_REQUIRE([gl_STDIO_H_DEFAULTS])
 ])
 

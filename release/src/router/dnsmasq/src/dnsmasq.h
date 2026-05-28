@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2025 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2026 Simon Kelley
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define COPYRIGHT "Copyright (c) 2000-2025 Simon Kelley"
+#define COPYRIGHT "Copyright (c) 2000-2026 Simon Kelley"
 
 /* We do defines that influence behavior of stdio.h, so complain
    if included too early. */
@@ -201,6 +201,11 @@ struct event_desc {
 #define EVENT_TIME_ERR   24
 #define EVENT_SCRIPT_LOG 25
 #define EVENT_TIME       26
+#define EVENT_LINK_ERR   27
+#define EVENT_INOTFY_ERR 28
+#define EVENT_TMSL_ERR   29
+#define EVENT_RESOLV_ERR 30
+#define EVENT_IFILE_ERR  31
 
 /* Exit codes. */
 #define EC_GOOD        0
@@ -481,7 +486,7 @@ struct interface_name {
 };
 
 union bigname {
-  char name[MAXDNAME];
+  char name[MAXDNAMESTR+1];
   union bigname *next; /* freelist */
 };
 
@@ -1266,10 +1271,10 @@ extern struct daemon {
   /* globally used stuff for DNS */
   char *packet; /* packet buffer */
   int packet_buff_sz; /* size of above */
-  char *namebuff; /* MAXDNAME size buffer */
+  char *namebuff; /* MAXDNAMESTR+1 size buffer */
   char *workspacename;
 #ifdef HAVE_DNSSEC
-  char *keyname, *cname; /* MAXDNAME size buffer */
+  char *keyname, *cname; /* MAXDNAMESTR+1 size buffer */
   unsigned long *rr_status; /* ceiling in TTL from DNSSEC or zero for insecure */
   int rr_status_sz;
   int dnssec_no_time_check;
@@ -1468,6 +1473,7 @@ int dnssec_validate_by_ds(time_t now, struct dns_header *header, size_t plen, ch
 			  char *keyname, int class, int *validate_count);
 int dnssec_validate_ds(time_t now, struct dns_header *header, size_t plen, char *name,
 		       char *keyname, int class, int *validate_count);
+int cache_neg_ds(char *name, int flags, int class, time_t now, int neg_ttl);
 int dnssec_validate_reply(time_t now, struct dns_header *header, size_t plen, char *name, char *keyname, int *class,
 			  int check_unsigned, int *neganswer, int *prim_ok, int *nons, int *nsec_ttl, int *validate_count);
 int dnskey_keytag(int alg, int flags, unsigned char *key, int keylen);
@@ -1484,6 +1490,7 @@ int verify(struct blockdata *key_data, unsigned int key_len, unsigned char *sig,
 char *ds_digest_name(int digest);
 char *algo_digest_name(int algo);
 char *nsec3_digest_name(int digest);
+void nettle_digest_wrapper(const struct nettle_hash *hash, void *ctx, size_t length, uint8_t *dst);
 
 /* util.c */
 void rand_init(void);
@@ -1493,15 +1500,17 @@ u64 rand64(void);
 int rr_on_list(struct rrlist *list, unsigned short rr);
 int legal_hostname(char *name);
 char *canonicalise(char *in, int *nomem);
-unsigned char *do_rfc1035_name(unsigned char *p, char *sval, char *limit);
+unsigned char *do_rfc1035_name(unsigned char *p, char *sval, unsigned char *limit);
 void *safe_malloc(size_t size);
 void safe_strncpy(char *dest, const char *src, size_t size);
 void safe_pipe(int *fd, int read_noblock);
+#define malloc_log(x, y) malloc_log_real(__func__, __LINE__, (x), (y))
 #define whine_malloc(x) whine_malloc_real(__func__, __LINE__, (x))
 #define whine_realloc(x, y) whine_realloc_real(NULL, __func__, __LINE__, (x), (y))
 #define expand_buf(x, y) expand_buf_real(__func__, __LINE__, (x), (y))
 #define expand_workspace(x, y, z) expand_workspace_real(__func__, __LINE__, (x), (y), (z))
 #define free(x) free_real(__func__, __LINE__, (x))
+void malloc_log_real(const char *func, unsigned int line, void *mem, size_t size);
 void free_real(const char *func, unsigned int line, void *ptr);
 void *whine_malloc_real(const char *func, unsigned int line, size_t size);
 void *whine_realloc_real(const char *wrapper, const char *func, unsigned int line, void *ptr, size_t size);
@@ -1905,7 +1914,7 @@ int detect_loop(char *query, int type);
 
 /* inotify.c */
 #ifdef HAVE_INOTIFY
-void inotify_dnsmasq_init(void);
+void inotify_dnsmasq_init(int errfd);
 int inotify_check(time_t now);
 void set_dynamic_inotify(int flag, int total_size, struct crec **rhash, int revhashsz);
 #endif

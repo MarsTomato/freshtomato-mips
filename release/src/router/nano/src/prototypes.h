@@ -1,7 +1,7 @@
 /**************************************************************************
  *   prototypes.h  --  This file is part of GNU nano.                     *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2025 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2026 Free Software Foundation, Inc.    *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -46,6 +46,8 @@ extern int final_status;
 
 extern bool inhelp;
 extern char *title;
+
+extern bool united_sidescroll;
 
 extern bool focusing;
 
@@ -230,7 +232,7 @@ char *mbstrcasestr(const char *haystack, const char *needle);
 char *revstrstr(const char *haystack, const char *needle, const char *pointer);
 char *mbrevstrcasestr(const char *haystack, const char *needle, const char *pointer);
 #if !defined(NANO_TINY) || defined(ENABLE_JUSTIFY)
-char *mbstrchr(const char *string, const char *chr);
+const char *mbstrchr(const char *string, const char *chr);
 #endif
 #ifndef NANO_TINY
 char *mbstrpbrk(const char *string, const char *accept);
@@ -354,8 +356,8 @@ char *get_history_completion(linestruct **h, char *s, size_t len);
 bool have_statedir(void);
 void load_history(void);
 void save_history(void);
-void load_poshistory(void);
-void update_poshistory(void);
+void load_positions_register(void);
+void update_positions_register(void);
 void restore_cursor_position_if_any(void);
 #endif
 
@@ -392,6 +394,10 @@ void do_scroll_down(void);
 #endif
 void do_left(void);
 void do_right(void);
+#ifndef NANO_TINY
+void do_scroll_left(void);
+void do_scroll_right(void);
+#endif
 
 /* Most functions in nano.c. */
 linestruct *make_new_node(linestruct *prevnode);
@@ -605,7 +611,7 @@ int get_input(WINDOW *win);
 int get_kbinput(WINDOW *win, bool showcursor);
 char *get_verbatim_kbinput(WINDOW *win, size_t *count);
 #ifdef ENABLE_MOUSE
-int get_mouseinput(int *mouse_y, int *mouse_x, bool allow_shortcuts);
+int get_mouseinput(int *mouse_y, int *mouse_x);
 #endif
 void blank_edit(void);
 void blank_statusbar(void);

@@ -29,10 +29,9 @@ import filecmp
 import logging
 import os
 import re
+
 import pytest
-
-from testenv import Env, CurlClient, Caddy, LocalClient
-
+from testenv import Caddy, CurlClient, Env, LocalClient
 
 log = logging.getLogger(__name__)
 
@@ -184,6 +183,7 @@ class TestCaddy:
             pytest.skip(f'example client not built: {client.name}')
         r = client.run(args=[
              '-n', f'{count}',
+             '-C', env.ca.cert_file,
              '-e',  # use TLS earlydata
              '-f',  # forbid reuse of connections
              '-r', f'{env.domain1}:{caddy.port}:127.0.0.1',

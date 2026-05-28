@@ -29,9 +29,9 @@
 #include "tool_operate.h"
 
 #ifdef _WIN32
-#define OPENMODE S_IREAD | S_IWRITE
+#define OPENMODE (_S_IREAD | _S_IWRITE)
 #else
-#define OPENMODE S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH
+#define OPENMODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 #endif
 
 /* create/open a local file for writing, return TRUE on success */
@@ -61,6 +61,7 @@ bool tool_create_output_file(struct OutStruct *outs,
     if(config->file_clobber_mode == CLOBBER_NEVER && fd == -1) {
       int next_num = 1;
       struct dynbuf fbuffer;
+      char *newfile;
       curlx_dyn_init(&fbuffer, 1025);
       /* !checksrc! disable ERRNOVAR 1 */
       while(fd == -1 && /* have not successfully opened a file */
@@ -78,8 +79,11 @@ bool tool_create_output_file(struct OutStruct *outs,
           /* Keep retrying in the hope that it is not interrupted sometime */
         } while(fd == -1 && errno == EINTR);
       }
-      outs->filename = curlx_dyn_ptr(&fbuffer); /* remember the new one */
-      outs->alloc_filename = TRUE;
+      newfile = curlx_dyn_ptr(&fbuffer); /* remember the new one */
+      if(newfile) {
+        outs->filename = newfile;
+        outs->alloc_filename = TRUE;
+      }
     }
     /* An else statement to not overwrite existing files and not retry with
        new numbered names (which would cover
@@ -89,7 +93,7 @@ bool tool_create_output_file(struct OutStruct *outs,
     if(fd != -1) {
       file = curlx_fdopen(fd, "wb");
       if(!file)
-        close(fd);
+        curlx_close(fd);
     }
   }
 
@@ -99,7 +103,7 @@ bool tool_create_output_file(struct OutStruct *outs,
           curlx_strerror(errno, errbuf, sizeof(errbuf)));
     return FALSE;
   }
-  outs->s_isreg = TRUE;
+  outs->regular_file = TRUE;
   outs->fopened = TRUE;
   outs->stream = file;
   outs->bytes = 0;
@@ -231,7 +235,7 @@ static size_t win_console(intptr_t fhnd, struct OutStruct *outs,
   *retp = bytes;
   return 0;
 }
-#endif
+#endif /* _WIN32 */
 
 /*
 ** callback for CURLOPT_WRITEFUNCTION
@@ -244,7 +248,7 @@ size_t tool_write_cb(char *buffer, size_t sz, size_t nmemb, void *userdata)
   struct OutStruct *outs = &per->outs;
   struct OperationConfig *config = per->config;
   size_t bytes = sz * nmemb;
-  bool is_tty = global->isatty;
+  bool is_tty = (bool)global->isatty;
 #ifdef _WIN32
   CONSOLE_SCREEN_BUFFER_INFO console_info;
   intptr_t fhnd;
@@ -282,7 +286,7 @@ size_t tool_write_cb(char *buffer, size_t sz, size_t nmemb, void *userdata)
       /* regular file */
       if(!*outs->filename)
         check_fails = TRUE;
-      if(!outs->s_isreg)
+      if(!outs->regular_file)
         check_fails = TRUE;
       if(outs->fopened && !outs->stream)
         check_fails = TRUE;
@@ -293,7 +297,7 @@ size_t tool_write_cb(char *buffer, size_t sz, size_t nmemb, void *userdata)
     }
     else {
       /* standard stream */
-      if(!outs->stream || outs->s_isreg || outs->fopened)
+      if(!outs->stream || outs->regular_file || outs->fopened)
         check_fails = TRUE;
       if(outs->alloc_filename || outs->is_cd_filename || outs->init)
         check_fails = TRUE;
@@ -303,7 +307,7 @@ size_t tool_write_cb(char *buffer, size_t sz, size_t nmemb, void *userdata)
       return CURL_WRITEFUNC_ERROR;
     }
   }
-#endif
+#endif /* DEBUGBUILD */
 
   if(!outs->stream && !tool_create_output_file(outs, per->config))
     return CURL_WRITEFUNC_ERROR;

@@ -57,6 +57,7 @@ extern void asp_nvstat(int argc, char **argv);
 extern void asp_jsdefaults(int argc, char **argv);
 
 /* misc.c */
+extern int is_ascii_alnum(unsigned char c);
 extern char *js_string(const char *s);
 extern char *html_string(const char *s);
 extern char *unix_string(const char *s);
@@ -124,7 +125,7 @@ extern void wo_pptpdcmd(char *url);
 
 /* wireguard.c */
 #ifdef TCONFIG_WIREGUARD
-extern void asp_wgstat(int argc, char **argv);
+extern int wg_status(char *iface);
 #endif
 
 /* devlist.c */

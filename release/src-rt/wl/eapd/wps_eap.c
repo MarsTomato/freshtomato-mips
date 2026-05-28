@@ -32,7 +32,6 @@
 #include <shutils.h>
 #include <UdpLib.h>
 #include <security_ipc.h>
-#include <bcmconfig.h>
 
 /* Receive message from wps module  */
 void

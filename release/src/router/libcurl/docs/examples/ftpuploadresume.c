@@ -51,7 +51,7 @@ static size_t getcontentlengthfunc(void *ptr, size_t size, size_t nmemb,
 }
 
 /* discard downloaded data */
-static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
+static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *stream)
 {
   (void)ptr;
   (void)stream;
@@ -158,7 +158,7 @@ int main(void)
   CURL *curl = NULL;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();

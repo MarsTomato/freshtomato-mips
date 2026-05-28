@@ -241,21 +241,6 @@ int check_hw_type(void)
 	return HW_UNKNOWN;
 }
 
-// Find partition with defined name (and return partition number as an integer). Borrorwed from DD-WRT, credit is due there!
-int getMTD(char *name)
-{
-	char buf[128];
-	int device;
-
-	sprintf(buf, "cat /proc/mtd|grep \"%s\"", name);
-	FILE *fp = popen(buf, "rb");
-
-	fscanf(fp, "%s", &buf[0]);
-	device = buf[3] - '0';
-	pclose(fp);
-	return device;
-}
-
 int get_wndr_model(void)
 {
 	#define	WNDR4000		"U12H181T00_NETGEAR"

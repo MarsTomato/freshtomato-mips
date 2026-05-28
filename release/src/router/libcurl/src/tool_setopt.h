@@ -78,7 +78,7 @@ extern const struct NameValueUnsigned setopt_nv_CURLHSTS[];
 /* Intercept setopt calls for --libcurl */
 
 CURLcode tool_setopt_enum(CURL *curl, const char *name, CURLoption tag,
-                          const struct NameValue *nv, long lval);
+                          const struct NameValue *nvlist, long lval);
 CURLcode tool_setopt_SSLVERSION(CURL *curl, const char *name, CURLoption tag,
                                 long lval);
 CURLcode tool_setopt_flags(CURL *curl, struct OperationConfig *config,
@@ -86,7 +86,8 @@ CURLcode tool_setopt_flags(CURL *curl, struct OperationConfig *config,
                            const struct NameValue *nv, long lval);
 CURLcode tool_setopt_bitmask(CURL *curl,
                              const char *name, CURLoption tag,
-                             const struct NameValueUnsigned *nv, long lval);
+                             const struct NameValueUnsigned *nvlist,
+                             long lval);
 CURLcode tool_setopt_mimepost(CURL *curl, struct OperationConfig *config,
                               const char *name, CURLoption tag,
                               curl_mime *mimepost);
@@ -134,7 +135,7 @@ CURLcode tool_setopt_ptr(CURL *curl, const char *name, CURLoption tag, ...);
 #define my_setopt_slist(x, y, z)      curl_easy_setopt(x, y, z)
 #define my_setopt_SSLVERSION(x, y, z) curl_easy_setopt(x, y, z)
 #define my_setopt_enum(x, y, z)       curl_easy_setopt(x, y, z)
-#define my_setopt_bitmask(x, y, z)    curl_easy_setopt(x, y, (long)z)
+#define my_setopt_bitmask(x, y, z)    curl_easy_setopt(x, y, (long)(z))
 
 #define MY_SETOPT_STR(x, y, z)          \
   do {                                  \

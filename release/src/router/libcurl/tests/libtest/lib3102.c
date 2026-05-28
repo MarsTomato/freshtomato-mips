@@ -29,18 +29,18 @@
  */
 static bool is_chain_in_order(struct curl_certinfo *cert_info)
 {
-  char *last_issuer = NULL;
+  const char *last_issuer = NULL;
   int cert;
 
   /* Chains with only a single certificate are always in order */
   if(cert_info->num_of_certs <= 1)
-    return 1;
+    return true;
 
   /* Enumerate each certificate in the chain */
   for(cert = 0; cert < cert_info->num_of_certs; cert++) {
     struct curl_slist *slist = cert_info->certinfo[cert];
-    char *issuer = NULL;
-    char *subject = NULL;
+    const char *issuer = NULL;
+    const char *subject = NULL;
 
     /* Find the certificate issuer and subject by enumerating each field */
     for(; slist && (!issuer || !subject); slist = slist->next) {
@@ -80,7 +80,7 @@ static bool is_chain_in_order(struct curl_certinfo *cert_info)
   return true;
 }
 
-static size_t wrfu(void *ptr, size_t size, size_t nmemb, void *stream)
+static size_t wrfu(char *ptr, size_t size, size_t nmemb, void *stream)
 {
   (void)stream;
   (void)ptr;

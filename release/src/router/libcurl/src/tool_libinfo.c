@@ -46,7 +46,7 @@ const char *proto_tftp = NULL;
 #ifndef CURL_DISABLE_IPFS
 const char *proto_ipfs = "ipfs";
 const char *proto_ipns = "ipns";
-#endif /* !CURL_DISABLE_IPFS */
+#endif
 
 static struct proto_name_tokenp {
   const char   *proto_name;
@@ -114,7 +114,6 @@ static struct feature_name_presentp {
   { "SSLS-EXPORT",    &feature_ssls_export, 0 },
   { "threadsafe",     NULL,                 CURL_VERSION_THREADSAFE },
   { "TLS-SRP",        &feature_tls_srp,     CURL_VERSION_TLSAUTH_SRP },
-  { "TrackMemory",    NULL,                 CURL_VERSION_CURLDEBUG },
   { "Unicode",        NULL,                 CURL_VERSION_UNICODE },
   { "UnixSockets",    NULL,                 CURL_VERSION_UNIX_SOCKETS },
   { "zstd",           &feature_zstd,        CURL_VERSION_ZSTD },
@@ -133,7 +132,6 @@ size_t feature_count;
  * the latter is not returned by curl_version_info(), it is built from
  * the returned features bit mask.
  */
-
 CURLcode get_libcurl_info(void)
 {
   CURLcode result = CURLE_OK;
@@ -185,7 +183,8 @@ CURLcode get_libcurl_info(void)
     ++feature_count;
   }
 
-  feature_libssh2 = curlinfo->libssh_version &&
+  feature_libssh2 = curlinfo->age >= CURLVERSION_FOURTH &&
+                    curlinfo->libssh_version &&
                     !strncmp("libssh2", curlinfo->libssh_version, 7);
   return CURLE_OK;
 }
@@ -197,7 +196,6 @@ CURLcode get_libcurl_info(void)
  * a given protocol and thus allows comparing pointers rather than strings.
  * In addition, the returned pointer is not deallocated until the program ends.
  */
-
 const char *proto_token(const char *proto)
 {
   const char * const *builtin;

@@ -1,5 +1,5 @@
 /* signbit() macro: Determine the sign bit of a floating-point number.
-   Copyright (C) 2007, 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2007, 2009-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -23,12 +23,12 @@
 #include "isnanf-nolibm.h"
 #include "float+.h"
 
-#ifdef gl_signbitf_OPTIMIZED_MACRO
-# undef gl_signbitf
+#ifdef _gl_signbitf_OPTIMIZED_MACRO
+# undef _gl_signbitf
 #endif
 
 int
-gl_signbitf (float arg)
+_gl_signbitf (float arg)
 {
 #if defined FLT_SIGNBIT_WORD && defined FLT_SIGNBIT_BIT
   /* The use of a union to extract the bits of the representation of a

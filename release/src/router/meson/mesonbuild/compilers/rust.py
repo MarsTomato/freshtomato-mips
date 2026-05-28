@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import argparse
 import functools
 import os.path
 import textwrap
@@ -11,18 +12,25 @@ import re
 import typing as T
 
 from .. import options
-from ..mesonlib import EnvironmentException, MesonException, Popen_safe_logged, version_compare
+from ..dependencies import InternalDependency
+from ..mesonlib import EnvironmentException, MesonException, Popen_safe, Popen_safe_logged, version_compare
 from ..linkers.linkers import VisualStudioLikeLinkerMixin
 from ..options import OptionKey
 from .compilers import Compiler, CompileCheckMode, clike_debug_args, is_library
 
 if T.TYPE_CHECKING:
+    from .. import build
     from ..options import MutableKeyedOptionDictType
     from ..environment import Environment  # noqa: F401
     from ..linkers.linkers import DynamicLinker
     from ..mesonlib import MachineChoice
     from ..dependencies import Dependency
     from ..build import BuildTarget
+
+    from typing_extensions import Protocol
+
+    class TargetParse(Protocol):
+        target: T.Optional[str]
 
 
 rust_optimization_args: T.Dict[str, T.List[str]] = {
@@ -34,6 +42,32 @@ rust_optimization_args: T.Dict[str, T.List[str]] = {
     '3': ['-C', 'opt-level=3'],
     's': ['-C', 'opt-level=s'],
 }
+
+
+class _TargetParser:
+
+    """Helper for bindgen to look for --target in various command line arguments.
+
+    Storing this as a helper class avoids the need to set up the ArgumentParser
+    multiple times, and simplifies it's use as well as the typing.
+    """
+
+    def __init__(self) -> None:
+        parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+        parser.add_argument('--target', action='store', default=None)
+        self._parser = parser
+
+    def parse(self, args: T.List[str]) -> T.Optional[str]:
+        """Parse arguments looking for --target
+
+        :param args: A list of arguments to search
+        :return: the argument to --target if it exists, otherwise None
+        """
+        parsed = T.cast('TargetParse', self._parser.parse_known_args(args)[0])
+        return parsed.target
+
+
+parse_target = _TargetParser().parse
 
 def get_rustup_run_and_args(exelist: T.List[str]) -> T.Optional[T.Tuple[T.List[str], T.List[str]]]:
     """Given the command for a rustc executable, check if it is invoked via
@@ -73,11 +107,18 @@ def rustc_link_args(args: T.List[str]) -> T.List[str]:
         rustc_args.append(f'link-arg={arg}')
     return rustc_args
 
+
+class RustSystemDependency(InternalDependency):
+    pass
+
+
 class RustCompiler(Compiler):
 
     # rustc doesn't invoke the compiler itself, it doesn't need a LINKER_PREFIX
     language = 'rust'
     id = 'rustc'
+
+    USED_FOR_SEPARATE_LINKING_STEP = False
 
     _WARNING_LEVELS: T.Dict[str, T.List[str]] = {
         '0': ['--cap-lints', 'allow'],
@@ -122,44 +163,45 @@ class RustCompiler(Compiler):
     def needs_static_linker(self) -> bool:
         return False
 
-    def sanity_check(self, work_dir: str) -> None:
-        source_name = os.path.join(work_dir, 'sanity.rs')
-        output_name = os.path.join(work_dir, 'rusttest.exe')
+    def _sanity_check_compile_args(self, sourcename: str, binname: str
+                                   ) -> T.Tuple[T.List[str], T.List[str]]:
         cmdlist = self.exelist.copy()
+        largs: T.List[str] = []
+        assert self.linker is not None, 'for mypy'
+        if self.info.kernel == 'none' and 'ld.' in self.linker.id:
+            largs.extend(rustc_link_args(['-nostartfiles']))
+        cmdlist.extend(self.get_output_args(binname))
+        cmdlist.append(sourcename)
+        return cmdlist, largs
 
-        with open(source_name, 'w', encoding='utf-8') as ofile:
-            # If machine kernel is not `none`, try to compile a dummy program.
-            # If 'none', this is likely a `no-std`(i.e. bare metal) project.
-            if self.info.kernel != 'none':
-                ofile.write(textwrap.dedent(
-                    '''fn main() {
-                    }
-                    '''))
-            else:
-                # If rustc linker is gcc, add `-nostartfiles`
-                if 'ld.' in self.linker.id:
-                    cmdlist.extend(['-C', 'link-arg=-nostartfiles'])
-                ofile.write(textwrap.dedent(
-                    '''#![no_std]
-                    #![no_main]
-                    #[no_mangle]
-                    pub fn _start() {
-                    }
-                    #[panic_handler]
-                    fn panic(_info: &core::panic::PanicInfo) -> ! {
-                        loop {}
-                    }
-                    '''))
+    def _sanity_check_source_code(self) -> str:
+        if self.info.kernel != 'none':
+            return textwrap.dedent(
+                '''fn main() {
+                }
+                ''')
+        return textwrap.dedent(
+            '''#![no_std]
+            #![no_main]
+            #[no_mangle]
+            pub fn _start() {
+            }
+            #[panic_handler]
+            fn panic(_info: &core::panic::PanicInfo) -> ! {
+                loop {}
+            }
+            ''')
 
-        cmdlist.extend(['-o', output_name, source_name])
-        pc, stdo, stde = Popen_safe_logged(cmdlist, cwd=work_dir)
-        if pc.returncode != 0:
-            raise EnvironmentException(f'Rust compiler {self.name_string()} cannot compile programs.')
+    def sanity_check(self, work_dir: str) -> None:
+        super().sanity_check(work_dir)
+        source_name = self._sanity_check_filenames()[0]
         self._native_static_libs(work_dir, source_name)
-        self.run_sanity_check([output_name], work_dir)
 
     def _native_static_libs(self, work_dir: str, source_name: str) -> None:
         # Get libraries needed to link with a Rust staticlib
+        if self.native_static_libs:
+            return
+
         cmdlist = self.exelist + ['--crate-type', 'staticlib', '--print', 'native-static-libs', source_name]
         p, stdo, stde = Popen_safe_logged(cmdlist, cwd=work_dir)
         if p.returncode != 0:
@@ -206,6 +248,20 @@ class RustCompiler(Compiler):
         return stdo.splitlines()
 
     @functools.lru_cache(maxsize=None)
+    def get_target_triple(self) -> str:
+        # First check if --target is explicitly set in the compiler command
+        target = parse_target(self.get_exe_args())
+        if target:
+            return target
+        # Fall back to parsing the host triple from `rustc -vV`
+        cmd = self.get_exelist(ccache=False) + ['-vV']
+        p, stdo, stde = Popen_safe(cmd)
+        for line in stdo.splitlines():
+            if line.startswith('host:'):
+                return line.split(':', 1)[1].strip()
+        raise EnvironmentException('Could not determine Rust target triple')
+
+    @functools.lru_cache(maxsize=None)
     def get_crt_static(self) -> bool:
         return 'target_feature="crt-static"' in self.get_cfgs()
 
@@ -224,6 +280,10 @@ class RustCompiler(Compiler):
         # Rust code cannot be instrumented, we can link in the sanitizer libraries
         # for the sake of C/C++ code
         return rustc_link_args(super().sanitizer_link_args(target, value))
+
+    def get_soname_args(self, prefix: str, shlib_name: str, suffix: str, soversion: str,
+                        darwin_versions: T.Tuple[str, str]) -> T.List[str]:
+        return rustc_link_args(super().get_soname_args(prefix, shlib_name, suffix, soversion, darwin_versions))
 
     @functools.lru_cache(maxsize=None)
     def has_verbatim(self) -> bool:
@@ -294,10 +354,6 @@ class RustCompiler(Compiler):
     def use_linker_args(cls, linker: str, version: str) -> T.List[str]:
         return ['-C', f'linker={linker}']
 
-    # Rust does not have a use_linker_args because it dispatches to a gcc-like
-    # C compiler for dynamic linking, as such we invoke the C compiler's
-    # use_linker_args method instead.
-
     def get_options(self) -> MutableKeyedOptionDictType:
         opts = super().get_options()
 
@@ -323,6 +379,8 @@ class RustCompiler(Compiler):
         return opts
 
     def get_dependency_compile_args(self, dep: 'Dependency') -> T.List[str]:
+        if isinstance(dep, RustSystemDependency):
+            return dep.get_compile_args()
         # Rust doesn't have dependency compile arguments so simply return
         # nothing here. Dependencies are linked and all required metadata is
         # provided by the linker flags.
@@ -336,17 +394,17 @@ class RustCompiler(Compiler):
             args.append('--edition=' + std)
         return args
 
-    def get_crt_compile_args(self, crt_val: str, buildtype: str) -> T.List[str]:
+    def get_crt_compile_args(self, crt_val: str, env: Environment) -> T.List[str]:
         # Rust handles this for us, we don't need to do anything
         return []
 
-    def get_crt_link_args(self, crt_val: str, buildtype: str) -> T.List[str]:
+    def get_crt_link_args(self, crt_val: str, env: Environment) -> T.List[str]:
         if not isinstance(self.linker, VisualStudioLikeLinkerMixin):
             return []
         # Rustc always use non-debug Windows runtime. Inject the one selected
         # by Meson options instead.
         # https://github.com/rust-lang/rust/issues/39016
-        return self.MSVCRT_ARGS[self.get_crt_val(crt_val, buildtype)]
+        return self.MSVCRT_ARGS[self.get_crt_val(crt_val, env)]
 
     def get_colorout_args(self, colortype: str) -> T.List[str]:
         if colortype in {'always', 'never', 'auto'}:
@@ -392,6 +450,9 @@ class RustCompiler(Compiler):
     def gen_vs_module_defs_args(self, defsfile: str) -> T.List[str]:
         return rustc_link_args(super().gen_vs_module_defs_args(defsfile))
 
+    def gen_export_dynamic_link_args(self) -> T.List[str]:
+        return rustc_link_args(self.linker.export_dynamic_args())
+
     def get_profile_generate_args(self) -> T.List[str]:
         return ['-C', 'profile-generate']
 
@@ -413,6 +474,15 @@ class RustCompiler(Compiler):
     def get_allow_undefined_link_args(self) -> T.List[str]:
         return rustc_link_args(super().get_allow_undefined_link_args())
 
+    def get_build_link_args(self, target: BuildTarget, build: build.Build) -> T.List[str]:
+        return rustc_link_args(super().get_build_link_args(target, build))
+
+    def get_target_link_args(self, target: 'BuildTarget') -> T.List[str]:
+        return rustc_link_args(super().get_target_link_args(target))
+
+    def get_win_subsystem_args(self, value: str) -> T.List[str]:
+        return rustc_link_args(super().get_win_subsystem_args(value))
+
     def get_werror_args(self) -> T.List[str]:
         # Use -D warnings, which makes every warning not explicitly allowed an
         # error
@@ -426,7 +496,27 @@ class RustCompiler(Compiler):
         # relocation-model=pic is rustc's default already.
         return []
 
+    def get_std_link_args(self, env: Environment, is_thin: bool) -> T.List[str]:
+        # Rust handles static library creation via --crate-type
+        return []
+
+    def get_std_shared_lib_link_args(self) -> T.List[str]:
+        # Rust handles shared library creation via --crate-type
+        return []
+
+    def get_std_shared_module_link_args(self, target: BuildTarget) -> T.List[str]:
+        # Rust handles shared module creation via --crate-type
+        return []
+
     def get_pie_args(self) -> T.List[str]:
+        # Rustc currently has no way to toggle this, it's controlled by whether
+        # pic is on by rustc
+        return []
+
+    def get_compile_only_args(self) -> T.List[str]:
+        return ['--crate-type', 'lib']
+
+    def get_pie_link_args(self) -> T.List[str]:
         # Rustc currently has no way to toggle this, it's controlled by whether
         # pic is on by rustc
         return []
@@ -457,7 +547,9 @@ class RustCompiler(Compiler):
     def has_multi_arguments(self, args: T.List[str]) -> T.Tuple[bool, bool]:
         return self.compiles('fn main() { std::process::exit(0) }\n', extra_args=args, mode=CompileCheckMode.COMPILE)
 
-    def has_multi_link_arguments(self, args: T.List[str]) -> T.Tuple[bool, bool]:
+    def has_multi_link_arguments(self, args: T.List[str], to_host_args: bool = True) -> T.Tuple[bool, bool]:
+        if to_host_args:
+            args = rustc_link_args(args)
         args = rustc_link_args(self.linker.fatal_warnings()) + args
         return self.compiles('fn main() { std::process::exit(0) }\n', extra_args=args, mode=CompileCheckMode.LINK)
 

@@ -1,4 +1,4 @@
-.\" Copyright (C) 1999-2011, 2013-2025 Free Software Foundation, Inc.
+.\" Copyright (C) 1999-2011, 2013-2026 Free Software Foundation, Inc.
 .\"
 .\" This document is dual-licensed.  You may distribute and/or modify it
 .\" under the terms of either of the following licenses:
@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANO 1 "version 8.7" "November 2025"
+.TH NANO 1 "version 9.0" "April 2026"
 
 .SH NAME
 nano \- Nano's ANOther text editor, inspired by Pico
@@ -27,12 +27,29 @@ nano \- Nano's ANOther text editor, inspired by Pico
 .sp
 .BR nano " [" \fIoptions "] [[" + [ crCR ]{ / | ? } \fIstring "] " \fIfile ]...
 
-.SH NOTICE
+.SH NOTICES
+Since version 9.0, all lines are scrolled horizontally together
+(when the cursor approaches the edge), by just the amount needed,
+instead of scrolling only the current line by a large step.
+If you prefer the old behavior, you can use \fB--solo\fR on the
+command line or \fBset solosidescroll\fR in your \fInanorc\fR.
+.sp
+Also since version 9.0, keystrokes \fBM-<\fR and \fBM->\fR have
+been reassigned to the `scrollleft` and `scrollright` functions.
+If you want those keystrokes to do what they did before version 9.0,
+add these two lines at the end of your \fInanorc\fR file:
+.sp
+.RS 4
+.B bind M\-< prevbuf main
+.br
+.B bind M\-> nextbuf main
+.RE
+.sp
 Since version 8.0, to be newcomer friendly, \fB^F\fR starts a forward search,
 \fB^B\fR starts a backward search, \fBM\-F\fR searches the next occurrence
 forward, and \fBM\-B\fR searches the next occurrence backward.  If you want
 those keystrokes to do what they did before version 8.0, add the following
-lines at the end of your \fInanorc\fR file:
+four lines at the end of your \fInanorc\fR file:
 .sp
 .RS 4
 .B bind ^F forward main
@@ -240,7 +257,10 @@ When doing soft line wrapping, wrap lines at whitespace
 instead of always at the edge of the screen.
 .TP
 .BR \-b ", " \-\-breaklonglines
-Automatically hard-wrap the current line when it becomes overlong.
+Automatically hard-wrap the current line when it becomes overlong,
+that is: when it becomes wider than the value given with \fB\-r\fR
+(\fB\-\-fill\fR).  The default value for \fB-r\fR is the terminal's
+width minus eight.
 (This option is the opposite of \fB\-w\fR (\fB\-\-nowrap\fR) \(em
 the last one given takes effect.)
 .TP
@@ -397,6 +417,14 @@ and disappears after 1.5 seconds or upon the next keystroke.
 With \fBM\-Z\fR the title bar plus status bar can be toggled.
 With \fBM\-X\fR the help lines.
 .TP
+.BR \-1 ", " \-\-solosidescroll
+When the cursor approaches the right edge of the edit window, scroll only the
+current line sideways by a large amount, instead of scrolling all visible lines
+sideways by just the amount needed to keep the cursor in view.
+This latter whole-window smooth sideways scrolling is the new default behavior.
+The single-line jerky sideways scrolling enabled by this option was the old
+behavior \(em the only behavior that \fBnano\fR knew.
+.TP
 .BR \-/ ", " \-\-modernbindings
 Use key bindings similar to the ones that most modern programs use:
 \fB^X\fR cuts, \fB^C\fR copies, \fB^V\fR pastes,
@@ -404,11 +432,11 @@ Use key bindings similar to the ones that most modern programs use:
 \fB^F\fR searches forward, \fB^G\fR searches next,
 \fB^S\fR saves, \fB^O\fR opens a file, \fB^Q\fR quits,
 and (when the terminal permits) \fB^H\fR shows help.
-Furthermore, \fB^A\fR sets the mark,
-\fB^R\fR makes replacements, \fB^D\fR searches previous,
+Furthermore, \fB^A\fR sets the mark, \fB^B\fR searches backward,
+\fB^D\fR searches previous, \fB^R\fR makes replacements,
 \fB^P\fR shows the position, \fB^T\fR goes to a line,
 \fB^W\fR writes out a file, and \fB^E\fR executes a command.
-Note that this overrides option \fB\-p\fR (\fB\-\-preserve\fR).
+Note that this option overrides option \fB\-p\fR (\fB\-\-preserve\fR).
 
 .SH TOGGLES
 Several of the above options can be switched on and off also while
@@ -435,13 +463,26 @@ for more information on the possible contents of those files.
 See \fI/usr/share/nano/\fR and \fI/usr/share/nano/extra/\fR
 for available syntax-coloring definitions.
 
+.SH EXIT STATUS
+.TP
+.B 0
+The editor finished normally.
+.TP
+.B 1
+An invalid option or option argument was given.
+.TP
+.B 2
+The last open buffer was discarded (with \fB^O^Q\fR or \fB^X^Q\fR).
+
 .SH NOTES
 Suspension is enabled by default, reachable via \fB^T^Z\fR.
 (If you want a plain \fB^Z\fR to suspend nano, add
 \fBbind ^Z suspend main\fR to your nanorc.)
 .sp
 At a Yes-No prompt, \fB^Y\fR can be used for "Yes", \fB^N\fR for "No",
-and \fB^A\fR for "All".  These unlisted bindings work in any locale.
+and \fB^A\fR for "All".
+(And when exiting, \fB^Q\fR can be used for "Quit with error".)
+These unlisted bindings work in any locale.
 .sp
 When you want to copy marked text from \fBnano\fR to the system's clipboard,
 see one of the examples in the \fBnanorc\fR(5) man page.

@@ -565,7 +565,7 @@ void stop_usb(void)
 	if ((disabled) || (nvram_get_int("usb_usb2") != 1))
 		modprobe_r(USB20_MOD);
 #ifdef TCONFIG_BCMARM
-	if ((disabled) || (nvram_get_int("usb_xhci") != 1))
+	if ((disabled) || (nvram_get_int("usb_usb3") != 1))
 		modprobe_r(USB30_MOD);
 
 	/* check USB LED */
@@ -951,8 +951,15 @@ int mount_partition(char *dev_name, int host_num, char *dsc_name, char *pt_name,
 	static char *swp_argv[] = { "swapon", "-a", NULL };
 	struct mntent *mnt;
 
-	if ((type = find_label_or_uuid(dev_name, the_label, uuid)) == NULL)
+	if ((type = find_label_or_uuid(dev_name, the_label, sizeof(the_label), uuid, sizeof(uuid))) == NULL)
 		return 0;
+
+#ifndef TCONFIG_BCMARM
+	if (strcmp(type, "ext4") == 0) {
+		logmsg(LOG_WARNING, "USB ext4 fs at %s not mounted: ext4 is not supported by this kernel", dev_name);
+		return 0;
+	}
+#endif
 
 	if (f_exists("/etc/fstab")) {
 		if (strcmp(type, "swap") == 0) {

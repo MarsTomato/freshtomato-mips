@@ -33,7 +33,6 @@
 #include <shutils.h>
 #include <wlif_utils.h>
 #include <UdpLib.h>
-#include <bcmconfig.h>
 
 uint eapd_msg_level =
 #ifdef BCMDBG

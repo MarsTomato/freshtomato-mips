@@ -28,10 +28,9 @@ import json
 import logging
 import os
 import re
+
 import pytest
-
-from testenv import Env, CurlClient, LocalClient
-
+from testenv import CurlClient, Env, LocalClient
 
 log = logging.getLogger(__name__)
 
@@ -382,7 +381,7 @@ class TestSSLUse:
         if not env.have_h3():
             pytest.skip("h3 not supported")
         if not env.curl_uses_lib('quictls') and \
-           not (env.curl_uses_lib('openssl') and env.curl_uses_lib('ngtcp2')) and \
+           not env.curl_uses_lib('openssl') and \
            not env.curl_uses_lib('gnutls') and \
            not env.curl_uses_lib('wolfssl'):
             pytest.skip("QUIC session reuse not implemented")
@@ -395,6 +394,7 @@ class TestSSLUse:
         r = client.run(args=[
              '-n', f'{count}',
              '-f',  # forbid reuse of connections
+             '-C', env.ca.cert_file,
              '-r', f'{env.domain1}:{env.port_for("h3")}:127.0.0.1',
              '-V', 'h3', url
         ])
@@ -465,7 +465,7 @@ class TestSSLUse:
         # clean session file first, then reuse
         session_file = os.path.join(env.gen_dir, 'test_17_15.sessions')
         if os.path.exists(session_file):
-            return os.remove(session_file)
+            os.remove(session_file)
         xargs = ['--tls-max', '1.3', '--tlsv1.3', '--ssl-sessions', session_file]
         curl = CurlClient(env=env, run_env=run_env)
         # tell the server to close the connection after each request

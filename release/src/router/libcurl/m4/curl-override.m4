@@ -20,12 +20,10 @@
 #
 # SPDX-License-Identifier: curl
 #
-###########################################################################
-#***************************************************************************
 #***************************************************************************
 
-# File version for 'aclocal' use. Keep it a single number.
-# serial 7
+dnl File version for 'aclocal' use. Keep it a single number.
+dnl serial 7
 
 dnl CURL_OVERRIDE_AUTOCONF
 dnl -------------------------------------------------
@@ -82,9 +80,9 @@ m4_define([AC_LANG_FUNC_LINK_TRY(C)],
 [
 #define $1 innocuous_$1
 #ifdef __STDC__
-# include <limits.h>
+#  include <limits.h>
 #else
-# include <assert.h>
+#  include <assert.h>
 #endif
 #undef $1
 #ifdef __cplusplus

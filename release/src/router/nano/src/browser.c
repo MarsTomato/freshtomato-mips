@@ -1,8 +1,8 @@
 /**************************************************************************
  *   browser.c  --  This file is part of GNU nano.                        *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2025 Free Software Foundation, Inc.    *
- *   Copyright (C) 2015-2016, 2020, 2022 Benno Schulenberg                *
+ *   Copyright (C) 2001-2011, 2013-2026 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2015, 2016, 2020, 2022, 2025 Benno Schulenberg         *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -465,7 +465,7 @@ char *browse(char *path)
 			int mouse_x, mouse_y;
 
 			/* When the user clicked in the file list, select a filename. */
-			if (get_mouseinput(&mouse_y, &mouse_x, TRUE) == 0 &&
+			if (get_mouseinput(&mouse_y, &mouse_x) == 0 &&
 						wmouse_trafo(midwin, &mouse_y, &mouse_x, FALSE)) {
 				selected = selected - selected % (usable_rows * piles) +
 								(mouse_y * piles) + (mouse_x / (gauge + 2));

@@ -53,8 +53,7 @@ HTTP Proxy. Default when no scheme or proxy type is specified.
 
 ## https://
 
-HTTPS Proxy. (Added in 7.52.0 for OpenSSL and GnuTLS Since 7.87.0, it also
-works for mbedTLS, Rustls, Schannel and wolfSSL.)
+HTTPS Proxy. (with OpenSSL, GnuTLS, mbedTLS, Rustls, Schannel or wolfSSL.)
 
 This uses HTTP/1 by default. Setting CURLOPT_PROXYTYPE(3) to
 **CURLPROXY_HTTPS2** allows libcurl to negotiate using HTTP/2 with proxy.
@@ -137,9 +136,11 @@ int main(void)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
+    CURLcode result;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/file.txt");
     curl_easy_setopt(curl, CURLOPT_PROXY, "http://proxy.example:80");
-    curl_easy_perform(curl);
+    result = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
   }
 }
 ~~~
@@ -153,6 +154,11 @@ Since 7.21.7 the proxy string supports the socks protocols as "schemes".
 
 Since 7.50.2, unsupported schemes in proxy strings cause libcurl to return
 error.
+
+Since 7.52.0, it supports HTTPS proxy for OpenSSL.
+
+Since 7.87.0, it supports HTTPS proxy for GnuTLS, for mbedTLS, Rustls,
+Schannel and wolfSSL.
 
 # %AVAILABILITY%
 

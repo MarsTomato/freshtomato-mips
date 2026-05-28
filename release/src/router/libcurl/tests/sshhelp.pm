@@ -91,10 +91,10 @@ our $sshlog          = undef;                    # ssh client log file
 our $sftplog         = undef;                    # sftp client log file
 our $sftpcmds        = 'curl_sftp_cmds';         # sftp client commands batch file
 our $knownhosts      = 'curl_client_knownhosts'; # ssh knownhosts file
-our $hstprvkeyf      = 'curl_host_rsa_key';      # host private key file
-our $hstpubkeyf      = 'curl_host_rsa_key.pub';  # host public key file
-our $hstpubmd5f      = 'curl_host_rsa_key.pub_md5';  # md5 hash of host public key
-our $hstpubsha256f   = 'curl_host_rsa_key.pub_sha256';  # sha256 hash of host public key
+our $hstprvkeyf      = 'curl_host_key';          # host private key file
+our $hstpubkeyf      = 'curl_host_key.pub';      # host public key file
+our $hstpubmd5f      = 'curl_host_key.pub_md5';  # md5 hash of host public key
+our $hstpubsha256f   = 'curl_host_key.pub_sha256';  # sha256 hash of host public key
 our $cliprvkeyf      = 'curl_client_key';        # client private key file
 our $clipubkeyf      = 'curl_client_key.pub';    # client public key file
 
@@ -177,9 +177,9 @@ sub dump_array {
 sub display_file {
     my $filename = $_[0];
     print "=== Start of file $filename\n";
-    if(open(my $displayfh, "<", "$filename")) {
+    if(open(my $displayfh, "<", $filename)) {
         while(my $line = <$displayfh>) {
-            print "$line";
+            print $line;
         }
         close $displayfh;
     }
@@ -192,9 +192,9 @@ sub display_file {
 sub display_file_top {
     my $filename = $_[0];
     print "=== Top of file $filename\n";
-    if(open(my $displayfh, "<", "$filename")) {
+    if(open(my $displayfh, "<", $filename)) {
         my $line = <$displayfh>;
-        print "$line";
+        print $line;
         close $displayfh;
     }
     print "=== End of file $filename\n";
@@ -381,7 +381,7 @@ sub sshversioninfo {
             if($tmpstr =~ /OpenSSH[_-](\d+)\.(\d+)(\.(\d+))*/i) {
                 $major = $1;
                 $minor = $2;
-                $patch = $4?$4:0;
+                $patch = $4 ? $4 : 0;
                 $sshid = 'OpenSSH';
                 $versnum = (100*$major) + (10*$minor) + $patch;
                 $versstr = "$sshid $major.$minor.$patch";
@@ -391,7 +391,7 @@ sub sshversioninfo {
             if($tmpstr =~ /OpenSSH[_-]for[_-]Windows[_-](\d+)\.(\d+)(\.(\d+))*/i) {
                 $major = $1;
                 $minor = $2;
-                $patch = $4?$4:0;
+                $patch = $4 ? $4 : 0;
                 $sshid = 'OpenSSH-Windows';
                 $versnum = (100*$major) + (10*$minor) + $patch;
                 $versstr = "$sshid $major.$minor.$patch";
@@ -401,7 +401,7 @@ sub sshversioninfo {
             if($tmpstr =~ /Sun[_-]SSH[_-](\d+)\.(\d+)(\.(\d+))*/i) {
                 $major = $1;
                 $minor = $2;
-                $patch = $4?$4:0;
+                $patch = $4 ? $4 : 0;
                 $sshid = 'SunSSH';
                 $versnum = (100*$major) + (10*$minor) + $patch;
                 $versstr = "$sshid $major.$minor.$patch";

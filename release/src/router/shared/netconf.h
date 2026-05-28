@@ -29,8 +29,6 @@
 #include <typedefs.h>
 #include <proto/ethernet.h>
 
-#include <bcmconfig.h>
-
 /* Supported match states */
 #define NETCONF_INVALID		0x01	/* Packet could not be classified */
 #define NETCONF_ESTABLISHED	0x02	/* Packet is related to an existing connection */

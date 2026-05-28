@@ -1069,7 +1069,6 @@ img[id^="barnoise_"] {
 	width: 70%;
 }
 
-#log-find-text,
 #res-bp-grid .box6,
 #sm-grid .co1 {
 	width: 30%;
@@ -1907,6 +1906,39 @@ span.pptpsvg {
 	padding-bottom: 20px;
 }
 
+.search-input-wrapper {
+	position: relative;
+	display: inline-block;
+}
+
+.search-input-wrapper input[type="text"] {
+	padding-right: 20px;
+	box-sizing: border-box;
+}
+
+.clear-search-btn {
+	position: absolute;
+	right: 3px;
+	top: 42%;
+	transform: translateY(-50%);
+	cursor: pointer;
+	color: #999;
+	font-size: 19px;
+	padding: 0;
+	margin: 0;
+	width: 19px;
+	height: 19px;
+	background: none;
+	border: none;
+	display: none;
+	line-height: 19px;
+	text-align: center;
+}
+
+.clear-search-btn:hover {
+	color: #999;
+}
+
 /* USB-BEGIN */
 div#dev-grid span.cellsvg {
 	background-image: var(--icon-cell);
@@ -1954,8 +1986,14 @@ span.pptpsvg {
 /* PPTPD-END */
 
 /* SVG */
-#svg text {
-	font: 11px monospace;
+#svg text,
+.svg-text {
+	font: 10px monospace;
+	fill: #000;
+}
+
+.svg-ssid {
+	font-family: monospace;
 	fill: #000;
 }
 

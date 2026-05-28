@@ -73,7 +73,7 @@ static int my_gettimeofday(struct timeval *tp, void *tzp)
   (void)tzp;
   if(tp) {
 /* Offset between 1601-01-01 and 1970-01-01 in 100 nanosec units */
-#define WIN32_FT_OFFSET (116444736000000000)
+#define WIN32_FT_OFFSET 116444736000000000
     union {
       CURL_TYPEOF_CURL_OFF_T ns100; /* time since 1 Jan 1601 in 100ns units */
       FILETIME ft;
@@ -191,7 +191,7 @@ static int my_trace(CURL *curl, curl_infotype type,
     return 0;
   }
 
-  dump(text, num, (unsigned char *)data, size, 1);
+  dump(text, num, (const unsigned char *)data, size, 1);
   return 0;
 }
 
@@ -205,7 +205,7 @@ static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *userp)
 
 static int setup(struct input *t, int num, const char *upload)
 {
-  char url[256];
+  char upload_url[256];
   char filename[128];
   struct stat file_info;
   curl_off_t uploadsize;
@@ -217,17 +217,18 @@ static int setup(struct input *t, int num, const char *upload)
   snprintf(filename, sizeof(filename), "dl-%d", num);
   t->out = fopen(filename, "wb");
   if(!t->out) {
-    fprintf(stderr, "error: could not open file %s for writing: %s\n",
-            upload, strerror(errno));
+    fprintf(stderr, "error: could not open file %s for writing: %s\n", upload,
+            strerror(errno));
     return 1;
   }
 
-  snprintf(url, sizeof(url), "https://localhost:8443/upload-%d", num);
+  snprintf(upload_url, sizeof(upload_url), "https://localhost:8443/upload-%d",
+           num);
 
   t->in = fopen(upload, "rb");
   if(!t->in) {
-    fprintf(stderr, "error: could not open file %s for reading: %s\n",
-            upload, strerror(errno));
+    fprintf(stderr, "error: could not open file %s for reading: %s\n", upload,
+            strerror(errno));
     fclose(t->out);
     t->out = NULL;
     return 1;
@@ -257,7 +258,7 @@ static int setup(struct input *t, int num, const char *upload)
     curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, uploadsize);
 
     /* send in the URL to store the upload as */
-    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_URL, upload_url);
 
     /* upload please */
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
@@ -285,7 +286,7 @@ static int setup(struct input *t, int num, const char *upload)
 /*
  * Upload all files over HTTP/2, using the same physical connection!
  */
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
   CURLcode result;
   struct input *trans;
@@ -309,7 +310,7 @@ int main(int argc, char **argv)
     num_transfers = 3;  /* a suitable low default */
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   trans = calloc(num_transfers, sizeof(*trans));

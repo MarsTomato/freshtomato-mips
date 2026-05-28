@@ -36,6 +36,7 @@ pkgg.generate(
   requires : 'glib-2.0', # Not really, but only here to test that this works.
   requires_private : ['gio-2.0', 'gobject-2.0'],
   libraries_private : [lib, '-lz'],
+  cflags_private: '-DSIMPLE_STATIC',
 )
 
 env = environment()
@@ -185,6 +186,9 @@ endtestcase
 testcase expect_error('pkgconfig.generate: if a library is not passed as a positional argument, the \'description\' keyword argument is required.')
   pkgg.generate(name: 'foobar')
 endtestcase
+
+# Test for FeatureBroken warning with absolute subdirs
+pkgg.generate(name: 'abssubdir', description: 'absolute subdirs test', subdirs: '/usr/include')
 
 # Make sure the -uninstalled.pc file contains both include directories.
 # See dependencies/test2.c that gets built against both simple7.pc and

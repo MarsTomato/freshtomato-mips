@@ -22,7 +22,6 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
-
 #include "urldata.h"
 #include "connect.h"
 
@@ -50,10 +49,10 @@ static void t1303_stop(struct Curl_easy *easy)
 #define BASE 1000000
 
 /* macro to set the pretended current time */
-#define NOW(x,y) now.tv_sec = x; now.tv_usec = y
+#define NOW(x, y) now.tv_sec = x; now.tv_usec = y
 /* macro to set the millisecond based timeouts to use */
-#define TIMEOUTS(x,y) easy->set.timeout = x; \
-                      easy->set.connecttimeout = y
+#define TIMEOUTS(x, y) easy->set.timeout = x; \
+                       easy->set.connecttimeout = y
 
 /*
  * To test:
@@ -148,7 +147,8 @@ static CURLcode test_unit1303(const char *arg)
     NOW(run[i].now_s, run[i].now_us);
     TIMEOUTS(run[i].timeout_ms, run[i].connecttimeout_ms);
     easy->progress.now = now;
-    timeout = Curl_timeleft_now_ms(easy, &now, run[i].connecting);
+    easy->mstate = run[i].connecting ? MSTATE_INIT : MSTATE_DO;
+    timeout = timeleft_now_ms(easy, &now);
     if(timeout != run[i].result)
       fail(run[i].comment);
   }

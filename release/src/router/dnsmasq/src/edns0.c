@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2025 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2026 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -469,6 +469,8 @@ int check_source(struct dns_header *header, size_t plen, unsigned char *pseudohe
      {
        GETSHORT(code, p);
        GETSHORT(len, p);
+       if (i + 4 + len > rdlen)
+	 break; /* malformed: option body extends beyond RDATA */
        if (code == EDNS0_OPTION_CLIENT_SUBNET)
 	 {
 	   if (peer)

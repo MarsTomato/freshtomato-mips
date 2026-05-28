@@ -55,22 +55,59 @@ int f_read(const char *path, void *buffer, int max)
 int f_write(const char *path, const void *buffer, int len, unsigned flags, unsigned cmode)
 {
 	static const char nl = '\n';
-	int f;
-	int r = -1;
+	int f, r;
+	int total = 0;
 	mode_t m;
 
 	m = umask(0);
-	if (cmode == 0) cmode = 0666;
-	if ((f = open(path, (flags & FW_APPEND) ? (O_WRONLY|O_CREAT|O_APPEND) : (O_WRONLY|O_CREAT|O_TRUNC), cmode)) >= 0) {
-		if ((buffer == NULL) || ((r = write(f, buffer, len)) == len)) {
-			if (flags & FW_NEWLINE) {
-				if (write(f, &nl, 1) == 1) ++r;
-			}
-		}
-		close(f);
+	if (cmode == 0)
+		cmode = 0666;
+
+	f = open(path, (flags & FW_APPEND) ? (O_WRONLY|O_CREAT|O_APPEND) : (O_WRONLY|O_CREAT|O_TRUNC), cmode);
+
+	if (f < 0) {
+		umask(m);
+		return -1;
 	}
+
+	/* write full buffer */
+	while (total < len) {
+		r = write(f, (const char *)buffer + total, len - total);
+
+		if (r > 0) {
+			total += r;
+			continue;
+		}
+
+		if (r < 0 && errno == EINTR)
+			continue;
+
+		close(f);
+		umask(m);
+		return -1;
+	}
+
+	/* FW_NEWLINE: append '\n' (do NOT use for binary data) */
+	if (flags & FW_NEWLINE) {
+		for (;;) {
+			r = write(f, &nl, 1);
+			if (r == 1)
+				break;
+
+			if (r < 0 && errno == EINTR)
+				continue;
+
+			close(f);
+			umask(m);
+			return -1;
+		}
+		total++;
+	}
+
+	close(f);
 	umask(m);
-	return r;
+
+	return total;
 }
 
 int f_read_string(const char *path, char *buffer, int max)
@@ -93,6 +130,91 @@ int f_write_procsysnet(const char *path, const char *value)
 
 	return f_write_string(syspath, value, 0, 0);
 }
+
+#if defined(TCONFIG_NGINX) || defined(TCONFIG_BT)
+int f_write_escaped(FILE *fp, int mode, const char *s1, const char *s2)
+{
+	static const char hex[] = "0123456789abcdef";
+	const char *s;
+	unsigned char c;
+	int part, json, esc;
+
+	if (!fp)
+		return -1;
+
+	if ((mode != FWESC_JSON) && (mode != FWESC_LINE))
+		return -1;
+
+	json = (mode == FWESC_JSON);
+
+	if (json)
+		fputc('"', fp);
+
+	for (part = 0; part < 2; ++part) {
+		s = part ? s2 : s1;
+		if (!s)
+			continue;
+
+		while (*s) {
+			c = (unsigned char)*s++;
+			esc = 0;
+
+			if (json && ((c == '"') || (c == '\\'))) {
+				esc = c;
+			}
+			else {
+				switch (c) {
+				case '\n':
+					esc = 'n';
+					break;
+				case '\r':
+					esc = 'r';
+					break;
+				case '\t':
+					esc = 't';
+					break;
+				case '\b':
+					if (json)
+						esc = 'b';
+					break;
+				case '\f':
+					if (json)
+						esc = 'f';
+					break;
+				}
+			}
+
+			if (esc) {
+				fputc('\\', fp);
+				fputc(esc, fp);
+			}
+			else if ((c < 0x20) || (!json && (c == 0x7f))) {
+				fputc('\\', fp);
+
+				if (json) {
+					fputc('u', fp);
+					fputc('0', fp);
+					fputc('0', fp);
+				}
+				else {
+					fputc('x', fp);
+				}
+
+				fputc(hex[(c >> 4) & 0x0f], fp);
+				fputc(hex[c & 0x0f], fp);
+			}
+			else {
+				fputc(c, fp);
+			}
+		}
+	}
+
+	if (json)
+		fputc('"', fp);
+
+	return ferror(fp) ? -1 : 0;
+}
+#endif /* TCONFIG_NGINX || TCONFIG_BT */
 
 static int _f_read_alloc(const char *path, char **buffer, int max, int z)
 {

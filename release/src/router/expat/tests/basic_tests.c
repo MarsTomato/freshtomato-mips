@@ -20,6 +20,7 @@
    Copyright (c) 2021      Donghee Na <donghee.na@python.org>
    Copyright (c) 2023-2024 Sony Corporation / Snild Dolkow <snild@sony.com>
    Copyright (c) 2024-2025 Berkay Eren Ürün <berkay.ueruen@siemens.com>
+   Copyright (c) 2026      Francesco Bertolaccini
    Licensed under the MIT license:
 
    Permission is  hereby granted,  free of charge,  to any  person obtaining
@@ -203,6 +204,30 @@ START_TEST(test_hash_collision) {
 }
 END_TEST
 #undef COLLIDING_HASH_SALT
+
+START_TEST(test_hash_salt_setter) {
+  const uint8_t entropy[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                               '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+  XML_Parser parser = XML_ParserCreate(NULL);
+
+  // NULL parser should be rejected
+  assert_true(XML_SetHashSalt16Bytes(NULL, entropy) == XML_FALSE);
+
+  // NULL entropy should be rejected
+  assert_true(XML_SetHashSalt16Bytes(parser, NULL) == XML_FALSE);
+
+  // Setting should be allowed more than once
+  assert_true(XML_SetHashSalt16Bytes(parser, entropy) == XML_TRUE);
+  assert_true(XML_SetHashSalt16Bytes(parser, entropy) == XML_TRUE);
+
+  // But not after parsing has started
+  assert_true(XML_Parse(parser, "", 0, XML_FALSE /* isFinal */)
+              == XML_STATUS_OK);
+  assert_true(XML_SetHashSalt16Bytes(parser, entropy) == XML_FALSE);
+
+  XML_ParserFree(parser);
+}
+END_TEST
 
 /* Regression test for SF bug #491986. */
 START_TEST(test_danish_latin1) {
@@ -3112,12 +3137,16 @@ START_TEST(test_buffer_can_grow_to_max) {
 #if defined(__MINGW32__) && ! defined(__MINGW64__)
   // workaround for mingw/wine32 on GitHub CI not being able to reach 1GiB
   // Can we make a big allocation?
-  void *big = malloc(maxbuf);
-  if (! big) {
+  for (int i = 1; i <= 2; i++) {
+    void *const big = malloc(maxbuf);
+    if (big != NULL) {
+      free(big);
+      break;
+    }
     // The big allocation failed. Let's be a little lenient.
     maxbuf = maxbuf / 2;
+    fprintf(stderr, "Reducing maxbuf to %d...\n", maxbuf);
   }
-  free(big);
 #endif
 
   for (int i = 0; i < num_prefixes; ++i) {
@@ -6041,6 +6070,7 @@ START_TEST(test_bypass_heuristic_when_close_to_bufsize) {
 
   const int document_length = 65536;
   char *const document = (char *)malloc(document_length);
+  assert_true(document != NULL);
 
   const XML_Memory_Handling_Suite memfuncs = {
       counting_malloc,
@@ -6253,6 +6283,24 @@ START_TEST(test_varying_buffer_fills) {
 }
 END_TEST
 
+START_TEST(test_empty_ext_param_entity_in_value) {
+  const char *text = "<!DOCTYPE r SYSTEM \"ext.dtd\"><r/>";
+  ExtOption options[] = {
+      {XCS("ext.dtd"), "<!ENTITY % pe SYSTEM \"empty\">"
+                       "<!ENTITY ge \"%pe;\">"},
+      {XCS("empty"), ""},
+      {NULL, NULL},
+  };
+
+  XML_SetParamEntityParsing(g_parser, XML_PARAM_ENTITY_PARSING_ALWAYS);
+  XML_SetExternalEntityRefHandler(g_parser, external_entity_optioner);
+  XML_SetUserData(g_parser, options);
+  if (_XML_Parse_SINGLE_BYTES(g_parser, text, (int)strlen(text), XML_TRUE)
+      == XML_STATUS_ERROR)
+    xml_failure(g_parser);
+}
+END_TEST
+
 void
 make_basic_test_case(Suite *s) {
   TCase *tc_basic = tcase_create("basic tests");
@@ -6269,6 +6317,7 @@ make_basic_test_case(Suite *s) {
   tcase_add_test(tc_basic, test_bom_utf16_le);
   tcase_add_test(tc_basic, test_nobom_utf16_le);
   tcase_add_test(tc_basic, test_hash_collision);
+  tcase_add_test(tc_basic, test_hash_salt_setter);
   tcase_add_test(tc_basic, test_illegal_utf8);
   tcase_add_test(tc_basic, test_utf8_auto_align);
   tcase_add_test(tc_basic, test_utf16);
@@ -6500,6 +6549,7 @@ make_basic_test_case(Suite *s) {
   tcase_add_test(tc_basic, test_empty_element_abort);
   tcase_add_test__ifdef_xml_dtd(tc_basic,
                                 test_pool_integrity_with_unfinished_attr);
+  tcase_add_test__ifdef_xml_dtd(tc_basic, test_empty_ext_param_entity_in_value);
   tcase_add_test__if_xml_ge(tc_basic, test_entity_ref_no_elements);
   tcase_add_test__if_xml_ge(tc_basic, test_deep_nested_entity);
   tcase_add_test__if_xml_ge(tc_basic, test_deep_nested_attribute_entity);

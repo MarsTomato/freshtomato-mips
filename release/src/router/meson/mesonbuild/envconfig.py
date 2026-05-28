@@ -11,15 +11,16 @@ import platform
 import sys
 
 from . import mesonlib
-from .mesonlib import EnvironmentException, HoldableObject, Popen_safe
+from .mesonlib import EnvironmentException, HoldableObject, lazy_property, Popen_safe
 from .programs import ExternalProgram
 from . import mlog
-from pathlib import Path
+from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath
 
 if T.TYPE_CHECKING:
     from .options import ElementaryOptionValues
-    from .compilers import Compiler
+    from .compilers.compilers import CompilerDict
     from .compilers.mixins.visualstudio import VisualStudioLikeCompiler
+    from ._typing import ImmutableListProtocol
 
 
 # These classes contains all the data pulled from configuration files (native
@@ -94,64 +95,64 @@ CPU_FAMILIES_64_BIT = [
 ]
 
 # Map from language identifiers to environment variables.
-ENV_VAR_COMPILER_MAP: T.Mapping[str, str] = {
+ENV_VAR_COMPILER_MAP: T.Mapping[str, ImmutableListProtocol[str]] = {
     # Compilers
-    'c': 'CC',
-    'cpp': 'CXX',
-    'cs': 'CSC',
-    'cython': 'CYTHON',
-    'd': 'DC',
-    'fortran': 'FC',
-    'objc': 'OBJC',
-    'objcpp': 'OBJCXX',
-    'rust': 'RUSTC',
-    'vala': 'VALAC',
-    'nasm': 'NASM',
+    'c': ['CC'],
+    'cpp': ['CXX'],
+    'cs': ['CSC'],
+    'cython': ['CYTHON'],
+    'd': ['DC'],
+    'fortran': ['FC'],
+    'objc': ['OBJC'],
+    'objcpp': ['OBJCXX'],
+    'rust': ['RUSTC'],
+    'vala': ['VALAC'],
+    'nasm': ['NASM'],
 
     # Linkers
-    'c_ld': 'CC_LD',
-    'cpp_ld': 'CXX_LD',
-    'd_ld': 'DC_LD',
-    'fortran_ld': 'FC_LD',
-    'objc_ld': 'OBJC_LD',
-    'objcpp_ld': 'OBJCXX_LD',
-    'rust_ld': 'RUSTC_LD',
+    'c_ld': ['CC_LD'],
+    'cpp_ld': ['CXX_LD'],
+    'd_ld': ['DC_LD'],
+    'fortran_ld': ['FC_LD'],
+    'objc_ld': ['OBJC_LD'],
+    'objcpp_ld': ['OBJCXX_LD'],
+    'rust_ld': ['RUSTC_LD'],
 }
 
 # Map from utility names to environment variables.
-ENV_VAR_TOOL_MAP: T.Mapping[str, str] = {
+ENV_VAR_TOOL_MAP: T.Mapping[str, ImmutableListProtocol[str]] = {
     # Binutils
-    'ar': 'AR',
-    'as': 'AS',
-    'ld': 'LD',
-    'nm': 'NM',
-    'objcopy': 'OBJCOPY',
-    'objdump': 'OBJDUMP',
-    'ranlib': 'RANLIB',
-    'readelf': 'READELF',
-    'size': 'SIZE',
-    'strings': 'STRINGS',
-    'strip': 'STRIP',
-    'windres': 'WINDRES',
+    'ar': ['AR'],
+    'as': ['AS'],
+    'ld': ['LD'],
+    'nm': ['NM'],
+    'objcopy': ['OBJCOPY'],
+    'objdump': ['OBJDUMP'],
+    'ranlib': ['RANLIB'],
+    'readelf': ['READELF'],
+    'size': ['SIZE'],
+    'strings': ['STRINGS'],
+    'strip': ['STRIP'],
+    'windres': ['RC', 'WINDRES'],
 
     # Other tools
-    'cmake': 'CMAKE',
-    'qmake': 'QMAKE',
-    'pkg-config': 'PKG_CONFIG',
-    'make': 'MAKE',
-    'vapigen': 'VAPIGEN',
-    'llvm-config': 'LLVM_CONFIG',
+    'cmake': ['CMAKE'],
+    'qmake': ['QMAKE'],
+    'pkg-config': ['PKG_CONFIG'],
+    'make': ['MAKE'],
+    'vapigen': ['VAPIGEN'],
+    'llvm-config': ['LLVM_CONFIG'],
 }
 
 ENV_VAR_PROG_MAP = {**ENV_VAR_COMPILER_MAP, **ENV_VAR_TOOL_MAP}
 
 # Deprecated environment variables mapped from the new variable to the old one
 # Deprecated in 0.54.0
-DEPRECATED_ENV_PROG_MAP: T.Mapping[str, str] = {
-    'd_ld': 'D_LD',
-    'fortran_ld': 'F_LD',
-    'rust_ld': 'RUST_LD',
-    'objcpp_ld': 'OBJCPP_LD',
+DEPRECATED_ENV_PROG_MAP: T.Mapping[str, ImmutableListProtocol[str]] = {
+    'd_ld': ['D_LD'],
+    'fortran_ld': ['F_LD'],
+    'rust_ld': ['RUST_LD'],
+    'objcpp_ld': ['OBJCPP_LD'],
 }
 
 class CMakeSkipCompilerTest(Enum):
@@ -318,6 +319,13 @@ class MachineInfo(HoldableObject):
         """
         return self.system == 'cygwin'
 
+    @lazy_property
+    def pure_path_class(self) -> T.Type[PurePath]:
+        """Get the appropriate PurePath class for this machine."""
+        if self.is_windows():
+            return PureWindowsPath
+        return PurePosixPath
+
     def is_linux(self) -> bool:
         """
         Machine is linux?
@@ -355,7 +363,7 @@ class MachineInfo(HoldableObject):
         return self.system == 'openbsd'
 
     def is_dragonflybsd(self) -> bool:
-        """Machine is DragonflyBSD?"""
+        """Machine is DragonFly BSD?"""
         return self.system == 'dragonfly'
 
     def is_freebsd(self) -> bool:
@@ -517,7 +525,7 @@ KERNEL_MAPPINGS: T.Mapping[str, str] = {'freebsd': 'freebsd',
                                         'gnu': 'gnu',
                                         }
 
-def detect_windows_arch(compilers: T.Dict[str, Compiler]) -> str:
+def detect_windows_arch(compilers: CompilerDict) -> str:
     """
     Detecting the 'native' architecture of Windows is not a trivial task. We
     cannot trust that the architecture that Python is built for is the 'native'
@@ -558,7 +566,7 @@ def detect_windows_arch(compilers: T.Dict[str, Compiler]) -> str:
             return 'x86'
     return os_arch
 
-def any_compiler_has_define(compilers: T.Dict[str, Compiler], define: str) -> bool:
+def any_compiler_has_define(compilers: CompilerDict, define: str) -> bool:
     for c in compilers.values():
         try:
             if c.has_builtin_define(define):
@@ -568,7 +576,7 @@ def any_compiler_has_define(compilers: T.Dict[str, Compiler], define: str) -> bo
             pass
     return False
 
-def detect_cpu_family(compilers: T.Dict[str, Compiler]) -> str:
+def detect_cpu_family(compilers: CompilerDict) -> str:
     """
     Python is inconsistent in its platform module.
     It returns different values for the same cpu.
@@ -640,7 +648,7 @@ def detect_cpu_family(compilers: T.Dict[str, Compiler]) -> str:
 
     return trial
 
-def detect_cpu(compilers: T.Dict[str, Compiler]) -> str:
+def detect_cpu(compilers: CompilerDict) -> str:
     if mesonlib.is_windows():
         trial = detect_windows_arch(compilers)
     elif mesonlib.is_freebsd() or mesonlib.is_netbsd() or mesonlib.is_openbsd() or mesonlib.is_aix():
@@ -716,7 +724,7 @@ def detect_system() -> str:
 def detect_msys2_arch() -> T.Optional[str]:
     return os.environ.get('MSYSTEM_CARCH', None)
 
-def detect_machine_info(compilers: T.Optional[T.Dict[str, Compiler]] = None) -> MachineInfo:
+def detect_machine_info(compilers: T.Optional[CompilerDict] = None) -> MachineInfo:
     """Detect the machine we're running on
 
     If compilers are not provided, we cannot know as much. None out those
@@ -743,7 +751,10 @@ def machine_info_can_run(machine_info: MachineInfo) -> bool:
     detect_cpu_family() here because we always want to know the OS
     architecture, not what the compiler environment tells us.
     """
-    if machine_info.system != detect_system():
+    system = detect_system()
+    if machine_info.system != system:
+        return False
+    if machine_info.subsystem != detect_subsystem(system):
         return False
     true_build_cpu_family = detect_cpu_family({})
     assert machine_info.cpu_family is not None, 'called on incomplete machine_info'

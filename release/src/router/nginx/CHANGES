@@ -1,4 +1,129 @@
 
+Changes with nginx 1.30.0                                        14 Apr 2026
+
+    *) 1.30.x stable branch.
+
+
+Changes with nginx 1.29.8                                        07 Apr 2026
+
+    *) Feature: the "max_headers" directive.
+       Thanks to Maxim Dounin.
+
+    *) Feature: OpenSSL 4.0 compatibility.
+
+    *) Feature: now the "include" directive inside the "geo" block supports
+       wildcards.
+
+    *) Bugfix: in processing of HTTP 103 (Early Hints) responses from a
+       proxied backend.
+
+    *) Bugfix: the $request_port and $is_request_port variables were not
+       available in subrequests.
+
+
+Changes with nginx 1.29.7                                        24 Mar 2026
+
+    *) Security: a buffer overflow might occur while handling a COPY or MOVE
+       request in a location with "alias", allowing an attacker to modify
+       the source or destination path outside of the document root
+       (CVE-2026-27654).
+       Thanks to Calif.io in collaboration with Claude and Anthropic
+       Research.
+
+    *) Security: processing of a specially crafted mp4 file by the
+       ngx_http_mp4_module on 32-bit platforms might cause a worker process
+       crash, or might have potential other impact (CVE-2026-27784).
+       Thanks to Prabhav Srinath (sprabhav7).
+
+    *) Security: processing of a specially crafted mp4 file by the
+       ngx_http_mp4_module might cause a worker process crash, or might have
+       potential other impact (CVE-2026-32647).
+       Thanks to Xint Code and Pavel Kohout (Aisle Research).
+
+    *) Security: a segmentation fault might occur in a worker process if the
+       CRAM-MD5 or APOP authentication methods were used and authentication
+       retry was enabled (CVE-2026-27651).
+       Thanks to Arkadi Vainbrand.
+
+    *) Security: an attacker might use PTR DNS records to inject data in
+       auth_http requests, as well as in the XCLIENT command in the backend
+       SMTP connection (CVE-2026-28753).
+       Thanks to Asim Viladi Oglu Manizada, Colin Warren, Xiao Liu (Yunnan
+       University), Yuan Tan (UC Riverside), and Bird Liu (Lanzhou
+       University).
+
+    *) Security: SSL handshake might succeed despite OCSP rejecting a client
+       certificate in the stream module (CVE-2026-28755).
+       Thanks to Mufeed VH of Winfunc Research.
+
+    *) Feature: the "multipath" parameter of the "listen" directive.
+
+    *) Feature: the "local" parameter of the "keepalive" directive in the
+       "upstream" block.
+
+    *) Change: now the "keepalive" directive in the "upstream" block is
+       enabled by default.
+
+    *) Change: now ngx_http_proxy_module supports keepalive by default; the
+       default value for "proxy_http_version" is "1.1"; the "Connection"
+       proxy header is not sent by default anymore.
+
+    *) Bugfix: an invalid HTTP/2 request might be sent after switching to
+       the next upstream if buffered body was used in the
+       ngx_http_grpc_module.
+
+
+Changes with nginx 1.29.6                                        10 Mar 2026
+
+    *) Feature: session affinity support; the "sticky" directive in the
+       "upstream" block of the "http" module; the "server" directive
+       supports the "route" and "drain" parameters.
+
+    *) Change: now nginx limits the size and rate of QUIC stateless reset
+       packets.
+
+    *) Bugfix: receiving a QUIC packet by a wrong worker process could cause
+       the connection to terminate.
+
+    *) Bugfix: "[crit] cache file ... contains invalid header" messages
+       might appear in logs when sending a cached HTTP/2 response.
+
+    *) Bugfix: proxying to scgi backends might not work when using chunked
+       transfer encoding and the "scgi_request_buffering" directive.
+       Thanks to Mufeed VH.
+
+    *) Bugfix: in the ngx_http_mp4_module.
+       Thanks to Andrew Lacambra.
+
+    *) Bugfix: nginx treated a comma as separator in the "Cookie" request
+       header line when evaluating "$cookie_..." variables.
+
+    *) Bugfix: in IMAP command literal argument parsing.
+
+
+Changes with nginx 1.29.5                                        04 Feb 2026
+
+    *) Security: an attacker might inject plain text data in the response
+       from an SSL backend (CVE-2026-1642).
+
+    *) Bugfix: use-after-free might occur after switching to the next gRPC
+       or HTTP/2 backend.
+
+    *) Bugfix: an invalid HTTP/2 request might be sent after switching to
+       the next upstream.
+
+    *) Bugfix: a response with multiple ranges might be larger than the
+       source response.
+
+    *) Bugfix: fixed setting HTTP_HOST when proxying to FastCGI, SCGI, and
+       uwsgi backends.
+
+    *) Bugfix: fixed warning when compiling with MSVC 2022 x86.
+
+    *) Change: the logging level of the "ech_required" SSL error has been
+       lowered from "crit" to "info".
+
+
 Changes with nginx 1.29.4                                        09 Dec 2025
 
     *) Feature: the ngx_http_proxy_module supports HTTP/2.

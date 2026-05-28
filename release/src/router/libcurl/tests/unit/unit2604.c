@@ -38,7 +38,7 @@ static CURLcode test_unit2604(const char *arg)
     CURLcode result;
   };
 
-#if defined(CURL_GNUC_DIAG) || defined(__clang__)
+#ifdef CURL_HAVE_DIAG
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
@@ -74,7 +74,7 @@ static CURLcode test_unit2604(const char *arg)
     { NULL, NULL, NULL, NULL, CURLE_OK }
   };
 
-#if defined(CURL_GNUC_DIAG) || defined(__clang__)
+#ifdef CURL_HAVE_DIAG
 #pragma GCC diagnostic pop
 #endif
 
@@ -86,7 +86,7 @@ static CURLcode test_unit2604(const char *arg)
     char *path;
     const char *cp = i == 0 ? cp0 : list[i].cp;
     CURLcode result = Curl_get_pathname(&cp, &path, list[i].home);
-    curl_mprintf("%u - Curl_get_pathname(\"%s\", ... \"%s\") == %u\n", i,
+    curl_mprintf("%d - Curl_get_pathname(\"%s\", ... \"%s\") == %d\n", i,
                  list[i].cp, list[i].home, list[i].result);
     if(result != list[i].result) {
       curl_mprintf("... returned %d\n", result);
@@ -94,12 +94,12 @@ static CURLcode test_unit2604(const char *arg)
     }
     if(!result) {
       if(cp && strcmp(cp, list[i].next)) {
-        curl_mprintf("... cp points to '%s', not '%s' as expected \n",
+        curl_mprintf("... cp points to '%s', not '%s' as expected\n",
                      cp, list[i].next);
         unitfail++;
       }
       if(path && strcmp(path, list[i].expect)) {
-        curl_mprintf("... gave '%s', not '%s' as expected \n",
+        curl_mprintf("... gave '%s', not '%s' as expected\n",
                      path, list[i].expect);
         unitfail++;
       }

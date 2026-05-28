@@ -165,7 +165,7 @@ Available substitute variables include:
 - `%FTP6PORT` - IPv6 port number of the FTP server
 - `%FTPPORT` - Port number of the FTP server
 - `%FTPSPORT` - Port number of the FTPS server
-- `%FTPTIME2` - Timeout in seconds that should be just sufficient to receive a
+- `%FTPTIME2` - Timeout in seconds that should be sufficient to receive a
   response from the test FTP server
 - `%GOPHER6PORT` - IPv6 port number of the Gopher server
 - `%GOPHERPORT` - Port number of the Gopher server
@@ -184,6 +184,7 @@ Available substitute variables include:
 - `%IMAPPORT` - Port number of the IMAP server
 - `%LOGDIR` - Log directory relative to %PWD
 - `%MQTTPORT` - Port number of the MQTT server
+- `%MQTTSPORT` - Port number of the MQTTS server
 - `%NOLISTENPORT` - Port number where no service is listening
 - `%POP36PORT` - IPv6 port number of the POP3 server
 - `%POP3PORT` - Port number of the POP3 server
@@ -201,6 +202,7 @@ Available substitute variables include:
 - `%SRCDIR` - Full path to the source dir
 - `%SCP_PWD` - Current directory friendly for the SSH server for the scp:// protocol
 - `%SFTP_PWD` - Current directory friendly for the SSH server for the sftp:// protocol
+- `%SSHKEYALGO` - SSH host and client key algorithm, e.g. `ssh-rsa` or `ssh-ed25519`
 - `%SSHPORT` - Port number of the SCP/SFTP server
 - `%SSHSRVMD5` - MD5 of SSH server's public key
 - `%SSHSRVSHA256` - SHA256 of SSH server's public key
@@ -258,7 +260,7 @@ similar.
 
 ## `<reply>`
 
-### `<data [nocheck="yes"] [sendzero="yes"] [hex="yes"] [nonewline="yes"] [crlf="yes|headers"]>`
+### `<data [nocheck="yes"] [sendzero="yes"] [nonewline="yes"] [crlf="yes|headers"]>`
 
 data to be sent to the client on its request and later verified that it
 arrived safely. Set `nocheck="yes"` to prevent the test script from verifying
@@ -273,15 +275,12 @@ the HTTP server overrides the part number response returned for a subsequent
 request made by the same test to `previous part number + 1`. For example, if a
 test makes a request which causes the server to return `<data>` that contains
 keyword `swsbounce` then for the next response it ignores the requested part
-number and instead returns `<data1>`. And if `<data1>` contains keyword
+number and instead returns `<data1>`. If `<data1>` contains keyword
 `swsbounce` then the next response is `<data2>` and so on. This is useful for
 auth tests and similar.
 
 `sendzero=yes` means that the (FTP) server "sends" the data even if the size
 is zero bytes. Used to verify curl's behavior on zero bytes transfers.
-
-`hex=yes` means that the data is a sequence of hex pairs. It gets decoded and
-used as "raw" data.
 
 `nonewline=yes` means that the last byte (the trailing newline character)
 should be cut off from the data before sending or comparing it.
@@ -302,14 +301,14 @@ test file to load the list content.
 
 Send back this contents instead of the `<data>` one. The `NUM` is set by:
 
- - The test number in the request line is >10000 and this is the remainder
-   of [test case number]%10000.
- - The request was HTTP and included digest details, which adds 1000 to `NUM`
- - If an HTTP request is NTLM type-1, it adds 1001 to `NUM`
- - If an HTTP request is NTLM type-3, it adds 1002 to `NUM`
- - If an HTTP request is Basic and `NUM` is already >=1000, it adds 1 to `NUM`
- - If an HTTP request is Negotiate, `NUM` gets incremented by one for each
-   request with Negotiate authorization header on the same test case.
+- The test number in the request line is >10000 and this is the remainder of
+  [test case number]%10000.
+- The request was HTTP and included digest details, which adds 1000 to `NUM`
+- If an HTTP request is NTLM type-1, it adds 1001 to `NUM`
+- If an HTTP request is NTLM type-3, it adds 1002 to `NUM`
+- If an HTTP request is Basic and `NUM` is already >=1000, it adds 1 to `NUM`
+- If an HTTP request is Negotiate, `NUM` gets incremented by one for each
+  request with Negotiate authorization header on the same test case.
 
 Dynamically changing `NUM` in this way allows the test harness to be used to
 test authentication negotiation where several different requests must be sent
@@ -400,7 +399,7 @@ issue.
 - `auth_required` if this is set and a POST/PUT is made without auth, the
   server does NOT wait for the full request body to get sent
 - `delay: [msecs]` - delay this amount after connection
-- `idle` - do nothing after receiving the request, just "sit idle"
+- `idle` - do nothing after receiving the request, "sit idle"
 - `stream` - continuously send data to the client, never-ending
 - `writedelay: [msecs]` delay this amount between reply packets
 - `skip: [num]` - instructs the server to ignore reading this many bytes from
@@ -464,10 +463,12 @@ What server(s) this test case requires/uses. Available servers:
 - `telnet`
 - `tftp`
 
-Give only one per line. This subsection is mandatory (use `none` if no servers
-are required). Servers that require a special server certificate can have the
-PEM certificate filename (found in the `certs` directory) appended to the
-server name separated by a space.
+Give only one per line. If a test does not require any servers, the `<server>`
+subsection should be omitted.
+
+Servers that require a special server certificate can
+have the PEM certificate filename (found in the `certs` directory) appended to
+the server name separated by a space.
 
 ### `<features>`
 A list of features that MUST be present in the client/library for this test to
@@ -586,8 +587,7 @@ Set the given environment variables to the specified value before the actual
 command is run. They are restored back to their former values again after the
 command has been run.
 
-If the variable name has no assignment, no `=`, then that variable is just
-deleted.
+If the variable name has no assignment, no `=`, then that variable is deleted.
 
 ### `<command [option="no-q/no-output/no-include/no-memdebug/force-output/binary-trace"] [timeout="secs"][delay="secs"][type="perl/shell"]>`
 Command line to run.
@@ -634,7 +634,7 @@ parameter is the not negative integer number of seconds for the delay. This
 'delay' attribute is intended for specific test cases, and normally not
 needed.
 
-### `<file name="%LOGDIR/filename" [nonewline="yes"][crlf="yes"]>`
+### `<file name="%LOGDIR/filename" [options]>`
 This creates the named file with this content before the test case is run,
 which is useful if the test case needs a file to act on.
 
@@ -643,6 +643,9 @@ off.
 
 `crlf=yes` forces the newlines to become CRLF even if not written so in the
 test.
+
+`mode="text"` normalizes the line endings to make them compare as text on all
+platforms.
 
 ### `<file1>`
 1 to 4 can be appended to 'file' to create more files.
@@ -711,11 +714,15 @@ server is used), if `nonewline` is set, we cut off the trailing newline of
 this given data before comparing with the one actually sent by the client The
 `<strip>` and `<strippart>` rules are applied before comparisons are made.
 
-### `<stderr [mode="text"] [nonewline="yes"] [crlf="yes|headers"]>`
+### `<stderr [mode="text/warn"] [nonewline="yes"] [crlf="yes|headers"]>`
 This verifies that this data was passed to stderr.
 
 Use the mode="text" attribute if the output is in text mode on platforms that
 have a text/binary difference.
+
+Use the mode="warn" attribute for curl warning output, as it then makes the
+check without newlines and the prefix to better handle that the lines may wrap
+at different points depending on the lengths of the lines and terminal width.
 
 `crlf=yes` forces the newlines to become CRLF even if not written so in the
 test.
@@ -744,6 +751,9 @@ in the source file. Note that this makes runtests.pl parse and "guess" what is
 a header and what is not in order to apply the CRLF line endings appropriately.
 
 `loadfile="filename"` makes loading the data from an external file.
+
+To verify that there was nothing sent to stdout, put `%EMPTY` as the only
+content.
 
 ### `<limit>`
 

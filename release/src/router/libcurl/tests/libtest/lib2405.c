@@ -46,7 +46,7 @@
     curl_mfprintf(stderr, "test failed with code: %d\n", result);            \
     goto test_cleanup;                                                       \
   }                                                                          \
-  else if(fd_count != expected_fds) {                                        \
+  else if(fd_count != (expected_fds)) {                                      \
     curl_mfprintf(stderr, "Max number of waitfds: %u not as expected: %u\n", \
                   fd_count, expected_fds);                                   \
     result = TEST_ERR_FAILURE;                                               \
@@ -322,7 +322,7 @@ static CURLcode empty_multi_test(void)
 
   multi_init(multi);
 
-  /* calling curl_multi_waitfds() on an empty multi handle.  */
+  /* calling curl_multi_waitfds() on an empty multi handle. */
   mresult = curl_multi_waitfds(multi, ufds, 10, &fd_count);
 
   if(mresult != CURLM_OK) {
@@ -331,8 +331,8 @@ static CURLcode empty_multi_test(void)
     goto test_cleanup;
   }
   else if(fd_count > 0) {
-    curl_mfprintf(stderr, "curl_multi_waitfds() returned non-zero count of "
-                  "waitfds: %d.\n", fd_count);
+    curl_mfprintf(stderr, "curl_multi_waitfds(), empty, returned non-zero "
+                  "count of waitfds: %u.\n", fd_count);
     result = TEST_ERR_FAILURE;
     goto test_cleanup;
   }
@@ -352,9 +352,9 @@ static CURLcode empty_multi_test(void)
     result = TEST_ERR_FAILURE;
     goto test_cleanup;
   }
-  else if(fd_count > 0) {
-    curl_mfprintf(stderr, "curl_multi_waitfds() returned non-zero count of "
-                  "waitfds: %d.\n", fd_count);
+  else if(fd_count > 1) {
+    curl_mfprintf(stderr, "curl_multi_waitfds() returned > 1 count of "
+                  "waitfds: %u.\n", fd_count);
     result = TEST_ERR_FAILURE;
     goto test_cleanup;
   }
@@ -380,16 +380,16 @@ static CURLcode test_lib2405(const char *URL)
     goto test_cleanup;
 
   if(testnum == 2405) {
-    /* HTTP1, expected 2 waitfds - one for each transfer */
-    test_run_check(TEST_USE_HTTP1, 2);
+    /* HTTP1, expected 3 waitfds - one for each transfer  + wakeup */
+    test_run_check(TEST_USE_HTTP1, 3U);
   }
 #ifdef USE_HTTP2
   else { /* 2407 */
-    /* HTTP2, expected 2 waitfds - one for each transfer */
-    test_run_check(TEST_USE_HTTP2, 2);
+    /* HTTP2, expected 3 waitfds - one for each transfer + wakeup */
+    test_run_check(TEST_USE_HTTP2, 3U);
 
-    /* HTTP2 with multiplexing, expected 1 waitfds - one for all transfers */
-    test_run_check(TEST_USE_HTTP2_MPLEX, 1);
+    /* HTTP2 with multiplexing, expected 2 waitfds - transfers + wakeup */
+    test_run_check(TEST_USE_HTTP2_MPLEX, 2U);
   }
 #endif
 

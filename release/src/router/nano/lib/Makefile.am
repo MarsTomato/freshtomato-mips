@@ -1,6 +1,6 @@
 ## DO NOT EDIT! GENERATED AUTOMATICALLY!
 ## Process this file with automake to produce Makefile.in.
-# Copyright (C) 2002-2025 Free Software Foundation, Inc.
+# Copyright (C) 2002-2026 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -46,13 +46,13 @@
 #  regex \
 #  sigaction \
 #  snprintf-posix \
-#  stdarg \
+#  stdarg-h \
 #  strcase \
 #  strcasestr-simple \
 #  strnlen \
 #  sys_wait \
 #  vsnprintf-posix \
-#  wchar \
+#  wchar-h \
 #  wctype-h \
 #  wcwidth
 
@@ -1447,8 +1447,11 @@ math.h: math.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) $(
 	      -e 's/@''GNULIB_ILOGBF''@/$(GL_GNULIB_ILOGBF)/g' \
 	      -e 's/@''GNULIB_ILOGBL''@/$(GL_GNULIB_ILOGBL)/g' \
 	      -e 's/@''GNULIB_ISFINITE''@/$(GL_GNULIB_ISFINITE)/g' \
+	      -e 's/@''GNULIB_ISFINITE_NO_CXX''@/$(GL_GNULIB_ISFINITE_NO_CXX)/g' \
 	      -e 's/@''GNULIB_ISINF''@/$(GL_GNULIB_ISINF)/g' \
+	      -e 's/@''GNULIB_ISINF_NO_CXX''@/$(GL_GNULIB_ISINF_NO_CXX)/g' \
 	      -e 's/@''GNULIB_ISNAN''@/$(GL_GNULIB_ISNAN)/g' \
+	      -e 's/@''GNULIB_ISNAN_NO_CXX''@/$(GL_GNULIB_ISNAN_NO_CXX)/g' \
 	      -e 's/@''GNULIB_ISNANF''@/$(GL_GNULIB_ISNANF)/g' \
 	      -e 's/@''GNULIB_ISNAND''@/$(GL_GNULIB_ISNAND)/g' \
 	      -e 's/@''GNULIB_ISNANL''@/$(GL_GNULIB_ISNANL)/g' \
@@ -1493,6 +1496,7 @@ math.h: math.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) $(
 	      -e 's/@''GNULIB_SETPAYLOADSIGF''@/$(GL_GNULIB_SETPAYLOADSIGF)/g' \
 	      -e 's/@''GNULIB_SETPAYLOADSIGL''@/$(GL_GNULIB_SETPAYLOADSIGL)/g' \
 	      -e 's/@''GNULIB_SIGNBIT''@/$(GL_GNULIB_SIGNBIT)/g' \
+	      -e 's/@''GNULIB_SIGNBIT_NO_CXX''@/$(GL_GNULIB_SIGNBIT_NO_CXX)/g' \
 	      -e 's/@''GNULIB_SINF''@/$(GL_GNULIB_SINF)/g' \
 	      -e 's/@''GNULIB_SINL''@/$(GL_GNULIB_SINL)/g' \
 	      -e 's/@''GNULIB_SINHF''@/$(GL_GNULIB_SINHF)/g' \
@@ -1712,6 +1716,7 @@ math.h: math.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) $(
 	      -e 's|@''REPLACE_SIGNBIT_USING_BUILTINS''@|$(REPLACE_SIGNBIT_USING_BUILTINS)|g' \
 	      -e 's|@''REPLACE_SINF''@|$(REPLACE_SINF)|g' \
 	      -e 's|@''REPLACE_SINHF''@|$(REPLACE_SINHF)|g' \
+	      -e 's|@''REPLACE_SINL''@|$(REPLACE_SINL)|g' \
 	      -e 's|@''REPLACE_SQRTF''@|$(REPLACE_SQRTF)|g' \
 	      -e 's|@''REPLACE_SQRTL''@|$(REPLACE_SQRTL)|g' \
 	      -e 's|@''REPLACE_TANF''@|$(REPLACE_TANF)|g' \
@@ -1836,6 +1841,12 @@ endif
 EXTRA_DIST += memchr.valgrind
 
 ## end   gnulib module memchr
+
+## begin gnulib module memeq
+
+libgnu_a_SOURCES += memeq.c
+
+## end   gnulib module memeq
 
 ## begin gnulib module mempcpy
 
@@ -2301,7 +2312,7 @@ EXTRA_DIST += signal.in.h
 
 ## end   gnulib module signal-h
 
-## begin gnulib module signbit
+## begin gnulib module signbit-no-c++
 
 if GL_COND_OBJ_SIGNBIT3
 libgnu_a_SOURCES += signbitf.c signbitd.c signbitl.c
@@ -2309,7 +2320,7 @@ endif
 
 EXTRA_DIST += float+.h
 
-## end   gnulib module signbit
+## end   gnulib module signbit-no-c++
 
 ## begin gnulib module sigprocmask
 
@@ -2458,6 +2469,34 @@ EXTRA_DIST += intprops-internal.h stdckdint.in.h
 
 ## end   gnulib module stdckdint-h
 
+## begin gnulib module stdcountof-h
+
+BUILT_SOURCES += $(STDCOUNTOF_H)
+
+# We need the following in order to create <stdcountof.h> when the system
+# doesn't have one that works with the given compiler.
+if GL_GENERATE_STDCOUNTOF_H
+stdcountof.h: stdcountof.in.h $(top_builddir)/config.status
+	$(gl_V_at)$(SED_HEADER_STDOUT) \
+	      -e 's|@''GUARD_PREFIX''@|GL|g' \
+	      -e 's/@''HAVE_STDCOUNTOF_H''@/$(HAVE_STDCOUNTOF_H)/g' \
+	      -e 's/@''CXX_HAVE_STDCOUNTOF_H''@/$(CXX_HAVE_STDCOUNTOF_H)/g' \
+	      -e 's|@''INCLUDE_NEXT''@|$(INCLUDE_NEXT)|g' \
+	      -e 's|@''PRAGMA_SYSTEM_HEADER''@|@PRAGMA_SYSTEM_HEADER@|g' \
+	      -e 's|@''PRAGMA_COLUMNS''@|@PRAGMA_COLUMNS@|g' \
+	      -e 's|@''NEXT_STDCOUNTOF_H''@|$(NEXT_STDCOUNTOF_H)|g' \
+	      $(srcdir)/stdcountof.in.h > $@-t
+	$(AM_V_at)mv $@-t $@
+else
+stdcountof.h: $(top_builddir)/config.status
+	rm -f $@
+endif
+MOSTLYCLEANFILES += stdcountof.h stdcountof.h-t
+
+EXTRA_DIST += stdcountof.in.h
+
+## end   gnulib module stdcountof-h
+
 ## begin gnulib module stddef-h
 
 BUILT_SOURCES += $(STDDEF_H)
@@ -2599,6 +2638,7 @@ stdio.h: stdio.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's/@''GNULIB_STDIO_H_SIGPIPE''@/$(GL_GNULIB_STDIO_H_SIGPIPE)/g' \
 	      -e 's/@''GNULIB_SZPRINTF''@/$(GL_GNULIB_SZPRINTF)/g' \
 	      -e 's/@''GNULIB_TMPFILE''@/$(GL_GNULIB_TMPFILE)/g' \
+	      -e 's/@''GNULIB_VAPRINTF''@/$(GL_GNULIB_VAPRINTF)/g' \
 	      -e 's/@''GNULIB_VASPRINTF''@/$(GL_GNULIB_VASPRINTF)/g' \
 	      -e 's/@''GNULIB_VASZPRINTF''@/$(GL_GNULIB_VASZPRINTF)/g' \
 	      -e 's/@''GNULIB_VDPRINTF''@/$(GL_GNULIB_VDPRINTF)/g' \
@@ -2622,6 +2662,7 @@ stdio.h: stdio.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's/@''GNULIB_MDA_GETW''@/$(GL_GNULIB_MDA_GETW)/g' \
 	      -e 's/@''GNULIB_MDA_PUTW''@/$(GL_GNULIB_MDA_PUTW)/g' \
 	      -e 's/@''GNULIB_MDA_TEMPNAM''@/$(GL_GNULIB_MDA_TEMPNAM)/g' \
+	      -e 's/@''GNULIB_FREE_POSIX''@/$(GL_GNULIB_FREE_POSIX)/g' \
 	      < $(srcdir)/stdio.in.h > $@-t1
 	$(AM_V_at)sed \
 	      -e 's|@''HAVE_DECL_FCLOSEALL''@|$(HAVE_DECL_FCLOSEALL)|g' \
@@ -2653,6 +2694,7 @@ stdio.h: stdio.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's|@''REPLACE_FOPEN_FOR_FOPEN_GNU''@|$(REPLACE_FOPEN_FOR_FOPEN_GNU)|g' \
 	      -e 's|@''REPLACE_FPRINTF''@|$(REPLACE_FPRINTF)|g' \
 	      -e 's|@''REPLACE_FPURGE''@|$(REPLACE_FPURGE)|g' \
+	      -e 's|@''REPLACE_FREE''@|$(REPLACE_FREE)|g' \
 	      -e 's|@''REPLACE_FREOPEN''@|$(REPLACE_FREOPEN)|g' \
 	      -e 's|@''REPLACE_FSEEK''@|$(REPLACE_FSEEK)|g' \
 	      -e 's|@''REPLACE_FSEEKO''@|$(REPLACE_FSEEKO)|g' \
@@ -2817,6 +2859,7 @@ stdlib.h: stdlib.in.h $(top_builddir)/config.status $(CXXDEFS_H) \
 	      -e 's|@''HAVE_STRTOULL''@|$(HAVE_STRTOULL)|g' \
 	      -e 's|@''HAVE_STRUCT_RANDOM_DATA''@|$(HAVE_STRUCT_RANDOM_DATA)|g' \
 	      -e 's|@''HAVE_SYS_LOADAVG_H''@|$(HAVE_SYS_LOADAVG_H)|g' \
+	      -e 's|@''HAVE_SYS_PROCESS_H''@|$(HAVE_SYS_PROCESS_H)|g' \
 	      -e 's|@''HAVE_UNLOCKPT''@|$(HAVE_UNLOCKPT)|g' \
 	      -e 's|@''HAVE_DECL_UNSETENV''@|$(HAVE_DECL_UNSETENV)|g' \
 	      < $@-t1 > $@-t2
@@ -2904,10 +2947,16 @@ endif
 
 ## begin gnulib module streq
 
-
-EXTRA_DIST += streq.h
+libgnu_a_SOURCES += streq.c
 
 ## end   gnulib module streq
+
+## begin gnulib module streq-opt
+
+
+EXTRA_DIST += streq-opt.h
+
+## end   gnulib module streq-opt
 
 ## begin gnulib module strerror
 
@@ -2960,6 +3009,7 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's/@''GNULIB_MBS_ENDSWITH''@/$(GL_GNULIB_MBS_ENDSWITH)/g' \
 	      -e 's/@''GNULIB_MBS_STARTSWITH''@/$(GL_GNULIB_MBS_STARTSWITH)/g' \
 	      -e 's/@''GNULIB_MEMCHR''@/$(GL_GNULIB_MEMCHR)/g' \
+	      -e 's/@''GNULIB_MEMEQ''@/$(GL_GNULIB_MEMEQ)/g' \
 	      -e 's/@''GNULIB_MEMMEM''@/$(GL_GNULIB_MEMMEM)/g' \
 	      -e 's/@''GNULIB_MEMPCPY''@/$(GL_GNULIB_MEMPCPY)/g' \
 	      -e 's/@''GNULIB_MEMRCHR''@/$(GL_GNULIB_MEMRCHR)/g' \
@@ -2969,10 +3019,12 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's/@''GNULIB_STPNCPY''@/$(GL_GNULIB_STPNCPY)/g' \
 	      -e 's/@''GNULIB_STRCHRNUL''@/$(GL_GNULIB_STRCHRNUL)/g' \
 	      -e 's/@''GNULIB_STRDUP''@/$(GL_GNULIB_STRDUP)/g' \
-	      -e 's/@''GNULIB_STRINGEQ''@/$(GL_GNULIB_STRINGEQ)/g' \
+	      -e 's/@''GNULIB_STREQ''@/$(GL_GNULIB_STREQ)/g' \
 	      -e 's/@''GNULIB_STRNCAT''@/$(GL_GNULIB_STRNCAT)/g' \
+	      -e 's/@''GNULIB_STRNCPY''@/$(GL_GNULIB_STRNCPY)/g' \
 	      -e 's/@''GNULIB_STRNDUP''@/$(GL_GNULIB_STRNDUP)/g' \
 	      -e 's/@''GNULIB_STRNLEN''@/$(GL_GNULIB_STRNLEN)/g' \
+	      -e 's/@''GNULIB_STRNUL''@/$(GL_GNULIB_STRNUL)/g' \
 	      -e 's/@''GNULIB_STRPBRK''@/$(GL_GNULIB_STRPBRK)/g' \
 	      -e 's/@''GNULIB_STRSEP''@/$(GL_GNULIB_STRSEP)/g' \
 	      -e 's/@''GNULIB_STRSTR''@/$(GL_GNULIB_STRSTR)/g' \
@@ -3032,6 +3084,7 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''REPLACE_STRCHRNUL''@|$(REPLACE_STRCHRNUL)|g' \
 	      -e 's|@''REPLACE_STRDUP''@|$(REPLACE_STRDUP)|g' \
 	      -e 's|@''REPLACE_STRNCAT''@|$(REPLACE_STRNCAT)|g' \
+	      -e 's|@''REPLACE_STRNCPY''@|$(REPLACE_STRNCPY)|g' \
 	      -e 's|@''REPLACE_STRNDUP''@|$(REPLACE_STRNDUP)|g' \
 	      -e 's|@''REPLACE_STRNLEN''@|$(REPLACE_STRNLEN)|g' \
 	      -e 's|@''REPLACE_STRSTR''@|$(REPLACE_STRSTR)|g' \
@@ -3055,12 +3108,6 @@ MOSTLYCLEANFILES += string.h string.h-t1 string.h-t2
 EXTRA_DIST += string.in.h
 
 ## end   gnulib module string-h
-
-## begin gnulib module stringeq
-
-libgnu_a_SOURCES += string.c
-
-## end   gnulib module stringeq
 
 ## begin gnulib module strings-h
 
@@ -3110,6 +3157,14 @@ endif
 
 ## end   gnulib module strncasecmp
 
+## begin gnulib module strncpy
+
+if GL_COND_OBJ_STRNCPY
+libgnu_a_SOURCES += strncpy.c
+endif
+
+## end   gnulib module strncpy
+
 ## begin gnulib module strnlen
 
 if GL_COND_OBJ_STRNLEN
@@ -3123,6 +3178,12 @@ endif
 libgnu_a_SOURCES += strnlen1.h strnlen1.c
 
 ## end   gnulib module strnlen1
+
+## begin gnulib module strnul
+
+libgnu_a_SOURCES += strnul.c
+
+## end   gnulib module strnul
 
 ## begin gnulib module sys_random-h
 

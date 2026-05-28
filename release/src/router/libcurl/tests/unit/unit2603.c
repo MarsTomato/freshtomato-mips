@@ -24,7 +24,6 @@
 #include "unitcheck.h"
 
 #ifndef CURL_DISABLE_HTTP
-
 #include "urldata.h"
 #include "http1.h"
 #include "curl_trc.h"
@@ -65,7 +64,7 @@ static void parse_success(const struct tcase *t)
   struct h1_req_parser p;
   const uint8_t *buf;
   size_t buflen, i, in_len, in_consumed;
-  CURLcode err;
+  CURLcode result;
   size_t nread;
 
   Curl_h1_req_parse_init(&p, 1024);
@@ -74,16 +73,16 @@ static void parse_success(const struct tcase *t)
     buf = (const uint8_t *)t->input[i];
     buflen = strlen(t->input[i]);
     in_len += buflen;
-    err = Curl_h1_req_parse_read(&p, buf, buflen, t->default_scheme,
-                                 t->custom_method, 0, &nread);
-    if(err) {
-      curl_mfprintf(stderr, "got err %d parsing: '%s'\n", err, buf);
+    result = Curl_h1_req_parse_read(&p, buf, buflen, t->default_scheme,
+                                    t->custom_method, 0, &nread);
+    if(result) {
+      curl_mfprintf(stderr, "got result %d parsing: '%s'\n", result, buf);
       fail("error consuming");
     }
-    in_consumed += (size_t)nread;
+    in_consumed += nread;
     if(nread != buflen) {
       if(!p.done) {
-        curl_mfprintf(stderr, "only %zd/%zu consumed for: '%s'\n",
+        curl_mfprintf(stderr, "only %zu/%zu consumed for: '%s'\n",
                       nread, buflen, buf);
         fail("not all consumed");
       }

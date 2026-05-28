@@ -1,5 +1,5 @@
 /* Convert multibyte character to 32-bit wide character.
-   Copyright (C) 2020-2025 Free Software Foundation, Inc.
+   Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -87,7 +87,7 @@ mbrtoc32 (char32_t *pwc, const char *s, size_t n, mbstate_t *ps)
 # include <wchar.h>
 
 # include "localcharset.h"
-# include "streq.h"
+# include "streq-opt.h"
 
 # if MBRTOC32_IN_C_LOCALE_MAYBE_EILSEQ
 #  include "hard-locale.h"
@@ -165,7 +165,6 @@ mbrtoc32 (char32_t *pwc, const char *s, size_t n, mbstate_t *ps)
       char buf[4];
       const char *p;
       size_t m;
-      int res;
 
       switch (nstate)
         {
@@ -198,6 +197,7 @@ mbrtoc32 (char32_t *pwc, const char *s, size_t n, mbstate_t *ps)
 
       /* Here m > 0.  */
 
+      int res;
       {
 #  define FITS_IN_CHAR_TYPE(wc)  1
 #  include "mbrtowc-impl-utf8.h"

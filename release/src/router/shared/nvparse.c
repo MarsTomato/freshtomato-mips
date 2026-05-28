@@ -35,7 +35,6 @@
 #include <bcmnvram.h>
 #include <shutils.h>
 #include <nvparse.h>
-#include <bcmconfig.h>
 
 char *
 safe_snprintf(char *str, int *len, const char *fmt, ...)

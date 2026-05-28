@@ -62,7 +62,7 @@ struct memory {
   size_t size;
 };
 
-static size_t write_cb(void *contents, size_t sz, size_t nmemb, void *ctx)
+static size_t write_cb(char *contents, size_t sz, size_t nmemb, void *ctx)
 {
   size_t realsize = sz * nmemb;
   struct memory *mem = (struct memory *)ctx;
@@ -131,18 +131,18 @@ static size_t follow_links(CURLM *multi, struct memory *mem, const char *url)
   xmlChar *xpath;
   xmlNodeSetPtr nodeset;
   xmlXPathContextPtr context;
-  xmlXPathObjectPtr result;
+  xmlXPathObjectPtr object;
   if(!doc)
     return 0;
   xpath = (xmlChar *)"//a/@href";
   context = xmlXPathNewContext(doc);
-  result = xmlXPathEvalExpression(xpath, context);
+  object = xmlXPathEvalExpression(xpath, context);
   xmlXPathFreeContext(context);
-  if(!result)
+  if(!object)
     return 0;
-  nodeset = result->nodesetval;
+  nodeset = object->nodesetval;
   if(xmlXPathNodeSetIsEmpty(nodeset)) {
-    xmlXPathFreeObject(result);
+    xmlXPathFreeObject(object);
     return 0;
   }
   count = 0;
@@ -167,7 +167,7 @@ static size_t follow_links(CURLM *multi, struct memory *mem, const char *url)
     }
     xmlFree(link);
   }
-  xmlXPathFreeObject(result);
+  xmlXPathFreeObject(object);
   return count;
 }
 
@@ -186,7 +186,7 @@ int main(void)
   CURLcode result;
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   signal(SIGINT, sighandler);

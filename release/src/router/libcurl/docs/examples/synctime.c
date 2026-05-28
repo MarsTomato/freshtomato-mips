@@ -45,7 +45,7 @@
  *    so there is no way to get an accurate time.
  * 4. This software could only provide an accuracy of +- a few seconds,
  *    as Round-Trip delay time is not taken into consideration.
- *    Compensation of network, firewall/proxy delay cannot be simply divide
+ *    Compensation of network, firewall/proxy delay cannot be done by dividing
  *    the Round-Trip delay time by half.
  * 5. Win32 SetSystemTime() API sets your computer clock according to
  *    GMT/UTC time. Therefore your computer timezone must be properly set.
@@ -108,16 +108,13 @@ static const char *MthStr[] = {
 };
 #endif
 
-#define HTTP_COMMAND_HEAD 0
-#define HTTP_COMMAND_GET  1
-
-static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
+static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *stream)
 {
   fwrite(ptr, size, nmemb, stream);
   return nmemb * size;
 }
 
-/* Remember: do not assume headers are passed on null terminated! */
+/* Remember: do not assume headers are passed on null-terminated! */
 static size_t SyncTime_CURL_WriteHeader(void *ptr, size_t size, size_t nmemb,
                                         void *stream)
 {
@@ -126,7 +123,7 @@ static size_t SyncTime_CURL_WriteHeader(void *ptr, size_t size, size_t nmemb,
   if(ShowAllHeader == 1)
     fprintf(stderr, "%.*s", (int)nmemb, (char *)ptr);
 
-  if((nmemb >= 5) && !strncmp((char *)ptr, "Date:", 5)) {
+  if((nmemb >= 5) && !strncmp((const char *)ptr, "Date:", 5)) {
     if(ShowAllHeader == 0)
       fprintf(stderr, "HTTP Server. %.*s", (int)nmemb, (char *)ptr);
 
@@ -137,9 +134,12 @@ static size_t SyncTime_CURL_WriteHeader(void *ptr, size_t size, size_t nmemb,
       char *field = ptr;
       *TmpStr1 = 0;
       *TmpStr2 = 0;
-      if(nmemb && (field[nmemb] == '\n')) {
-        field[nmemb] = 0; /* null terminated */
-        RetVal = sscanf(field, "Date: %25s %hu %25s %hu %hu:%hu:%hu",
+      if(nmemb && (field[nmemb - 1] == '\n')) {
+        char header[100];
+        size_t len = nmemb < sizeof(header) ? nmemb : sizeof(header) - 1;
+        memcpy(header, field, len);
+        header[len] = 0; /* null-terminate local copy */
+        RetVal = sscanf(header, "Date: %25s %hu %25s %hu %hu:%hu:%hu",
                         TmpStr1, &SYSTime.wDay, TmpStr2, &SYSTime.wYear,
                         &SYSTime.wHour, &SYSTime.wMinute,
                         &SYSTime.wSecond);
@@ -163,7 +163,7 @@ static size_t SyncTime_CURL_WriteHeader(void *ptr, size_t size, size_t nmemb,
     }
   }
 
-  if((nmemb >= 12) && !strncmp((char *)ptr, "X-Cache: HIT", 12)) {
+  if((nmemb >= 12) && !strncmp((const char *)ptr, "X-Cache: HIT", 12)) {
     fprintf(stderr, "ERROR: HTTP Server data is cached."
             " Server Date is no longer valid.\n");
     AutoSyncTime = 0;
@@ -185,24 +185,15 @@ static void SyncTime_CURL_Init(CURL *curl, const char *proxy_port,
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, SyncTime_CURL_WriteHeader);
 }
 
-static CURLcode SyncTime_CURL_Fetch(CURL *curl, const char *URL_Str,
-                                    const char *OutFileName, int HttpGetBody)
+static CURLcode SyncTime_CURL_FetchHead(CURL *curl, const char *URL_Str)
 {
-  FILE *outfile;
   CURLcode result;
 
-  outfile = NULL;
-  if(HttpGetBody == HTTP_COMMAND_HEAD)
-    curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
-  else {
-    outfile = fopen(OutFileName, "wb");
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, outfile);
-  }
-
+  curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
   curl_easy_setopt(curl, CURLOPT_URL, URL_Str);
+
   result = curl_easy_perform(curl);
-  if(outfile)
-    fclose(outfile);
+
   return result; /* CURLE_OK */
 }
 
@@ -223,10 +214,9 @@ static void showUsage(void)
           " port.\n");
   fprintf(stderr, " --help                    Print this help.\n");
   fprintf(stderr, "\n");
-  return;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
   CURLcode result;
   CURL *curl;
@@ -275,7 +265,7 @@ int main(int argc, char *argv[])
 
   /* Init CURL before usage */
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -287,7 +277,7 @@ int main(int argc, char *argv[])
     time_t tt_gmt;
     double tzonediffFloat;
     int tzonediffWord;
-    char timeBuf[61];
+    char timeBuf[61] = "";
     char tzoneBuf[16];
 
     SyncTime_CURL_Init(curl, conf.http_proxy, conf.proxy_user);
@@ -320,7 +310,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Before HTTP. Date: %s%s\n\n", timeBuf, tzoneBuf);
 
     /* HTTP HEAD command to the Webserver */
-    SyncTime_CURL_Fetch(curl, conf.timeserver, "index.htm", HTTP_COMMAND_HEAD);
+    SyncTime_CURL_FetchHead(curl, conf.timeserver);
 
 #if defined(_WIN32) && !defined(CURL_WINDOWS_UWP)
     GetLocalTime(&LOCALTime);

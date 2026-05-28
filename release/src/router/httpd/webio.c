@@ -58,6 +58,16 @@ void web_putj_utf8(const char *buffer)
 	}
 }
 
+/* output a JS variable assignment with a safely escaped string value.
+ * uses web_puts for the template and web_putj for the value to prevent XSS.
+ */
+void web_putj_nvram(const char *varname, const char *value)
+{
+	web_printf("\n%s = '", varname);
+	web_putj(value);
+	web_puts("';");
+}
+
 void web_puth(const char *buffer)
 {
 	char *p;
@@ -128,49 +138,100 @@ int _web_printf(wofilter_t wof, const char *format, ...)
 
 int web_write(const char *buffer, int len)
 {
-	int n = len;
-	int r = 0;
+	size_t n;
+	size_t r;
+
+	/* nothing to write; also protects the cast to size_t below */
+	if (len <= 0)
+		return 0;
+
+	n = (size_t)len;
 
 	while (n > 0) {
-		r = fwrite(buffer, 1, n, connfp);
-		if ((r == 0) && (errno != EINTR))
-			return -1;
+		/*
+		 * clear errno before fwrite(), so a stale errno value from an
+		 * earlier call is not mistaken for the cause of this result
+		 */
+		errno = 0;
 
-		buffer += r;
-		n -= r;
+		r = fwrite(buffer, 1, n, connfp);
+
+		if (r > 0) {
+			/* partial writes are valid; continue until all bytes are written */
+			buffer += r;
+			n -= r;
+			continue;
+		}
+
+		/*
+		 * fwrite() returns 0 on failure here. If the operation was
+		 * interrupted by a signal, clear the stream error flag and retry
+		 */
+		if (ferror(connfp) && errno == EINTR) {
+			clearerr(connfp);
+			continue;
+		}
+
+		/* real write error, or an unexpected zero-byte write */
+		return -1;
 	}
 
-	return r;
+	/* return the total number of bytes requested */
+	return len;
 }
 
 int web_read(void *buffer, int len)
 {
-	int r;
+	size_t r;
+
+	/* nothing to read; also protects the cast to size_t below */
 	if (len <= 0)
 		return 0;
 
-	while ((r = fread(buffer, 1, len, connfp)) == 0) {
-		if (errno != EINTR) return -1;
-	}
+	for (;;) {
+		/*
+		 * clear errno before fread(), so a stale errno value from an
+		 * earlier call is not mistaken for the cause of this result
+		 */
+		errno = 0;
 
-	return r;
+		r = fread(buffer, 1, (size_t)len, connfp);
+
+		if (r > 0)
+			return (int)r;
+
+		/* EOF is a clean connection close / end of input */
+		if (feof(connfp))
+			return 0;
+
+		/*
+		 * if the read was interrupted by a signal, clear the stream
+		 * error flag and retry the same read
+		 */
+		if (ferror(connfp) && errno == EINTR) {
+			clearerr(connfp);
+			continue;
+		}
+
+		/* real read error, or an unexpected zero-byte read without EOF */
+		return -1;
+	}
 }
 
 int web_read_x(void *buffer, int len)
 {
-	int n, t = 0;
+	int n, total = 0;
 
-	while (len > 0) {
-		n = web_read(buffer, len);
+	while (total < len) {
+		n = web_read((char *)buffer + total, len - total);
+
 		if (n <= 0)
-			return len;
+			return -1; /* error or EOF */
 
-		buffer += n;
-		len -= n;
-		t += n;
+		total += n;
 	}
 
-	return t;
+	return total; /* == len on success */
 }
 
 int web_eat(int max)
@@ -228,9 +289,16 @@ static void _web_putfile(FILE *f, wofilter_t wof)
 {
 	char buf[2048];
 	int nr;
+	int total = 0;
+	int max = 10 * 1024 * 1024; /* 10MB limit */
 
 	while ((nr = fread(buf, 1, sizeof(buf) - 1, f)) > 0) {
+		/* enforce output limit */
+		if (total + nr > max)
+			nr = max - total;
+
 		buf[nr] = 0;
+
 		switch (wof) {
 		case WOF_JAVASCRIPT:
 			web_putj_utf8(buf);
@@ -242,6 +310,11 @@ static void _web_putfile(FILE *f, wofilter_t wof)
 			web_puts(buf);
 			break;
 		}
+
+		total += nr;
+
+		if (total >= max)
+			break;
 	}
 }
 
@@ -249,24 +322,24 @@ int web_putfile(const char *fname, wofilter_t wof)
 {
 	FILE *f;
 
-	if ((f = fopen(fname, "r")) != NULL) {
-		_web_putfile(f, wof);
-		fclose(f);
-		return 1;
-	}
+	if ((f = fopen(fname, "r")) == NULL)
+		return 0;
 
-	return 0;
+	_web_putfile(f, wof);
+	fclose(f);
+
+	return 1;
 }
 
 int web_pipecmd(const char *cmd, wofilter_t wof)
 {
 	FILE *f;
 
-	if ((f = popen(cmd, "r")) != NULL) {
-		_web_putfile(f, wof);
-		pclose(f);
-		return 1;
-	}
+	if ((f = popen(cmd, "r")) == NULL)
+		return 0;
 
-	return 0;
+	_web_putfile(f, wof);
+	pclose(f);
+
+	return 1;
 }

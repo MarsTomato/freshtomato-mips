@@ -24,13 +24,12 @@
 #include "unitcheck.h"
 
 #ifndef CURL_DISABLE_NETRC
-
 #include "netrc.h"
 
 static void t1304_stop(char **password, char **login)
 {
-  Curl_safefree(*password);
-  Curl_safefree(*login);
+  curlx_safefree(*password);
+  curlx_safefree(*login);
 }
 
 static CURLcode test_unit1304(const char *arg)
@@ -56,44 +55,48 @@ static CURLcode test_unit1304(const char *arg)
   /*
    * Test a non existent login in our netrc file.
    */
-  login = (char *)CURL_UNCONST("me");
+  login = curlx_strdup("me");
   Curl_netrc_init(&store);
   result = Curl_parsenetrc(&store, "example.com", &login, &password, arg);
   fail_unless(result == 0, "Host should have been found");
   abort_unless(password == NULL, "password is not NULL!");
   Curl_netrc_cleanup(&store);
+  curlx_free(login);
 
   /*
    * Test a non existent login and host in our netrc file.
    */
-  login = (char *)CURL_UNCONST("me");
+  login = curlx_strdup("me");
   Curl_netrc_init(&store);
   result = Curl_parsenetrc(&store, "test.example.com", &login, &password, arg);
   fail_unless(result == 1, "Host not found should return 1");
   abort_unless(password == NULL, "password is not NULL!");
   Curl_netrc_cleanup(&store);
+  curlx_free(login);
 
   /*
    * Test a non existent login (substring of an existing one) in our
    * netrc file.
    */
-  login = (char *)CURL_UNCONST("admi"); /* spellchecker:disable-line */
+  login = curlx_strdup("admi"); /* spellchecker:disable-line */
   Curl_netrc_init(&store);
   result = Curl_parsenetrc(&store, "example.com", &login, &password, arg);
   fail_unless(result == 0, "Host should have been found");
   abort_unless(password == NULL, "password is not NULL!");
   Curl_netrc_cleanup(&store);
+  curlx_free(login);
 
   /*
    * Test a non existent login (superstring of an existing one)
    * in our netrc file.
    */
-  login = (char *)CURL_UNCONST("adminn");
+  login = curlx_strdup("adminn");
   Curl_netrc_init(&store);
   result = Curl_parsenetrc(&store, "example.com", &login, &password, arg);
   fail_unless(result == 0, "Host should have been found");
   abort_unless(password == NULL, "password is not NULL!");
   Curl_netrc_cleanup(&store);
+  curlx_free(login);
 
   /*
    * Test for the first existing host in our netrc file

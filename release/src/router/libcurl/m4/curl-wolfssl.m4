@@ -32,7 +32,7 @@ case "$OPT_WOLFSSL" in
     wolfpkg=""
     ;;
   *)
-    wolfpkg="$withval/lib/pkgconfig"
+    wolfpkg="$OPT_WOLFSSL/lib/pkgconfig"
     ;;
 esac
 
@@ -83,6 +83,7 @@ if test "$OPT_WOLFSSL" != "no"; then
     fi
 
     if test "$USE_WOLFSSL" != "yes"; then
+      CPPFLAGS="$CPPFLAGS -DWOLFSSL_OPTIONS_IGNORE_SYS"
 
       LDFLAGS="$LDFLAGS $addld"
       LDFLAGSPC="$LDFLAGSPC $addld"
@@ -99,10 +100,6 @@ if test "$OPT_WOLFSSL" != "no"; then
       AC_MSG_CHECKING([for wolfSSL_Init in -lwolfssl])
       AC_LINK_IFELSE([
         AC_LANG_PROGRAM([[
-          /* These are not needed for detection and confuse wolfSSL.
-             They are set up properly later if it is detected.  */
-          #undef SIZEOF_LONG
-          #undef SIZEOF_LONG_LONG
           #include <wolfssl/options.h>
           #include <wolfssl/ssl.h>
         ]],[[
@@ -130,28 +127,24 @@ if test "$OPT_WOLFSSL" != "no"; then
       AC_MSG_NOTICE([detected wolfSSL])
       check_for_ca_bundle=1
 
-      dnl wolfssl/ctaocrypt/types.h needs SIZEOF_LONG_LONG defined!
-      CURL_SIZEOF(long long)
-
       LIBS="$addlib $LIBS"
 
       dnl is this wolfSSL providing the original QUIC API?
       AC_CHECK_FUNCS([wolfSSL_set_quic_use_legacy_codepoint], [QUIC_ENABLED=yes])
 
       dnl wolfSSL needs configure --enable-opensslextra to have *get_peer*
-      dnl DES* is needed for NTLM support and lives in the OpenSSL compatibility
-      dnl layer
+      dnl wc_Des_EcbEncrypt is needed for NTLM support.
       dnl if wolfSSL_BIO_set_shutdown is present, we have the full BIO feature set
       AC_CHECK_FUNCS(wolfSSL_get_peer_certificate \
                      wolfSSL_UseALPN \
-                     wolfSSL_DES_ecb_encrypt \
                      wolfSSL_BIO_new \
-                     wolfSSL_BIO_set_shutdown)
+                     wolfSSL_BIO_set_shutdown \
+                     wc_Des_EcbEncrypt)
 
       dnl if this symbol is present, we want the include path to include the
       dnl OpenSSL API root as well
-      if test "$ac_cv_func_wolfSSL_DES_ecb_encrypt" = "yes"; then
-        HAVE_WOLFSSL_DES_ECB_ENCRYPT=1
+      if test "$ac_cv_func_wc_Des_EcbEncrypt" = "yes"; then
+        HAVE_WC_DES_ECBENCRYPT=1
       fi
 
       dnl if this symbol is present, we can make use of BIO filter chains

@@ -28,7 +28,6 @@
 #include "tool_msgs.h"
 #include "tool_paramhlp.h"
 #include "tool_writeout_json.h"
-#include "tool_strdup.h"
 #include "var.h"
 
 #define MAX_EXPAND_CONTENT 10000000
@@ -60,7 +59,7 @@ static const struct tool_var *varcontent(const char *name, size_t nlen)
 
 #define ENDOFFUNC(x) (((x) == '}') || ((x) == ':'))
 #define FUNCMATCH(ptr, name, len)                   \
-  (!strncmp(ptr, name, len) && ENDOFFUNC(ptr[len]))
+  (!strncmp(ptr, name, len) && ENDOFFUNC((ptr)[len]))
 
 #define FUNC_TRIM      "trim"
 #define FUNC_TRIM_LEN  (sizeof(FUNC_TRIM) - 1)
@@ -75,7 +74,7 @@ static const struct tool_var *varcontent(const char *name, size_t nlen)
 
 static ParameterError varfunc(char *c, /* content */
                               size_t clen, /* content length */
-                              char *f, /* functions */
+                              const char *f, /* functions */
                               size_t flen, /* function string length */
                               struct dynbuf *out)
 {
@@ -154,7 +153,7 @@ static ParameterError varfunc(char *c, /* content */
         /* put it in the output */
         if(curlx_dyn_addn(out, enc, elen))
           err = PARAM_NO_MEM;
-        curl_free(enc);
+        curlx_free(enc);
         if(err)
           break;
       }
@@ -174,7 +173,7 @@ static ParameterError varfunc(char *c, /* content */
         else {
           if(curlx_dyn_addn(out, enc, elen))
             err = PARAM_NO_MEM;
-          curl_free(enc);
+          curlx_free(enc);
         }
         if(err)
           break;
@@ -190,7 +189,7 @@ static ParameterError varfunc(char *c, /* content */
       curlx_free(c);
 
     clen = curlx_dyn_len(out);
-    c = memdup0(curlx_dyn_ptr(out), clen);
+    c = curlx_memdup0(curlx_dyn_ptr(out), clen);
     if(!c) {
       err = PARAM_NO_MEM;
       break;
@@ -207,13 +206,15 @@ static ParameterError varfunc(char *c, /* content */
 ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
 {
   CURLcode result;
-  char *envp;
+  const char *envp;
   bool added = FALSE;
   const char *input = line;
   *replaced = FALSE;
   curlx_dyn_init(out, MAX_EXPAND_CONTENT);
   do {
     envp = strstr(line, "{{");
+    if(!envp)
+      break;
     if((envp > line) && envp[-1] == '\\') {
       /* preceding backslash, we want this verbatim */
 
@@ -228,12 +229,12 @@ ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
         return PARAM_NO_MEM;
       line = &envp[2];
     }
-    else if(envp) {
+    else {
       char name[MAX_VAR_LEN];
       size_t nlen;
       size_t i;
-      char *funcp;
-      char *clp = strstr(envp, "}}");
+      const char *funcp;
+      const char *clp = strstr(envp, "}}");
       size_t prefix;
 
       if(!clp) {
@@ -304,7 +305,7 @@ ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
           if(value && vlen > 0) {
             /* A variable might contain null bytes. Such bytes cannot be shown
                using normal means, this is an error. */
-            char *nb = memchr(value, '\0', vlen);
+            const char *nb = memchr(value, '\0', vlen);
             if(nb) {
               errorf("variable contains null byte");
               return PARAM_EXPAND_ERROR;
@@ -321,8 +322,7 @@ ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
       }
       line = &clp[2];
     }
-
-  } while(envp);
+  } while(1);
   if(added && *line) {
     /* add the "suffix" as well */
     result = curlx_dyn_add(out, line);
@@ -357,7 +357,7 @@ static ParameterError addvariable(const char *name,
     memcpy(p->name, name, nlen);
     /* the null termination byte is already present from above */
 
-    p->content = contalloc ? content : memdup0(content, clen);
+    p->content = contalloc ? content : curlx_memdup0(content, clen);
     if(p->content) {
       p->clen = clen;
 
@@ -369,8 +369,6 @@ static ParameterError addvariable(const char *name,
   }
   return PARAM_NO_MEM;
 }
-
-#define MAX_FILENAME 10000
 
 ParameterError setvariable(const char *input)
 {
@@ -396,7 +394,7 @@ ParameterError setvariable(const char *input)
     line++;
   nlen = line - name;
   if(!nlen || (nlen >= MAX_VAR_LEN)) {
-    warnf("Bad variable name length (%zd), skipping", nlen);
+    warnf("Bad variable name length (%zu), skipping", nlen);
     return PARAM_OK;
   }
   if(import) {

@@ -175,7 +175,7 @@ static int _unlock_erase(const char *mtdname, int erase)
 	if ((mf = mtd_open(mtdname, &mi)) >= 0) {
 #endif
 			r = 1;
-#if 1
+
 			ei.length = mi.erasesize;
 			for (ei.start = 0; ei.start < mi.size; ei.start += mi.erasesize) {
 				printf("%sing 0x%x - 0x%x\n", erase ? "Eras" : "Unlock", ei.start, (ei.start + ei.length) - 1);
@@ -214,24 +214,6 @@ static int _unlock_erase(const char *mtdname, int erase)
 					}
 				}
 			}
-#else /* 1 */
-			ei.start = 0;
-			ei.length = mi.size;
-
-			printf("%sing 0x%x - 0x%x\n", erase ? "Eras" : "Unlock", ei.start, ei.length - 1);
-			fflush(stdout);
-
-			if (ioctl(mf, MEMUNLOCK, &ei) != 0) {
-				perror("MEMUNLOCK");
-				r = 0;
-			}
-			else if (erase) {
-				if (ioctl(mf, MEMERASE, &ei) != 0) {
-					perror("MEMERASE");
-					r = 0;
-				}
-			}
-#endif /* 1 */
 
 			/* checkme: */
 			char buf[2];
@@ -300,13 +282,12 @@ int mtd_write_main_old(int argc, char *argv[])
 	int mf = -1;
 	mtd_info_t mi;
 	erase_info_t ei;
-#ifdef TCONFIG_BCMARM
 	struct code_header;
-#endif
 	FILE *f;
 	unsigned char *buf = NULL, *p, *bounce_buf = NULL;
 	const char *error;
-	long wlen, n;
+	long wlen;
+	size_t n;
 	unsigned long filelen = 0, unit_len;
 	struct sysinfo si;
 	uint32 ofs;
@@ -354,11 +335,7 @@ int mtd_write_main_old(int argc, char *argv[])
 	fseek( f, 0, SEEK_SET);
 	_dprintf("*** %s: file len=0x%lu\n", __FUNCTION__, filelen);
 
-#ifdef TCONFIG_BCMARM
 	if ((mf = mtd_open_old(dev, &mi)) < 0) {
-#else
-	if ((mf = mtd_open(dev, &mi)) < 0) {
-#endif
 		snprintf(msg_buf, sizeof(msg_buf), "Error opening MTD device. (errno %d (%s))", errno, strerror(errno));
 		error = msg_buf;
 		goto ERROR;
@@ -506,7 +483,7 @@ int mtd_write_main(int argc, char *argv[])
 	char *buf = NULL;
 	const char *error;
 	uint32 total;
-	uint32 n;
+	size_t  n;
 	struct sysinfo si;
 	uint32 ofs;
 	char c;
@@ -606,7 +583,7 @@ int mtd_write_main(int argc, char *argv[])
 
 		/* read (formatted) Netgear CHK header (now that we know how long it is) */
 		// rewind(f); /* disabled, not working for some reason? Adjust structure above to account for this */
-		if (safe_fread(&netgear_hdr, 1, n-sizeof(sig)-sizeof(n), f) != (int) (n-sizeof(sig)-sizeof(n))) {
+		if (safe_fread(&netgear_hdr, 1, n-sizeof(sig)-sizeof(n), f) != (n-sizeof(sig)-sizeof(n))) {
 			goto ERROR;
 		}
 		else
@@ -618,7 +595,7 @@ int mtd_write_main(int argc, char *argv[])
 			error = "Not enough memory";
 			goto ERROR;
 		}
-		if (safe_fread(buf, 1, n, f) != (int) n) {
+		if (safe_fread(buf, 1, n, f) != n) {
 			goto ERROR;
 		}
 		free(buf);
@@ -759,7 +736,7 @@ int mtd_write_main(int argc, char *argv[])
 
 	for (ei.start = 0; ei.start < total; ei.start += ei.length) {
 		n = MIN(ei.length, trx.len) - ofs;
-		if (safe_fread(buf + ofs, 1, n, f) != (int) n) {
+		if (safe_fread(buf + ofs, 1, n, f) != n) {
 			error = "Error reading file";
 			break;
 		}

@@ -72,9 +72,9 @@ BEGIN {
 #
 {
     # Cached static variable, Perl 5.0-compatible.
-    my $is_win = $^O eq 'MSWin32'
-              || $^O eq 'cygwin'
-              || $^O eq 'msys';
+    my $is_win = $^O eq 'MSWin32' ||
+                 $^O eq 'cygwin' ||
+                 $^O eq 'msys';
 
     # Returns boolean true if OS is any form of Windows.
     sub os_is_win {
@@ -173,8 +173,8 @@ sub exe_ext {
     if($ENV{'CURL_TEST_EXE_EXT'}) {
         return $ENV{'CURL_TEST_EXE_EXT'};
     }
-    if($ENV{'CURL_TEST_EXE_EXT_'.$component}) {
-        return $ENV{'CURL_TEST_EXE_EXT_'.$component};
+    if($ENV{'CURL_TEST_EXE_EXT_' . $component}) {
+        return $ENV{'CURL_TEST_EXE_EXT_' . $component};
     }
     if($^O eq 'MSWin32' || $^O eq 'cygwin' || $^O eq 'msys' ||
        $^O eq 'dos' || $^O eq 'os2') {
