@@ -1,6 +1,6 @@
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1560,15 +1560,25 @@
+@@ -1561,15 +1561,25 @@
  #endif
  
  /* log.c */
@@ -70,7 +70,7 @@
  static void log_packet(char *type, void *addr, unsigned char *ext_mac, 
  		       int mac_len, char *interface, char *string, char *err, u32 xid)
  {
-@@ -1970,6 +1978,7 @@
+@@ -1972,6 +1980,7 @@
        start += start[1] + 2;
      }
  }
