@@ -539,6 +539,7 @@ const defaults_t defaults[] = {
 
 	{ "lan_state",			"1"				},	/* Show Ethernet LAN ports state (0|1) */
 	{ "lan_desc",			"1"				},	/* Show Ethernet LAN ports state (0|1) */
+	{ "eth_desc", 			""				},	/* Ethernet port custom descriptions (MAX_PORT_ID+1 entries, separated by %) */
 	{ "lan_invert",			"0"				},	/* Invert Ethernet LAN ports state (0|1) */
 
 	{ "mwan_num",			"1"				},
