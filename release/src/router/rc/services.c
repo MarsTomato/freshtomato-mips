@@ -1946,10 +1946,8 @@ void start_ntpd(void)
 	FILE *f;
 	char *servers, *ptr;
 	const char *ntp_server;
-	int servers_len = 0, ntp_updates_int = 0, index = 2, i;
+	int servers_len = 0, ntp_updates_int = 0, index = 2, ret;
 	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL, NULL, NULL }; /* -ddddddd -q -S /sbin/ntpd_synced -l */
-	char *sh_argv[12];
-	int sh_index;
 
 	if (serialize_restart("ntpd", 1))
 		return;
@@ -2007,29 +2005,20 @@ void start_ntpd(void)
 
 			if (nvram_get_int("ntpd_enable")) /* enable local NTP server */
 				ntpd_argv[index++] = "-l";
+
+			/* add daily restart to cron */
+			eval("cru", "a", "ntpd_restart", "11 4 * * * /sbin/ntpd_restart");
 		}
 
-		sh_index = 0;
-		sh_argv[sh_index++] = "/bin/sh";
-		sh_argv[sh_index++] = "-c";
-		sh_argv[sh_index++] = "ulimit -c 0 -e 15 -r 15 -l 64 -m 8192 -n 512 -s 8192 -u 16 -v 8192; exec \"$@\"";
-		sh_argv[sh_index++] = "ntpd";
-
-		for (i = 0; ntpd_argv[i]; ++i)
-			sh_argv[sh_index++] = ntpd_argv[i];
-
-		sh_argv[sh_index] = NULL;
-
-		_eval(sh_argv, NULL, 0, NULL);
+		ret = _eval(ntpd_argv, NULL, 0, NULL);
 
 		if (!nvram_contains_word("debug_norestart", "ntpd"))
 			pid_ntpd = -2;
 
-		sleep(1);
-		if (pidof("ntpd") > 0)
-			logmsg(LOG_INFO, "ntpd is started");
-		else
+		if (ret)
 			logmsg(LOG_ERR, "starting ntpd failed ...");
+		else
+			logmsg(LOG_INFO, "ntpd is started");
 	}
 }
 
@@ -2037,6 +2026,9 @@ void stop_ntpd(void)
 {
 	if (serialize_restart("ntpd", 0))
 		return;
+
+	/* always try to remove from cron */
+	eval("cru", "d", "ntpd_restart");
 
 	pid_ntpd = -1;
 	if (pidof("ntpd") > 0) {
@@ -2109,6 +2101,14 @@ int ntpd_synced_main(int argc, char *argv[])
 
 	fprintf(file,"%s", message);
 	fclose(file);
+	return 0;
+}
+
+int ntpd_restart_main(int argc, char *argv[])
+{
+	logmsg(LOG_INFO, "ntpd: daily service restart");
+	stop_ntpd();
+	start_ntpd();
 	return 0;
 }
 
