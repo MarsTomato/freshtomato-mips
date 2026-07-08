@@ -76,6 +76,7 @@
 char *blob = NULL;
 char ifname[16];
 static int mdu_http_force_af = 0;
+static int mdu_addr_cache_cold = 0;
 char sPrefix[8];
 int error_exitcode = 1;
 int g_argc;
@@ -123,6 +124,7 @@ static int mdu_mwan_route_enabled(void)
 	return (ifname[0] != '\0') && (nvram_get_int("mwan_num") > 1);
 }
 
+#if defined(USE_LIBCURL) || defined(TCONFIG_IPV6)
 static int mdu_http_af(void)
 {
 	if (mdu_http_force_af)
@@ -133,6 +135,7 @@ static int mdu_http_af(void)
 
 	return 0;
 }
+#endif /* USE_LIBCURL || TCONFIG_IPV6 */
 
 static int mdu_addr_family(const char *ip, char *normalized, size_t normalized_sz)
 {
@@ -182,7 +185,7 @@ static int mdu_ddns_auto_af(void)
 
 	return AF_INET;
 }
-#endif
+#endif /* TCONFIG_IPV6 */
 
 static int mdu_eval(const char *cmd, const char *path)
 {
@@ -802,7 +805,6 @@ static int mdu_resolve_ip(const unsigned int ssl, const char *host, char *ip_buf
 
 	return 0;
 }
-
 #endif /* USE_LIBCURL */
 
 static long _http_req(const unsigned int ssl, int static_host, const char *host, const char *req, const char *query, const char *header, int auth, char *data, char **body)
@@ -1428,6 +1430,9 @@ static const char *get_address_checked(int want_af)
 #endif
 
 	set_addr_cache_name(cache_name, sizeof(cache_name), want_af);
+	if (!f_exists(cache_name))
+		mdu_addr_cache_cold = 1;
+
 	if (read_tmaddr(cache_name, &et, addr, sizeof(addr))) {
 		if ((et > ut) && ((et - ut) <= DDNS_IP_CACHE) && (mdu_addr_family(addr, NULL, 0) == want_af)) {
 #ifdef TCONFIG_IPV6
@@ -2500,6 +2505,8 @@ static void check_cookie(void)
 
 	logmsg(LOG_DEBUG, "*** %s: IN", __FUNCTION__);
 
+	mdu_addr_cache_cold = 0;
+
 	if (((c = get_option("cookie")) == NULL) || (!read_tmaddr(c, &tm, addr, sizeof(addr)))) {
 		logmsg(LOG_DEBUG, "*** %s: no cookie", __FUNCTION__);
 		return;
@@ -2507,6 +2514,10 @@ static void check_cookie(void)
 
 	if ((c = get_update_address(0)) == NULL) {
 		logmsg(LOG_DEBUG, "*** %s: no address specified", __FUNCTION__);
+		return;
+	}
+	if (mdu_addr_cache_cold) {
+		logmsg(LOG_DEBUG, "*** %s: cold external checker cache, ignoring cookie", __FUNCTION__);
 		return;
 	}
 	if (strcmp(c, addr) != 0) {
