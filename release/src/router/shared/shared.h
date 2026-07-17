@@ -467,6 +467,11 @@ extern char *shrink_space(char *dest, const char *src, int n);
 #if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
  extern int getMTD(const char *name); /* Find partition with defined name and return partition number as an integer */
 #endif
+#ifdef TCONFIG_WIREGUARD
+extern int wg_status(char *iface);
+#endif
+extern int bwlimit_status(void);
+extern int qos_status(void);
 
 /* mdu.c/ddns.c */
 #define MDU_STOP_FN		"/var/lib/mdu/mdu-stop"

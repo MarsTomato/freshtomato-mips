@@ -20,31 +20,30 @@
  * MA 02111-1307 USA
  *
  */
+/*
+ * Compatibility shim for BusyBox >= 1.38.
+ *
+ * BusyBox commit 3e8010196325 moved UUID DCE formatting from
+ * util-linux/volume_id/util*.c to libbb/xfuncs_printf.c.
+ *
+ * FreshTomato's libshared.so links selected volume_id objects directly,
+ * without linking BusyBox libbb. Provide the tiny formatter here so the
+ * volume_id objects can be linked into libshared.so.
+ */
 
+#include <stdint.h>
+#include <stdio.h>
 
-#include "tomato.h"
-
-#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
-#define LOGMSG_NVDEBUG	"wg_debug"
-
-
-int wg_status(char *iface)
+void __attribute__((visibility("hidden")))
+format_uuid_DCE_37_chars(char *dst37, const uint8_t *buf)
 {
-	FILE *fp;
-	char buffer[BUF_SIZE_64];
-	int status = 0;
-
-	memset(buffer, 0, BUF_SIZE_64);
-	snprintf(buffer, BUF_SIZE_64, "/sys/class/net/%s/operstate", iface);
-
-	if ((fp = fopen(buffer, "r"))) {
-		fgets(buffer, BUF_SIZE_64, fp);
-		buffer[strcspn(buffer, "\n")] = 0;
-		if ((strcmp(buffer, "unknown") == 0) || (strcmp(buffer, "up") == 0))
-			status = 1;
-
-		fclose(fp);
-	}
-
-	return status;
+	/* 37 = 16*2 hexdigits + 4 dashes + 1 NUL */
+	sprintf(dst37,
+		"%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+		buf[0], buf[1], buf[2], buf[3],
+		buf[4], buf[5],
+		buf[6], buf[7],
+		buf[8], buf[9],
+		buf[10], buf[11], buf[12], buf[13], buf[14], buf[15]
+	);
 }
