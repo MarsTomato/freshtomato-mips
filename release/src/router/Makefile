@@ -30,28 +30,26 @@ define unpatch_files
 endef
 
 define CMAKE_CrossOptions
- ( \
-  echo "SET(CMAKE_CROSSCOMPILING \"TRUE\")" >>$(1); \
-  echo "SET(TOP $(TOP))" >>$(1); \
-  echo "SET(CMAKE_SYSTEM_NAME Linux)" >>$(1); \
-  echo "SET(CMAKE_SYSTEM_VERSION $(LINUX_KERNEL))" >>$(1); \
-  echo "SET(CMAKE_SYSTEM $(PLATFORM))" >>$(1); \
-  echo "SET(CMAKE_SYSTEM_PROCESSOR $(ARCH))" >>$(1); \
-  echo "SET(CMAKE_C_COMPILER $(CC))" >>$(1); \
-  echo "SET(CMAKE_CXX_COMPILER $(CXX))" >>$(1); \
-  echo "SET(CMAKE_C_COMPILER_RANLIB $(RANLIB))" >>$(1); \
-  echo "SET(CMAKE_AR $(AR))" >>$(1); \
-  echo "SET(CMAKE_LINKER $(LD))" >>$(1); \
-  echo "SET(CMAKE_NM $(NM))" >>$(1); \
-  echo "SET(CMAKE_OBJCOPY $(OBJCOPY))" >>$(1); \
-  echo "SET(CMAKE_OBJDUMP $(OBJDUMP))" >>$(1); \
-  echo "SET(CMAKE_RANLIB $(RANLIB))" >>$(1); \
-  echo "SET(CMAKE_STRIP $(STRIP))" >>$(1); \
-  echo "SET(CMAKE_FIND_ROOT_PATH $(TOOLCHAIN))" >>$(1); \
-  echo "SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)" >>$(1); \
-  echo "SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER)" >>$(1); \
-  echo "SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)" >>$(1); \
- )
+	( \
+	echo "SET(CMAKE_CROSSCOMPILING TRUE)" >>$(1); \
+	echo "SET(TOP \"$(TOP)\")" >>$(1); \
+	echo "SET(CMAKE_SYSTEM_NAME Linux)" >>$(1); \
+	echo "SET(CMAKE_SYSTEM_VERSION \"$(LINUX_KERNEL)\")" >>$(1); \
+	echo "SET(CMAKE_SYSTEM_PROCESSOR \"$(ARCH)\")" >>$(1); \
+	echo "SET(CMAKE_C_COMPILER \"$(abspath $(TOOLCHAIN))/bin/$(notdir $(CC))\" CACHE FILEPATH \"\" FORCE)" >>$(1); \
+	echo "SET(CMAKE_CXX_COMPILER \"$(abspath $(TOOLCHAIN))/bin/$(notdir $(CXX))\" CACHE FILEPATH \"\" FORCE)" >>$(1); \
+	echo "SET(CMAKE_AR \"$(abspath $(TOOLCHAIN))/bin/$(notdir $(AR))\" CACHE FILEPATH \"\" FORCE)" >>$(1); \
+	echo "SET(CMAKE_LINKER \"$(abspath $(TOOLCHAIN))/bin/$(notdir $(LD))\" CACHE FILEPATH \"\" FORCE)" >>$(1); \
+	echo "SET(CMAKE_NM \"$(abspath $(TOOLCHAIN))/bin/$(notdir $(NM))\" CACHE FILEPATH \"\" FORCE)" >>$(1); \
+	echo "SET(CMAKE_OBJCOPY \"$(abspath $(TOOLCHAIN))/bin/$(notdir $(OBJCOPY))\" CACHE FILEPATH \"\" FORCE)" >>$(1); \
+	echo "SET(CMAKE_OBJDUMP \"$(abspath $(TOOLCHAIN))/bin/$(notdir $(OBJDUMP))\" CACHE FILEPATH \"\" FORCE)" >>$(1); \
+	echo "SET(CMAKE_RANLIB \"$(abspath $(TOOLCHAIN))/bin/$(notdir $(RANLIB))\" CACHE FILEPATH \"\" FORCE)" >>$(1); \
+	echo "SET(CMAKE_STRIP \"$(abspath $(TOOLCHAIN))/bin/$(notdir $(STRIP))\" CACHE FILEPATH \"\" FORCE)" >>$(1); \
+	echo "SET(CMAKE_FIND_ROOT_PATH \"$(abspath $(TOOLCHAIN))\")" >>$(1); \
+	echo "SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)" >>$(1); \
+	echo "SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER)" >>$(1); \
+	echo "SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)" >>$(1); \
+	)
 endef
 
 define meson_CrossOptions
@@ -248,7 +246,7 @@ ifeq ($(TCONFIG_BBT),)
 endif
 
 # set gcc mode for packages that don't compile in default one
-ifeq ($(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73),)
+ifeq ($(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73)$(CONFIG_TOOLCHAIN75),)
  GCC_CMODE := -std=gnu99
  GCC_CXXMODE := -std=gnu++98
 else
@@ -432,13 +430,17 @@ ifeq ($(TCONFIG_BCMARM),y)
  include $(SRCBASE)/makefiles/WLAN_Common.mk
  export BASEDIR := $(WLAN_TreeBaseA)
  export EXTRALIBS = -lgcc_s
- ifeq ($(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73),)
+ ifeq ($(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73)$(CONFIG_TOOLCHAIN75),)
   export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib
  else
   ifeq ($(CONFIG_TOOLCHAIN73),y)
    export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-7.3/usr/lib
   else
-   export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-5.3/usr/lib
+   ifeq ($(CONFIG_TOOLCHAIN75),y)
+    export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-7.5/usr/lib
+   else
+    export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-5.3/usr/lib
+   endif
   endif
  endif
  ifeq (2_6_36,$(LINUX_VERSION))
@@ -1397,7 +1399,7 @@ iptables-clean:
 iptables-1.8.x/stamp-h1:
 	$(call patch_files,iptables-1.8.x)
 	cd iptables-1.8.x && ./autogen.sh && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURCE -U CONFIG_NVRAM_SIZE $(if $(CONFIG_TOOLCHAIN73),-DCONFIG_TOOLCHAIN73,)" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURCE -U CONFIG_NVRAM_SIZE $(if $(CONFIG_TOOLCHAIN73),-DCONFIG_TOOLCHAIN73) $(if $(CONFIG_TOOLCHAIN75),-DCONFIG_TOOLCHAIN75)" \
 		CPPFLAGS="-Os -Wall -D_GNU_SOURCE $(if $(TCONFIG_CONNTRACK_TOOL),-I$(TOP)/libnfnetlink/include -I$(TOP)/libnetfilter_conntrack/include,)" \
 		LDFLAGS="$(if $(TCONFIG_CONNTRACK_TOOL),-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink -L$(TOP)/libnetfilter_conntrack/src/.libs -Wl$(comma)-rpath$(comma)$(TOP)/libnetfilter_conntrack/src/.libs \
 			-Wl$(comma)-rpath$(comma)$(TOP)/libmnl/staged/usr/lib,) -lrt" \
@@ -2148,7 +2150,7 @@ hotplug2:
 	@$(SEP)
 	$(call patch_files,hotplug2)
 	$(MAKE) -C $@ \
-		EXTRACFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(CONFIG_TOOLCHAIN53),-DCONFIG_TOOLCHAIN53) $(if $(CONFIG_TOOLCHAIN73),-DCONFIG_TOOLCHAIN73)" \
+		EXTRACFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(CONFIG_TOOLCHAIN53),-DCONFIG_TOOLCHAIN53) $(if $(CONFIG_TOOLCHAIN73),-DCONFIG_TOOLCHAIN73) $(if $(CONFIG_TOOLCHAIN75),-DCONFIG_TOOLCHAIN75)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 
 hotplug2-install:
@@ -2228,7 +2230,7 @@ spawn-fcgi/build:
 		--prefix=/usr \
 		-Dsysconfdir=/etc \
 		-Dlocalstatedir=/var \
-		-Dc_std=$(if $(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73),gnu11,gnu99) \
+		-Dc_std=$(if $(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73)$(CONFIG_TOOLCHAIN75),gnu11,gnu99) \
 		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		-Dc_link_args="-Wl,--gc-sections" \
 		-Doptimization=s \
@@ -3361,7 +3363,7 @@ tinc/build:
 		-Dlocalstatedir=/var \
 		-Dpkg_config_path="$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/lzo/staged/usr/lib/pkgconfig:$(TOP)/lz4/staged/usr/lib/pkgconfig:$(TOP)/$(OPENSSLDIR)/staged/usr/lib/pkgconfig" \
 		-Dbuildtype=release \
-		-Dc_std=$(if $(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73),gnu11,gnu99) \
+		-Dc_std=$(if $(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73)$(CONFIG_TOOLCHAIN75),gnu11,gnu99) \
 		-Dwarning_level=1 \
 		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -I$(TOP)/lzo/staged/usr/include -I$(TOP)/lz4/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		-Dc_link_args="-Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/lzo/staged/usr/lib -L$(TOP)/lz4/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread" \
@@ -4273,8 +4275,8 @@ glib2/build:
 			-I$(TOP)/libffi/staged/usr/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/gettext-tiny/staged/usr/include" \
 		-Dcpp_link_args="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -liconv -L$(TOP)/zlib/staged/usr/lib -lz -L$(TOP)/libffi/staged/usr/lib -lffi \
 			-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8 -L$(TOP)/gettext-tiny/staged/usr/lib" \
-		-Dc_std=$(if $(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73),gnu11,gnu99) \
-		-Dcpp_std=$(if $(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73),gnu++14,gnu++98) \
+		-Dc_std=$(if $(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73)$(CONFIG_TOOLCHAIN75),gnu11,gnu99) \
+		-Dcpp_std=$(if $(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73)$(CONFIG_TOOLCHAIN75),gnu++14,gnu++98) \
 		-Dwarning_level=1 \
 		-Doptimization=s \
 		-Ddebug=false \
