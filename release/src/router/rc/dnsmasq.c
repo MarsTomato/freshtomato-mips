@@ -200,10 +200,8 @@ static void write_tor_dns(FILE *f)
 
 	if (nvram_get_int("tor_enable") && nvram_get_int("dnsmasq_onion_support")) {
 		for (i = 1; i < BRIDGE_COUNT; i++) {
-			memset(buf, 0, sizeof(buf));
 			snprintf(buf, sizeof(buf), "br%d", i);
 			if (nvram_match("tor_iface", buf)) {
-				memset(buf, 0, sizeof(buf));
 				snprintf(buf, sizeof(buf), "lan%d_ipaddr", i);
 				t_ip = nvram_safe_get(buf);
 				break;
@@ -228,7 +226,6 @@ static void write_wan_dns(FILE *f, const int mwan_num)
 		get_wan_prefix(wan_unit, wan_prefix);
 
 		/* allow RFC1918 responses for server domain (fix connect PPTP/L2TP WANs) */
-		memset(key, 0, sizeof(key));
 		proto = get_wanx_proto(wan_prefix);
 		if (proto == WP_PPTP)
 			nv = nvram_safe_get(strlcat_r(wan_prefix, "_pptp_server_ip", key, sizeof(key)));
@@ -257,7 +254,6 @@ static void write_dhcp_ignore(FILE *f)
 
 	/* ignore DHCP requests from unknown devices for given LAN */
 	for (i = 0; i < BRIDGE_COUNT; i++) {
-		memset(buf, 0, sizeof(buf));
 		snprintf(buf, sizeof(buf), (i == 0 ? "dhcpd_ostatic" : "dhcpd%u_ostatic"), i);
 		if (nvram_get_int(buf))
 			fprintf(f, "dhcp-ignore=tag:br%u,tag:!known\n", i);
@@ -304,7 +300,6 @@ static void write_dhcp_ranges(FILE *f, int *do_dhcpd_hosts, int *do_dns_ptr, cha
 			(*do_dhcpd_hosts)++;
 
 			router_ip = nvram_safe_get(lanN_ipaddr);
-			memset(lan_base, 0, sizeof(lan_base));
 			strlcpy(lan_base, router_ip, sizeof(lan_base));
 			if ((p = strrchr(lan_base, '.')) != NULL)
 				*(p + 1) = 0;
@@ -317,7 +312,6 @@ static void write_dhcp_ranges(FILE *f, int *do_dhcpd_hosts, int *do_dns_ptr, cha
 			if (dhcp_lease <= 0)
 				dhcp_lease = 1440;
 
-			memset(sdhcp_lease, 0, buf_sz);
 			e = nvram_get("dhcpd_slt");
 			nval = (e && *e) ? atoi(e) : 0;
 			if (nval < 0)
@@ -399,6 +393,7 @@ static FILE *write_static_hosts(void)
 {
 	FILE *hf;
 	unsigned int i;
+	unsigned int mwan_num = mwan_active_num();
 	char tmp[32];
 	const char *router_ip, *hostname, *p;
 
@@ -412,8 +407,7 @@ static FILE *write_static_hosts(void)
 		else if ((hostname = nvram_safe_get("lan_hostname")) && (*hostname)) /* FIXME: it has to be implemented (lan_hostname is always empty) */
 			fprintf(hf, "%s %s\n", router_ip, hostname);
 #endif
-		for (i = 1; i <= MWAN_MAX; i++) {
-			memset(tmp, 0, sizeof(tmp));
+		for (i = 1; i <= mwan_num; i++) {
 			snprintf(tmp, sizeof(tmp), (i == 1 ? "wan" : "wan%u"), i);
 			p = get_wanip(tmp);
 			if ((!*p) || (strcmp(p, "0.0.0.0") == 0))
@@ -635,13 +629,10 @@ static void write_tftp_config(FILE *f)
 		           nvram_safe_get("dnsmasq_tftp_path"));
 
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			memset(key, 0, sizeof(key));
-			memset(lan_ifname, 0, sizeof(lan_ifname));
 			snprintf(key, sizeof(key), (i == 0 ? "dnsmasq_pxelan" : "dnsmasq_pxelan%u"), i);
 			snprintf(lan_ifname, sizeof(lan_ifname), (i == 0 ? "lan_ifname" : "lan%u_ifname"), i);
 
 			if (nvram_get_int(key) && strlen(nvram_safe_get(lan_ifname)) > 0) {
-				memset(lan_ip, 0, sizeof(lan_ip));
 				snprintf(lan_ip, sizeof(lan_ip), (i == 0 ? "lan_ipaddr" : "lan%u_ipaddr"), i);
 				fprintf(f, "dhcp-boot=pxelinux.0,,%s\n", nvram_safe_get(lan_ip));
 			}
@@ -737,9 +728,7 @@ void start_dnsmasq(void) {
 		return;
 	}
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
-		mwan_num = 1;
+	mwan_num = mwan_active_num();
 
 	write_basic_config(f);
 	write_tor_dns(f);
