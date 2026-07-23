@@ -421,7 +421,53 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	model = get_model();
 
 	/* check router model according to shared/led.c table, LED WHITE */
-	if ((model == MODEL_WRT54G) ||
+	if (
+#ifdef TCONFIG_BCMARM
+	    (model == MODEL_RTN18U)
+	    || (model == MODEL_R7000)
+	    || (model == MODEL_EX6200)
+	    || (model == MODEL_EX7000)
+	    || (model == MODEL_R6400)
+	    || (model == MODEL_R6400v2)
+	    || (model == MODEL_R6700v1)
+	    || (model == MODEL_R6700v3)
+	    || (model == MODEL_R6900)
+	    || (model == MODEL_XR300)
+	    || (model == MODEL_RTAC67U)
+	    || (model == MODEL_DSLAC68U)
+	    || (model == MODEL_RTAC68U)
+	    || (model == MODEL_RTAC68UV3)
+	    || (model == MODEL_RTAC66U_B1)
+	    || (model == MODEL_RTAC1900P)
+	    || (model == MODEL_RTAC56U)
+	    || (model == MODEL_DIR868L)
+	    || (model == MODEL_F9K1113v2_20X0)
+	    || (model == MODEL_F9K1113v2)
+	    || (model == MODEL_WS880)
+	    || (model == MODEL_R6200v2)
+	    || (model == MODEL_R6250)
+	    || (model == MODEL_AC1450)
+	    || (model == MODEL_R6300v2)
+	    || (model == MODEL_EA6350v1)
+	    || (model == MODEL_EA6350v2)
+	    || (model == MODEL_EA6400)
+	    || (model == MODEL_EA6700)
+	    || (model == MODEL_EA6900)
+	    || (model == MODEL_R1D)
+	    || (model == MODEL_WZR1750)
+#ifdef TCONFIG_BCM714
+	    || (model == MODEL_RTAC3100)
+	    || (model == MODEL_RTAC88U)
+#endif
+#ifdef TCONFIG_AC3200
+#ifdef TCONFIG_AC5300
+	    || (model == MODEL_RTAC5300)
+#endif
+	    || (model == MODEL_RTAC3200)
+	    || (model == MODEL_R8000)
+#endif
+#else /* !TCONFIG_BCMARM */
+	    (model == MODEL_WRT54G) ||
 	    (model == MODEL_WRTSL54GS) ||
 	    (model == MODEL_DIR320) ||
 	    (model == MODEL_WL1600GL) ||
@@ -431,8 +477,9 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    (model == MODEL_WRT160Nv3) ||
 	    (model == MODEL_WRT320N) ||
 	    (model == MODEL_WRT610Nv2) ||
-	    (model == MODEL_E4200) ||
-	    (model == MODEL_WNR3500LV2) ||
+	    (model == MODEL_E4200)
+#ifdef TCONFIG_BCMWL6
+	    || (model == MODEL_WNR3500LV2) ||
 	    (model == MODEL_WNDR4000) ||
 	    (model == MODEL_WNDR3400) ||
 	    (model == MODEL_F9K1102) ||
@@ -449,8 +496,10 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    (model == MODEL_TDN6) ||
 	    (model == MODEL_WNDR4500) ||
 	    (model == MODEL_WNDR4500V2) ||
-	    (model == MODEL_DIR865L))
-	{
+	    (model == MODEL_DIR865L)
+#endif /* TCONFIG_BCMWL6 */
+#endif /* TCONFIG_BCMARM */
+	) {
 		led(LED_WHITE, mode);
 	}
 
@@ -1025,16 +1074,28 @@ void set_radio(int on, int unit)
 	if (!on) {
 		if (unit == 0)
 			led(LED_WLAN, LED_OFF);
-		else
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+		if (unit == 1)
 			led(LED_5G, LED_OFF);
+#ifdef TCONFIG_AC3200
+		if (unit == 2)
+			led(LED_52G, LED_OFF);
+#endif /* TCONFIG_AC3200 */
+#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
 	}
 	else {
 		if (unit == 0)
 			led(LED_WLAN, LED_ON);
-		else
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+		if (unit == 1)
 			led(LED_5G, LED_ON);
+#ifdef TCONFIG_AC3200
+		if (unit == 2)
+			led(LED_52G, LED_ON);
+#endif /* TCONFIG_AC3200 */
+#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
 	}
-#else
+#else /* WL_BSS_INFO_VERSION >= 108 */
 	n = on ? 0 : WL_RADIO_SW_DISABLE;
 	wl_ioctl(nvram_safe_get(wl_nvname("ifname", unit, 0)), WLC_SET_RADIO, &n, sizeof(n));
 	if (!on) {
@@ -1043,7 +1104,7 @@ void set_radio(int on, int unit)
 	else {
 		led(LED_WLAN, LED_ON);
 	}
-#endif
+#endif /* WL_BSS_INFO_VERSION >= 108 */
 }
 
 int mtd_getinfo(const char *mtdname, int *part, int *size)
