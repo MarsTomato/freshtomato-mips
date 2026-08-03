@@ -1096,6 +1096,10 @@ static inline void usbled_proc(char *device, int add)
 {
 	char *p;
 	char param[32];
+
+	if (!device || !*device)
+		return;
+
 #if defined(CONFIG_BCMWL6) || defined (TCONFIG_BLINK)
 	DIR *usb1 = NULL;
 	DIR *usb2 = NULL;
@@ -1321,11 +1325,12 @@ void hotplug_usb(void)
 	int is_block = strcmp(getenv("SUBSYSTEM") ? : "", "block") == 0;
 	char *scsi_host = getenv("SCSI_HOST");
 
-	logmsg(LOG_DEBUG, "*** %s: %s hotplug INTERFACE=%s ACTION=%s PRODUCT=%s HOST=%s DEVICE=%s\n", __FUNCTION__, getenv("SUBSYSTEM") ? : "USB", interface, action, product, scsi_host, device);
+	logmsg(LOG_DEBUG, "*** %s: %s hotplug INTERFACE=%s ACTION=%s PRODUCT=%s HOST=%s DEVICE=%s\n", __FUNCTION__, getenv("SUBSYSTEM") ? : "USB", interface ? : "", action ? : "", product ? : "", scsi_host ? : "", device ? : "");
 
 	if (!nvram_get_int("usb_enable"))
 		return;
-	if ((!action) || ((!interface || !product) && !is_block))
+
+	if ((!action) || ((!interface || !product) && !is_block) || (is_block && !device))
 		return;
 
 	if (scsi_host)
@@ -1333,7 +1338,11 @@ void hotplug_usb(void)
 
 	if (!wait_action_idle(10)) return;
 
+	if (strcmp(action, "add") != 0 && strcmp(action, "remove") != 0)
+		return;
+
 	add = (strcmp(action, "add") == 0);
+
 	if (add && (strncmp(interface ? : "", "TOMATO/", 7) != 0)) {
 		if (!is_block && device)
 			logmsg(LOG_DEBUG, "*** %s: attached USB device %s [INTERFACE=%s PRODUCT=%s]", __FUNCTION__, device, interface, product);

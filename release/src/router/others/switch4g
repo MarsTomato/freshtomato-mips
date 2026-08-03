@@ -332,28 +332,25 @@ connect() {
 	COUNT=1
 
 	while [ "$DONE" -eq 0 ] && [ "$COUNT" -lt 6 ]; do
-		dhcpc-release $PREFIX
+		dhcpc-release "$PREFIX"
 		sleep 1
-		dhcpc-renew $PREFIX
-		sleep 1
+		dhcpc-renew "$PREFIX"
 
-		# is IF up?
-		if ifconfig "$IFA" &>/dev/null; then
-			# IF has an IP address assigned?
-			if ifconfig "$IFA" | grep -q 'inet addr'; then
+		# Check immediately, then wait up to two seconds for an address.
+		for WAIT in 0 1 2; do
+			if ifconfig "$IFA" 2>/dev/null | grep -q 'inet addr'; then
 				$LOGI "4G MODEM - WAN IFACE configured ($IFA)"
 				DONE=1
 				break
-			else
-				# TODO: IP is up only every 2nd attempt - temporary fix
-				dhcpc-release $PREFIX
-				sleep 1
-				dhcpc-renew $PREFIX
 			fi
-		fi
+
+			[ "$WAIT" -lt 2 ] && sleep 1
+		done
+
+		[ "$DONE" -eq 1 ] && break
+
 		$LOGI "4G MODEM - WAN IFACE not ready ($IFA) [$COUNT] ..."
 		COUNT=$((COUNT+1))
-		sleep 2
 	done
 
 	[ "$DONE" -eq 0 ] && {
@@ -496,7 +493,7 @@ switchMe() {
 searchWAN() {
 	# search WAN interface (usbX, ethX, wwanX)
 	WAN="" WANS="" # global
-	local FOUND=0 MODULE
+	local FOUND=0 MODULE WDM WDM_PATH
 
 	for MODULE in $MODULES; do
 		modprobe $MODULE
@@ -508,7 +505,18 @@ searchWAN() {
 
 			# check if interface has our MODULE
 			[ "$(grep -s ^DRIVER $PATHWAN/$WAN/device/uevent | cut -d "=" -f2)" = "$MODULE" ] && {
-				WANS="$WANS $WAN:$(ls $PATHWAN/$WAN/device/ | grep usb | cut -d ":" -f2)"
+				WDM=""
+				for WDM_PATH in \
+					"$PATHWAN/$WAN/device/usbmisc"/cdc-wdm[0-9]* \
+					"$PATHWAN/$WAN/device"/usb:cdc-wdm[0-9]*; do
+					[ -e "$WDM_PATH" ] || continue
+
+					WDM=${WDM_PATH##*/}
+					WDM=${WDM#usb:}
+					break
+				done
+
+				WANS="$WANS $WAN${WDM:+:$WDM}"
 				$LOGI "4G MODEM - found WAN(s): $WANS"
 				FOUND=1
 			}
@@ -541,6 +549,55 @@ isDiag() {
 	TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/tty?* 2>/dev/null | sed -e "s/.*\\/\\//.*/g" -e "s/.*\\//\\/dev\\//g" | tr "\n" " " | sed -e "s/  */ /g" -e "s,^ *,,; s, *$,,")
 }
 
+bindUsbserialGeneric() {
+	local BIND_VENDOR="$1" BIND_PRODUCT="$2"
+	local USBSERIAL_MODULE=0
+
+	[ -n "$BIND_VENDOR" ] && [ -n "$BIND_PRODUCT" ] || return 1
+
+	# Dynamic IDs work with current kernels and also cover configurations
+	# where the usbserial core is built in.
+	modprobe usbserial 2>/dev/null
+	if [ -w /sys/bus/usb-serial/drivers/generic/new_id ]; then
+		$LOGI "4G MODEM - binding usbserial generic driver ($BIND_VENDOR:$BIND_PRODUCT)"
+		echo "$BIND_VENDOR $BIND_PRODUCT" > /sys/bus/usb-serial/drivers/generic/new_id 2>/dev/null
+		sleep 1
+		isDiag # --> TTYS
+
+		[ -n "$TTYS" ] && {
+			$LOGI "4G MODEM - found: using usbserial generic driver"
+			return 0
+		}
+	fi
+
+	# Some older kernels expose generic/new_id but do not reprobe the
+	# generic driver correctly. If usbserial is a module, reload it with
+	# the legacy vendor/product parameters.
+	grep -q '^usbserial ' /proc/modules 2>/dev/null && USBSERIAL_MODULE=1
+	modprobe -r option 2>/dev/null
+
+	if [ "$USBSERIAL_MODULE" -eq 1 ]; then
+		modprobe -r usbserial 2>/dev/null
+
+		# Do not rely on the modprobe exit status. Some older implementations
+		# return an error even though the module has been removed.
+		if ! grep -q '^usbserial ' /proc/modules 2>/dev/null; then
+			$LOGI "4G MODEM - loading usbserial module ($BIND_VENDOR:$BIND_PRODUCT)"
+			modprobe usbserial vendor=0x$BIND_VENDOR product=0x$BIND_PRODUCT 2>/dev/null ||
+				insmod usbserial vendor=0x$BIND_VENDOR product=0x$BIND_PRODUCT
+			sleep 1
+			isDiag # --> TTYS
+
+			[ -n "$TTYS" ] && {
+				$LOGI "4G MODEM - found: using usbserial module"
+				return 0
+			}
+		fi
+	fi
+
+	return 1
+}
+
 searchDiag() {
 	DEVNR=""
 	local TTYS="" UQMIRET="" UQMIPID=""
@@ -554,37 +611,30 @@ searchDiag() {
 		non-hilink|huawei-non-hilink|hw-ether)
 			isDiag # --> TTYS
 
+			# Prefer the dedicated modem serial driver before falling back to
+			# the generic usbserial driver.
 			if [ -z "$TTYS" ]; then
-				if [ "$(lsmod | grep usbserial | wc -l)" -gt 0 ] && [ -n "$VENDOR" ] && [ -n "$PRODUCT" ]; then
-					$LOGI "4G MODEM - add ($VENDOR:$PRODUCT) to already loaded usbserial module"
-					echo "$VENDOR $PRODUCT" > /sys/bus/usb-serial/drivers/generic/new_id
-				elif [ -n "$VENDOR" ] && [ -n "$PRODUCT" ]; then
-					$LOGI "4G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
-					insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
+				modprobe option 2>/dev/null
+				sleep 1
+				isDiag # --> TTYS
+			fi
+
+			if [ -z "$TTYS" ]; then
+				if [ -n "$VENDOR" ] && [ -n "$PRODUCT" ]; then
+					bindUsbserialGeneric "$VENDOR" "$PRODUCT"
 				else
-					# VENDOR/PRODUCT unknown, so try for every possible device...
+					# VENDOR/PRODUCT unknown, so try every possible device.
 					for DEVICENAME in $(ls "$PATHDIAG"/ | grep -v ":" | grep "-"); do
 						PATHDEV="$PATHDIAG/$DEVICENAME"
-						[ -f $PATHDEV/idVendor ] && [ -f $PATHDEV/idProduct ] && [ -f $PATHDEV/uevent ] || continue # skip
+						[ -f "$PATHDEV/idVendor" ] && [ -f "$PATHDEV/idProduct" ] && [ -f "$PATHDEV/uevent" ] || continue # skip
 
-						VENDOR=$(cat "$PATHDEV"/idVendor 2>/dev/null)	# vendor
-						PRODUCT=$(cat "$PATHDEV"/idProduct 2>/dev/null)	# product
-						$LOGI "4G MODEM - try to load usbserial module ($VENDOR:$PRODUCT) for device $DEVICENAME ..."
+						VENDOR=$(cat "$PATHDEV/idVendor" 2>/dev/null)	# vendor
+						PRODUCT=$(cat "$PATHDEV/idProduct" 2>/dev/null)	# product
+						$LOGI "4G MODEM - try USB serial drivers ($VENDOR:$PRODUCT) for device $DEVICENAME ..."
 
-						modprobe -r usbserial
-						insmod usbserial vendor=0x$VENDOR product=0x$PRODUCT
-						sleep 1
-						isDiag # --> TTYS
-						[ -n "$TTYS" ] && {
-							# found
-							$LOGI "4G MODEM - found: using usbserial module"
-							break
-						}
+						bindUsbserialGeneric "$VENDOR" "$PRODUCT" && break
 					done
 				fi
-				sleep 1
-
-				isDiag # --> TTYS
 			fi
 
 			if [ -n "$TTYS" ]; then
@@ -596,7 +646,10 @@ searchDiag() {
 			fi
 		;;
 		qmi_wwan)
-			TTYS=$(ls -d $PATHDIAG/$DEVICENAME/${DEVICENAME}*/usb:cdc-wdm?* 2>/dev/null | sed -e "s/.*\\/\\//.*/g" -e "s/.*://g")
+			TTYS=$(ls -d \
+				"$PATHDIAG/$DEVICENAME"/"${DEVICENAME}"*/usbmisc/cdc-wdm[0-9]* \
+				"$PATHDIAG/$DEVICENAME"/"${DEVICENAME}"*/usb:cdc-wdm[0-9]* \
+				2>/dev/null | sed -e 's|.*/||' -e 's/^usb://' | sort -u)
 
 			if [ -n "$TTYS" ]; then
 				$LOGI "4G MODEM - DIAG(s) found ($TTYS)"
@@ -682,7 +735,7 @@ modemReset() {
 
 setPIN() {
 	local PIN=$(NG "$PREFIX"_modem_pin)
-	local IS_DONE=0 COUNT=1 PIN_STATUS PIN_VERIFY_TRIES PIN_EXT_STATUS=0 PINVAL STATUS
+	local IS_DONE=0 COUNT=1 PIN_STATUS PIN_VERIFY_TRIES PIN_EXT_STATUS=0 PINVAL SIM_STATE STATUS
 
 	$LOGI "4G MODEM - waiting for SIM initialization"
 
@@ -752,32 +805,40 @@ setPIN() {
 				fi
 			done
 
-			# check if UIM application is stuck in illegal state
+			# Check the UIM state first, then fall back to the legacy PIN status.
+			# Some modems report an illegal or unsupported UIM state even though
+			# the legacy DMS command returns a valid SIM status.
 			COUNT=1
 			while true; do
-				STATUS=$(uqmiCall "-t 2000 --uim-get-sim-state" | cut -d "," -f2 | cut -d ":" -f2 | tr -d '"')
+				STATUS=$(uqmiCall "-t 2000 --uim-get-sim-state")
+				SIM_STATE=$(echo "$STATUS" | sed -n 's/.*"card_application_state"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
-				# SIM card is either completely absent or state is labeled as illegal
-				# try to power-cycle the SIM card to recover from this state
-				if [ -z "$STATUS" ] || [ "$STATUS" = "illegal" ]; then
-					$LOGI "4G MODEM - SIM in illegal state: Power-cycling SIM"
+				[ -n "$SIM_STATE" ] && [ "$SIM_STATE" != "illegal" ] && break
 
-					# try to reset SIM application
-					uqmiCall "-t 1000 --uim-power-off --uim-slot 1"
-					sleep 3
-					uqmiCall "-t 1000 --uim-power-on --uim-slot 1"
+				STATUS=$(uqmiCall "-t 1000 --get-pin-status")
+				PIN_STATUS=$(echo "$STATUS" | sed -n 's/.*"pin1_status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
-					if [ "$COUNT" -lt 10 ]; then
-						COUNT=$((COUNT+1))
-						sleep 5
-						continue
-					fi
+				case "$PIN_STATUS" in
+					disabled|blocked|not_verified|verified)
+						break
+					;;
+				esac
 
-					# recovery failed
-					wayOut "4G MODEM - SIM recovery failed!"
-				else
-					break
+				$LOGI "4G MODEM - SIM state invalid (${SIM_STATE:-unknown}): Power-cycling SIM"
+
+				# try to reset SIM application
+				uqmiCall "-t 1000 --uim-power-off --uim-slot 1"
+				sleep 3
+				uqmiCall "-t 1000 --uim-power-on --uim-slot 1"
+
+				if [ "$COUNT" -lt 10 ]; then
+					COUNT=$((COUNT+1))
+					sleep 5
+					continue
 				fi
+
+				# recovery failed
+				wayOut "4G MODEM - SIM recovery failed!"
 			done
 
 			# verify pin
