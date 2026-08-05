@@ -251,7 +251,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Status</div>
+<div class="section-title">Samba Status</div>
 <div class="section">
 	<div class="fields">
 		<span id="_samba_notice"></span><input type="button" id="_samba_button" value="">

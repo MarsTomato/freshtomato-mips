@@ -223,7 +223,7 @@ sub fixDyn
 	fixDynDep("minidlna", "libid3tag.so.0.16.4");
 	fixDynDep("minidlna", "libexif.so.12");
 	fixDynDep("minidlna", "libFLAC.so.14.0.0");
-	fixDynDep("minidlna", "libsqlite3.so.3.53.3");
+	fixDynDep("minidlna", "libsqlite3.so.3.53.4");
 	fixDynDep("mysql", "libz.so.1");
 	fixDynDep("mysqld", "libz.so.1");
 	fixDynDep("mysqldump", "libz.so.1");
@@ -290,7 +290,7 @@ sub fixDyn
 	}
 	fixDynDep("php-cgi", "libpng16.so.16.58.0");
 	fixDynDep("php-cgi", "libiconv.so.2.7.1");
-	fixDynDep("php-cgi", "libsqlite3.so.3.53.3");
+	fixDynDep("php-cgi", "libsqlite3.so.3.53.4");
 	if ($openssldir eq "openssl-3.0") {
 		fixDynDep("php-cgi", "libcurl.so.4.8.0");
 	}
@@ -311,7 +311,7 @@ sub fixDyn
 	}
 	fixDynDep("php-cli", "libpng16.so.16.58.0");
 	fixDynDep("php-cli", "libiconv.so.2.7.1");
-	fixDynDep("php-cli", "libsqlite3.so.3.53.3");
+	fixDynDep("php-cli", "libsqlite3.so.3.53.4");
 	if ($openssldir eq "openssl-3.0") {
 		fixDynDep("php-cli", "libcurl.so.4.8.0");
 	}
@@ -332,7 +332,7 @@ sub fixDyn
 	}
 	fixDynDep("php-fpm", "libpng16.so.16.58.0");
 	fixDynDep("php-fpm", "libiconv.so.2.7.1");
-	fixDynDep("php-fpm", "libsqlite3.so.3.53.3");
+	fixDynDep("php-fpm", "libsqlite3.so.3.53.4");
 	if ($openssldir eq "openssl-3.0") {
 		fixDynDep("php-fpm", "libcurl.so.4.8.0");
 	}
@@ -774,7 +774,7 @@ genSO("${root}/usr/lib/libe2p.so.2.3", "${router}/e2fsprogs/lib/libe2p.a", "${st
 genSO("${root}/usr/lib/libcom_err.so.2.1", "${router}/e2fsprogs/lib/libcom_err.a", "${stripshared}", "-L${router}/e2fsprogs/lib");
 
 #genSO("${root}/usr/lib/libipset.so.11.1.0", "${router}/ipset/lib/.libs/libipset.a", "${stripshared}"); # (deleted)
-#genSO("${root}/usr/lib/libffi.so.8.2.0", "${router}/libffi/.libs/libffi.a", "${stripshared}"); # (deleted)
+#genSO("${root}/usr/lib/libffi.so.8.4.1", "${router}/libffi/.libs/libffi.a", "${stripshared}"); # (deleted)
 
 # do not add (!): libcap-ng, libzip, libsqlite3, libebtc, libiptc, libxtables, libip4tc, libip6tc, libglib-1, libglib-2, ...
 

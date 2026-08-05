@@ -1884,11 +1884,11 @@ sqlite: sqlite/Makefile
 
 sqlite-install:
 ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
-	install -D sqlite/staged/usr/lib/libsqlite3.so.3.53.3 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.3
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.3
+	install -D sqlite/staged/usr/lib/libsqlite3.so.3.53.4 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.4
+	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.3.53.4
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
-		ln -sf libsqlite3.so.3.53.3 libsqlite3.so.0 && \
-		ln -sf libsqlite3.so.3.53.3 libsqlite3.so
+		ln -sf libsqlite3.so.3.53.4 libsqlite3.so.0 && \
+		ln -sf libsqlite3.so.3.53.4 libsqlite3.so
 endif
 	@true
 
@@ -1945,6 +1945,7 @@ flac-clean:
 	$(call unpatch_files,flac)
 
 libjpeg-turbo/build/Makefile:
+	$(call patch_files,libjpeg-turbo)
 	@rm -rf libjpeg-turbo/build && rm -f libjpeg-turbo/jconfig.h && mkdir -p libjpeg-turbo/build
 	cd libjpeg-turbo/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
@@ -1976,6 +1977,7 @@ libjpeg-turbo-clean:
 	@rm -rf libjpeg-turbo/build
 	@rm -rf libjpeg-turbo/staged
 	@rm -f libjpeg-turbo/jconfig.h
+	$(call unpatch_files,libjpeg-turbo)
 
 libexif/stamp-h1:
 	cd libexif && autoreconf -fsi && \
@@ -4252,9 +4254,9 @@ libffi: libffi/stamp-h1
 
 libffi-install:
 ifeq ($(TCONFIG_IRQBALANCE),y)
-	install -D $(TOP)/libffi/.libs/libffi.so.8.3.1 $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.3.1
-	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.3.1
-	cd $(INSTALLDIR)/libffi/usr/lib && ln -sf libffi.so.8.3.1 libffi.so.8 && ln -sf libffi.so.8.3.1 libffi.so
+	install -D $(TOP)/libffi/.libs/libffi.so.8.4.1 $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.4.1
+	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.4.1
+	cd $(INSTALLDIR)/libffi/usr/lib && ln -sf libffi.so.8.4.1 libffi.so.8 && ln -sf libffi.so.8.4.1 libffi.so
 endif
 	@true
 
