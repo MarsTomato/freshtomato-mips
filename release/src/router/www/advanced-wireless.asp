@@ -238,7 +238,10 @@ function init() {
 /* BCMWL6-END */
 				{ title: 'Bluetooth Coexistence', name: 'wl'+u+'_btc_mode', type: 'select',
 					options: [['0', 'Disable *'],['1', 'Enable'],['2', 'Preemption']],
-					value: nvram['wl'+u+'_btc_mode'], hidden: (nvram['wl'+u+'_nband'] == 1) },
+/* RTNPLUS-BEGIN */
+					hidden: (nvram['wl'+u+'_nband'] == 1),
+/* RTNPLUS-END */
+					value: nvram['wl'+u+'_btc_mode'] },
 				{ title: 'Distance / ACK Timing', name: 'f_wl'+u+'_distance', type: 'text', maxlen: 5, size: 7,
 					suffix: ' <small>meters<\/small>&nbsp;&nbsp;<small>(range: 0 - 99999; 0 = use default)<\/small>',
 						value: (nvram['wl'+u+'_distance'] == '') ? '0' : nvram['wl'+u+'_distance'] },
@@ -283,7 +286,11 @@ function init() {
 					options: [['0','Auto *'],['1000000','1 Mbps'],['2000000','2 Mbps'],['5500000','5.5 Mbps'],['6000000','6 Mbps'],['9000000','9 Mbps'],['11000000','11 Mbps'],['12000000','12 Mbps'],['18000000','18 Mbps'],['24000000','24 Mbps'],['36000000','36 Mbps'],['48000000','48 Mbps'],['54000000','54 Mbps']],
 					value: nvram['wl'+u+'_rate'] },
 				{ title: 'Interference Mitigation', name: 'wl'+u+'_mitigation', type: 'select',
-					options: [['0','None *'],['1','Non-WLAN'],['2','WLAN Manual'],['3','WLAN Auto'],['4','WLAN Auto with Noise Reduction']],
+					options: [['0','None *'],['1','Non-WLAN'],['2','WLAN Manual'],['3','WLAN Auto']
+/* RTNPLUS-BEGIN */
+						,['4','WLAN Auto with Noise Reduction']
+/* RTNPLUS-END */
+					],
 					value: nvram['wl'+u+'_mitigation'] },
 				{ title: 'WMM', name: 'wl'+u+'_wme', type: 'select', options: [['auto','Auto'],['off','Disable'],['on','Enable *']], value: nvram['wl'+u+'_wme'] },
 				{ title: 'No ACK', name: 'wl'+u+'_wme_no_ack', indent: 2, type: 'select', options: [['off','Disable *'],['on','Enable']],

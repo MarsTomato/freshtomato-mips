@@ -202,6 +202,7 @@ ifeq ($(filter y,$(TCONFIG_BLINK) $(TCONFIG_BCMARM)),)
 	sed -i $(INSTALLDIR)/www/basic-ipv6.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-wlanvifs.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 else
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/RTNPLUS-NO-BEGIN/,/RTNPLUS-NO-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-wlanvifs.asp -e "/RTNPLUS-NO-BEGIN/,/RTNPLUS-NO-END/d"
