@@ -546,15 +546,39 @@ function init() {
 			{ title: 'UI files path', name: 'web_dir', type: 'select',
 				options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], suffix: '<br>&nbsp;<small>Please be sure of your decision before change this settings!<\/small>', value: nvram.web_dir },
 			{ title: 'Theme UI', name: 'web_css', type: 'select',
-				options: [['default','Default'],['red','Tomato'],
+				options: [
+					  ['default','Default'],
+/* BCMARM-BEGIN */
+					  ['usbred','USB Red'],
+/* BCMARM-END */
+					  ['red','Tomato'],
+/* BCMARM-BEGIN */
+					  ['black','Black'],
+					  ['blue','Blue'],
+					  ['bluegreen','Blue &amp; Green (Lighter)'],
+					  ['bluegreen2','Blue &amp; Green (Darker)'],
+					  ['brown','Brown'],
+					  ['cyan','Cyan'],
+					  ['olive','Olive'],
+					  ['pumpkin','Pumpkin'],
+					  ['asus','Asus RT-N16'],
+					  ['rtn66u','Asus RT-N66U'],
+					  ['asusred','Asus Red'],
+					  ['linksysred','Linksys Red'],
+/* BCMARM-END */
 /* ADVTHEMES-BEGIN */
-					  ['at-dark','Advanced Dark'],['at-red','Advanced Red'],['at-blue','Advanced Blue'],['at-green','Advanced Green'],
+					  ['at-dark','Advanced Dark'],
+					  ['at-red','Advanced Red'],
+					  ['at-blue','Advanced Blue'],
+					  ['at-green','Advanced Green'],
 /* ADVTHEMES-END */
-					  ['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], 
+					  ['ext/custom','Custom (ext/custom.css)'],
+					  ['online','Online from TTB (TomatoThemeBase)']
+					],
 /* ADVTHEMES-BEGIN */
-					  suffix: '&nbsp;<small id="web_css_warn" style="display:none">requires a modern browser<\/small>',
+					suffix: '&nbsp;<small id="web_css_warn" style="display:none">requires a modern browser<\/small>',
 /* ADVTHEMES-END */
-					  value: nvram.web_css },
+					value: nvram.web_css },
 /* ADVTHEMES-BEGIN */
 				{ title: 'Dynamic BW/IPT/WL charts', indent: 2, name: 'f_web_adv_scripts', type: 'checkbox', suffix: '&nbsp;<small>JS based, supported only by modern browsers<\/small>', value: nvram.web_adv_scripts == 1 },
 /* ADVTHEMES-END */

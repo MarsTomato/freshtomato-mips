@@ -49,12 +49,34 @@ else if (last_wan_proto != nvram.wan_proto)
 	reloadPage();
 
 stats.flashsize = sysinfo.flashsize+' MB';
+/* BCMARM-BEGIN */
+stats.cpumhz = sysinfo.cpuclk+'-core)';
+/* BCMARM-END */
+/* BCMARM-NO-BEGIN */
 stats.cpumhz = sysinfo.cpuclk+' MHz';
+/* BCMARM-NO-END */
 stats.cputemp = sysinfo.cputemp+'°';
 stats.systemtype = sysinfo.systemtype;
 stats.cfeversion = sysinfo.cfeversion;
 stats.cpuload = ((sysinfo.loads[0] / 65536.0).toFixed(2)+'<small> / </small> '+(sysinfo.loads[1] / 65536.0).toFixed(2)+'<small> / </small>'+(sysinfo.loads[2] / 65536.0).toFixed(2));
 stats.uptime = sysinfo.uptime_s;
+/* BCMARM-BEGIN */
+stats.freqcpu = nvram.clkfreq;
+
+var total_jiffies = 0;
+var jiffylist = sysinfo.jiffies.split(' ');
+for (i = 0; i < jiffylist.length; ++i)
+	total_jiffies += parseInt(jiffylist[i]);
+
+var diff_idle = jiffylist[3] - lastjiffiesidle;
+var diff_total = total_jiffies - lastjiffiestotal;
+lastjiffiesusage = (1000*(diff_total-diff_idle)/diff_total)/10;
+
+lastjiffiestotal = total_jiffies;
+lastjiffiesidle = jiffylist[3];
+
+stats.cpupercent = lastjiffiesusage.toFixed(2)+'%<div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(lastjiffiesusage.toFixed(2))+';width:'+lastjiffiesusage.toFixed(2)+'%"></div></div></div>';
+/* BCMARM-END */
 /* RTNPLUS-BEGIN */
 stats.wlsense = sysinfo.wlsense;
 /* RTNPLUS-END */

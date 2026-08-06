@@ -18,14 +18,20 @@
 
 <script>
 
-//	<% nvram("sesx_led,sesx_b0,sesx_b1,sesx_b2,sesx_b3,sesx_script,script_brau,t_model,t_features"); %>
+//	<% nvram("stealth_mode,stealth_iled,blink_wl,sesx_led,sesx_b0,sesx_b1,sesx_b2,sesx_b3,sesx_script,script_brau,t_model,t_features"); %>
 
 var ses = features('ses');
+/* BCMARM-NO-BEGIN */
 var brau = features('brau');
 var aoss = features('aoss');
 var wham = features('wham');
+/* BCMARM-NO-END */
 
 function verifyFields(focused, quiet) {
+/* BCMARM-BEGIN */
+	var a = !E('_f_stealth_mode').checked;
+	E('_f_stealth_iled').disabled = a;
+/* BCMARM-END */
 	return 1;
 }
 
@@ -40,10 +46,26 @@ function save() {
 	if (fom._led2.checked) n |= 4;
 	if (fom._led3.checked) n |= 8;
 	fom.sesx_led.value = n;
+/* BCMARM-BEGIN */
+	fom.blink_wl.value = E('_f_blink_wl').checked ? 1 : 0;
+	fom.stealth_mode.value = E('_f_stealth_mode').checked ? 1 : 0;
+	fom.stealth_iled.value = E('_f_stealth_iled').checked ? 1 : 0;
+/* BCMARM-END */
 	form.submit(fom, 1);
 }
 
 function earlyInit() {
+/* BCMARM-BEGIN */
+	if (!ses) {
+		E('notice-msg').innerHTML = '<div id="notice">This feature is not supported on this router.<\/div>';
+		E('save-button').disabled = 1;
+		return;
+	}
+	else {
+		E('sesdiv').style.display = 'block';
+	}
+/* BCMARM-END */
+/* BCMARM-NO-BEGIN */
 	if ((!brau) && (!ses)) {
 		E('notice-msg').innerHTML = '<div id="notice">This feature is not supported on this router.<\/div>';
 		E('save-button').disabled = 1;
@@ -54,6 +76,7 @@ function earlyInit() {
 		if (brau) E('braudiv').style.display = 'block';
 		if ((wham) || (aoss) || (brau)) E('leddiv').style.display = 'block';
 	}
+/* BCMARM-NO-END */
 	insOvl();
 }
 </script>
@@ -74,6 +97,11 @@ function earlyInit() {
 
 <input type="hidden" name="_nextpage" value="admin-buttons.asp">
 <input type="hidden" name="sesx_led" value="0">
+<!-- BCMARM-BEGIN -->
+<input type="hidden" name="blink_wl">
+<input type="hidden" name="stealth_mode">
+<input type="hidden" name="stealth_iled">
+<!-- BCMARM-END -->
 
 <!-- / / / -->
 
@@ -103,6 +131,49 @@ function earlyInit() {
 
 <!-- / / / -->
 
+<!-- BCMARM-BEGIN -->
+	<div class="section-title">Stealth Mode</div>
+	<div class="section">
+		<script>
+			createFieldTable('', [
+				{ title: 'Enable Stealth Mode', name: 'f_stealth_mode', type: 'checkbox', value: (nvram.stealth_mode == '1'), suffix: '&nbsp;<small>(this option requires a reboot to become effective)<\/small>' },
+				{ title: 'Exclude INTERNET LED', name: 'f_stealth_iled', type: 'checkbox', value: (nvram.stealth_iled == '1') }
+			]);
+		</script>
+	</div>
+
+<!-- / / / -->
+
+	<div class="section-title">Startup LED</div>
+	<div class="section">
+		<script>
+			createFieldTable('', [
+				{ title: 'Amber', name: '_led0', type: 'checkbox', value: (nvram.sesx_led & 0x01) },
+				{ title: 'White', name: '_led1', type: 'checkbox', value: (nvram.sesx_led & 0x02) },
+				{ title: 'AOSS', name: '_led2', type: 'checkbox', value: (nvram.sesx_led & 0x04) },
+				{ title: 'Bridge', name: '_led3', type: 'checkbox', value: (nvram.sesx_led & 0x08) },
+				{ title: 'Enable blink', name: 'f_blink_wl', type: 'checkbox', value: (nvram.blink_wl == '1'), suffix: ' <small> (for WiFi)<\/small>' }
+			]);
+		</script>
+	</div>
+
+<!-- / / / -->
+
+	<div class="section-title">Notes</div>
+	<div class="section">
+		<i>Startup LED:</i><br>
+		<ul>
+			<li><b>Amber</b> - Enable LED Amber at Startup (No use case right now).</li>
+			<li><b>White</b> - Enable LED White (Internet LED) at Startup.</li>
+			<li><b>AOSS</b> - Enable LED AOSS (Power LED for Asus Router; Wifi Summary LED for Netgear Router) at Startup.</li>
+			<li><b>Bridge</b> - Enable LED Bridge (WAN & LAN Port X LED(s)) at Startup.</li>
+			<li><b>Enable blink</b> - Enable blink for WiFi LEDs.</li>
+			<li><b>Other hints</b> - LED function and blink support is router dependent. Check command <i>led [LED_NAME/help] [on/off]</i> for advanced LED control, see <a href="tools-shell.asp">Web Shell</a>.</li>
+		</ul>
+	</div>
+<!-- BCMARM-END -->
+
+<!-- BCMARM-NO-BEGIN -->
 	<div id="braudiv" style="display:none">
 		<div class="section-title">Bridge/Auto Switch</div>
 		<div class="section">
@@ -110,7 +181,7 @@ function earlyInit() {
 				createFieldTable('', [
 					{ title: 'Custom Script', indent: 2, name: 'script_brau', type: 'textarea', value: nvram.script_brau }
 				]);
-			</script>
+				</script>
 		</div>
 	</div>
 
@@ -125,10 +196,11 @@ function earlyInit() {
 					{ title: 'White SES', name: '_led1', type: 'checkbox', value: nvram.sesx_led & 2, hidden: !wham },
 					{ title: 'AOSS', name: '_led2', type: 'checkbox', value: nvram.sesx_led & 4, hidden: !aoss },
 					{ title: 'Bridge', name: '_led3', type: 'checkbox', value: nvram.sesx_led & 8, hidden: !brau }
-				]);
+					]);
 			</script>
 		</div>
 	</div>
+<!-- BCMARM-NO-END -->
 
 <!-- / / / -->
 

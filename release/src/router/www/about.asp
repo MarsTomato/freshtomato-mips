@@ -103,7 +103,7 @@ function init() {
 	- Ethernet Ports State<br>
 	- Extended MOTD (written by @Monter, modified by @Shibby)<br>
 	- Webmon Backup Script<br>
-	<i>Copyright (C) 2011-2013 Michał Rupental</i><br>
+	<i>Copyright (C) 2011-2014 Michał Rupental</i><br>
 	<a href="https://openlinksys.info" class="new_window">https://openlinksys.info</a><br>
 	<br>
 
@@ -118,7 +118,7 @@ function init() {
 <!-- HFS-BEGIN -->
 	- HFS / HFS+ filesystem integration<br>
 <!-- HFS-END -->
-	<i>Copyright (C) 2007-2011 Ofer Chen &amp; Vicente Soriano</i><br>
+	<i>Copyright (C) 2007-2014 Ofer Chen &amp; Vicente Soriano</i><br>
 	<a href="https://victek.is-a-geek.com" class="new_window">https://victek.is-a-geek.com</a><br>
 	<br>
 
@@ -147,6 +147,9 @@ function init() {
 	- Tinc Daemon integration and GUI<br>
 <!-- TINC-END -->
 	- Comcast DSCP Fix GUI<br>
+<!-- ZFS-BEGIN -->
+	- ZFS filesystem integration<br>
+<!-- ZFS-END -->
 	<i>Copyright (C) 2014-2022 Lance Fredrickson</i><br>
 	<a href="mailto:lancethepants@gmail.com">lancethepants@gmail.com</a><br>
 	<br>
