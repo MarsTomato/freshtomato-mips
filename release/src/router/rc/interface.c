@@ -167,7 +167,9 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 
 	if (ioctl(s, cmd, &rt) < 0) {
 		err = errno;
-		if (cmd == SIOCADDRT)
+		/* Existing routes on add and missing routes on delete are expected. */
+		if (!(((cmd == SIOCADDRT) && (err == EEXIST)) ||
+		      ((cmd == SIOCDELRT) && (err == ESRCH))))
 			logerr(__FUNCTION__, __LINE__, name ? : "");
 	}
 
@@ -176,16 +178,36 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 	return err;
 }
 
+int route_error_retryable(int err)
+{
+	switch (err) {
+	case EINTR:
+	case EAGAIN:
+	case ENOMEM:
+	case ENOBUFS:
+	case ENODEV:
+	case ENETDOWN:
+	case ENETUNREACH:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 int route_add(char *name, int metric, char *dst, char *gateway, char *genmask)
 {
 	return route_manip(SIOCADDRT, name, (metric + 1), dst, gateway, genmask);
 }
 
-void route_del(char *name, int metric, char *dst, char *gateway, char *genmask)
+int route_del(char *name, int metric, char *dst, char *gateway, char *genmask)
 {
+	int count = 0;
+
 	while (route_manip(SIOCDELRT, name, (metric + 1), dst, gateway, genmask) == 0) { /* del all! */
-		//
+		count++;
 	}
+
+	return count;
 }
 
 /* configure loopback interface */
@@ -248,7 +270,10 @@ static int ipv6_route_manip(int cmd, const char *name, int metric, const char *d
 
 	if (ioctl(s, cmd, &rt) < 0) {
 		err = errno;
-		logerr(__FUNCTION__, __LINE__, name ? : "");
+		/* Existing routes on add and missing routes on delete are expected. */
+		if (!(((cmd == SIOCADDRT) && (err == EEXIST)) ||
+		      ((cmd == SIOCDELRT) && (err == ESRCH))))
+			logerr(__FUNCTION__, __LINE__, name ? : "");
 	}
 
 error:

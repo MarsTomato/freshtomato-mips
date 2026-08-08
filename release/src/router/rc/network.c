@@ -1841,7 +1841,7 @@ void start_lan(void)
 			char *gateway = nvram_safe_get("lan_gateway") ;
 			if ((*gateway) && (strcmp(gateway, "0.0.0.0") != 0)) {
 				int tries = 5;
-				while ((route_add(lan_ifname, 0, "0.0.0.0", gateway, "0.0.0.0") != 0) && (tries-- > 0))
+				while (route_error_retryable(route_add(lan_ifname, 0, "0.0.0.0", gateway, "0.0.0.0")) && (tries-- > 0))
 					sleep(1);
 
 				logmsg(LOG_DEBUG, "*** %s: add gateway=%s tries=%d", __FUNCTION__, gateway, tries);
@@ -1963,7 +1963,7 @@ void do_static_routes(int add)
 	char *buf;
 	char *p, *q;
 	char *dest, *mask, *gateway, *metric, *if_tmp, *ifname;
-	int r, found_lan;
+	int r, err, found_lan;
 	unsigned int i;
 	unsigned int mwan_num = add ? mwan_active_num() : mwan_configured_num();
 	char name[8], ip[16], proto_key[16], ip_key[32], if_key[16];
@@ -1978,12 +1978,12 @@ void do_static_routes(int add)
 	else
 		nvram_unset("routes_static_saved");
 
-	ifname = nvram_safe_get("wan_ifname"); /* default */
 	p = buf;
 	while ((q = strsep(&p, ">")) != NULL) {
 		if (vstrsep(q, "<", &dest, &gateway, &mask, &metric, &if_tmp) < 5)
 			continue;
 
+		ifname = nvram_safe_get("wan_ifname"); /* default for each route */
 		found_lan = 0;
 		for (i = 0; i < BRIDGE_COUNT; i++) {
 			/* LAN, LAN1, LAN2, LAN3 set in advanced-routing.asp */
@@ -2018,18 +2018,30 @@ void do_static_routes(int add)
 			}
 		}
 
-		logmsg(LOG_WARNING, "Static route %s: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", (add ? "added" : "deleted"), ifname, metric, dest, gateway, mask);
 
 		if (add) {
 			for (r = 3; r >= 0; --r) {
-				if (route_add(ifname, atoi(metric), dest, gateway, mask) == 0)
+				err = route_add(ifname, atoi(metric), dest, gateway, mask);
+				if (err == 0) {
+					logmsg(LOG_WARNING, "Static route added: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
+					break;
+				}
+				if (err == EEXIST) {
+					logmsg(LOG_DEBUG, "Static route already exists: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
+					break;
+				}
+
+				if (!route_error_retryable(err))
 					break;
 
-				sleep(1);
+				if (r > 0)
+					sleep(1);
 			}
 		}
-		else
-			route_del(ifname, atoi(metric), dest, gateway, mask);
+		else {
+			if (route_del(ifname, atoi(metric), dest, gateway, mask) > 0)
+				logmsg(LOG_WARNING, "Static route deleted: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
+		}
 	}
 	free(buf);
 

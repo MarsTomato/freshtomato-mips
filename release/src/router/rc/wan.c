@@ -364,11 +364,14 @@ void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 	struct in_addr ipaddr;
 	char tmp[100];
 	char word[100], *next;
-	int i, ret;
+	int i;
 	int proto;
 	int mwan_num;
 
 	mwan_num = mwan_active_num();
+
+	/* Try adding a host route to gateway first */
+	route_add(ifname, 0, gw, NULL, "255.255.255.255");
 
 	if (mwan_num <= 1) {
 		/* Delete default route */
@@ -376,13 +379,10 @@ void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 
 		/* Set default route to gateway if specified */
 		i = 5;
-		while ((ret = route_add(ifname, 1, "0.0.0.0", gw, "0.0.0.0") != 0) && (i--)) {
+		while (route_error_retryable(route_add(ifname, 1, "0.0.0.0", gw, "0.0.0.0")) && (i--)) {
 			sleep(1);
 		}
 	}
-
-	/* Try adding a host route to gateway first */
-	route_add(ifname, 0, gw, NULL, "255.255.255.255");
 
 	/* Add routes to dns servers as well for demand ppp to work */
 	in_addr_t mask = inet_addr(netmask);
@@ -1039,7 +1039,7 @@ void start_wan6(const char *wan_ifname)
 			strlcpy(gateway, nvram_safe_get("ipv6_llremote_custom"), sizeof(gateway));
 			if (*gateway && (inet_pton(AF_INET6, gateway, &addr) == 1)) { /* check for valid IPv6 address */
 				ret = ipv6_route_add(wan_ifname, IPV6_METRIC_GW_LOW_INT, "::/0", gateway);
-				logmsg(LOG_INFO, "DHCPV6-PD - add default route ::/0 via gateway %s (user provided) on wan_ifname: %s - status: %s", gateway, wan_ifname, (ret == 0 ? "OK" : "ERROR"));
+				logmsg(LOG_INFO, "DHCPV6-PD - add default route ::/0 via gateway %s (user provided) on wan_ifname: %s - status: %s", gateway, wan_ifname, (((ret == 0) || (ret == EEXIST)) ? "OK" : "ERROR"));
 			}
 			else {
 				ret = eval("ip", "-6", "route", "add", "::/0", "dev", (char *)wan_ifname, "metric", IPV6_METRIC_GW_LOW);
@@ -1133,7 +1133,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 
 			if (mwan_num <= 1) {
 				n = 5;
-				while ((route_add(wan_ifname, 0, "0.0.0.0", gw, "0.0.0.0") == 1) && (n--)) {
+				while (route_error_retryable(route_add(wan_ifname, 0, "0.0.0.0", gw, "0.0.0.0")) && (n--)) {
 					sleep(1);
 				}
 			}
