@@ -34,6 +34,15 @@ function bridgeHasManagementAddress(i) {
 	return (nvram['lan'+i+'_ifname'] == 'br'+i) && (ip != '') && (ip != '0.0.0.0');
 }
 
+function bridgeListenerNames() {
+	var names = [];
+
+	for (var i = 1; i <= MAX_BRIDGE_ID; i++)
+		names.push('LAN'+i);
+
+	return names.join(' / ');
+}
+
 var xmenus = [['Status','status'],['Bandwidth','bwm'],['IP Traffic','ipt'],['Tools','tools'],['Basic','basic'],['Advanced','advanced'],['Port Forwarding','forward'],['QoS','qos'],['Misc','misc'],
 /* USB-BEGIN */
               ['USB and NAS','nas'],
@@ -434,9 +443,10 @@ function earlyInit() {
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
+
+	E('http_lan_listener_names').innerHTML = bridgeListenerNames();
+
+	restoreVisibility(cprefix, 'notes');
 
 	changed = 0;
 	up.initPage(250, 5);
@@ -676,7 +686,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<i>SSH Daemon (dropbear) also accepts additional configuration in the following files:</i><br>
 	<ul>
@@ -688,17 +698,13 @@ function init() {
 	These files are appended to the automatically generated configuration files resulting from the settings in the GUI.<br><br>
 	<i>Web Admin:</i><br>
 	<ul>
-		<li><b>Listen on LAN1 / LAN2 / LAN3</b> - enable/disable httpd listening interfaces. (by default communication is allowed! Please use <a href="admin-scripts.asp">Firewall script</a> to add your own rules, ie. br0 = private network, br1 = IOT)</li>
+		<li><b>Listen on <span id="http_lan_listener_names"></span></b> - enable/disable httpd listening interfaces. (by default communication is allowed! Please use <a href="admin-scripts.asp">Firewall script</a> to add your own rules, ie. br0 = private network, br1 = IOT)</li>
 	</ul>
 </div>
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

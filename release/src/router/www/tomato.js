@@ -742,6 +742,18 @@ function CompressIPv6Address(ip) {
 	return ip;
 }
 
+function joinIPv6Addr(a) {
+	var r, i, s;
+
+	r = [];
+	for (i = 0; i < a.length; ++i) {
+		s = CompressIPv6Address(a[i]);
+		if ((s) && (s != '')) r.push(s);
+	}
+
+	return r.join(' ');
+}
+
 function ZeroIPv6PrefixBits(ip, prefix_length) {
 	var b, c, m, n;
 	ip = ExpandIPv6Address(ip);
@@ -2271,6 +2283,10 @@ function W(s) {
 	document.write(s);
 }
 
+function writeFooter() {
+	W('<div id="footer"><span id="footer-msg"></span><input type="button" value="Save" id="save-button" onclick="save()"><input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();"></div>');
+}
+
 function E(e) {
 	return (typeof(e) == 'string') ? document.getElementById(e) : e;
 }
@@ -2970,6 +2986,15 @@ function toggleVisibility(where, whichone) {
 		tag.classList.add('hide');
 		cookie.set(where+'_'+whichone+'_vis', 1);
 	}
+}
+
+function restoreVisibility(where, whichone) {
+	if (cookie.get(where+'_'+whichone+'_vis') == '1')
+		toggleVisibility(where, whichone);
+}
+
+function writeToggleSectionTitle(title, whichone, id) {
+	W('<div class="section-title"'+(id ? ' id="'+id+'"' : '')+'>'+title+' <small><i><a href="javascript:toggleVisibility(cprefix,\''+whichone+'\');" id="toggleLink-'+whichone+'"><span id="sesdiv_'+whichone+'_showhide">(Show)</span></a></i></small></div>');
 }
 
 function spinOUI(x, which) {

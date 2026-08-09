@@ -24,13 +24,17 @@
 
 var cprefix = 'advanced_access';
 
+var lanOptions = [];
+for (var i = 0; i <= MAX_BRIDGE_ID; ++i)
+	lanOptions.push([i, 'LAN'+i+' (br'+i+')']);
+
 var la = new TomatoGrid();
 la.setup = function() {
 	this.init('la-grid', 'sort', 50, [
 	{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
-	{ type: 'select', options: [[0,'LAN0 (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '<\/div>' },
+	{ type: 'select', options: lanOptions, prefix: '<div class="centered">', suffix: '<\/div>' },
 	{ type: 'text', maxlen: 80 },
-	{ type: 'select', options: [[0,'LAN0 (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)']], prefix: '<div class="centered">', suffix: '<\/div>' },
+	{ type: 'select', options: lanOptions, prefix: '<div class="centered">', suffix: '<\/div>' },
 	{ type: 'text', maxlen: 80 },
 	{ type: 'text', maxlen: 32 }]);
 	this.headerSet(['On','Src','Src Address','Dst','Dst Address','Description']);
@@ -151,7 +155,7 @@ la.verifyFields = function(row, quiet) {
 }
 
 la.dataToView = function(data) {
-	return [(data[0] != 0) ? '&#x2b50' : '', ['LAN0','LAN1','LAN2','LAN3'][data[1]],data[2],['LAN0','LAN1','LAN2','LAN3'][data[3]],data[4],data[5] ];
+	return [(data[0] != 0) ? '&#x2b50' : '', 'LAN'+data[1],data[2],'LAN'+data[3],data[4],data[5] ];
 }
 
 la.dataToFieldValues = function (data) {
@@ -181,9 +185,7 @@ function save() {
 
 function init() {
 	la.setup();
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
+	restoreVisibility(cprefix, 'notes');
 }
 </script>
 </head>
@@ -210,14 +212,12 @@ function init() {
 <div class="section-title">LAN Access</div>
 <div class="section">
 	<div class="tomato-grid" id="la-grid"></div>
-	<input type="button" value="Backup" id="backup-button" onclick="backupGrid()">
-	<input type="button" value="Restore" id="restore-button" onclick="restoreGrid()">
-	<input type="button" value="Clear Table" id="clear-button" onclick="clearGrid()">
+	<script>writeGridButtons();</script>
 </div>
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<li><b>Src</b> - Source LAN bridge.</li>
@@ -229,11 +229,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

@@ -75,6 +75,7 @@ ifneq ($(TCONFIG_BCMARM),y)
 	sed -i $(INSTALLDIR)/www/qos-graphs.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
 	sed -i $(INSTALLDIR)/www/qos-settings.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
 	sed -i $(INSTALLDIR)/www/nas-usb.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/nas-samba.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
 else
 	sed -i $(INSTALLDIR)/www/status-data.jsx -e "/BCMARM-NO-BEGIN/,/BCMARM-NO-END/d"
@@ -117,6 +118,7 @@ ifneq ($(TCONFIG_CIFS),y)
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/admin-bwm.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/admin-iptraffic.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
+	sed -i $(INSTALLDIR)/www/admin-stats.js -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/nas-media.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/nas-bittorrent.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/isup.jsx -e "/CIFS-BEGIN/,/CIFS-END/d"
@@ -128,6 +130,7 @@ ifneq ($(TCONFIG_JFFS2),y)
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-bwm.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-iptraffic.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
+	sed -i $(INSTALLDIR)/www/admin-stats.js -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-upgrade.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/nas-media.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"

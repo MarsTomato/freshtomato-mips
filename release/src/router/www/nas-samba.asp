@@ -153,7 +153,9 @@ function verifyFields(focused, quiet) {
 	elem.display(PR('_smbd_user'), PR('_smbd_passwd'), (a == 2));
 
 	E('_f_smbd_wins').disabled = (nvram.wan_wins != '' && nvram.wan_wins != '0.0.0.0');
+/* BCMARM-BEGIN */
 	if (a == 0) E('_f_gro_disable').checked = true; /* disable gro (default) if smbd off */
+/* BCMARM-END */
 
 	if (a != 0 && !v_length('_smbd_custom', quiet, 0, 2048)) return 0;
 
@@ -198,7 +200,9 @@ function save(nomsg) {
 	else
 		fom.smbd_wins.value = nvram.smbd_wins;
 
+/* BCMARM-BEGIN */
 	fom.gro_disable.value = fom._f_gro_disable.checked ? 1 : 0;
+/* BCMARM-END */
 	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	var smbd_ifnames = '';
@@ -220,10 +224,7 @@ function earlyInit() {
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
-		toggleVisibility(cprefix, 'notes');
-	}
+	restoreVisibility(cprefix, 'notes');
 	eventHandler();
 	up.initPage(250, 5);
 }
@@ -250,7 +251,9 @@ function init() {
 <input type="hidden" name="smbd_wins">
 <input type="hidden" name="smbd_shares">
 <input type="hidden" name="smbd_ifnames">
+<!-- BCMARM-BEGIN -->
 <input type="hidden" name="gro_disable">
+<!-- BCMARM-END -->
 
 <!-- / / / -->
 
@@ -286,7 +289,9 @@ function init() {
 			{ title: 'LAN2', name: 'f_smbd_lan2', type: 'checkbox', value: smbd_lan[2] == 1 },
 			{ title: 'LAN3', name: 'f_smbd_lan3', type: 'checkbox', value: smbd_lan[3] == 1 },
 			{ title: 'Samba protocol version', name: 'smbd_protocol', type: 'select', options: [['0','SMBv1'],['1','SMBv2'],['2','SMBv1 + SMBv2']], value: nvram.smbd_protocol },
+/* BCMARM-BEGIN */
 			{ title: 'Disable GRO', name: 'f_gro_disable', type: 'checkbox', value: nvram.gro_disable == 1 },
+/* BCMARM-END */
 			{ title: 'Workgroup Name', name: 'smbd_wgroup', type: 'text', maxlen: 15, size: 32, value: nvram.smbd_wgroup },
 			{ title: 'Client Codepage', name: 'smbd_cpage', type: 'select',
 				options: [['', 'Unspecified'],['437', '437 (United States, Canada)'],['850', '850 (Western Europe)'],['852', '852 (Central / Eastern Europe)'],['866', '866 (Cyrillic / Russian)']
@@ -313,7 +318,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<li><b>LAN0, LAN1, LAN2, LAN3</b> - list of router interface names Samba will bind to.
@@ -323,17 +328,15 @@ function init() {
 				<li>Refer to the <a href="https://www.samba.org/samba/docs/man/manpages-3/smb.conf.5.html" class="new_window">Samba documentation</a> for details.</li>
 			</ul>
 		</li>
+<!-- BCMARM-BEGIN -->
 		<li><b>Disable GRO</b> - Disable/Enable Generic Receive Offload</li>
+<!-- BCMARM-END -->
 	</ul>
 </div>
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

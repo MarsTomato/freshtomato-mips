@@ -25,6 +25,10 @@
 
 var cprefix = 'splashd';
 
+var bridgeOptions = [];
+for (var i = 0; i <= MAX_BRIDGE_ID; ++i)
+	bridgeOptions.push(['br'+i, 'LAN'+i+' (br'+i+')'+(i == 0 ? '*' : '')]);
+
 function fix(name) {
 	var i;
 
@@ -71,14 +75,10 @@ function verifyFields(focused, quiet) {
 	E('_NC_BridgeLAN').disabled = !a;
 
 	var bridge = E('_NC_BridgeLAN');
-	if (nvram.lan_ifname.length < 1)
-		bridge.options[0].disabled = 1;
-	if (nvram.lan1_ifname.length < 1)
-		bridge.options[1].disabled = 1;
-	if (nvram.lan2_ifname.length < 1)
-		bridge.options[2].disabled = 1;
-	if (nvram.lan3_ifname.length < 1)
-		bridge.options[3].disabled = 1;
+	for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+		var n = (i == 0) ? '' : i.toString();
+		bridge.options[i].disabled = (nvram['lan'+n+'_ifname'].length < 1);
+	}
 
 	if ((E('_f_NC_ForcedRedirect').checked) && (!v_length('_NC_HomePage', quiet, 1, 255)))
 		return 0;
@@ -122,9 +122,7 @@ function save() {
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
+	restoreVisibility(cprefix, 'notes');
 }
 </script>
 </head>
@@ -152,7 +150,7 @@ function init() {
 			<script>
 			createFieldTable('', [
 				{ title: 'Enable', name: 'f_NC_enable', type: 'checkbox', value: nvram.NC_enable == '1' },
-				{ title: 'Interface', multi: [ { name: 'NC_BridgeLAN', type: 'select', options: [ ['br0','LAN0 (br0)*'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)'] ], value: nvram.NC_BridgeLAN, suffix: '&nbsp; <small>* default<\/small> ' } ] },
+				{ title: 'Interface', multi: [ { name: 'NC_BridgeLAN', type: 'select', options: bridgeOptions, value: nvram.NC_BridgeLAN, suffix: '&nbsp; <small>* default<\/small> ' } ] },
 				{ title: 'Gateway Name', name: 'NC_GatewayName', type: 'text', maxlen: 255, size: 34, value: nvram.NC_GatewayName },
 				{ title: 'Captive Site Forwarding', name: 'f_NC_ForcedRedirect', type: 'checkbox', value: (nvram.NC_ForcedRedirect == '1') },
 				{ title: 'Home Page', name: 'NC_HomePage', type: 'text', maxlen: 255, size: 34, value: nvram.NC_HomePage },
@@ -187,7 +185,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<li><b>Enable function</b> - When you tick and save the router will show a Welcome banner when a computer access the Internet</li>
@@ -214,11 +212,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

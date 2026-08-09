@@ -149,9 +149,7 @@ function init() {
 <div class="section-title">Triggered Port Forwarding</div>
 <div class="section">
 	<div class="tomato-grid" id="tg-grid"></div>
-	<input type="button" value="Backup" id="backup-button" onclick="backupGrid()">
-	<input type="button" value="Restore" id="restore-button" onclick="restoreGrid()">
-	<input type="button" value="Clear Table" id="clear-button" onclick="clearGrid()">
+	<script>writeGridButtons();</script>
 </div>
 
 <!-- / / / -->
@@ -168,11 +166,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

@@ -226,10 +226,8 @@ function save() {
 }
 
 function init() {
-	var c;
 
-	if (((c = cookie.get(cprefix+'_classnames_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'classnames');
+	restoreVisibility(cprefix, 'classnames');
 
 /* CTF-BEGIN */
 	if (nvram.ctf_disable && nvram.ctf_disable === 0) {
@@ -472,7 +470,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title" id="class-names">Custom Class Names <small><i><a href="javascript:toggleVisibility(cprefix,'classnames');" id="toggleLink-classnames"><span id="sesdiv_classnames_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Custom Class Names', 'classnames', 'class-names');</script>
 <div class="section" id="sesdiv_classnames" style="display:none">
 	<script>
 		if ((v = nvram.qos_classnames.match(/^(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)\s+(.+)$/)) == null)
@@ -504,11 +502,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>
