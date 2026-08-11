@@ -11,6 +11,7 @@ config TCONFIG_OPTIMIZE_SHARED_LIBS
 
 config TCONFIG_BCMARM
 	bool "BCM ARM"
+	select TCONFIG_BCMWL6
 	default n
 
 config TCONFIG_MIPSR2
@@ -23,18 +24,21 @@ config TCONFIG_BCMWL6
 	default n
 
 config TCONFIG_BCMWL6A
-	bool "BCM SDK 6.37"
-	depends on TCONFIG_BCMARM && TCONFIG_BCMWL6
-	default n
+	def_bool TCONFIG_BCMARM && TCONFIG_BCMWL6
 
 config TCONFIG_BCM7
 	bool "BCM SDK 7"
 	depends on TCONFIG_BCMARM
+	select TCONFIG_5301X
+	select TCONFIG_BCMDCS
+	select TCONFIG_TRAFFIC_MGMT_RSSI_POLICY
+	select TCONFIG_TOAD
 	default n
 
 config TCONFIG_BCM714
 	bool "BCM SDK 7.14"
-	depends on TCONFIG_BCM7
+	depends on TCONFIG_BCMARM
+	select TCONFIG_BCM7
 	default n
 
 config TCONFIG_BCMSMP
@@ -70,6 +74,7 @@ config TCONFIG_OPTIMIZE_SIZE
 
 config TCONFIG_OPTIMIZE_SIZE_MORE
 	bool "Flag to optimize code even more"
+	depends on TCONFIG_OPTIMIZE_SIZE
 	default n
 
 config TCONFIG_TRXKEY
@@ -108,6 +113,7 @@ config TCONFIG_BCMNAT
 
 config TCONFIG_ZEBRA
 	bool "Zebra"
+	depends on !TCONFIG_BCMARM
 	default n
 
 config TCONFIG_L7
@@ -133,6 +139,7 @@ config TCONFIG_MDNS
 
 config TCONFIG_CONNTRACK_TOOL
 	bool "Conntrack Userspace Tool"
+	depends on TCONFIG_BCMARM
 	default n
 
 endmenu
@@ -275,7 +282,7 @@ config TCONFIG_MEDIA_SERVER
 
 config TCONFIG_FTP
 	bool "FTP Server"
-	depends on TCONFIG_USB
+	depends on TCONFIG_USB && !TCONFIG_REMOVE_USBAPP
 	default y
 
 config TCONFIG_FTP_SSL
@@ -285,7 +292,7 @@ config TCONFIG_FTP_SSL
 
 config TCONFIG_SAMBASRV
 	bool "Samba File Sharing"
-	depends on TCONFIG_USB
+	depends on TCONFIG_USB && !TCONFIG_REMOVE_USBAPP
 	default y
 
 config TCONFIG_USB_EXTRAS
@@ -308,24 +315,28 @@ config TCONFIG_ZFS
 	depends on TCONFIG_BCMARM && TCONFIG_USB
 	default n
 
+choice
+	prompt "NTFS filesystem driver"
+	depends on TCONFIG_USB && TCONFIG_NTFS
+	optional
+
 config TCONFIG_UFSD
 	bool "Paragon NTFS driver for Asus routers"
-	depends on !TCONFIG_BCMARM && TCONFIG_USB
-	default n
+	depends on !TCONFIG_BCMARM
 
 config TCONFIG_UFSDA
 	bool "Paragon NTFS driver for Asus routers"
-	depends on TCONFIG_BCMARM && TCONFIG_USB
-	default n
+	depends on TCONFIG_BCMARM
 
 config TCONFIG_TUXERA
 	bool "Tuxera NTFS driver for Asus routers"
-	depends on TCONFIG_BCMARM && TCONFIG_USB
-	default n
+	depends on TCONFIG_BCMARM
+
+endchoice
 
 config TCONFIG_TUX_HFS
 	bool "Tuxera HFS/HFS+ driver for Asus routers"
-	depends on TCONFIG_BCMARM && TCONFIG_USB && TCONFIG_HFS
+	depends on TCONFIG_BCMARM && TCONFIG_USB && TCONFIG_HFS && TCONFIG_TUXERA
 	default n
 
 config TCONFIG_UPS
@@ -335,7 +346,7 @@ config TCONFIG_UPS
 
 config TCONFIG_MICROSD
 	bool "Support SD card (RT-N66u only)"
-	depends on TCONFIG_USB
+	depends on !TCONFIG_BCMARM && TCONFIG_USB
 	default n
 
 config TCONFIG_SDHC
@@ -376,7 +387,7 @@ config TCONFIG_BBT
 config TCONFIG_TR_EXTRAS
 	bool "Transmission extra tools"
 	default n
-	depends on TCONFIG_BT
+	depends on TCONFIG_BBT
 
 config TCONFIG_NANO
 	bool "NANO - user-friendly file editor"
@@ -400,35 +411,36 @@ config TCONFIG_ADVTHEMES
 
 config TCONFIG_FANCTRL
 	bool "FANCTRL"
+	depends on TCONFIG_BCMARM
 	default n
 
 config TCONFIG_IRQBALANCE
 	bool "irqbalance Tool"
+	depends on TCONFIG_BCMARM
 	default n
 
 endmenu
 
 menu "Broadcom wireless and hardware"
 
+choice
+	prompt "MIPS RT-AC model discriminator"
+	depends on !TCONFIG_BCMARM && TCONFIG_BCMWL6
+	optional
+
 config TCONFIG_AC66U
 	bool "Flag to distinguish RT-AC66U from RT-N66U"
-	depends on !TCONFIG_BCMARM
-	default n
 
 config TCONFIG_R6300V1
 	bool "Flag to distinguish Netgear R6300 v1 from WNDR4500 v1 and WNDR4500 v2"
-	depends on !TCONFIG_BCMARM
-	default n
 
 config TCONFIG_WNDR4500V1
 	bool "Flag to distinguish Netgear WNDR4500 v1 from R6300 v1 and WNDR4500 v2"
-	depends on !TCONFIG_BCMARM
-	default n
 
 config TCONFIG_WNDR4500V2
 	bool "Flag to distinguish Netgear WNDR4500 v2 from R6300 v1 and WNDR4500 v1"
-	depends on !TCONFIG_BCMARM
-	default n
+
+endchoice
 
 config TCONFIG_AC3200
 	bool "Tri-Band router (AC3200 or more)"
@@ -438,17 +450,14 @@ config TCONFIG_AC3200
 config TCONFIG_AC5300
 	bool "Tri-Band router SDK 7.14 (AC5300)"
 	depends on TCONFIG_BCM714
+	select TCONFIG_AC3200
 	default n
 
 config TCONFIG_DHDAP
-	bool "BCM7 dhdap"
-	depends on TCONFIG_BCM7
-	default n
+	def_bool TCONFIG_BCM7
 
 config TCONFIG_GMAC3
-	bool "BCM7 gmac3"
-	depends on TCONFIG_BCM7
-	default n
+	def_bool TCONFIG_BCM7
 
 config TCONFIG_PROXYSTA
 	bool "Proxy STA"
@@ -473,7 +482,7 @@ config TCONFIG_BCMFA
 config TCONFIG_5301X
 	bool "BCM 5301x"
 	depends on TCONFIG_BCM7
-	default y
+	default n
 
 config TCONFIG_BCMDCS
 	bool "Broadcom Dynamic Channel Selection"
@@ -501,6 +510,7 @@ config TCONFIG_ROAM
 
 config TCONFIG_BLINK
 	bool "wireless lan LED blink & bridge LED status (on or off) - for RT-N and RT-AC branch"
+	depends on !TCONFIG_BCMARM
 	default n
 
 config TCONFIG_EXTSW

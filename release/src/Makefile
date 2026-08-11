@@ -416,6 +416,7 @@ what:
 # NO_CIFS, NO_ZEBRA, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT, NO_FTP, NO_BLINK, HAVEGED
 # SAMBA3, OPENVPN, DONT_OPTIMIZE_SIZE, OPTIMIZE_SIZE_MORE, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, CTF, NGINX, NANO, BCMNAT, PROXY
 # NFS, BTCLIENT, BTGUI, TR_EXTRAS, SNMP, SDHC, HFS, UPS, DNSCRYPT, STUBBY, PPTPD, TOR, IPSEC, RAID, MICROSD, USBAP, NO_USBAPP, IPERF, KEYGEN, NO_KEYGEN, TERMLIB, ADVTHEMES, BRCM_NAND_JFFS2, BONDING, MDNS, SDK6MIPS, ROAM OPENSSL11 OPENSSL30 WOLFSSL WOLFSSLMIN
+# AC66U, R6300V1, WNDR4500V1, WNDR4500V2
 
 define RouterOptions
 	@( \
@@ -572,23 +573,31 @@ define RouterOptions
 		config_y TCONFIG_USBAP; \
 		if [ "$(NO_USBAPP)" = "y" ]; then \
 			config_y TCONFIG_REMOVE_USBAPP; \
-			config_n TCONFIG_FTP; \
-			config_n TCONFIG_FTP_SSL; \
-			config_n TCONFIG_SAMBASRV; \
 		fi; \
 	fi; \
-	if [ "$(ASUS_TRX)" = "RT-AC66U" ]; then \
-		config_y TCONFIG_AC66U; \
-	else \
-		config_n TCONFIG_AC66U; \
+	model_flags=0; \
+	[ "$(AC66U)" = "y" ] && model_flags=$$((model_flags + 1)); \
+	[ "$(R6300V1)" = "y" ] && model_flags=$$((model_flags + 1)); \
+	[ "$(WNDR4500V1)" = "y" ] && model_flags=$$((model_flags + 1)); \
+	[ "$(WNDR4500V2)" = "y" ] && model_flags=$$((model_flags + 1)); \
+	if [ "$$model_flags" -gt 1 ]; then \
+		echo "ERROR: select only one RT-AC model discriminator (AC66U, R6300V1, WNDR4500V1 or WNDR4500V2)" >&2; \
+		exit 1; \
 	fi; \
-	if [ "$(ASUS_TRX)" = "R6300V1" ]; then \
+	if [ "$$model_flags" -gt 0 ] && [ "$(SDK6MIPS)" != "y" ]; then \
+		echo "ERROR: RT-AC model discriminators require SDK6MIPS=y" >&2; \
+		exit 1; \
+	fi; \
+	if [ "$(AC66U)" = "y" ]; then \
+		config_y TCONFIG_AC66U; \
+	fi; \
+	if [ "$(R6300V1)" = "y" ]; then \
 		config_y TCONFIG_R6300V1; \
 	fi; \
-	if [ "$(ASUS_TRX)" = "WNDR4500V1" ]; then \
+	if [ "$(WNDR4500V1)" = "y" ]; then \
 		config_y TCONFIG_WNDR4500V1; \
 	fi; \
-	if [ "$(ASUS_TRX)" = "WNDR4500V2" ]; then \
+	if [ "$(WNDR4500V2)" = "y" ]; then \
 		config_y TCONFIG_WNDR4500V2; \
 	fi; \
 	if [ "$(BUILD_DESC)" = "AIO" ]; then \
