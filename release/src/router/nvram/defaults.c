@@ -1085,7 +1085,7 @@ const defaults_t defaults[] = {
 	{ "fw_nat_tuning",		"0"				},	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
 /* advanced-adblock */
-#ifdef TCONFIG_HTTPS
+#ifdef TCONFIG_ADBLOCK
 	{ "adblock_enable",		"0"				},
 	{ "adblock_blacklist",		""				},
 	{ "adblock_blacklist_custom",	""				},
@@ -1093,7 +1093,7 @@ const defaults_t defaults[] = {
 	{ "adblock_logs",		"3"				},
 	{ "adblock_limit",		""				},
 	{ "adblock_path",		""				},
-#endif /* TCONFIG_HTTPS */
+#endif /* TCONFIG_ADBLOCK */
 
 /* advanced-mac */
 	{ "wan_mac",			""				},

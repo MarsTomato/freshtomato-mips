@@ -12,12 +12,31 @@ config TCONFIG_OPTIMIZE_SHARED_LIBS
 config TCONFIG_BCMARM
 	bool "BCM ARM"
 	select TCONFIG_BCMWL6
+	select TCONFIG_ADVTHEMES
+	select TCONFIG_TERMLIB
 	default n
 
 config TCONFIG_MIPSR2
 	bool "MIPS R2 flag"
 	depends on !TCONFIG_BCMARM
 	default n
+
+choice
+	prompt "MIPS target family"
+	depends on !TCONFIG_BCMARM
+	optional
+
+config TCONFIG_MIPS_RT
+	bool "MIPS RT"
+
+config TCONFIG_MIPS_RTN
+	bool "MIPS RT-N"
+
+config TCONFIG_MIPS_RTAC
+	bool "MIPS RT-AC"
+	select TCONFIG_BCMWL6
+
+endchoice
 
 config TCONFIG_BCMWL6
 	bool "BCM WL 6"
@@ -178,6 +197,11 @@ config TCONFIG_TINC
 
 config TCONFIG_HTTPS
 	bool "HTTPS"
+	default y
+
+config TCONFIG_ADBLOCK
+	bool "Adblock"
+	depends on TCONFIG_HTTPS
 	default y
 
 config TCONFIG_DNSSEC
@@ -425,7 +449,7 @@ menu "Broadcom wireless and hardware"
 
 choice
 	prompt "MIPS RT-AC model discriminator"
-	depends on !TCONFIG_BCMARM && TCONFIG_BCMWL6
+	depends on TCONFIG_MIPS_RTAC
 	optional
 
 config TCONFIG_AC66U
@@ -509,9 +533,7 @@ config TCONFIG_ROAM
 	default n
 
 config TCONFIG_BLINK
-	bool "wireless lan LED blink & bridge LED status (on or off) - for RT-N and RT-AC branch"
-	depends on !TCONFIG_BCMARM
-	default n
+	def_bool TCONFIG_MIPS_RTN || TCONFIG_MIPS_RTAC
 
 config TCONFIG_EXTSW
 	bool "Add RTL8365MB switch support (RT-AC88U)"

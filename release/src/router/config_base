@@ -7,6 +7,9 @@
 TCONFIG_OPTIMIZE_SHARED_LIBS=y
 # TCONFIG_BCMARM is not set
 # TCONFIG_MIPSR2 is not set
+# TCONFIG_MIPS_RT is not set
+# TCONFIG_MIPS_RTN is not set
+# TCONFIG_MIPS_RTAC is not set
 # TCONFIG_BCMWL6 is not set
 # TCONFIG_BCMWL6A is not set
 # TCONFIG_BCM7 is not set
@@ -45,6 +48,7 @@ TCONFIG_PPTP=y
 # TCONFIG_IPSEC is not set
 # TCONFIG_TINC is not set
 TCONFIG_HTTPS=y
+TCONFIG_ADBLOCK=y
 # TCONFIG_DNSSEC is not set
 # TCONFIG_OPENSSL30 is not set
 # TCONFIG_OPENSSL11 is not set
