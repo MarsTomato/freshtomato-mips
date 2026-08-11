@@ -1225,10 +1225,15 @@ const defaults_t defaults[] = {
 #ifdef TCONFIG_IPV6
 	{ "ipv6_portforward",		""				},
 #endif
+#ifdef TCONFIG_DMZ
 	{ "dmz_enable",			"0"				},
 	{ "dmz_ipaddr",			"0"				},
+#ifdef TCONFIG_DMZMAC
+	{ "dmz_macaddr",		""				},
+#endif
 	{ "dmz_sip",			""				},
 	{ "dmz_ra",			"1"				},
+#endif /* TCONFIG_DMZ */
 
 /* forward-upnp */
 	{ "upnp_enable",		"0"				},
