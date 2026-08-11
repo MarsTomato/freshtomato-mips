@@ -11,14 +11,8 @@ config TCONFIG_OPTIMIZE_SHARED_LIBS
 
 config TCONFIG_BCMARM
 	bool "BCM ARM"
-	select TCONFIG_BCMWL6
 	select TCONFIG_ADVTHEMES
 	select TCONFIG_TERMLIB
-	default n
-
-config TCONFIG_MIPSR2
-	bool "MIPS R2 flag"
-	depends on !TCONFIG_BCMARM
 	default n
 
 choice
@@ -34,13 +28,19 @@ config TCONFIG_MIPS_RTN
 
 config TCONFIG_MIPS_RTAC
 	bool "MIPS RT-AC"
-	select TCONFIG_BCMWL6
 
 endchoice
 
-config TCONFIG_BCMWL6
-	bool "BCM WL 6"
+config TCONFIG_MIPS
+	def_bool TCONFIG_MIPS_RT || TCONFIG_MIPS_RTN || TCONFIG_MIPS_RTAC
+
+config TCONFIG_MIPSR2
+	bool "MIPS R2 flag"
+	depends on TCONFIG_MIPS
 	default n
+
+config TCONFIG_BCMWL6
+	def_bool TCONFIG_BCMARM || TCONFIG_MIPS_RTAC
 
 config TCONFIG_BCMWL6A
 	def_bool TCONFIG_BCMARM && TCONFIG_BCMWL6
@@ -127,12 +127,12 @@ config TCONFIG_CTF
 
 config TCONFIG_BCMNAT
 	bool "Broadcom FastNAT (bcm_nat)"
-	depends on !TCONFIG_BCMARM
+	depends on TCONFIG_MIPS
 	default n
 
 config TCONFIG_ZEBRA
 	bool "Zebra"
-	depends on !TCONFIG_BCMARM
+	depends on TCONFIG_MIPS
 	default n
 
 config TCONFIG_L7
@@ -346,7 +346,7 @@ choice
 
 config TCONFIG_UFSD
 	bool "Paragon NTFS driver for Asus routers"
-	depends on !TCONFIG_BCMARM
+	depends on TCONFIG_MIPS_RTAC
 
 config TCONFIG_UFSDA
 	bool "Paragon NTFS driver for Asus routers"
@@ -370,12 +370,12 @@ config TCONFIG_UPS
 
 config TCONFIG_MICROSD
 	bool "Support SD card (RT-N66u only)"
-	depends on !TCONFIG_BCMARM && TCONFIG_USB
+	depends on TCONFIG_USB && (TCONFIG_MIPS_RTN || TCONFIG_MIPS_RTAC)
 	default n
 
 config TCONFIG_SDHC
 	bool "SDHC/MMC mod for WRT54G/GL"
-	depends on !TCONFIG_BCMARM
+	depends on TCONFIG_MIPS_RT
 	default n
 
 config TCONFIG_USBAP
