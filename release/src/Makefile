@@ -416,7 +416,7 @@ what:
 # NO_CIFS, NO_ZEBRA, NO_SAMBA, NO_HTTPS, NO_ADBLOCK, NO_DMZ, NO_DMZMAC, NO_XXTP, NO_L7, NO_L7PAT, NO_LIBOPT, NO_FTP, HAVEGED
 # SAMBA3, OPENVPN, OPTIMIZE_SIZE_MORE, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, CTF, NGINX, NANO, BCMNAT, PROXY
 # NFS, BTCLIENT, BTGUI, TR_EXTRAS, SNMP, SDHC, HFS, UPS, DNSCRYPT, STUBBY, PPTPD, TOR, IPSEC, RAID, MICROSD, USBAP, NO_USBAPP, IPERF, KEYGEN, NO_KEYGEN, TERMLIB, ADVTHEMES, BRCM_NAND_JFFS2, BONDING, MDNS, ROAM OPENSSL11 OPENSSL30 WOLFSSL WOLFSSLMIN
-# AC66U, R6300V1, WNDR4500V1, WNDR4500V2, AIO, FULL_EXTRAS
+# AC66U, R6300V1, WNDR4500V1, WNDR4500V2, AIO, FULL_EXTRAS, MWAN_MAX, BRIDGE_COUNT
 
 define RouterOptions
 	@( \
@@ -428,6 +428,21 @@ define RouterOptions
 		grep -q -e "^$$1=y$$" -e "^# $$1 is not set$$" $(1) || { echo "ERROR: $$1 missing from $(1)" >&2; exit 1; }; \
 		sed -i "s/^$$1=y$$/# $$1 is not set/" $(1); \
 	}; \
+	config_value() { \
+		grep -q "^$$1=" $(1) || { echo "ERROR: $$1 missing from $(1)" >&2; exit 1; }; \
+		sed -i "s/^$$1=.*/$$1=$$2/" $(1); \
+	}; \
+	config_range() { \
+		case "$$2" in ''|*[!0-9]*) echo "ERROR: $$1 must be an integer in range $$3..$$4" >&2; exit 1;; esac; \
+		if [ "$$2" -lt "$$3" ] || [ "$$2" -gt "$$4" ]; then echo "ERROR: $$1=$$2 outside supported range $$3..$$4" >&2; exit 1; fi; \
+		config_value "$$1" "$$2"; \
+	}; \
+	if [ -n "$(MWAN_MAX)" ]; then \
+		config_range TCONFIG_MWAN_MAX "$(MWAN_MAX)" 1 8; \
+	fi; \
+	if [ -n "$(BRIDGE_COUNT)" ]; then \
+		config_range TCONFIG_BRIDGE_COUNT "$(BRIDGE_COUNT)" 1 16; \
+	fi; \
 	config_n TCONFIG_MIPS_RT; \
 	config_n TCONFIG_MIPS_RTN; \
 	config_n TCONFIG_MIPS_RTAC; \
@@ -540,11 +555,6 @@ define RouterOptions
 	fi; \
 	if [ "$(NGINX)" = "y" ]; then \
 		config_y TCONFIG_NGINX; \
-	fi; \
-	if [ "$(NVRAM_SIZE)" = "60" ] || [ "$(NVRAM_SIZE)" = "64" ] || [ "$(NVRAM_64K)" = "y" ]; then \
-		config_y TCONFIG_MULTIWAN; \
-	else \
-		config_n TCONFIG_MULTIWAN; \
 	fi; \
 	if [ "$(OPENVPN)" = "y" ]; then \
 		config_y TCONFIG_OPENVPN; \
