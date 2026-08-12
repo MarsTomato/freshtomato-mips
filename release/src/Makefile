@@ -75,18 +75,7 @@ lowercase_B = $(shell echo $(B) | tr A-Z a-z)
 beta = $(if $(filter $(TOMATO_EXPERIMENTAL),1),-beta,)
 
 revision = $(if $(filter $(MIPS32),r2),R2,R1)
-ifneq ($(CONFIG_RT),)
- ND = "RT"
-else
- ifeq ($(CONFIG_BCMWL6),y)
-  ND = "RTAC"
- else
-  ifeq ($(CONFIG_BCMWL5),y)
-   ND = "RTN"
-  endif
- endif
-endif
-branch_rev = $(shell echo K26MIPS$(revision)_$(ND))
+branch_rev = K26MIPS$(revision)_$(MIPS_FAMILY)
 
 ifneq ($(V2),)
 	current_V2 = $(shell echo -$(V2))
@@ -446,13 +435,12 @@ define RouterOptions
 	config_n TCONFIG_MIPS_RT; \
 	config_n TCONFIG_MIPS_RTN; \
 	config_n TCONFIG_MIPS_RTAC; \
-	if [ "$(CONFIG_RT)" = "y" ]; then \
-		config_y TCONFIG_MIPS_RT; \
-	elif [ "$(CONFIG_BCMWL6)" = "y" ]; then \
-		config_y TCONFIG_MIPS_RTAC; \
-	else \
-		config_y TCONFIG_MIPS_RTN; \
-	fi; \
+	case "$(MIPS_FAMILY)" in \
+		RT) config_y TCONFIG_MIPS_RT ;; \
+		RTN) config_y TCONFIG_MIPS_RTN ;; \
+		RTAC) config_y TCONFIG_MIPS_RTAC ;; \
+		*) echo "ERROR: unsupported MIPS_FAMILY='$(MIPS_FAMILY)' (expected RT, RTN or RTAC)" >&2; exit 1 ;; \
+	esac; \
 	config_y TCONFIG_ZEBRA; \
 	if [ "$(AIO)" = "y" ]; then \
 		config_n TCONFIG_OPTIMIZE_SIZE; \
