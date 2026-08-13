@@ -448,8 +448,15 @@ define RouterOptions
 		*) echo "ERROR: unsupported target platform '$(TARGET_PLATFORM):$(TARGET_VARIANT)'" >&2; exit 1 ;; \
 	esac; \
 	if [ "$(AIO)" = "y" ]; then \
-		config_n TCONFIG_OPTIMIZE_SIZE; \
-	else \
+		config_y TCONFIG_AIO; \
+	fi; \
+	if [ "$(TARGET_PLATFORM)" = "MIPS" ]; then \
+		if [ "$(AIO)" = "y" ]; then \
+			config_n TCONFIG_OPTIMIZE_SIZE; \
+		else \
+			config_y TCONFIG_OPTIMIZE_SIZE; \
+		fi; \
+	elif [ "$(DO_OPTIMIZE_SIZE)" = "y" ]; then \
 		config_y TCONFIG_OPTIMIZE_SIZE; \
 	fi; \
 	if [ "$(SLIM)" = "y" ]; then \
@@ -487,6 +494,17 @@ define RouterOptions
 		fi; \
 		if [ "$(UFSD)" = "y" ]; then \
 			config_y TCONFIG_UFSD; \
+		elif [ "$(UFSD)" = "ASUS" ]; then \
+			config_y TCONFIG_UFSDA; \
+		fi; \
+		if [ "$(TUXERA)" = "y" ]; then \
+			config_y TCONFIG_TUXERA; \
+		fi; \
+		if [ "$(TUXERA_HFS)" = "y" ]; then \
+			config_y TCONFIG_TUX_HFS; \
+		fi; \
+		if [ "$(ZFS)" = "y" ]; then \
+			config_y TCONFIG_ZFS; \
 		fi; \
 		if [ "$(HFS)" = "y" ]; then \
 			config_y TCONFIG_HFS; \
@@ -551,6 +569,9 @@ define RouterOptions
 		config_y TCONFIG_OPENVPN; \
 		config_y TCONFIG_FTP_SSL; \
 	fi; \
+	if [ "$(WIREGUARD)" = "y" ]; then \
+		config_y TCONFIG_WIREGUARD; \
+	fi; \
 	if [ "$(PPTPD)" = "y" ]; then \
 		config_y TCONFIG_PPTPD; \
 	fi; \
@@ -591,6 +612,12 @@ define RouterOptions
 	if [ "$(NVRAM_64K)" = "y" ]; then \
 		config_y TCONFIG_NVRAM_64K; \
 	fi; \
+	if [ "$(NVRAM_128K)" = "y" ]; then \
+		config_y TCONFIG_NVRAM_128K; \
+	fi; \
+	if [ "$(DRAM_512M)" = "y" ]; then \
+		config_y TCONFIG_DRAM_512M; \
+	fi; \
 	if [ "$(TOR)" = "y" ]; then \
 		config_y TCONFIG_TOR; \
 	fi; \
@@ -627,9 +654,6 @@ define RouterOptions
 	fi; \
 	if [ "$(WNDR4500V2)" = "y" ]; then \
 		config_y TCONFIG_WNDR4500V2; \
-	fi; \
-	if [ "$(AIO)" = "y" ]; then \
-		config_y TCONFIG_AIO; \
 	fi; \
 	if [ "$(CTF)" = "y" ]; then \
 		config_y TCONFIG_CTF; \
@@ -682,9 +706,6 @@ define RouterOptions
 	if [ "$(NVRAM_SIZE)" = "32" ]; then \
 		config_y TCONFIG_NVRAM_32K; \
 	fi; \
-	if [ "$(OPTIMIZE_SIZE_MORE)" = "y" ]; then \
-		config_y TCONFIG_OPTIMIZE_SIZE_MORE; \
-	fi; \
 	if [ "$(BRCM_NAND_JFFS2)" = "y" ]; then \
 		config_y TCONFIG_BRCM_NAND_JFFS2; \
 	fi; \
@@ -699,6 +720,24 @@ define RouterOptions
 	fi; \
 	if [ "$(QRCODE)" = "y" ]; then \
 		config_y TCONFIG_QRCODE; \
+	fi; \
+	if [ "$(FANCTRL)" = "y" ]; then \
+		config_y TCONFIG_FANCTRL; \
+	fi; \
+	if [ "$(OPTIMIZE_SIZE_MORE)" = "y" ]; then \
+		config_y TCONFIG_OPTIMIZE_SIZE_MORE; \
+	fi; \
+	if [ "$(CONNTRACK_TOOL)" = "y" ]; then \
+		config_y TCONFIG_CONNTRACK_TOOL; \
+	fi; \
+	if [ "$(IRQBALANCE)" = "y" ]; then \
+		config_y TCONFIG_IRQBALANCE; \
+	fi; \
+	if [ "$(NO_TRXKEY)" = "y" ]; then \
+		config_n TCONFIG_TRXKEY; \
+	fi; \
+	if [ "$(EXTSW)" = "y" ]; then \
+		config_y TCONFIG_EXTSW; \
 	fi; \
 	if [ "$(HAVEGED)" = "y" ]; then \
 		config_y TCONFIG_HAVEGED; \
