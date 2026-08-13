@@ -75,7 +75,7 @@ lowercase_B = $(shell echo $(B) | tr A-Z a-z)
 beta = $(if $(filter $(TOMATO_EXPERIMENTAL),1),-beta,)
 
 revision = $(if $(filter $(MIPS32),r2),R2,R1)
-branch_rev = K26MIPS$(revision)_$(MIPS_FAMILY)
+branch_rev = K26MIPS$(revision)_$(TARGET_VARIANT)
 
 ifneq ($(V2),)
 	current_V2 = $(shell echo -$(V2))
@@ -432,16 +432,21 @@ define RouterOptions
 	if [ -n "$(BRIDGE_COUNT)" ]; then \
 		config_range TCONFIG_BRIDGE_COUNT "$(BRIDGE_COUNT)" 1 16; \
 	fi; \
+	config_n TCONFIG_BCMARM; \
+	config_n TCONFIG_BCM7; \
+	config_n TCONFIG_BCM714; \
 	config_n TCONFIG_MIPS_RT; \
 	config_n TCONFIG_MIPS_RTN; \
 	config_n TCONFIG_MIPS_RTAC; \
-	case "$(MIPS_FAMILY)" in \
-		RT) config_y TCONFIG_MIPS_RT ;; \
-		RTN) config_y TCONFIG_MIPS_RTN ;; \
-		RTAC) config_y TCONFIG_MIPS_RTAC ;; \
-		*) echo "ERROR: unsupported MIPS_FAMILY='$(MIPS_FAMILY)' (expected RT, RTN or RTAC)" >&2; exit 1 ;; \
+	case "$(TARGET_PLATFORM):$(TARGET_VARIANT)" in \
+		ARM:SDK6) config_y TCONFIG_BCMARM ;; \
+		ARM:SDK7) config_y TCONFIG_BCMARM; config_y TCONFIG_BCM7 ;; \
+		ARM:SDK714) config_y TCONFIG_BCMARM; config_y TCONFIG_BCM714 ;; \
+		MIPS:RT) config_y TCONFIG_MIPS_RT ;; \
+		MIPS:RTN) config_y TCONFIG_MIPS_RTN ;; \
+		MIPS:RTAC) config_y TCONFIG_MIPS_RTAC ;; \
+		*) echo "ERROR: unsupported target platform '$(TARGET_PLATFORM):$(TARGET_VARIANT)'" >&2; exit 1 ;; \
 	esac; \
-	config_y TCONFIG_ZEBRA; \
 	if [ "$(AIO)" = "y" ]; then \
 		config_n TCONFIG_OPTIMIZE_SIZE; \
 	else \
@@ -515,7 +520,6 @@ define RouterOptions
 	fi; \
 	if [ "$(NO_DMZ)" = "y" ]; then \
 		config_n TCONFIG_DMZ; \
-		config_n TCONFIG_DMZMAC; \
 	elif [ "$(NO_DMZMAC)" = "y" ]; then \
 		config_n TCONFIG_DMZMAC; \
 	fi; \
@@ -525,7 +529,6 @@ define RouterOptions
 	fi; \
 	if [ "$(NO_L7)" = "y" ]; then \
 		config_n TCONFIG_L7; \
-		config_n TCONFIG_L7PAT; \
 	elif [ "$(NO_L7PAT)" = "y" ]; then \
 		config_n TCONFIG_L7PAT; \
 	fi; \
@@ -609,7 +612,7 @@ define RouterOptions
 		echo "ERROR: select only one RT-AC model discriminator (AC66U, R6300V1, WNDR4500V1 or WNDR4500V2)" >&2; \
 		exit 1; \
 	fi; \
-	if [ "$$model_flags" -gt 0 ] && [ "$(CONFIG_BCMWL6)" != "y" ]; then \
+	if [ "$$model_flags" -gt 0 ] && [ "$(TARGET_VARIANT)" != "RTAC" ]; then \
 		echo "ERROR: RT-AC model discriminators require the RT-AC target family" >&2; \
 		exit 1; \
 	fi; \
@@ -722,7 +725,7 @@ define BusyboxOptions
 		echo "CONFIG_NICE=y" >>$(1); \
 		sed -i "/CONFIG_SETCONSOLE/d" $(1); \
 		echo "CONFIG_SETCONSOLE=y" >>$(1); \
-		if [ "$(CONFIG_RT)" = "" ]; then \
+		if [ "$(TARGET_VARIANT)" != "RT" ]; then \
 			sed -i "/CONFIG_MKFIFO/d" $(1); \
 			echo "CONFIG_MKFIFO=y" >>$(1); \
 		fi; \
@@ -933,7 +936,7 @@ define KernelConfig
 	else \
 		echo "# CONFIG_BCM57XX is not set" >>$(1); \
 	fi; \
-	if [ "$(CONFIG_RT)" = "" ]; then \
+	if [ "$(TARGET_VARIANT)" != "RT" ]; then \
 		if [ "$(USBAP)" = "y" ]; then \
 			sed -i "s/# CONFIG_WL_USBAP is not set/CONFIG_WL_USBAP=y/g" $(1); \
 			sed -i "s/CONFIG_WL_APSTA=\"wlconfig_lx_router_apsta\"/CONFIG_WL_APSTA=\"wlconfig_lx_router_high\"/g" $(1); \
@@ -968,14 +971,14 @@ define KernelConfig
 			echo "CONFIG_BRIDGE_EBT_IP6=m" >>$(1); \
 		fi; \
 	fi; \
-	if [ "$(CONFIG_RT)" = "" ]; then \
+	if [ "$(TARGET_VARIANT)" != "RT" ]; then \
 		if [ "$(NVRAM_64K)" = "y" ]; then \
 			sed -i "s/# CONFIG_NVRAM_64K is not set/CONFIG_NVRAM_64K=y/g" $(1); \
 		fi; \
 	else \
 		sed -i "s/# CONFIG_NVRAM_64K is not set//g" $(1); \
 	fi; \
-	if [ "$(CONFIG_RT)" = "" ]; then \
+	if [ "$(TARGET_VARIANT)" != "RT" ]; then \
 		if [ "$(FULL_EXTRAS)" = "y" ]; then \
 			sed -i "s/# CONFIG_NETFILTER_XT_MATCH_STATISTIC is not set/CONFIG_NETFILTER_XT_MATCH_STATISTIC=m/g" $(1); \
 			sed -i "s/# CONFIG_NETFILTER_XT_MATCH_COMMENT is not set/CONFIG_NETFILTER_XT_MATCH_COMMENT=y/g" $(1); \
@@ -1058,6 +1061,9 @@ setprofile:
 		cp config_current .config
 
 	@$(MAKE) -C router oldconfig
+	@cp -f $(LINUXDIR)/.config $(LINUXDIR)/config_current
+	@cp -f router/busybox/.config router/busybox/config_current
+	@cp -f router/.config router/config_current
 
 include help.mak
 
