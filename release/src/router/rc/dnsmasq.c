@@ -66,16 +66,6 @@ static int check_bridge_modes(void) {
 	return 0;
 }
 
-static const char *bridge_nvram_get(unsigned int bridge, const char *suffix, char *key, const size_t key_size)
-{
-	if (bridge == 0)
-		snprintf(key, key_size, "lan_%s", suffix);
-	else
-		snprintf(key, key_size, "lan%u_%s", bridge, suffix);
-
-	return nvram_safe_get(key);
-}
-
 static int bridge_has_l3(unsigned int bridge)
 {
 	char key[32];
@@ -233,8 +223,7 @@ static void write_tor_dns(FILE *f)
 		for (i = 1; i < BRIDGE_COUNT; i++) {
 			snprintf(buf, sizeof(buf), "br%d", i);
 			if (nvram_match("tor_iface", buf)) {
-				snprintf(buf, sizeof(buf), "lan%d_ipaddr", i);
-				t_ip = nvram_safe_get(buf);
+				t_ip = bridge_nvram_get(i, "ipaddr", buf, sizeof(buf));
 				break;
 			}
 		}
@@ -259,9 +248,9 @@ static void write_wan_dns(FILE *f, const int mwan_num)
 		/* allow RFC1918 responses for server domain (fix connect PPTP/L2TP WANs) */
 		proto = get_wanx_proto(wan_prefix);
 		if (proto == WP_PPTP)
-			nv = nvram_safe_get(strlcat_r(wan_prefix, "_pptp_server_ip", key, sizeof(key)));
+			nv = wan_nvram_get(wan_unit, "pptp_server_ip", key, sizeof(key));
 		else if (proto == WP_L2TP)
-			nv = nvram_safe_get(strlcat_r(wan_prefix, "_l2tp_server_ip", key, sizeof(key)));
+			nv = wan_nvram_get(wan_unit, "l2tp_server_ip", key, sizeof(key));
 
 		if (nv && *nv)
 			fprintf(f, "rebind-domain-ok=%s\n", nv);
@@ -316,16 +305,13 @@ static void write_dhcp_ranges(FILE *f, int *do_dhcpd_hosts, int *do_dns_ptr, cha
 	do_dns = *do_dns_ptr;
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br != 0)
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
+		char bridge[12];
+		get_bridge_suffix(br, bridge, sizeof(bridge));
 
-		snprintf(lanN_proto, sizeof(lanN_proto), "lan%s_proto", bridge);
-		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
-		snprintf(lanN_ipaddr, sizeof(lanN_ipaddr), "lan%s_ipaddr", bridge);
-		snprintf(lanN_netmask, sizeof(lanN_netmask), "lan%s_netmask", bridge);
+		get_bridge_nvram_key(br, "proto", lanN_proto, sizeof(lanN_proto));
+		get_bridge_nvram_key(br, "ifname", lanN_ifname, sizeof(lanN_ifname));
+		get_bridge_nvram_key(br, "ipaddr", lanN_ipaddr, sizeof(lanN_ipaddr));
+		get_bridge_nvram_key(br, "netmask", lanN_netmask, sizeof(lanN_netmask));
 		snprintf(dhcpdN_startip, sizeof(dhcpdN_startip), "dhcpd%s_startip", bridge);
 		snprintf(dhcpdN_endip, sizeof(dhcpdN_endip), "dhcpd%s_endip", bridge);
 
@@ -517,28 +503,23 @@ static int dmz_dhcp_enabled_for_ip(const char *ip, const struct in_addr *addr, c
 {
 	struct in_addr lan, mask, network, broadcast;
 	char ifname[IFNAMSIZ + 1];
-	char num[4], ifkey[24], ipkey[24], maskkey[24], protokey[24];
+	char ifkey[24], ipkey[24], maskkey[24], protokey[24];
 	unsigned int i;
 
 	if (!lan_ifname_for_ipv4(ip, ifname, sizeof(ifname)))
 		return 0;
 
 	for (i = 0; i < BRIDGE_COUNT; i++) {
-		if (i == 0)
-			num[0] = '\0';
-		else
-			snprintf(num, sizeof(num), "%u", i);
-
-		snprintf(ifkey, sizeof(ifkey), "lan%s_ifname", num);
+		get_bridge_nvram_key(i, "ifname", ifkey, sizeof(ifkey));
 		if (strcmp(nvram_safe_get(ifkey), ifname) != 0)
 			continue;
 
-		snprintf(protokey, sizeof(protokey), "lan%s_proto", num);
+		get_bridge_nvram_key(i, "proto", protokey, sizeof(protokey));
 		if (!nvram_match(protokey, "dhcp"))
 			return 0;
 
-		snprintf(ipkey, sizeof(ipkey), "lan%s_ipaddr", num);
-		snprintf(maskkey, sizeof(maskkey), "lan%s_netmask", num);
+		get_bridge_nvram_key(i, "ipaddr", ipkey, sizeof(ipkey));
+		get_bridge_nvram_key(i, "netmask", maskkey, sizeof(maskkey));
 		if ((inet_pton(AF_INET, nvram_safe_get(ipkey), &lan) != 1) ||
 		    (inet_pton(AF_INET, nvram_safe_get(maskkey), &mask) != 1))
 			return 0;
@@ -885,10 +866,10 @@ static void write_tftp_config(FILE *f)
 
 		for (i = 0; i < BRIDGE_COUNT; i++) {
 			snprintf(key, sizeof(key), (i == 0 ? "dnsmasq_pxelan" : "dnsmasq_pxelan%u"), i);
-			snprintf(lan_ifname, sizeof(lan_ifname), (i == 0 ? "lan_ifname" : "lan%u_ifname"), i);
+			get_bridge_nvram_key(i, "ifname", lan_ifname, sizeof(lan_ifname));
 
 			if (bridge_has_l3(i) && nvram_get_int(key) && strlen(nvram_safe_get(lan_ifname)) > 0) {
-				snprintf(lan_ip, sizeof(lan_ip), (i == 0 ? "lan_ipaddr" : "lan%u_ipaddr"), i);
+				get_bridge_nvram_key(i, "ipaddr", lan_ip, sizeof(lan_ip));
 				fprintf(f, "dhcp-boot=pxelinux.0,,%s\n", nvram_safe_get(lan_ip));
 			}
 		}
@@ -939,14 +920,7 @@ static void start_dnsmasq_wet(void)
 	           4096);
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br != 0)
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
-
-		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
-		nv = nvram_safe_get(lanN_ifname);
+		nv = bridge_nvram_get(br, "ifname", lanN_ifname, sizeof(lanN_ifname));
 
 		if (strncmp(nv, "br", 2) == 0) {
 			if (bridge_has_l3(br)) {

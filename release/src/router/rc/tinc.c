@@ -32,27 +32,24 @@
 
 static void tinc_setup_watchdog(void)
 {
-	FILE *fp;
 	char buffer[64], buffer2[64];
 	int nvi;
 
 	if ((nvi = nvram_get_int("tinc_poll")) > 0) {
 		snprintf(buffer, sizeof(buffer), TINC_DIR"/watchdog.sh");
 
-		if ((fp = fopen(buffer, "w"))) {
-			fprintf(fp, "#!/bin/sh\n"
-			            "[ \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
-			            " if [ -z \"$(pidof tincd)\" ]; then\n"
-			            "  logger -t tinc tincd stopped? Starting...\n"
-			            "  service tinc restart\n"
-			            " elif [ $(tinc dump connections | grep -v localhost | wc -l ) -lt 1 ]; then\n"
-			            "  logger -t tincd[\"$(pidof tincd)\"] Restarting process to due connectivity issue\n"
-			            "  service tinc restart\n"
-			            " fi\n"
-			            "}\n");
-			fclose(fp);
-			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
-
+		if (f_write_string(buffer,
+		                   "#!/bin/sh\n"
+		                   "[ \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
+		                   " if [ -z \"$(pidof tincd)\" ]; then\n"
+		                   "  logger -t tinc tincd stopped? Starting...\n"
+		                   "  service tinc restart\n"
+		                   " elif [ $(tinc dump connections | grep -v localhost | wc -l ) -lt 1 ]; then\n"
+		                   "  logger -t tincd[\"$(pidof tincd)\"] Restarting process to due connectivity issue\n"
+		                   "  service tinc restart\n"
+		                   " fi\n"
+		                   "}\n",
+		                   0, (S_IRUSR | S_IWUSR | S_IXUSR)) >= 0) {
 			snprintf(buffer2, sizeof(buffer2), "*/%d * * * * %s", nvi, buffer);
 			eval("cru", "a", "CheckTincDaemon", buffer2);
 		}
@@ -105,6 +102,26 @@ static void build_tinc_firewall(const char *port)
 
 	fclose(p);
 	chmod(TINC_FW_SCRIPT, 0744);
+}
+
+/*
+ * Write a user-provided Tinc hook as an executable shell script.
+ * @param path  destination script path
+ * @param body  shell commands stored in NVRAM
+ * @return      1 on success, 0 when the script cannot be created
+ */
+static int write_tinc_hook(const char *path, const char *body)
+{
+	FILE *fp;
+
+	if (!(fp = fopen(path, "w")))
+		return 0;
+
+	fprintf(fp, "#!/bin/sh\n%s\n", body);
+	fclose(fp);
+	chmod(path, 0744);
+
+	return 1;
 }
 
 void start_tinc(int force)
@@ -247,63 +264,38 @@ void start_tinc(int force)
 	free(nv);
 
 	/* write tinc-down script */
-	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_tinc_down"), "") != 0) {
-		if (!(fp = fopen(TINC_DOWN_SCRIPT, "w"))) {
-			logerr(__FUNCTION__, __LINE__, TINC_DOWN_SCRIPT);
-			return;
-		}
-		fprintf(fp, "#!/bin/sh\n");
-		fprintf(fp, "%s\n", tinc_tmp_value);
-		fclose(fp);
-		chmod(TINC_DOWN_SCRIPT, 0744);
+	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_tinc_down"), "") != 0 &&
+	    !write_tinc_hook(TINC_DOWN_SCRIPT, tinc_tmp_value)) {
+		logerr(__FUNCTION__, __LINE__, TINC_DOWN_SCRIPT);
+		return;
 	}
 
 	/* write host-up */
-	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_host_up"), "") != 0) {
-		if (!(fp = fopen(TINC_HOSTUP_SCRIPT, "w"))) {
-			logerr(__FUNCTION__, __LINE__, TINC_HOSTUP_SCRIPT);
-			return;
-		}
-		fprintf(fp, "#!/bin/sh\n" );
-		fprintf(fp, "%s\n", tinc_tmp_value );
-		fclose(fp);
-		chmod(TINC_HOSTUP_SCRIPT, 0744);
+	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_host_up"), "") != 0 &&
+	    !write_tinc_hook(TINC_HOSTUP_SCRIPT, tinc_tmp_value)) {
+		logerr(__FUNCTION__, __LINE__, TINC_HOSTUP_SCRIPT);
+		return;
 	}
 
 	/* write host-down */
-	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_host_down"), "") != 0) {
-		if (!(fp = fopen(TINC_HOSTDOWN_SCRIPT, "w"))) {
-			logerr(__FUNCTION__, __LINE__, TINC_HOSTDOWN_SCRIPT);
-			return;
-		}
-		fprintf(fp, "#!/bin/sh\n");
-		fprintf(fp, "%s\n", tinc_tmp_value);
-		fclose(fp);
-		chmod(TINC_HOSTDOWN_SCRIPT, 0744);
+	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_host_down"), "") != 0 &&
+	    !write_tinc_hook(TINC_HOSTDOWN_SCRIPT, tinc_tmp_value)) {
+		logerr(__FUNCTION__, __LINE__, TINC_HOSTDOWN_SCRIPT);
+		return;
 	}
 
 	/* write subnet-up */
-	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_subnet_up"), "") != 0) {
-		if (!(fp = fopen(TINC_SUBNETUP_SCRIPT, "w"))) {
-			logerr(__FUNCTION__, __LINE__, TINC_SUBNETUP_SCRIPT);
-			return;
-		}
-		fprintf(fp, "#!/bin/sh\n");
-		fprintf(fp, "%s\n", tinc_tmp_value);
-		fclose(fp);
-		chmod(TINC_SUBNETUP_SCRIPT, 0744);
+	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_subnet_up"), "") != 0 &&
+	    !write_tinc_hook(TINC_SUBNETUP_SCRIPT, tinc_tmp_value)) {
+		logerr(__FUNCTION__, __LINE__, TINC_SUBNETUP_SCRIPT);
+		return;
 	}
 
 	/* write subnet-down */
-	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_subnet_down"), "") != 0) {
-		if (!(fp = fopen(TINC_SUBNETDOWN_SCRIPT, "w"))) {
-			logerr(__FUNCTION__, __LINE__, TINC_SUBNETDOWN_SCRIPT);
-			return;
-		}
-		fprintf(fp, "#!/bin/sh\n");
-		fprintf(fp, "%s\n", tinc_tmp_value);
-		fclose(fp);
-		chmod(TINC_SUBNETDOWN_SCRIPT, 0744);
+	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_subnet_down"), "") != 0 &&
+	    !write_tinc_hook(TINC_SUBNETDOWN_SCRIPT, tinc_tmp_value)) {
+		logerr(__FUNCTION__, __LINE__, TINC_SUBNETDOWN_SCRIPT);
+		return;
 	}
 
 	/* make sure module is loaded */

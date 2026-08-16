@@ -39,18 +39,198 @@
 #define LOGMSG_NVDEBUG	"misc_debug"
 
 
+/*
+ * Formats the numeric suffix used by the lan/lanN bridge namespace.
+ *
+ * @param bridge       bridge index; bridge 0 maps to an empty suffix
+ * @param suffix       destination buffer
+ * @param suffix_size  size of the destination buffer
+ */
+void get_bridge_suffix(unsigned int bridge, char *suffix, const size_t suffix_size)
+{
+	if (bridge == 0)
+		suffix[0] = '\0';
+	else
+		snprintf(suffix, suffix_size, "%u", bridge);
+}
+
+/*
+ * Builds an NVRAM key from an existing namespace prefix and variable suffix.
+ *
+ * @param prefix    existing namespace prefix, for example "wan2" or "pptpc"
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param key       destination buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ */
+static void get_prefix_nvram_key(const char *prefix, const char *suffix, char *key, const size_t key_size)
+{
+	snprintf(key, key_size, "%s_%s", prefix, suffix);
+}
+
+/*
+ * Reads an NVRAM value from an existing namespace prefix.
+ *
+ * @param prefix    existing namespace prefix
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param key       scratch buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ * @return          value returned by nvram_safe_get(); never NULL
+ */
+char *prefix_nvram_get(const char *prefix, const char *suffix, char *key, const size_t key_size)
+{
+	get_prefix_nvram_key(prefix, suffix, key, key_size);
+	return nvram_safe_get(key);
+}
+
+/*
+ * Sets an NVRAM value in an existing namespace prefix.
+ *
+ * @param prefix    existing namespace prefix
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param value     value passed to nvram_set()
+ * @param key       scratch buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ */
+void prefix_nvram_set(const char *prefix, const char *suffix, const char *value, char *key, const size_t key_size)
+{
+	get_prefix_nvram_key(prefix, suffix, key, key_size);
+	nvram_set(key, value);
+}
+
+/*
+ * Removes an NVRAM value from an existing namespace prefix.
+ *
+ * @param prefix    existing namespace prefix
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param key       scratch buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ */
+void prefix_nvram_unset(const char *prefix, const char *suffix, char *key, const size_t key_size)
+{
+	get_prefix_nvram_key(prefix, suffix, key, key_size);
+	nvram_unset(key);
+}
+
+/*
+ * Compares an NVRAM value in an existing namespace prefix.
+ *
+ * @param prefix    existing namespace prefix
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param value     comparison value passed to nvram_match()
+ * @param key       scratch buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ * @return          result returned by nvram_match()
+ */
+int prefix_nvram_match(const char *prefix, const char *suffix, const char *value, char *key, const size_t key_size)
+{
+	get_prefix_nvram_key(prefix, suffix, key, key_size);
+	return nvram_match(key, value);
+}
+
+/*
+ * Reads an integer NVRAM value from an existing namespace prefix.
+ *
+ * @param prefix    existing namespace prefix
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param key       scratch buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ * @return          integer value returned by nvram_get_int()
+ */
+int prefix_nvram_get_int(const char *prefix, const char *suffix, char *key, const size_t key_size)
+{
+	get_prefix_nvram_key(prefix, suffix, key, key_size);
+	return nvram_get_int(key);
+}
+
+/*
+ * Formats the bridge NVRAM namespace prefix.
+ *
+ * @param bridge       bridge index; bridge 0 maps to "lan"
+ * @param prefix       destination buffer
+ * @param prefix_size  size of the destination buffer
+ */
+void get_bridge_prefix(unsigned int bridge, char *prefix, const size_t prefix_size)
+{
+	if (bridge == 0)
+		strlcpy(prefix, "lan", prefix_size);
+	else
+		snprintf(prefix, prefix_size, "lan%u", bridge);
+}
+
+/*
+ * Builds a bridge-scoped NVRAM key using the lan/lanN naming convention.
+ *
+ * @param bridge    bridge index; bridge 0 uses the unsuffixed lan namespace
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param key       destination buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ */
+void get_bridge_nvram_key(unsigned int bridge, const char *suffix, char *key, const size_t key_size)
+{
+	char prefix[12];
+
+	get_bridge_prefix(bridge, prefix, sizeof(prefix));
+	get_prefix_nvram_key(prefix, suffix, key, key_size);
+}
+
+/*
+ * Reads a bridge-scoped NVRAM value using the lan/lanN naming convention.
+ *
+ * @param bridge    bridge index; bridge 0 uses the unsuffixed lan namespace
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param key       scratch buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ * @return          value returned by nvram_safe_get(); never NULL
+ */
+char *bridge_nvram_get(unsigned int bridge, const char *suffix, char *key, const size_t key_size)
+{
+	get_bridge_nvram_key(bridge, suffix, key, key_size);
+	return nvram_safe_get(key);
+}
+
+/*
+ * Formats the NVRAM namespace prefix for a WAN unit.
+ *
+ * @param iWan_unit  WAN unit number; 1 maps to "wan", 2..MWAN_MAX to "wanN"
+ * @param sPrefix    destination buffer; must be large enough for "wanN"
+ */
 void get_wan_prefix(int iWan_unit, char *sPrefix)
 {
-	char wanstr[8];
-	int i;
+	if ((iWan_unit > 1) && (iWan_unit <= MWAN_MAX))
+		sprintf(sPrefix, "wan%d", iWan_unit);
+	else
+		strcpy(sPrefix, "wan");
+}
 
-	strcpy(sPrefix, "wan");
-	for (i = 1; i <= MWAN_MAX; i++) {
-		snprintf(wanstr, sizeof(wanstr), (i == 1 ? "wan" : "wan%d"), i);
+/*
+ * Builds a WAN-scoped NVRAM key.
+ *
+ * @param wan_unit  WAN unit number
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param key       destination buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ */
+static void get_wan_nvram_key(int wan_unit, const char *suffix, char *key, const size_t key_size)
+{
+	char prefix[8];
 
-		if (iWan_unit == i)
-			strcpy(sPrefix, wanstr);
-	}
+	get_wan_prefix(wan_unit, prefix);
+	get_prefix_nvram_key(prefix, suffix, key, key_size);
+}
+
+/*
+ * Reads a WAN-scoped NVRAM value using the wan/wanN naming convention.
+ *
+ * @param wan_unit  WAN unit number
+ * @param suffix    NVRAM variable suffix without the separating underscore
+ * @param key       scratch buffer receiving the complete NVRAM key
+ * @param key_size  size of the key buffer
+ * @return          value returned by nvram_safe_get(); never NULL
+ */
+char *wan_nvram_get(int wan_unit, const char *suffix, char *key, const size_t key_size)
+{
+	get_wan_nvram_key(wan_unit, suffix, key, key_size);
+	return nvram_safe_get(key);
 }
 
 int get_wan_unit(const char *sPrefix)
@@ -111,7 +291,7 @@ int get_wanx_proto(char *prefix)
 	int i;
 	const char *p;
 
-	p = nvram_safe_get(strlcat_r(prefix, "_proto", tmp, sizeof(tmp)));
+	p = prefix_nvram_get(prefix, "proto", tmp, sizeof(tmp));
 	for (i = 0; names[i] != NULL; ++i) {
 		if (strcmp(p, names[i]) == 0)
 			return i + 1;
@@ -258,7 +438,7 @@ int using_dhcpc(char *prefix)
 		case WP_L2TP:
 		case WP_PPTP:
 		case WP_PPPOE: /* PPPoE with MAN */
-			return nvram_get_int(strlcat_r(prefix, "_pptp_dhcp", tmp, sizeof(tmp)));
+			return prefix_nvram_get_int(prefix, "pptp_dhcp", tmp, sizeof(tmp));
 	}
 
 	return 0;
@@ -328,8 +508,7 @@ int foreach_wif(int include_vifs, void *param,
 
 	/* LAN interfaces */
 	for (i = 0; i < BRIDGE_COUNT; i++) {
-		snprintf(name, sizeof(name), (i == 0 ? "lan_ifnames" : "lan%d_ifnames"), i);
-		if (append_ifnames(ifnames, sizeof(ifnames), nvram_safe_get(name), 1) < 0)
+		if (append_ifnames(ifnames, sizeof(ifnames), bridge_nvram_get(i, "ifnames", name, sizeof(name)), 1) < 0)
 			goto list_full;
 	}
 
@@ -535,10 +714,10 @@ int wan_led_off(char *prefix) /* off WAN LED only if no other WAN active */
 			case WP_STATIC:
 			case WP_DHCP:
 			case WP_LTE:
-				if (!nvram_match(strlcat_r(wanstr, "_ipaddr", tmp, sizeof(tmp)), "0.0.0.0")) { /* have IP, assume ON */
+				if (!prefix_nvram_match(wanstr, "ipaddr", "0.0.0.0", tmp, sizeof(tmp))) { /* have IP, assume ON */
 					up = 1;
 					if (((f = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) { /* check interface */
-						strlcpy(ifr.ifr_name, nvram_safe_get(strlcat_r(wanstr, "_iface", tmp, sizeof(tmp))), sizeof(ifr.ifr_name));
+						strlcpy(ifr.ifr_name, prefix_nvram_get(wanstr, "iface", tmp, sizeof(tmp)), sizeof(ifr.ifr_name));
 						if (ioctl(f, SIOCGIFFLAGS, &ifr) < 0)
 							up = 0;
 						close(f);
@@ -674,7 +853,7 @@ int check_wanup(char *prefix)
 			logmsg(LOG_DEBUG, "*** %s: error reading %s", __FUNCTION__, ppplink_file);
 		}
 	}
-	else if (!nvram_match(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)), "0.0.0.0")) {
+	else if (!prefix_nvram_match(prefix, "ipaddr", "0.0.0.0", tmp, sizeof(tmp))) {
 		logmsg(LOG_DEBUG, "*** %s: %s have IP, assume ON", __FUNCTION__, prefix);
 		up = 1;
 	}
@@ -684,7 +863,7 @@ int check_wanup(char *prefix)
 	}
 
 	if ((up) && ((s = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) {
-		strlcpy(ifr.ifr_name, nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp))), sizeof(ifr.ifr_name));
+		strlcpy(ifr.ifr_name, prefix_nvram_get(prefix, "iface", tmp, sizeof(tmp)), sizeof(ifr.ifr_name));
 
 		if (ioctl(s, SIOCGIFFLAGS, &ifr) < 0) {
 			up = 0;
@@ -770,10 +949,10 @@ const dns_list_t *get_dns(char *prefix)
 
 	dns.count = 0;
 
-	if (nvram_get_int(strlcat_r(prefix, "_dns_auto", tmp, sizeof(tmp))))
-		snprintf(s, sizeof(s), " %s", nvram_safe_get(strlcat_r(prefix, "_get_dns", tmp, sizeof(tmp))));
+	if (prefix_nvram_get_int(prefix, "dns_auto", tmp, sizeof(tmp)))
+		snprintf(s, sizeof(s), " %s", prefix_nvram_get(prefix, "get_dns", tmp, sizeof(tmp)));
 	else {
-		strlcpy(s, nvram_safe_get(strlcat_r(prefix, "_dns", tmp, sizeof(tmp))), sizeof(s));
+		strlcpy(s, prefix_nvram_get(prefix, "dns", tmp, sizeof(tmp)), sizeof(s));
 		snprintf(tmp, sizeof(tmp), "%s_addget", prefix);
 		if ((!nvram_get_int(tmp))
 #ifdef TCONFIG_DNSCRYPT
@@ -787,8 +966,8 @@ const dns_list_t *get_dns(char *prefix)
 		}
 		else {
 			/* add received DNS servers to the static DNS server list */
-			logmsg(LOG_DEBUG, "*** %s: adding received servers (%s) to the static DNS server list", __FUNCTION__, nvram_safe_get(strlcat_r(prefix, "_get_dns", tmp, sizeof(tmp))));
-			snprintf(s + strlen(s), sizeof(s) - strlen(s), " %s", nvram_safe_get(strlcat_r(prefix, "_get_dns", tmp, sizeof(tmp))));
+			logmsg(LOG_DEBUG, "*** %s: adding received servers (%s) to the static DNS server list", __FUNCTION__, prefix_nvram_get(prefix, "get_dns", tmp, sizeof(tmp)));
+			snprintf(s + strlen(s), sizeof(s) - strlen(s), " %s", prefix_nvram_get(prefix, "get_dns", tmp, sizeof(tmp)));
 		}
 	}
 
@@ -872,17 +1051,17 @@ const wanface_list_t *get_wanfaces(char *prefix)
 		case WP_L2TP:
 			while (wanfaces.count < 2) {
 				if (wanfaces.count == 0) {
-					ip = nvram_safe_get(strlcat_r(prefix, "_ppp_get_ip", tmp, sizeof(tmp)));
-					iface = nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp)));
+					ip = prefix_nvram_get(prefix, "ppp_get_ip", tmp, sizeof(tmp));
+					iface = prefix_nvram_get(prefix, "iface", tmp, sizeof(tmp));
 					if (!(*iface))
 						iface = "ppp+";
 				}
 				else /* if (wanfaces.count == 1) */ {
-					ip = nvram_safe_get(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)));
+					ip = prefix_nvram_get(prefix, "ipaddr", tmp, sizeof(tmp));
 					if ((!(*ip) || strcmp(ip, "0.0.0.0") == 0) && (wanfaces.count > 0))
 						iface = "";
 					else
-						iface = nvram_safe_get(strlcat_r(prefix, "_ifname", tmp, sizeof(tmp)));
+						iface = prefix_nvram_get(prefix, "ifname", tmp, sizeof(tmp));
 				}
 				strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
 				strlcpy(wanfaces.iface[wanfaces.count].name, iface, IFNAMSIZ);
@@ -893,16 +1072,16 @@ const wanface_list_t *get_wanfaces(char *prefix)
 			if (using_dhcpc(prefix)) { /* PPPoE with MAN */
 				while (wanfaces.count < 2) {
 					if (wanfaces.count == 0) {
-						ip = nvram_safe_get(strlcat_r(prefix, "_ppp_get_ip", tmp, sizeof(tmp)));
-						iface = nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp)));
+						ip = prefix_nvram_get(prefix, "ppp_get_ip", tmp, sizeof(tmp));
+						iface = prefix_nvram_get(prefix, "iface", tmp, sizeof(tmp));
 						if (!(*iface)) iface = "ppp+";
 					}
 					else /* if (wanfaces.count == 1) */ {
-						ip = nvram_safe_get(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)));
+						ip = prefix_nvram_get(prefix, "ipaddr", tmp, sizeof(tmp));
 						if ((!(*ip) || strcmp(ip, "0.0.0.0") == 0) && (wanfaces.count > 0))
 							iface = "";
 						else
-							iface = nvram_safe_get(strlcat_r(prefix, "_ifname", tmp, sizeof(tmp)));
+							iface = prefix_nvram_get(prefix, "ifname", tmp, sizeof(tmp));
 					}
 					strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
 					strlcpy(wanfaces.iface[wanfaces.count].name, iface, IFNAMSIZ);
@@ -910,8 +1089,8 @@ const wanface_list_t *get_wanfaces(char *prefix)
 				}
 			}
 			else { /* PPPoE */
-				ip = (proto == WP_DISABLED) ? "0.0.0.0" : nvram_safe_get(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)));
-				iface = nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp)));
+				ip = (proto == WP_DISABLED) ? "0.0.0.0" : prefix_nvram_get(prefix, "ipaddr", tmp, sizeof(tmp));
+				iface = prefix_nvram_get(prefix, "iface", tmp, sizeof(tmp));
 				if (!(*iface))
 					iface = "ppp+";
 				strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
@@ -919,14 +1098,14 @@ const wanface_list_t *get_wanfaces(char *prefix)
 			}
 			break;
 		default:
-			ip = (proto == WP_DISABLED) ? "0.0.0.0" : nvram_safe_get(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)));
+			ip = (proto == WP_DISABLED) ? "0.0.0.0" : prefix_nvram_get(prefix, "ipaddr", tmp, sizeof(tmp));
 			if (proto == WP_PPP3G) {
-				iface = nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp)));
+				iface = prefix_nvram_get(prefix, "iface", tmp, sizeof(tmp));
 				if (!(*iface))
 					iface = "ppp+";
 			}
 			else {
-				iface = nvram_safe_get(strlcat_r(prefix, "_ifname", tmp, sizeof(tmp)));
+				iface = prefix_nvram_get(prefix, "ifname", tmp, sizeof(tmp));
 			}
 			strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
 			strlcpy(wanfaces.iface[wanfaces.count++].name, iface, IFNAMSIZ);

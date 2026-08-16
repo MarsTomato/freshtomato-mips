@@ -85,7 +85,7 @@ int get_sta_wan_prefix(char *sPrefix, const size_t buf_sz)
 		memset(prefix, 0, sizeof(prefix));
 		get_wan_prefix(wan_unit, prefix);
 
-		if (strcmp(nvram_safe_get(strlcat_r(prefix, "_sta", tmp, sizeof(tmp))), "")) {
+		if (*wan_nvram_get(wan_unit, "sta", tmp, sizeof(tmp))) {
 			found = 1;
 			break;
 		}
@@ -111,16 +111,16 @@ void get_wan_info(char *sPrefix)
 	switch (proto) {
 		case WP_L2TP:
 		case WP_PPTP:
-			strlcpy(wan_info.wan_ipaddr, nvram_safe_get(strlcat_r(sPrefix, "_ppp_get_ip", tmp, sizeof(tmp))), sizeof(wan_info.wan_ipaddr));
+			strlcpy(wan_info.wan_ipaddr, prefix_nvram_get(sPrefix, "ppp_get_ip", tmp, sizeof(tmp)), sizeof(wan_info.wan_ipaddr));
 			break;
 		case WP_PPPOE:
 			if (using_dhcpc(sPrefix))
-				strlcpy(wan_info.wan_ipaddr, nvram_safe_get(strlcat_r(sPrefix, "_ppp_get_ip", tmp, sizeof(tmp))), sizeof(wan_info.wan_ipaddr));
+				strlcpy(wan_info.wan_ipaddr, prefix_nvram_get(sPrefix, "ppp_get_ip", tmp, sizeof(tmp)), sizeof(wan_info.wan_ipaddr));
 			else
-				strlcpy(wan_info.wan_ipaddr, nvram_safe_get(strlcat_r(sPrefix, "_ipaddr", tmp, sizeof(tmp))), sizeof(wan_info.wan_ipaddr));
+				strlcpy(wan_info.wan_ipaddr, prefix_nvram_get(sPrefix, "ipaddr", tmp, sizeof(tmp)), sizeof(wan_info.wan_ipaddr));
 			break;
 		default:
-			strlcpy(wan_info.wan_ipaddr, nvram_safe_get(strlcat_r(sPrefix, "_ipaddr", tmp, sizeof(tmp))), sizeof(wan_info.wan_ipaddr));
+			strlcpy(wan_info.wan_ipaddr, prefix_nvram_get(sPrefix, "ipaddr", tmp, sizeof(tmp)), sizeof(wan_info.wan_ipaddr));
 			break;
 	}
 
@@ -128,7 +128,7 @@ void get_wan_info(char *sPrefix)
 	if ((proto == WP_L2TP) || (proto == WP_PPTP) || (proto == WP_PPPOE) || (proto == WP_PPP3G))
 		strlcpy(wan_info.wan_netmask, "255.255.255.255", sizeof(wan_info.wan_netmask));
 	else
-		strlcpy(wan_info.wan_netmask, nvram_safe_get(strlcat_r(sPrefix, "_netmask", tmp, sizeof(tmp))), sizeof(wan_info.wan_netmask));
+		strlcpy(wan_info.wan_netmask, prefix_nvram_get(sPrefix, "netmask", tmp, sizeof(tmp)), sizeof(wan_info.wan_netmask));
 
 	/* WAN gateway */
 	strlcpy(wan_info.wan_gateway, wan_gateway(sPrefix), sizeof(wan_info.wan_gateway));
@@ -137,7 +137,7 @@ void get_wan_info(char *sPrefix)
 	wan_info.dns = get_dns(sPrefix); /* static buffer */
 
 	/* WAN weight */
-	wan_info.wan_weight = atoi(nvram_safe_get(strlcat_r(sPrefix, "_weight", tmp, sizeof(tmp))));
+	wan_info.wan_weight = atoi(prefix_nvram_get(sPrefix, "weight", tmp, sizeof(tmp)));
 
 	logmsg(LOG_DEBUG, "*** %s: PREFIX=[%s], wan_name=[%s] wan_ipaddr=[%s] wan_netmask=[%s] wan_gateway=[%s] wan_weight=[%d]", __FUNCTION__, sPrefix, wan_info.wan_name, wan_info.wan_ipaddr, wan_info.wan_netmask, wan_info.wan_gateway, wan_info.wan_weight);
 }
@@ -276,12 +276,9 @@ void mwan_table_add(char *sPrefix)
 
 		/* ip route add 192.168.1.0/24 dev br0 proto kernel scope link  src 192.168.1.1  table 2 */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			snprintf(nvram_var, sizeof(nvram_var), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-			lan_ifname = nvram_safe_get(nvram_var);
-			snprintf(nvram_var, sizeof(nvram_var), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-			lan_ipaddr = nvram_safe_get(nvram_var);
-			snprintf(nvram_var, sizeof(nvram_var), (i == 0 ? "lan_netmask" : "lan%d_netmask"), i);
-			lan_netmask = nvram_safe_get(nvram_var);
+			lan_ifname = bridge_nvram_get(i, "ifname", nvram_var, sizeof(nvram_var));
+			lan_ipaddr = bridge_nvram_get(i, "ipaddr", nvram_var, sizeof(nvram_var));
+			lan_netmask = bridge_nvram_get(i, "netmask", nvram_var, sizeof(nvram_var));
 
 			if ((lan_ifname[0] == '\0') || (lan_ipaddr[0] == '\0') || (lan_netmask[0] == '\0'))
 				continue;

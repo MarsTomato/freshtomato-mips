@@ -837,7 +837,7 @@ void dns_to_resolv(void)
 		    get_wanx_proto(wan_prefix) != WP_DISABLED &&
 		    get_wanx_proto(wan_prefix) != WP_PPTP &&
 		    get_wanx_proto(wan_prefix) != WP_L2TP &&
-		    !nvram_get_int(strlcat_r(wan_prefix, "_ppp_demand", tmp, sizeof(tmp))))
+		    !atoi(wan_nvram_get(wan_unit, "ppp_demand", tmp, sizeof(tmp))))
 		{
 			logmsg(LOG_DEBUG, "*** %s: %s (proto:%d) is not UP, not P-t-P or On Demand, SKIP ADD", __FUNCTION__, wan_prefix, get_wanx_proto(wan_prefix));
 			continue;
@@ -867,7 +867,7 @@ void dns_to_resolv(void)
 				dns = get_dns(wan_prefix); /* static buffer */
 				if (dns->count == 0) {
 					/* put a pseudo DNS IP to trigger Connect On Demand */
-					if (nvram_match(strlcat_r(wan_prefix, "_ppp_demand", tmp, sizeof(tmp)), "1")) {
+					if (prefix_nvram_match(wan_prefix, "ppp_demand", "1", tmp, sizeof(tmp))) {
 						switch (get_wanx_proto(wan_prefix)) {
 							case WP_PPPOE:
 							case WP_PPP3G:
@@ -880,7 +880,7 @@ void dns_to_resolv(void)
 								 * Further info: https://linksysinfo.org/index.php?threads/tomato-using-1-1-1-1-for-pppoe-connect-on-demand.74102/
 								 * Also add possibility to change that IP (198.51.100.1) in GUI by the user
 								 */
-								trig_ip = nvram_safe_get(strlcat_r(wan_prefix, "_ppp_demand_dnsip", tmp, sizeof(tmp)));
+								trig_ip = prefix_nvram_get(wan_prefix, "ppp_demand_dnsip", tmp, sizeof(tmp));
 								logmsg(LOG_DEBUG, "*** %s: no servers for %s: put a pseudo DNS (non-routable on public internet) IP %s to trigger Connect On Demand", __FUNCTION__, wan_prefix, trig_ip);
 								fprintf(f, "nameserver %s\n", trig_ip);
 								break;
@@ -1236,15 +1236,17 @@ void start_ipv6(void)
 		/* HINT: "ipv6_accept_ra" bit 0 ==> used for wan, "ipv6_accept_ra" bit 1 ==> used for lan interfaces (br0...br3) */
 		/* check lanX / brX if available */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-			if (strcmp(nvram_safe_get(buffer), "") != 0 && strcmp(nvram_safe_get(buffer), "0.0.0.0") != 0) {
-				snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+			char *lan_ipaddr = bridge_nvram_get(i, "ipaddr", buffer, sizeof(buffer));
+
+			if (*lan_ipaddr && strcmp(lan_ipaddr, "0.0.0.0") != 0) {
+				char *lan_ifname = bridge_nvram_get(i, "ifname", buffer, sizeof(buffer));
+
 				if (((nvram_get_int("ipv6_accept_ra") & 0x02) != 0) && !nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd"))
 					/* accept_ra for brX */
-					accept_ra(nvram_safe_get(buffer));
+					accept_ra(lan_ifname);
 				else
 					/* accept_ra default value for brX */
-					accept_ra_reset(nvram_safe_get(buffer));
+					accept_ra_reset(lan_ifname);
 			}
 		}
 	}
@@ -1284,10 +1286,8 @@ void start_upnp(void)
 	int enable, upnp_port, https;
 	int ports[4];
 	char uuid[45];
-	char lanN_ipaddr[] = "lanXX_ipaddr";
-	char lanN_netmask[] = "lanXX_netmask";
-	char lanN_ifname[] = "lanXX_ifname";
 	char upnp_lanN[] = "upnp_lanXX";
+	char lan_prefix[12], key[24];
 	char tmp[8];
 	char *lanip, *lanmask, *lanifname;
 	char br;
@@ -1370,20 +1370,15 @@ void start_upnp(void)
 	fprintf(f, "%s\n", nvram_safe_get("upnp_custom"));
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2];
-		bridge[0] = br ? '0' + br : '\0';
-		bridge[1] = '\0';
+		/* upnp_lan is bridge zero; higher bridges use upnp_lanN. */
+		get_bridge_prefix(br, lan_prefix, sizeof(lan_prefix));
+		snprintf(upnp_lanN, sizeof(upnp_lanN), "upnp_%s", lan_prefix);
 
-		snprintf(lanN_ipaddr, sizeof(lanN_ipaddr), "lan%s_ipaddr", bridge);
-		snprintf(lanN_netmask, sizeof(lanN_netmask), "lan%s_netmask", bridge);
-		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
-		snprintf(upnp_lanN, sizeof(upnp_lanN), "upnp_lan%s", bridge);
+		lanip = bridge_nvram_get(br, "ipaddr", key, sizeof(key));
+		lanmask = bridge_nvram_get(br, "netmask", key, sizeof(key));
+		lanifname = bridge_nvram_get(br, "ifname", key, sizeof(key));
 
-		lanip = nvram_safe_get(lanN_ipaddr);
-		lanmask = nvram_safe_get(lanN_netmask);
-		lanifname = nvram_safe_get(lanN_ifname);
-
-		if ((strcmp(nvram_safe_get(upnp_lanN), "1") == 0) && (strcmp(lanifname, "") != 0)) {
+		if (nvram_match(upnp_lanN, "1") && *lanifname) {
 			fprintf(f, "listening_ip=%s\n", lanifname);
 
 			/* not implemented in GUI */
@@ -1462,6 +1457,7 @@ void start_zebra(void)
 	char lan_tx[32];
 	char lan_rx[32];
 	char lan_ifname[32];
+	char lan_prefix[12];
 	const char *tx;
 	const char *rx;
 	const char *ifname;
@@ -1476,8 +1472,10 @@ void start_zebra(void)
 
 	if (!enabled) {
 		for (i = 0; i < BRIDGE_COUNT; ++i) {
-			snprintf(lan_tx, sizeof(lan_tx), (i == 0 ? "dr_lan_tx" : "dr_lan%d_tx"), i);
-			snprintf(lan_rx, sizeof(lan_rx), (i == 0 ? "dr_lan_rx" : "dr_lan%d_rx"), i);
+			/* Feature keys use "lan" for br0 and "lanN" for higher bridges. */
+			get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+			snprintf(lan_tx, sizeof(lan_tx), "dr_%s_tx", lan_prefix);
+			snprintf(lan_rx, sizeof(lan_rx), "dr_%s_rx", lan_prefix);
 
 			if ((*nvram_safe_get(lan_tx) != '0') || (*nvram_safe_get(lan_rx) != '0')) {
 				enabled = 1;
@@ -1499,10 +1497,9 @@ void start_zebra(void)
 	fprintf(fp, "router rip\n");
 
 	for (i = 0; i < BRIDGE_COUNT; ++i) {
-		snprintf(lan_ifname, sizeof(lan_ifname), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-		ifname = nvram_safe_get(lan_ifname);
+		ifname = bridge_nvram_get(i, "ifname", lan_ifname, sizeof(lan_ifname));
 
-		if (strcmp(ifname, "") != 0)
+		if (*ifname)
 			fprintf(fp, "network %s\n", ifname);
 	}
 
@@ -1510,15 +1507,15 @@ void start_zebra(void)
 	fprintf(fp, "redistribute connected\n");
 
 	for (i = 0; i < BRIDGE_COUNT; ++i) {
-		snprintf(lan_tx, sizeof(lan_tx), (i == 0 ? "dr_lan_tx" : "dr_lan%d_tx"), i);
-		snprintf(lan_rx, sizeof(lan_rx), (i == 0 ? "dr_lan_rx" : "dr_lan%d_rx"), i);
-		snprintf(lan_ifname, sizeof(lan_ifname), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+		get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+		snprintf(lan_tx, sizeof(lan_tx), "dr_%s_tx", lan_prefix);
+		snprintf(lan_rx, sizeof(lan_rx), "dr_%s_rx", lan_prefix);
 
 		tx = nvram_safe_get(lan_tx);
 		rx = nvram_safe_get(lan_rx);
-		ifname = nvram_safe_get(lan_ifname);
+		ifname = bridge_nvram_get(i, "ifname", lan_ifname, sizeof(lan_ifname));
 
-		if (strcmp(ifname, "") != 0) {
+		if (*ifname) {
 			fprintf(fp, "interface %s\n", ifname);
 			if (*tx != '0')
 				fprintf(fp, "ip rip send version %s\n", tx);
@@ -1537,15 +1534,15 @@ void start_zebra(void)
 	fprintf(fp, "router rip\n");
 
 	for (i = 0; i < BRIDGE_COUNT; ++i) {
-		snprintf(lan_tx, sizeof(lan_tx), (i == 0 ? "dr_lan_tx" : "dr_lan%d_tx"), i);
-		snprintf(lan_rx, sizeof(lan_rx), (i == 0 ? "dr_lan_rx" : "dr_lan%d_rx"), i);
-		snprintf(lan_ifname, sizeof(lan_ifname), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+		get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+		snprintf(lan_tx, sizeof(lan_tx), "dr_%s_tx", lan_prefix);
+		snprintf(lan_rx, sizeof(lan_rx), "dr_%s_rx", lan_prefix);
 
 		tx = nvram_safe_get(lan_tx);
 		rx = nvram_safe_get(lan_rx);
-		ifname = nvram_safe_get(lan_ifname);
+		ifname = bridge_nvram_get(i, "ifname", lan_ifname, sizeof(lan_ifname));
 
-		if (strcmp(ifname, "") != 0) {
+		if (*ifname) {
 			if (*tx == '0')
 				fprintf(fp, "distribute-list private out %s\n", ifname);
 			if (*rx == '0')
@@ -1729,8 +1726,8 @@ void start_igmp_proxy(void)
 	int wan_unit, mwan_num, count = 0;
 	int ret = 1;
 	int i, enabled_interface;
-	char lanN_ifname[] = "lanXX_ifname";
-	char multicast_lanN[] = "multicast_lanXX";
+	char lan_prefix[12];
+	char key[32];
 	char br;
 
 	mwan_num = mwan_active_num();
@@ -1753,7 +1750,9 @@ void start_igmp_proxy(void)
 		 */
 		enabled_interface=0;
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			snprintf(igmp_buffer, sizeof(igmp_buffer), (i == 0 ? "multicast_lan" : "multicast_lan%d"), i);
+			/* Preserve the legacy multicast_lan / multicast_lanN NVRAM names. */
+			get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+			snprintf(igmp_buffer, sizeof(igmp_buffer), "multicast_%s", lan_prefix);
 			enabled_interface += nvram_get_int(igmp_buffer);
 		}
 		if (!enabled_interface) {
@@ -1808,20 +1807,19 @@ void start_igmp_proxy(void)
 			}
 
 			for (br = 0; br < BRIDGE_COUNT; br++) {
-				char bridge[2];
-				bridge[0] = br ? '0' + br : '\0';
-				bridge[1] = '\0';
+				char *lan_ifname;
 
-				snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
-				snprintf(multicast_lanN, sizeof(multicast_lanN), "multicast_lan%s", bridge);
+				get_bridge_prefix(br, lan_prefix, sizeof(lan_prefix));
+				snprintf(key, sizeof(key), "multicast_%s", lan_prefix);
+				lan_ifname = bridge_nvram_get(br, "ifname", igmp_buffer, sizeof(igmp_buffer));
 
-				if ((strcmp(nvram_safe_get(multicast_lanN), "1") == 0) && (strcmp(nvram_safe_get(lanN_ifname), "") != 0)) {
+				if (nvram_match(key, "1") && *lan_ifname) {
 				/*
 				 * Configuration for Downstream Interface
 				 * Example:
 				 * phyint br0 downstream ratelimit 0 threshold 1
 				 */
-					fprintf(fp, "phyint %s downstream ratelimit 0 threshold 1\n", nvram_safe_get(lanN_ifname));
+					fprintf(fp, "phyint %s downstream ratelimit 0 threshold 1\n", lan_ifname);
 				}
 			}
 			fclose(fp);
@@ -1858,7 +1856,7 @@ void stop_igmp_proxy(void)
 void start_udpxy(void)
 {
 	char wan_prefix[] = "wan"; /* not yet mwan ready, use wan for now */
-	char buffer[32], buffer2[16], lan_ifname[32];
+	char buffer[32], buffer2[16], lan_ifname[32], lan_prefix[12];
 	char *argv[12];
 	int i, argc, bind_lan;
 
@@ -1875,20 +1873,14 @@ void start_udpxy(void)
 		bind_lan = 0;
 		lan_ifname[0] = '\0';
 
-		/* check interface to listen on */
-		/* check udpxy enabled/selected for br0 - br3 */
+		/* Check configured bridges and bind udpxy to the first selected one. */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			int ret1 = 0, ret2 = 0;
+			/* Preserve the legacy udpxy_lan / udpxy_lanN NVRAM names. */
+			get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+			snprintf(buffer2, sizeof(buffer2), "udpxy_%s", lan_prefix);
 
-			snprintf(buffer2, sizeof(buffer2), (i == 0 ? "udpxy_lan" : "udpxy_lan%d"), i);
-			ret1 = nvram_match(buffer2, "1");
-
-			snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-			ret2 = strcmp(nvram_safe_get(buffer2), "") != 0;
-
-			if (ret1 && ret2) {
-				snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-				strlcpy(lan_ifname, nvram_safe_get(buffer2), sizeof(lan_ifname));
+			if (nvram_match(buffer2, "1") && *bridge_nvram_get(i, "ipaddr", buffer2, sizeof(buffer2))) {
+				strlcpy(lan_ifname, bridge_nvram_get(i, "ifname", buffer2, sizeof(buffer2)), sizeof(lan_ifname));
 				bind_lan = 1;
 				break; /* start udpxy only once and only for one lanX */
 			}
@@ -2271,9 +2263,10 @@ static void start_media_server(int force)
 				buffer3[0] = '\0';
 
 				for (i = 0; i < BRIDGE_COUNT; i++) {
-					snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+					char *lan_ifname = bridge_nvram_get(i, "ifname", buffer, sizeof(buffer));
+
 					snprintf(buffer2, sizeof(buffer2), "br%d", i);
-					if ((strlen(nvram_safe_get(buffer)) > 0) && (strstr(msi, buffer2) != NULL)) { /* bridge is up & present in 'ms_ifname' */
+					if (*lan_ifname && (strstr(msi, buffer2) != NULL)) { /* bridge is up & present in 'ms_ifname' */
 						if (strlen(buffer3) > 0)
 							strlcat(buffer3, ",", sizeof(buffer3));
 
@@ -3080,9 +3073,10 @@ static int svc_exec_simple(const struct svc_entry *svc, const char *service, int
 #endif
 				do_static_routes(0); /* remove old '_saved' */
 				for (i = 0; i < BRIDGE_COUNT; i++) {
-					snprintf(ifname, sizeof(ifname), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-					if ((i == 0) || (strcmp(nvram_safe_get(ifname), "") != 0))
-						eval("brctl", "stp", nvram_safe_get(ifname), "0");
+					char *lan_ifname = bridge_nvram_get(i, "ifname", ifname, sizeof(ifname));
+
+					if ((i == 0) || *lan_ifname)
+						eval("brctl", "stp", lan_ifname, "0");
 				}
 			}
 			if (act_start) {
@@ -3091,11 +3085,10 @@ static int svc_exec_simple(const struct svc_entry *svc, const char *service, int
 				start_zebra();
 #endif
 				for (i = 0; i < BRIDGE_COUNT; i++) {
-					snprintf(ifname, sizeof(ifname), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-					if ((i == 0) || (strcmp(nvram_safe_get(ifname), "") != 0)) {
-						snprintf(stp, sizeof(stp), (i == 0 ? "lan_stp" : "lan%d_stp"), i);
-						eval("brctl", "stp", nvram_safe_get(ifname), nvram_safe_get(stp));
-					}
+					char *lan_ifname = bridge_nvram_get(i, "ifname", ifname, sizeof(ifname));
+
+					if ((i == 0) || *lan_ifname)
+						eval("brctl", "stp", lan_ifname, bridge_nvram_get(i, "stp", stp, sizeof(stp)));
 				}
 			}
 			restart_firewall(); /* always restart */
@@ -3593,16 +3586,13 @@ void stop_roamast(void)
 void start_roamast(void)
 {
 	char *cmd[] = {"roamast", NULL};
-	char prefix[] = "wl_XXXX";
-	char tmp[32];
 	pid_t pid;
 	int i;
 
 	stop_roamast();
 
 	for (i = 0; i < TOMATO_WLIF_MAX; i++) {
-		snprintf(prefix, sizeof(prefix), "wl%d_", i);
-		if (nvram_get_int(strlcat_r(prefix, "user_rssi", tmp, sizeof(tmp))) != 0) {
+		if (nvram_get_int(wl_nvname("user_rssi", i, 0)) != 0) {
 			_eval(cmd, NULL, 0, &pid);
 			logmsg(LOG_INFO, "wireless roaming assistant is started");
 			break;
