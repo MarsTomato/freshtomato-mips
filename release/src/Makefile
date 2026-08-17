@@ -400,7 +400,7 @@ what:
 # KERN_SIZE_OPT
 # USB ("USB"|"")
 # JFFSv1 | NO_JFFS
-# NO_CIFS NO_SAMBA NO_HTTPS NO_ADBLOCK NO_DMZ NO_DMZMAC NO_XXTP NO_LIBOPT NO_FTP NO_USBAPP NO_KEYGEN
+# NO_CIFS NO_SAMBA NO_HTTPS NO_ADBLOCK NO_DMZ NO_DMZMAC NO_XXTP NO_L7 NO_L7PAT NO_LIBOPT NO_FTP NO_USBAPP NO_KEYGEN
 # FTPSSL OPENVPN IPV6SUPP EBTABLES NTFS UFSD MEDIASRV BBEXTRAS USBEXTRAS BCM57 SLIM NOCAT NGINX NANO PROXY
 # NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT DNSSEC STUBBY PPTPD TOR TINC IPSEC RAID MICROSD USBAP IPERF
 # KEYGEN HAVEGED CTF BRCM_NAND_JFFS2 MDNS ROAM OPENSSL11 OPENSSL30 WOLFSSL WOLFSSLMIN QRCODE AIO MWAN_MAX BRIDGE_COUNT
@@ -408,7 +408,7 @@ what:
 # MIPS-specific options:
 # MIPS32 (r2|r1)
 # WNR3500LV2 (0|1)
-# KERN_SIZE_OPT_MORE NO_ZEBRA NO_L7 NO_L7PAT OPTIMIZE_SIZE_MORE BCMNAT SDHC TERMLIB ADVTHEMES BONDING
+# KERN_SIZE_OPT_MORE NO_ZEBRA OPTIMIZE_SIZE_MORE BCMNAT SDHC TERMLIB ADVTHEMES BONDING
 # AC66U R6300V1 WNDR4500V1 WNDR4500V2 FULL_EXTRAS
 
 define RouterOptions
@@ -582,6 +582,10 @@ define RouterOptions
 		echo "ERROR: FTPSSL requires FTP; remove NO_FTP or FTPSSL" >&2; \
 		exit 1; \
 	fi; \
+	if [ "$(FTPSSL)" = "y" ] && { [ "$(WOLFSSL)" = "y" ] || [ "$(WOLFSSLMIN)" = "y" ]; }; then \
+		echo "ERROR: FTPSSL is not supported with WOLFSSL/WOLFSSLMIN" >&2; \
+		exit 1; \
+	fi; \
 	if [ "$(FTPSSL)" = "y" ]; then \
 		config_y TCONFIG_FTP_SSL; \
 	fi; \
@@ -684,11 +688,35 @@ define RouterOptions
 	if [ "$(NAND)" = "y" ]; then \
 		config_y TCONFIG_NAND; \
 	fi; \
+	if [ "$(AC3200)" = "y" ]; then \
+		config_y TCONFIG_AC3200; \
+	fi; \
+	if [ "$(AC5300)" = "y" ]; then \
+		config_y TCONFIG_AC5300; \
+	fi; \
+	if [ "$(BSD)" = "y" ]; then \
+		config_y TCONFIG_BCMBSD; \
+	fi; \
 	if [ "$(ROAM)" = "y" ]; then \
 		config_y TCONFIG_ROAM; \
 	fi; \
 	if [ "$(BCMNAT)" = "y" ]; then \
 		config_y TCONFIG_BCMNAT; \
+	fi; \
+	if [ "$(BCMSMP)" = "y" ]; then \
+		config_y TCONFIG_BCMSMP; \
+	fi; \
+	if [ "$(PROXYSTA)" = "y" ]; then \
+		config_y TCONFIG_PROXYSTA; \
+	fi; \
+	if [ "$(DPSTA)" = "y" ]; then \
+		config_y TCONFIG_DPSTA; \
+	fi; \
+	if [ "$(GRO)" = "y" ]; then \
+		config_y TCONFIG_GROCTRL; \
+	fi; \
+	if [ "$(BCMFA)" = "y" ]; then \
+		config_y TCONFIG_BCMFA; \
 	fi; \
 	if [ "$(TINC)" = "y" ]; then \
 		config_y TCONFIG_TINC; \
