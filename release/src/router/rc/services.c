@@ -648,7 +648,7 @@ void generate_mdns_config(void)
 	            ipv6_enabled() ? "yes" : "no");
 
 	for (i = 1; i <= mwan_num; i++) {
-		snprintf(tmp, sizeof(tmp), (i == 1 ? "wan" : "wan%d"), i);
+		get_wan_prefix(i, tmp);
 		if ((check_wanup(tmp)) || (i == 1))
 			fprintf(fp, "%s%s", (i == 1 ? "" : ","), get_wanface(tmp));
 	}
@@ -1326,7 +1326,7 @@ void start_upnp(void)
 		upnp_port = 0;
 
 	for (i = 1; i <= mwan_num; i++) {
-		snprintf(tmp, sizeof(tmp), (i == 1 ? "wan" : "wan%d"), i);
+		get_wan_prefix(i, tmp);
 		if ((check_wanup(tmp)) || (i == 1))
 			fprintf(f, "ext_ifname=%s\n", get_wanface(tmp));
 	}
@@ -2124,7 +2124,13 @@ int ntpd_restart_main(int argc, char *argv[])
 	return 0;
 }
 
-static void stop_rstats(void)
+/*
+ * Stop a statistics daemon while allowing its backup helper to finish.
+ * @param daemon  daemon process name used by pidof() and the final log message
+ * @param caller  wrapper function name preserved in the debug log
+ * @return        none
+ */
+static void stop_stats(const char *daemon, const char *caller)
 {
 	int n, m;
 	pid_t pid, pidz, ppidz;
@@ -2132,7 +2138,7 @@ static void stop_rstats(void)
 
 	n = 60;
 	m = 15;
-	while ((n-- > 0) && ((pid = pidof("rstats")) > 0)) {
+	while ((n-- > 0) && ((pid = pidof((char *)daemon)) > 0)) {
 		w = 1;
 		pidz = pidof("gzip");
 		if (pidz < 0)
@@ -2143,7 +2149,7 @@ static void stop_rstats(void)
 			ppidz = ppid(ppid(pidz));
 
 		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			logmsg(LOG_DEBUG, "*** %s: (PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", __FUNCTION__, pid, pidz, ppidz);
+			logmsg(LOG_DEBUG, "*** %s: (PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", caller, pid, pidz, ppidz);
 			--m;
 		}
 		else
@@ -2152,7 +2158,12 @@ static void stop_rstats(void)
 		sleep(1);
 	}
 	if ((w == 1) && (n > 0))
-		logmsg(LOG_INFO, "rstats stopped");
+		logmsg(LOG_INFO, "%s stopped", daemon);
+}
+
+static void stop_rstats(void)
+{
+	stop_stats("rstats", __FUNCTION__);
 }
 
 static void start_rstats(int new)
@@ -2171,33 +2182,7 @@ static void start_rstats(int new)
 
 static void stop_cstats(void)
 {
-	int n, m;
-	pid_t pid, pidz, ppidz;
-	int w = 0;
-
-	n = 60;
-	m = 15;
-	while ((n-- > 0) && ((pid = pidof("cstats")) > 0)) {
-		w = 1;
-		pidz = pidof("gzip");
-		if (pidz < 0)
-			pidz = pidof("cp");
-
-		ppidz = -1;
-		if (pidz > 0)
-			ppidz = ppid(ppid(pidz));
-
-		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			logmsg(LOG_DEBUG, "*** %s: (PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", __FUNCTION__, pid, pidz, ppidz);
-			--m;
-		}
-		else
-			kill(pid, SIGTERM);
-
-		sleep(1);
-	}
-	if ((w == 1) && (n > 0))
-		logmsg(LOG_INFO, "cstats stopped");
+	stop_stats("cstats", __FUNCTION__);
 }
 
 static void start_cstats(int new)
@@ -3051,13 +3036,13 @@ static int svc_exec_simple(const struct svc_entry *svc, const char *service, int
 		case SVCOP_QOS:
 			if (act_stop) {
 				for (i = 1; i <= (int)mwan_configured; i++) {
-					snprintf(ifname, sizeof(ifname), (i == 1 ? "wan" : "wan%d"), i);
+					get_wan_prefix(i, ifname);
 					stop_qos(ifname);
 				}
 			}
 			if (act_start) {
 				for (i = 1; i <= (int)mwan_num; i++) {
-					snprintf(ifname, sizeof(ifname), (i == 1 ? "wan" : "wan%d"), i);
+					get_wan_prefix(i, ifname);
 					if ((check_wanup(ifname)) || (i == 1))
 						start_qos(ifname);
 				}
@@ -3292,7 +3277,7 @@ static int svc_exec_simple(const struct svc_entry *svc, const char *service, int
 				rename("/tmp/ppp/wan_log", "/tmp/ppp/wan_log.~");
 				start_wan();
 				for (i = 1; i <= (int)mwan_num; i++) {
-					snprintf(ifname, sizeof(ifname), (i == 1 ? "wan" : "wan%d"), i);
+					get_wan_prefix(i, ifname);
 					sleep(5);
 					force_to_dial(ifname);
 				}

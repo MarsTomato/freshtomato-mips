@@ -521,10 +521,7 @@ static void ipt_account_cleanup(void)
 				aname = argv[i + 1];
 
 				for (br = 0; br < BRIDGE_COUNT; br++) {
-					if (br)
-						snprintf(lanN, sizeof(lanN), "lan%d", br);
-					else
-						snprintf(lanN, sizeof(lanN), "lan");
+					get_bridge_prefix(br, lanN, sizeof(lanN));
 
 					if (strcmp(aname, lanN) == 0) {
 						have_lan_aname = 1;
@@ -838,9 +835,9 @@ static void nat_table(void)
 	char src[64];
 	char t[512];
 	char *p, *c, *b;
-	int i;
+	int i, proto;
 	unsigned int j;
-	char proto_key[16], ip_key[24], if_key[16], name[8];
+	char key[24], name[8];
 #ifndef TCONFIG_BCMARM
 	int n;
 #endif /* !TCONFIG_BCMARM */
@@ -1023,19 +1020,17 @@ static void nat_table(void)
 #endif
 
 	for (j = 1; j <= mwan_count; j++) {
-		snprintf(name, sizeof(name), (j == 1 ? "wan" : "wan%u"), j);
-		snprintf(proto_key, sizeof(proto_key), "%s_proto", name);
-		snprintf(ip_key, sizeof(ip_key), "%s_modem_ipaddr", name);
-		snprintf(if_key, sizeof(if_key), "%s_ifname", name);
-
-		if (!(nvram_match(proto_key, "pppoe") || nvram_match(proto_key, "dhcp") || nvram_match(proto_key, "static")))
+		get_wan_prefix(j, name);
+		proto = get_wanx_proto(name);
+		if ((proto != WP_PPPOE) && (proto != WP_DHCP) && (proto != WP_STATIC))
 			continue;
 
-		b = nvram_safe_get(ip_key);
-		if ((!b) || (!*b) || (nvram_match(ip_key, "0.0.0.0")) || (foreach_wif(1, NULL, is_sta)))
+		b = prefix_nvram_get(name, "modem_ipaddr", key, sizeof(key));
+		if ((!b) || (!*b) || (nvram_match(key, "0.0.0.0")) || (foreach_wif(1, NULL, is_sta)))
 			continue;
 
-		ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get(if_key), b);
+		ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n",
+		          prefix_nvram_get(name, "ifname", key, sizeof(key)), b);
 	}
 
 	switch (nvram_get_int("nf_loopback")) {
@@ -1202,7 +1197,7 @@ static void filter_input(void)
 	 */
 	if (nvram_invmatch("wan_dhcp_pass", "0")) {
 		for (mwan = 1; mwan <= mwan_count; mwan++) {
-			snprintf(buf, sizeof(buf), (mwan == 1 ? "wan" : "wan%u"), mwan);
+			get_wan_prefix(mwan, buf);
 			if (using_dhcpc(buf)) {
 				ipt_write("-A INPUT -p udp --sport 67 --dport 68 -j %s\n", chain_in_accept);
 				break;
@@ -1724,7 +1719,7 @@ int start_firewall(void)
 	memset(wanfaces, 0, sizeof(wanfaces));
 
 	for (mwan = 1; mwan <= mwan_count; mwan++) {
-		snprintf(s, sizeof(s), (mwan == 1 ? "wan" : "wan%u"), mwan);
+		get_wan_prefix(mwan, s);
 		wanup[mwan - 1] = check_wanup(s);
 	}
 
@@ -1841,7 +1836,7 @@ int start_firewall(void)
 	}
 
 	for (mwan = 1; mwan <= mwan_count; mwan++) {
-		snprintf(buf, sizeof(buf), (mwan == 1 ? "wan" : "wan%u"), mwan);
+		get_wan_prefix(mwan, buf);
 		memcpy(&wanfaces[mwan - 1], get_wanfaces(buf), sizeof(wanfaces[mwan - 1]));
 		wanface[mwan - 1] = wanfaces[mwan - 1].iface[0].name;
 	}
