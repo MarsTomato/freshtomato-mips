@@ -188,15 +188,3 @@ make ac66z
 ```
 
 `make help` lists the build targets available in the selected source tree.
-
-## Special RT-N targets
-
-> [!IMPORTANT]
-> Before compiling any of the following RT-N targets, revert the kernel patch:
->
-> `n6`, `n60`, `rtn53`, `e2500`, `e3200`, `wndr3400v2`, `f9k`
-
-```sh
-cd release/src-rt/linux
-patch -R -p4 < fix4usbap.patch
-```
