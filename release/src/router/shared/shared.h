@@ -250,6 +250,55 @@ extern int is_no_partition(const char *discname);
 /* id.c */
 enum {
 	MODEL_UNKNOWN,
+#ifdef TCONFIG_BCMARM
+	MODEL_RTN18U,
+	MODEL_RTAC56U,
+	MODEL_RTAC66U_B1,
+	MODEL_RTAC67U,
+	MODEL_DSLAC68U,
+	MODEL_RTAC68U,
+	MODEL_RTAC68UV3,
+	MODEL_RTAC1900P,
+#ifdef TCONFIG_AC3200
+	MODEL_RTAC3200,
+#endif
+#ifdef TCONFIG_BCM714
+	MODEL_RTAC3100,
+	MODEL_RTAC88U,
+#ifdef TCONFIG_AC5300
+	MODEL_RTAC5300,
+#endif
+#endif /* TCONFIG_BCM714 */
+	MODEL_R6250,
+	MODEL_R6300v2,
+	MODEL_R6400,
+	MODEL_R6400v2,
+	MODEL_R6700v1,
+	MODEL_R6700v3,
+	MODEL_R6900,
+	MODEL_R7000,
+	MODEL_EX7000,
+	MODEL_XR300,
+#ifdef TCONFIG_AC3200
+	MODEL_R8000,
+#endif
+	MODEL_DIR868L,
+	MODEL_WS880,
+	MODEL_EA6350v1,
+	MODEL_EA6350v2,
+	MODEL_EA6400,
+	MODEL_EA6700,
+	MODEL_EA6900,
+	MODEL_WZR1750,
+	MODEL_R1D,
+	MODEL_AC15,
+	MODEL_AC18,
+	MODEL_F9K1113v2,
+	MODEL_F9K1113v2_20X0,
+	MODEL_AC1450,
+	MODEL_R6200v2,
+	MODEL_EX6200
+#elif defined(TCONFIG_RTNPLUS)
 	MODEL_WRT54G,
 	MODEL_WRTSL54GS,
 	MODEL_WHRG54S,
@@ -344,6 +393,61 @@ enum {
 	MODEL_WNDR4500,
 	MODEL_WNDR4500V2,
 	MODEL_DIR865L
+#else
+	MODEL_WRT54G,
+	MODEL_WRTSL54GS,
+	MODEL_WHRG54S,
+	MODEL_WHRHPG54,
+	MODEL_WR850GV1,
+	MODEL_WR850GV2,
+	MODEL_WZRG54,
+	MODEL_WL500W,
+	MODEL_WL500GP,
+	MODEL_WL500GPv2,
+	MODEL_WL500GE,
+	MODEL_WL500GD,
+	MODEL_WL520GU,
+	MODEL_DIR320,
+	MODEL_H618B,
+	MODEL_WL1600GL,
+	MODEL_WBRG54,
+	MODEL_WBR2G54,
+	MODEL_WX6615GT,
+	MODEL_WZRHPG54,
+	MODEL_WZRRSG54,
+	MODEL_WZRRSG54HP,
+	MODEL_WVRG54NF,
+	MODEL_WHR2A54G54,
+	MODEL_WHR3AG54,
+	MODEL_RT390W,
+	MODEL_RTN10,
+	MODEL_RTN12,
+	MODEL_RTN16,
+	MODEL_WNR3500L,
+	MODEL_WNR2000v2,
+	MODEL_F7D3301,
+	MODEL_F7D3302,
+	MODEL_F7D4301,
+	MODEL_F7D4302,
+	MODEL_F5D8235v3,
+	MODEL_WRT160Nv1,
+	MODEL_WRT160Nv3,
+	MODEL_WRT320N,
+	MODEL_WRT610Nv2,
+	MODEL_WRT310Nv1,
+	MODEL_E4200,
+	MODEL_MN700,
+	MODEL_WRH54G,
+	MODEL_WHRG125,
+	MODEL_WZRG108,
+	MODEL_WTR54GS,
+	MODEL_WR100,
+	MODEL_WLA2G54L,
+	MODEL_TM2300,
+	MODEL_WZRG300N,
+	MODEL_WRT300N,
+	MODEL_WL330GE
+#endif /* TCONFIG_BCMARM */
 };
 
 /* NOTE: Do not insert new entries in the middle of this enum,
@@ -352,6 +456,10 @@ enum {
  * whether or not this config file can be restored on the router.
  */
 enum {
+#ifdef TCONFIG_BCMARM
+	HW_UNKNOWN,
+	HW_BCM4708
+#elif defined(TCONFIG_RTNPLUS)
 	HW_BCM4702,
 	HW_BCM4712,
 	HW_BCM5325E,
@@ -374,6 +482,25 @@ enum {
 	HW_BCM4785,
 	HW_BCM4706,
 	HW_UNKNOWN
+#else
+	HW_BCM4702,
+	HW_BCM4712,
+	HW_BCM5325E,
+	HW_BCM4704_BCM5325F,
+	HW_BCM5352E,
+	HW_BCM5354G,
+	HW_BCM4712_BCM5325E,
+	HW_BCM4704_BCM5325F_EWC,
+	HW_BCM4705L_BCM5325E_EWC,
+	HW_BCM5350,
+	HW_BCM5356,
+	HW_BCM4716,
+	HW_BCM4718,
+	HW_BCM4717,
+	HW_BCM5365,
+	HW_BCM4785,
+	HW_UNKNOWN
+#endif /* TCONFIG_BCMARM */
 };
 
 #define SUP_SES			(1 << 0)
@@ -384,8 +511,12 @@ enum {
 #define SUP_NONVE		(1 << 5)
 #define SUP_80211N		(1 << 6)
 #define SUP_1000ET		(1 << 7)
+#ifdef TCONFIG_RTNPLUS
 #define SUP_80211AC		(1 << 8)
-
+#endif
+#ifdef TCONFIG_BCMARM
+#define SUP_80211AC_WAVE2	(1 << 9)
+#endif /* TCONFIG_BCMARM */
 extern int check_hw_type(void);
 extern int get_model(void);
 extern int supports(unsigned long attr);
@@ -432,25 +563,88 @@ extern void file_unlock(int lockfd);
 #define LED_BRIDGE		6
 #define LED_USB			7
 #define LED_MYSTERY		LED_USB /* (unmarked LED between wireless and bridge on WHR-G54S) */
+#ifdef TCONFIG_BCMARM
+#define LED_USB3		8
+#define LED_5G			9
+#ifdef TCONFIG_AC3200
+#define LED_52G			10
+#define LED_COUNT		11
+#else
+#define LED_COUNT		10
+#endif /* TCONFIG_AC3200 */
+#elif defined(TCONFIG_RTNPLUS)
 #define LED_5G			8
 #define LED_COUNT		9
+#else
+#define LED_COUNT		8
+#endif /* TCONFIG_BCMARM */
 #define	LED_OFF			0
 #define	LED_ON			1
 #define LED_PROBE		2
 /* support up to 32 GPIO pins for buttons, leds and some other IC functions */
 #define TOMATO_GPIO_MAX		31
 #define TOMATO_GPIO_MIN		0
+#ifdef TCONFIG_BCMARM
+#define T_HIGH			1
+#define T_LOW			0
+
+#define GPIO_00			0
+#define GPIO_01			1
+#define GPIO_02			2
+#define GPIO_03			3
+#define GPIO_04			4
+#define GPIO_05			5
+#define GPIO_06			6
+#define GPIO_07			7
+#define GPIO_08			8
+#define GPIO_09			9
+#define GPIO_10			10
+#define GPIO_11			11
+#define GPIO_12			12
+#define GPIO_13			13
+#define GPIO_14			14
+#define GPIO_15			15
+#define GPIO_16			16
+#define GPIO_17			17
+#define GPIO_18			18
+#define GPIO_19			19
+#define GPIO_20			20
+#define GPIO_21			21
+#define GPIO_22			22
+#define GPIO_23			23
+#define GPIO_24			24
+#define GPIO_25			25
+#define GPIO_26			26
+#define GPIO_27			27
+#define GPIO_28			28
+#define GPIO_29			29
+#define GPIO_30			30
+#define GPIO_31			31
+#endif /* TCONFIG_BCMARM */
+
 extern const char *led_names[];
 extern int gpio_open(uint32_t mask);
 extern void gpio_write(uint32_t bit, int en);
 extern uint32_t gpio_read(void);
 extern uint32_t _gpio_read(int f);
+#ifdef TCONFIG_BCMARM
+extern uint32_t set_gpio(uint32_t gpio, uint32_t value);
+#endif
 extern int nvget_gpio(const char *name, int *gpio, int *inv);
 extern int do_led(int which, int mode);
+#ifdef TCONFIG_BCMARM
+extern void do_led_nongpio(int model, int which, int mode);
+#endif
 static inline int led(int which, int mode)
 {
 	return (do_led(which, mode) != 255);
 }
+#ifdef TCONFIG_BCMARM
+extern void disable_led_wanlan(void);
+extern void enable_led_wanlan(void);
+extern void do_led_bridge(int mode);
+extern void led_setup(void);
+#endif /* TCONFIG_BCMARM */
 
 /* base64.c */
 extern int base64_encode(const unsigned char *in, char *out, int inlen); /* returns amount of out buffer used */
@@ -474,11 +668,20 @@ extern int is_number(char *a);
 extern int isspacex(char c);
 extern char *shrink_space(char *dest, const char *src, int n);
 
+/* wl.c */
+#if defined(__CONFIG_DHDAP__) || defined(TCONFIG_DHDAP)
+extern int dhd_probe(char *name);
+extern int dhd_ioctl(char *name, int cmd, void *buf, int len);
+extern int dhd_iovar_setbuf(char *ifname, char *iovar, void *param, int paramlen, void *bufptr, unsigned int buflen);
+extern int dhd_iovar_setint(char *ifname, char *iovar, int val);
+extern int dhd_bssiovar_setint(char *ifname, char *iovar, int bssidx, int val);
+#endif
+
 /* shutils.c */
 #ifdef TCONFIG_BCMBSD
  extern pid_t get_pid_by_name(const char *name); /* Returns the process ID */
 #endif
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS
  extern int getMTD(const char *name); /* Find partition with defined name and return partition number as an integer */
 #endif
 #ifdef TCONFIG_WIREGUARD

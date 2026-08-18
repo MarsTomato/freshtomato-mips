@@ -1,15 +1,6 @@
-/*
- * MIPS builds use this file in two contexts:
- *
- *  - libshared: keep the historical router_defaults[] stub used by wlconf
- *    and other Broadcom consumers;
- *  - nvram utility: build the full defaults tables into nvram itself.
- *
- * This preserves the existing MIPS binary layout while keeping the defaults
- * source under router/shared, ready for ARM/MIPS source unification.
- */
+#include <tomato_config.h>
 
-#ifdef NVRAM_DEFAULTS_FULL
+#if defined(TCONFIG_BCMARM) || defined(NVRAM_DEFAULTS_FULL)
 
 /*
  *
@@ -22,7 +13,6 @@
  */
 
 
-#include <tomato_config.h>
 #include "tomato_profile.h"
 #include <string.h>
 #ifdef TCONFIG_BCMARM
@@ -55,7 +45,23 @@
  #endif
 #endif
 
-const defaults_t rstats_defaults[] = {
+/*
+ * ARM uses Broadcom's larger nvram_tuple while MIPS keeps the compact
+ * two-pointer defaults_t used by the nvram utility.  The common tables
+ * intentionally initialize only name/key and value; all remaining ARM
+ * nvram_tuple members are zero-initialized by C.
+ */
+#ifdef TCONFIG_BCMARM
+ #define DEFAULTS_TYPE struct nvram_tuple
+ #define DEFAULTS_CONST
+ #define DEFAULTS_MAIN router_defaults
+#else
+ #define DEFAULTS_TYPE defaults_t
+ #define DEFAULTS_CONST const
+ #define DEFAULTS_MAIN defaults
+#endif
+
+DEFAULTS_CONST DEFAULTS_TYPE rstats_defaults[] = {
 	{ "rstats_path",		""				},
 	{ "rstats_stime",		"48"				},
 	{ "rstats_offset",		"1"				},
@@ -66,7 +72,7 @@ const defaults_t rstats_defaults[] = {
 	{ NULL, NULL }
 };
 
-const defaults_t cstats_defaults[] = {
+DEFAULTS_CONST DEFAULTS_TYPE cstats_defaults[] = {
 	{ "cstats_path",		""				},
 	{ "cstats_stime",		"48"				},
 	{ "cstats_offset",		"1"				},
@@ -80,7 +86,7 @@ const defaults_t cstats_defaults[] = {
 };
 
 #ifdef TCONFIG_FTP
-const defaults_t ftp_defaults[] = {
+DEFAULTS_CONST DEFAULTS_TYPE ftp_defaults[] = {
 	{ "ftp_super",			"0"				},
 	{ "ftp_anonymous",		"0"				},
 	{ "ftp_dirlist",		"0"				},
@@ -104,7 +110,7 @@ const defaults_t ftp_defaults[] = {
 #endif /* TCONFIG_FTP */
 
 #ifdef TCONFIG_SNMP
-const defaults_t snmp_defaults[] = {
+DEFAULTS_CONST DEFAULTS_TYPE snmp_defaults[] = {
 	{ "snmp_port",			"161"				},
 	{ "snmp_remote",		"0"				},
 	{ "snmp_remote_sip",		""				},
@@ -120,7 +126,7 @@ const defaults_t snmp_defaults[] = {
 #define BRIDGE_BLOCK_UPNP(i) \
 	{ "upnp_lan" #i,		""				},
 
-const defaults_t upnp_defaults[] = {
+DEFAULTS_CONST DEFAULTS_TYPE upnp_defaults[] = {
 	{ "upnp_secure",		"1"				},
 	{ "upnp_port",			"0"				},
 	{ "upnp_ssdp_interval",		"900"				},	/* SSDP interval */
@@ -179,7 +185,7 @@ const defaults_t upnp_defaults[] = {
 };
 
 #ifdef TCONFIG_BCMBSD
-const defaults_t bsd_defaults[] = {
+DEFAULTS_CONST DEFAULTS_TYPE bsd_defaults[] = {
 	{ "bsd_role", 		 	"3"				},	/* Band Steer Daemon; 0:Disable, 1:Primary, 2:Helper, 3:Standalone */
 	{ "bsd_hport", 		 	"9877"				},	/* BSD helper port */
 	{ "bsd_pport", 		 	"9878"				},	/* BSD Primary port */
@@ -229,7 +235,7 @@ const defaults_t bsd_defaults[] = {
 	{"bsd_aclist_timeout",		"3"				},
 #endif /* TCONFIG_AC3200 */
 	{"bsd_scheme",			"2"				},
-	{ 0, 0, 0 }
+	{ NULL, NULL }
 };
 #endif /* TCONFIG_BCMBSD */
 
@@ -250,7 +256,7 @@ const defaults_t bsd_defaults[] = {
 	{ "wan" #i "_ppp_username",	""				}, \
 	{ "wan" #i "_ppp_passwd",	""				}, \
 	{ "wan" #i "_ppp_service",	""				}, \
-	{ "wan" #i "_ppp_demand",	""				}, \
+	{ "wan" #i "_ppp_demand",	"0"				}, \
 	{ "wan" #i "_ppp_demand_dnsip",	"198.51.100.1"			}, \
 	{ "wan" #i "_ppp_custom",	""				}, \
 	{ "wan" #i "_ppp_idletime",	"5"				}, \
@@ -529,7 +535,7 @@ const defaults_t bsd_defaults[] = {
 	{"wg" #i "_prio",		""				},
 #endif /* TCONFIG_WIREGUARD */
 
-const defaults_t defaults[] = {
+DEFAULTS_CONST DEFAULTS_TYPE DEFAULTS_MAIN[] = {
 	{ "restore_defaults",		"0"				},	/* Set to 0 to not restore defaults on boot */
 
 	/* LAN H/W parameters */
@@ -675,7 +681,7 @@ const defaults_t defaults[] = {
 #ifdef TCONFIG_IPV6
 	/* IPv6 parameters */
 	{ "ipv6_service",		""				},	/* [''|native|native-pd|6to4|sit|other] */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "ipv6_debug",			"0"				},	/* enable/show debug infos */
 #endif
 	{ "ipv6_duid_type",		"3"				},	/* see RFC8415 Section 11; DUID-LLT = 1, DUID-EN = 2, DUID-LL = 3 (default), DUID-UUID = 4 */
@@ -721,7 +727,7 @@ const defaults_t defaults[] = {
 	/* Wireless parameters */
 	{ "wl_ifname",			""				},	/* Interface name */
 	{ "wl_hwaddr",			""				},	/* MAC address */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "wl_clap_hwaddr",		""				},	/* ap mac addr for the FT client (sta/psta/wet) to connect to (default "empty" / not needed) */
 #endif
 #ifdef TCONFIG_BCMARM
@@ -741,7 +747,7 @@ const defaults_t defaults[] = {
 	{ "wl1_ssid",			"FreshTomato50"			},
 #endif
 	{ "wl_country_code",		""				},	/* Country (default obtained from driver) */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "wl_country_rev", 		""				},	/* Regrev Code (default obtained from driver) */
 #endif
 	{ "wl_radio",			"1"				},	/* Enable (1) or disable (0) radio */
@@ -752,7 +758,7 @@ const defaults_t defaults[] = {
 	{ "wl_closed",			"0"				},	/* Closed (hidden) network */
 	{ "wl_ap_isolate",		"0"				},	/* AP isolate mode */
 	{ "wl_mode",			"ap"				},	/* AP mode (ap|sta|wds) */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "wl_lazywds",			"0"				},	/* Enable "lazy" WDS mode (0|1) */
 #else
 	{ "wl_lazywds",			"1"				},	/* Enable "lazy" WDS mode (0|1) */
@@ -767,7 +773,7 @@ const defaults_t defaults[] = {
 	{ "wl_key3",			""				},	/* 5/13 char ASCII or 10/26 char hex */
 	{ "wl_key4",			""				},	/* 5/13 char ASCII or 10/26 char hex */
 	{ "wl_channel",			"6"				},	/* Channel number */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "wl_assoc_retry_max", 	"3"				},	/* Non-zero limit for association retries */
 #else
 	{ "wl1_channel",		"0"				},
@@ -871,7 +877,7 @@ const defaults_t defaults[] = {
 	{ "wl_nbw",			"40"				},	/* BW: 20 / 40 MHz */
 	{ "wl_nbw_cap",			"1"				},	/* BW: def 20inB and 40inA */
 	{ "wl_mimo_preamble",		"mm"				},	/* 802.11n Preamble: mm/gf/auto/gfbcm */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "wl_nctrlsb",			"lower"				},	/* N-CTRL SB (none/lower/upper) */
 #else
 	{ "wl_nctrlsb",			"upper"				},	/* N-CTRL SB (none/lower/upper) */
@@ -932,7 +938,7 @@ const defaults_t defaults[] = {
 	{ "wl_radio_pwrsave_enable",	"0"				},	/* Radio powersave enable */
 	{ "wl_radio_pwrsave_quiet_time","1800"				},	/* Quiet time for power save */
 	{ "wl_radio_pwrsave_pps",	"10"				},	/* Packets per second threshold for power save */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "wl_rxchain_pwrsave_stas_assoc_check", "1"			},	/* STAs associated before powersave */
 	{ "wl_radio_pwrsave_level",	"0"				},	/* Radio power save level */
 	{ "wl_radio_pwrsave_stas_assoc_check", "1"			},	/* STAs associated before powersave */
@@ -946,7 +952,7 @@ const defaults_t defaults[] = {
 	{ "wl_wmf_bss_enable",		"0"				},	/* Wireless Multicast Forwarding Enable/Disable */
 	{ "wl_rifs_advert",		"auto"				},	/* RIFS mode advertisement */
 	{ "wl_stbc_tx",			"auto"				},	/* Default STBC TX setting */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "wl_stbc_rx", 		"1"				},	/* Default STBC RX setting */
 #endif
 	{ "wl_mcast_regen_bss_enable",	"1"				},	/* MCAST REGEN Enable/Disable */
@@ -2112,14 +2118,17 @@ const defaults_t if_vlan[] = {
 };
 #endif /* TCONFIG_BCMARM */
 
-
-#else /* !NVRAM_DEFAULTS_FULL */
+#else /* TCONFIG_BCMARM || NVRAM_DEFAULTS_FULL */
 
 #include <string.h>
 #include <ctype.h>
 #include <bcmnvram.h>
 
-// stub for wlconf, etc.
+/*
+ * Keep the historical MIPS router_defaults[] stub used by wlconf and
+ * other Broadcom consumers.  The nvram utility builds the full tables
+ * above by compiling this file with NVRAM_DEFAULTS_FULL.
+ */
 struct nvram_tuple router_defaults[] = {
 	{ NULL, NULL, 0 }
 };
@@ -2127,9 +2136,7 @@ struct nvram_tuple router_defaults[] = {
 #ifdef CONFIG_BCMWL6
 /* Translates from, for example, wl0_ (or wl0.1_) to wl_. */
 /* Only single digits are currently supported */
-
-static void
-fix_name(const char *name, char *fixed_name)
+static void fix_name(const char *name, char *fixed_name)
 {
 	char *pSuffix = NULL;
 
@@ -2153,12 +2160,11 @@ fix_name(const char *name, char *fixed_name)
  * Find nvram param name; return pointer which should be treated as const
  * return NULL if not found.
  *
- * NOTE:  This routine special-cases the variable wl_bss_enabled.  It will
- * return the normal default value if asked for wl_ or wl0_.  But it will
+ * NOTE: This routine special-cases the variable wl_bss_enabled. It will
+ * return the normal default value if asked for wl_ or wl0_. But it will
  * return 0 if asked for a virtual BSS reference like wl0.1_.
  */
-char *
-nvram_default_get(const char *name)
+char *nvram_default_get(const char *name)
 {
 	int idx;
 	char fixed_name[NVRAM_MAX_VALUE_LEN];
@@ -2178,6 +2184,6 @@ nvram_default_get(const char *name)
 
 	return NULL;
 }
-#endif
+#endif /* CONFIG_BCMWL6 */
 
-#endif /* NVRAM_DEFAULTS_FULL */
+#endif /* TCONFIG_BCMARM || NVRAM_DEFAULTS_FULL */

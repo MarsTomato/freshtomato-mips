@@ -227,7 +227,7 @@ static const char *nv_default_value(const defaults_t *t)
 			return "28";
 #ifdef CONFIG_BCMWL5
 		case MODEL_RTN10:
-#if !defined(TCONFIG_BLINK) && !defined(TCONFIG_BCMARM) /* RT only */
+#ifndef TCONFIG_RTNPLUS /* RT only */
 		case MODEL_RTN12:
 #else
 		case MODEL_RTN12A1:
@@ -257,7 +257,7 @@ static const char *nv_default_value(const defaults_t *t)
 		case MODEL_F7D4301:
 		case MODEL_F7D4302:
 		case MODEL_F5D8235v3:
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 		case MODEL_F9K1102:
 #endif
 			return "1";
