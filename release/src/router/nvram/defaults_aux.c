@@ -22,8 +22,9 @@
  */
 
 
-#include <tomato_config.h>
-#include "tomato_profile.h"
+#include <stddef.h>
+#include <shared.h>
+
 #include "defaults.h"
 
 #if BRIDGE_COUNT < 1 || BRIDGE_COUNT > 16
