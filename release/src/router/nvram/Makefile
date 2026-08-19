@@ -25,19 +25,13 @@ all: libnvram.so nvram
 	@echo " [nvram$(BCMEX)] CC $@"
 	@$(CC) $(CFLAGS) -o $@ -c $<
 
-ifneq ($(TCONFIG_BCMARM),y)
-defaults.o: $(TOP)/shared/defaults.c
-	@echo " [nvram$(BCMEX)] CC $@"
-	@$(CC) $(CFLAGS) -DNVRAM_DEFAULTS_FULL -o $@ -c $<
-endif
-
 libnvram.so: nvram_linux.o $(if $(TCONFIG_BCMARM),,nvram_convert.o)
 	@echo " [nvram$(BCMEX)] LD $@"
 	@$(LD) -shared -o $@ $^
 	$(SIZECHECK)
 	$(CPTMP)
 
-nvram: libnvram.so $(if $(TCONFIG_BCMARM),main.o,nvram.o defaults.o)
+nvram: libnvram.so $(if $(TCONFIG_BCMARM),main.o,nvram.o defaults_aux.o)
 	@echo " [nvram$(BCMEX)] CC $@"
 	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 	$(SIZECHECK)
