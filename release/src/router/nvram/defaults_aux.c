@@ -23,15 +23,15 @@
 
 
 #include <stddef.h>
+#include <string.h>
+#include <bcmnvram.h>
 #include <shared.h>
-
-#include "defaults.h"
 
 #if BRIDGE_COUNT < 1 || BRIDGE_COUNT > 16
  #error "Unsupported BRIDGE_COUNT range"
 #endif
 
-const defaults_t if_generic[] = {
+const struct nvram_tuple if_generic[] = {
 	{ "lan_ifname",			"br0"				},
 	{ "lan_ifnames",		"eth0 eth2 eth3 eth4"		},
 	{ "wan_ifname",			"eth1"				},
@@ -44,7 +44,7 @@ const defaults_t if_generic[] = {
 	{ "lan" #i "_ifname",		""				}, \
 	{ "lan" #i "_ifnames",		""				},
 
-const defaults_t if_vlan[] = {
+const struct nvram_tuple if_vlan[] = {
 	{ "wan_ifname",			"vlan1"				},
 	{ "wan_ifnames",		"vlan1"				},
 	{ "lan_ifname",			"br0"				},

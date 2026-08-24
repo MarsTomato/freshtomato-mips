@@ -13,18 +13,18 @@
 
 #include "tomato_profile.h"
 #include <string.h>
+#include <shutils.h>
 #ifdef TCONFIG_BCMARM
  #include <stdio.h>
  #include <ctype.h>
  #include <wlioctl.h>
- #include <shutils.h>
  #include <bcmnvram.h>
 #else
  #include <ctype.h>
  #include <bcmnvram.h>
- #include "defaults.h"
 #endif
 #include <shared.h>
+#include "defaults.h"
 #if MWAN_MAX < 1 || MWAN_MAX > 8
  #error "Unsupported MWAN_MAX range"
 #endif
@@ -46,22 +46,11 @@
 #endif
 
 /*
- * ARM uses Broadcom's larger nvram_tuple while MIPS keeps the compact
- * two-pointer defaults_t used by the nvram utility.  The common tables
- * intentionally initialize only name/key and value; all remaining ARM
- * nvram_tuple members are zero-initialized by C.
+ * Use Broadcom's nvram_tuple for all default tables. The common two-field
+ * initializers set name and value; next is zero-initialized by C.
  */
-#ifdef TCONFIG_BCMARM
- #define DEFAULTS_TYPE struct nvram_tuple
- #define DEFAULTS_CONST
- #define DEFAULTS_MAIN router_defaults
-#else
- #define DEFAULTS_TYPE defaults_t
- #define DEFAULTS_CONST const
- #define DEFAULTS_MAIN defaults
-#endif
 
-DEFAULTS_CONST DEFAULTS_TYPE rstats_defaults[] = {
+struct nvram_tuple rstats_defaults[] = {
 	{ "rstats_path",		""				},
 	{ "rstats_stime",		"48"				},
 	{ "rstats_offset",		"1"				},
@@ -72,7 +61,7 @@ DEFAULTS_CONST DEFAULTS_TYPE rstats_defaults[] = {
 	{ NULL, NULL }
 };
 
-DEFAULTS_CONST DEFAULTS_TYPE cstats_defaults[] = {
+struct nvram_tuple cstats_defaults[] = {
 	{ "cstats_path",		""				},
 	{ "cstats_stime",		"48"				},
 	{ "cstats_offset",		"1"				},
@@ -86,7 +75,7 @@ DEFAULTS_CONST DEFAULTS_TYPE cstats_defaults[] = {
 };
 
 #ifdef TCONFIG_FTP
-DEFAULTS_CONST DEFAULTS_TYPE ftp_defaults[] = {
+struct nvram_tuple ftp_defaults[] = {
 	{ "ftp_super",			"0"				},
 	{ "ftp_anonymous",		"0"				},
 	{ "ftp_dirlist",		"0"				},
@@ -110,7 +99,7 @@ DEFAULTS_CONST DEFAULTS_TYPE ftp_defaults[] = {
 #endif /* TCONFIG_FTP */
 
 #ifdef TCONFIG_SNMP
-DEFAULTS_CONST DEFAULTS_TYPE snmp_defaults[] = {
+struct nvram_tuple snmp_defaults[] = {
 	{ "snmp_port",			"161"				},
 	{ "snmp_remote",		"0"				},
 	{ "snmp_remote_sip",		""				},
@@ -126,7 +115,7 @@ DEFAULTS_CONST DEFAULTS_TYPE snmp_defaults[] = {
 #define BRIDGE_BLOCK_UPNP(i) \
 	{ "upnp_lan" #i,		""				},
 
-DEFAULTS_CONST DEFAULTS_TYPE upnp_defaults[] = {
+struct nvram_tuple upnp_defaults[] = {
 	{ "upnp_secure",		"1"				},
 	{ "upnp_port",			"0"				},
 	{ "upnp_ssdp_interval",		"900"				},	/* SSDP interval */
@@ -185,7 +174,7 @@ DEFAULTS_CONST DEFAULTS_TYPE upnp_defaults[] = {
 };
 
 #ifdef TCONFIG_BCMBSD
-DEFAULTS_CONST DEFAULTS_TYPE bsd_defaults[] = {
+struct nvram_tuple bsd_defaults[] = {
 	{ "bsd_role", 		 	"3"				},	/* Band Steer Daemon; 0:Disable, 1:Primary, 2:Helper, 3:Standalone */
 	{ "bsd_hport", 		 	"9877"				},	/* BSD helper port */
 	{ "bsd_pport", 		 	"9878"				},	/* BSD Primary port */
@@ -535,7 +524,7 @@ DEFAULTS_CONST DEFAULTS_TYPE bsd_defaults[] = {
 	{"wg" #i "_prio",		""				},
 #endif /* TCONFIG_WIREGUARD */
 
-DEFAULTS_CONST DEFAULTS_TYPE DEFAULTS_MAIN[] = {
+struct nvram_tuple router_defaults[] = {
 	{ "restore_defaults",		"0"				},	/* Set to 0 to not restore defaults on boot */
 
 	/* LAN H/W parameters */
@@ -1955,7 +1944,6 @@ DEFAULTS_CONST DEFAULTS_TYPE DEFAULTS_MAIN[] = {
 	{ NULL, NULL }
 };
 
-#ifdef TCONFIG_BCMARM
 /* Translates from, for example, wl0_ (or wl0.1_) to wl_ */
 /* Only single digits are currently supported */
 static void fix_name(const char *name, char *fixed_name)
@@ -1998,6 +1986,7 @@ char *nvram_default_get(const char *name)
 		}
 	}
 
+#ifdef TCONFIG_BCMARM
 #ifndef TCONFIG_BCM7
 #ifdef __CONFIG_HSPOT__
 	if (strcmp(fixed_name, "wl_bss_hs2_enabled") == 0) {
@@ -2007,6 +1996,7 @@ char *nvram_default_get(const char *name)
 	}
 #endif /* __CONFIG_HSPOT__ */
 #endif /* !TCONFIG_BCM7 */
+#endif /* TCONFIG_BCMARM */
 
 	for (idx = 0; router_defaults[idx].name != NULL; idx++) {
 		if (strcmp(router_defaults[idx].name, fixed_name) == 0) {
@@ -2048,68 +2038,3 @@ void nvram_restore_var(char *prefix, char *name)
 		}
 	}
 }
-
-#else /* TCONFIG_BCMARM */
-/*
- * Keep the historical MIPS router_defaults[] stub used by wlconf and
- * other Broadcom consumers.  The full compact defaults tables above
- * are exported by libshared for the MIPS nvram utility.
- */
-struct nvram_tuple router_defaults[] = {
-	{ NULL, NULL, 0 }
-};
-
-#ifdef CONFIG_BCMWL6
-/* Translates from, for example, wl0_ (or wl0.1_) to wl_. */
-/* Only single digits are currently supported */
-static void fix_name(const char *name, char *fixed_name)
-{
-	char *pSuffix = NULL;
-
-	/* Translate prefix wlx_ and wlx.y_ to wl_ */
-	/* Expected inputs are: wld_root, wld.d_root, wld.dd_root
-	 * We accept: wld + '_' anywhere
-	 */
-	pSuffix = strchr(name, '_');
-
-	if ((strncmp(name, "wl", 2) == 0) && isdigit(name[2]) && (pSuffix != NULL)) {
-		strcpy(fixed_name, "wl");
-		strcpy(&fixed_name[2], pSuffix);
-		return;
-	}
-
-	/* No match with above rules: default to input name */
-	strcpy(fixed_name, name);
-}
-
-/*
- * Find nvram param name; return pointer which should be treated as const
- * return NULL if not found.
- *
- * NOTE: This routine special-cases the variable wl_bss_enabled. It will
- * return the normal default value if asked for wl_ or wl0_. But it will
- * return 0 if asked for a virtual BSS reference like wl0.1_.
- */
-char *nvram_default_get(const char *name)
-{
-	int idx;
-	char fixed_name[NVRAM_MAX_VALUE_LEN];
-
-	fix_name(name, fixed_name);
-	if (strcmp(fixed_name, "wl_bss_enabled") == 0) {
-		if (name[3] == '.' || name[4] == '.') { /* Virtual interface */
-			return "0";
-		}
-	}
-
-	for (idx = 0; router_defaults[idx].name != NULL; idx++) {
-		if (strcmp(router_defaults[idx].name, fixed_name) == 0) {
-			return router_defaults[idx].value;
-		}
-	}
-
-	return NULL;
-}
-#endif /* CONFIG_BCMWL6 */
-
-#endif /* TCONFIG_BCMARM */

@@ -19,7 +19,7 @@
 #include <shared.h>
 
 #include "nvram_convert.h"
-#include "defaults.h"
+#include <defaults.h>
 
 #define X_QUOTE		0
 #define X_SET		1
@@ -40,6 +40,9 @@ typedef struct {
 	int (*main)(int argc, char *argv[]);
 } applets_t;
 
+
+extern const struct nvram_tuple if_generic[];
+extern const struct nvram_tuple if_vlan[];
 
 extern int nvram_file2nvram(const char *name, const char *filename);
 extern int nvram_nvram2file(const char *name, const char *filename);
@@ -217,11 +220,11 @@ static int find_main(int argc, char **argv)
 	return (r == -1) ? 1 : WEXITSTATUS(r);
 }
 
-static const char *nv_default_value(const defaults_t *t)
+static const char *nv_default_value(const struct nvram_tuple *t)
 {
 	int model = get_model();
 
-	if (strcmp(t->key, "wl_txpwr") == 0) {
+	if (strcmp(t->name, "wl_txpwr") == 0) {
 		switch (model) {
 		case MODEL_WHRG54S:
 			return "28";
@@ -238,7 +241,7 @@ static const char *nv_default_value(const defaults_t *t)
 		}
 	}
 #ifdef TCONFIG_USB
-	else if (strcmp(t->key, "usb_enable") == 0) {
+	else if (strcmp(t->name, "usb_enable") == 0) {
 		switch (model) {
 		case MODEL_WRTSL54GS:
 		case MODEL_WL500W:
@@ -268,9 +271,10 @@ static const char *nv_default_value(const defaults_t *t)
 	return t->value;
 }
 
+#ifdef TCONFIG_MIPS_RTAC
 static int validate_main(int argc, char **argv)
 {
-	const defaults_t *t;
+	const struct nvram_tuple *t;
 	char *p;
 	int i;
 	int force = 0;
@@ -283,10 +287,10 @@ static int validate_main(int argc, char **argv)
 			unit = atoi(argv[i] + 4);
 	}
 
-	for (t = defaults; t->key; t++) {
-		if (strncmp(t->key, "wl_", 3) == 0) {
+	for (t = router_defaults; t->name; t++) {
+		if (strncmp(t->name, "wl_", 3) == 0) {
 			/* sync wl_ and wlX_ */
-			p = wl_nvname(t->key + 3, unit, 0);
+			p = wl_nvname(t->name + 3, unit, 0);
 			if ((force) || (nvram_get(p) == NULL))
 				nvram_set(p, t->value);
 		}
@@ -294,10 +298,11 @@ static int validate_main(int argc, char **argv)
 
 	return 0;
 }
+#endif /* TCONFIG_MIPS_RTAC */
 
 static int defaults_main(int argc, char **argv)
 {
-	const defaults_t *t;
+	const struct nvram_tuple *t;
 	char *p;
 	char s[256];
 	int i, j;
@@ -315,31 +320,31 @@ static int defaults_main(int argc, char **argv)
 	if (force)
 		nvram_unset("nvram_ver"); /* prep to prevent problems later */
 
-	for (t = defaults; t->key; t++) {
-		if (((p = nvram_get(t->key)) == NULL) || (force)) {
+	for (t = router_defaults; t->name; t++) {
+		if (((p = nvram_get(t->name)) == NULL) || (force)) {
 			if (t->value == NULL) {
 				if (p != NULL) {
-					nvram_unset(t->key);
+					nvram_unset(t->name);
 					if (!force)
-						_dprintf("%s=%s is not the default (NULL) - resetting\n", t->key, p);
+						_dprintf("%s=%s is not the default (NULL) - resetting\n", t->name, p);
 
 					commit = 1;
 				}
 			}
 			else {
-				nvram_set(t->key, nv_default_value(t));
+				nvram_set(t->name, nv_default_value(t));
 				if (!force)
-					_dprintf("%s=%s is not the default (%s) - resetting\n", t->key, p ? p : "(NULL)", nv_default_value(t));
+					_dprintf("%s=%s is not the default (%s) - resetting\n", t->name, p ? p : "(NULL)", nv_default_value(t));
 
 				commit = 1;
 			}
 		}
-		else if (strncmp(t->key, "wl_", 3) == 0) {
+		else if (strncmp(t->name, "wl_", 3) == 0) {
 			/* sync wl_ and wl0_ */
 			strlcpy(s, "wl0_", sizeof(s));
-			strlcat(s, t->key + 3, sizeof(s));
+			strlcat(s, t->name + 3, sizeof(s));
 			if (nvram_get(s) == NULL)
-				nvram_set(s, nvram_safe_get(t->key));
+				nvram_set(s, nvram_safe_get(t->name));
 		}
 	}
 
@@ -349,12 +354,12 @@ static int defaults_main(int argc, char **argv)
 	else
 		t = if_generic;
 
-	for (; t->key; t++) {
-		if (((p = nvram_get(t->key)) == NULL) || (*p == 0) || (force)) {
-			nvram_set(t->key, t->value);
+	for (; t->name; t++) {
+		if (((p = nvram_get(t->name)) == NULL) || (*p == 0) || (force)) {
+			nvram_set(t->name, t->value);
 			commit = 1;
 			if (!force)
-				_dprintf("%s=%s is not the default (%s) - resetting\n", t->key, p ? p : "(NULL)", t->value);
+				_dprintf("%s=%s is not the default (%s) - resetting\n", t->name, p ? p : "(NULL)", t->value);
 		}
 	}
 
@@ -393,164 +398,6 @@ static int defaults_main(int argc, char **argv)
 	return 0;
 }
 
-static int defaults_rstats(int argc, char **argv)
-{
-	const defaults_t *t;
-	int add = 0, del = 0;
-
-	if (strcmp(argv[1], "--add") == 0)
-		add = 1;
-	else if (strcmp(argv[1], "--del") == 0)
-		del = 1;
-	else
-		return 1;
-
-	if (add) {
-		/* restore defaults if necessary */
-		for (t = rstats_defaults; t->key; t++) {
-			if (!nvram_get(t->key)) /* check existence */
-				nvram_set(t->key, t->value);
-		}
-	}
-
-	if (del) {
-		if (nvram_match("rstats_enable", "0")) {
-			/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
-			for (t = rstats_defaults; t->key; t++)
-				nvram_unset(t->key);
-		}
-	}
-
-	return 0;
-}
-
-static int defaults_cstats(int argc, char **argv)
-{
-	const defaults_t *t;
-	int add = 0, del = 0;
-
-	if (strcmp(argv[1], "--add") == 0)
-		add = 1;
-	else if (strcmp(argv[1], "--del") == 0)
-		del = 1;
-	else
-		return 1;
-
-	if (add) {
-		/* restore defaults if necessary */
-		for (t = cstats_defaults; t->key; t++) {
-			if (!nvram_get(t->key)) /* check existence */
-				nvram_set(t->key, t->value);
-		}
-	}
-
-	if (del) {
-		if (nvram_match("cstats_enable", "0")) {
-			/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
-			for (t = cstats_defaults; t->key; t++)
-				nvram_unset(t->key);
-		}
-	}
-
-	return 0;
-}
-
-static int defaults_upnp(int argc, char **argv)
-{
-	const defaults_t *t;
-	int add = 0, del = 0;
-
-	if (strcmp(argv[1], "--add") == 0)
-		add = 1;
-	else if (strcmp(argv[1], "--del") == 0)
-		del = 1;
-	else
-		return 1;
-
-	if (add) {
-		/* restore defaults if necessary */
-		for (t = upnp_defaults; t->key; t++) {
-			if (!nvram_get(t->key)) /* check existence */
-				nvram_set(t->key, t->value);
-		}
-	}
-
-	if (del) {
-		if (nvram_match("upnp_enable", "0")) {
-		/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
-			for (t = upnp_defaults; t->key; t++)
-				nvram_unset(t->key);
-		}
-	}
-
-	return 0;
-}
-
-#ifdef TCONFIG_FTP
-static int defaults_ftp(int argc, char **argv)
-{
-	const defaults_t *t;
-	int add = 0, del = 0;
-
-	if (strcmp(argv[1], "--add") == 0)
-		add = 1;
-	else if (strcmp(argv[1], "--del") == 0)
-		del = 1;
-	else
-		return 1;
-
-	if (add) {
-		/* restore defaults if necessary */
-		for (t = ftp_defaults; t->key; t++) {
-			if (!nvram_get(t->key)) /* check existence */
-				nvram_set(t->key, t->value);
-		}
-	}
-
-	if (del) {
-		if (nvram_match("ftp_enable", "0")) {
-			/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
-			for (t = ftp_defaults; t->key; t++)
-				nvram_unset(t->key);
-		}
-	}
-
-	return 0;
-}
-#endif /* TCONFIG_FTP */
-
-#ifdef TCONFIG_SNMP
-static int defaults_snmp(int argc, char **argv)
-{
-	const defaults_t *t;
-	int add = 0, del = 0;
-
-	if (strcmp(argv[1], "--add") == 0)
-		add = 1;
-	else if (strcmp(argv[1], "--del") == 0)
-		del = 1;
-	else
-		return 1;
-
-	if (add) {
-		/* restore defaults if necessary */
-		for (t = snmp_defaults; t->key; t++) {
-			if (!nvram_get(t->key)) /* check existence */
-				nvram_set(t->key, t->value);
-		}
-	}
-
-	if (del) {
-		if (nvram_match("snmp_enable", "0")) {
-			/* remove defaults if NOT necessary (only keep "xyz_enable" nv var.) */
-			for (t = snmp_defaults; t->key; t++)
-				nvram_unset(t->key);
-		}
-	}
-
-	return 0;
-}
-#endif /* TCONFIG_SNMP */
 
 static int commit_main(int argc, char **argv)
 {
@@ -582,7 +429,7 @@ static int erase_main(int argc, char **argv)
 static const char *get_default_value(const char *name)
 {
 	char *p;
-	const defaults_t *t;
+	const struct nvram_tuple *t;
 	char fixed_name[NVRAM_MAX_PARAM_LEN + 1];
 
 	if (strncmp(name, "wl", 2) == 0 && isdigit(name[2]) && ((p = strchr(name, '_'))))
@@ -595,8 +442,8 @@ static const char *get_default_value(const char *name)
 			return "0";
 	}
 
-	for (t = defaults; t->key; t++) {
-		if (strcmp(t->key, name) == 0 || strcmp(t->key, fixed_name) == 0)
+	for (t = router_defaults; t->name; t++) {
+		if (strcmp(t->name, name) == 0 || strcmp(t->name, fixed_name) == 0)
 			return (t->value ? : "");
 	}
 
@@ -741,11 +588,11 @@ static int export_main(int argc, char **argv)
 
 static int in_defaults(const char *key)
 {
-	const defaults_t *t;
+	const struct nvram_tuple *t;
 	int n;
 
-	for (t = defaults; t->key; t++) {
-		if (strcmp(t->key, key) == 0)
+	for (t = router_defaults; t->name; t++) {
+		if (strcmp(t->name, key) == 0)
 			return 1;
 	}
 
@@ -1158,16 +1005,9 @@ static const applets_t applets[] = {
 	{ "export",		-3,	export_main		},
 	{ "import",		-3,	import_main		},
 	{ "defaults",		3,	defaults_main		},
-	{ "rstats_defaults",	3,	defaults_rstats		},
-	{ "cstats_defaults",	3,	defaults_cstats		},
-#ifdef TCONFIG_FTP
-	{ "ftp_defaults",	3,	defaults_ftp		},
-#endif /* TCONFIG_FTP */
-#ifdef TCONFIG_SNMP
-	{ "snmp_defaults",	3,	defaults_snmp		},
-#endif /* TCONFIG_SNMP */
-	{ "upnp_defaults",	3,	defaults_upnp		},
+#ifdef TCONFIG_MIPS_RTAC
 	{ "validate",		-3,	validate_main		},
+#endif /* TCONFIG_MIPS_RTAC */
 	{ "backup",		3,	backup_main		},
 	{ "restore",		-3,	restore_main		},
 	{ "setfb64",		4,	setfb64_main		},
