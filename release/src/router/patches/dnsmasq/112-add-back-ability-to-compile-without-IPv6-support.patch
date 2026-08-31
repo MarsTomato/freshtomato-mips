@@ -459,7 +459,7 @@
  	/* At the end */
 --- dnsmasq/src/dnsmasq.c
 +++ dnsmasq/src/dnsmasq.c
-@@ -2132,9 +2132,11 @@
+@@ -2130,9 +2130,11 @@
  
  	  got_index = 1;
  	  
@@ -966,7 +966,7 @@
  
  #ifdef HAVE_TFTP
        /* file length */
-@@ -884,8 +888,10 @@
+@@ -878,8 +882,10 @@
  
    if ((buf->flags = peer->sa.sa_family) == AF_INET)
      buf->addr = peer->in.sin_addr;
@@ -977,7 +977,7 @@
  
    memcpy((unsigned char *)(buf+1), filename, filename_len);
    
-@@ -907,8 +913,10 @@
+@@ -901,8 +907,10 @@
    buf->hwaddr_type =  ARPHRD_ETHER; 
    if ((buf->flags = family) == AF_INET)
      buf->addr = addr->addr4;
@@ -1335,7 +1335,7 @@
        
        if (bind(fd, (struct sockaddr *)&addr_copy, sa_len(&addr_copy)) != -1)
  	break;
-@@ -1439,7 +1474,7 @@
+@@ -1430,7 +1474,7 @@
            return setsockopt(fd, IPPROTO_IP, IP_UNICAST_IF, &ifindex_opt, sizeof(ifindex_opt)) == 0;
          }
  #endif
@@ -1420,7 +1420,7 @@
        gotone = 1;
 --- dnsmasq/src/option.c
 +++ dnsmasq/src/option.c
-@@ -889,8 +889,10 @@
+@@ -892,8 +892,10 @@
  {
    if (inet_pton(AF_INET, arg, &addr->in.sin_addr) > 0)
      addr->sa.sa_family = AF_INET;
@@ -1431,7 +1431,7 @@
    else
      return _("bad address");
     
-@@ -945,8 +947,10 @@
+@@ -948,8 +950,10 @@
  
    if (inet_pton(AF_INET, arg, &sdetails->addr->in.sin_addr) > 0)
        sdetails->addr_type = AF_INET;
@@ -1442,7 +1442,7 @@
    else 
      {
        /* if the argument is neither an IPv4 not an IPv6 address, it might be a
-@@ -1023,6 +1027,7 @@
+@@ -1026,6 +1030,7 @@
  	  sdetails->source_addr->in.sin_port = htons(sdetails->source_port);
  	  if (inet_pton(AF_INET, sdetails->source, &sdetails->source_addr->in.sin_addr) == 0)
  	    {
@@ -1450,7 +1450,7 @@
  	      if (inet_pton(AF_INET6, sdetails->source, &sdetails->source_addr->in6.sin6_addr) == 1)
  		{
  		  sdetails->source_addr->sa.sa_family = AF_INET6;
-@@ -1033,6 +1038,7 @@
+@@ -1036,6 +1041,7 @@
  		    return _("cannot use IPv4 server address with IPv6 source address");
  		}
  	      else
@@ -1458,7 +1458,7 @@
  		{
  #if defined(SO_BINDTODEVICE)
  		  if (sdetails->interface_opt)
-@@ -1047,6 +1053,7 @@
+@@ -1050,6 +1056,7 @@
  	    }
  	}
      }
@@ -1466,7 +1466,7 @@
    else if (sdetails->addr_type == AF_INET6)
      {
        if (sdetails->scope_id && (sdetails->scope_index = if_nametoindex(sdetails->scope_id)) == 0)
-@@ -1093,6 +1100,7 @@
+@@ -1096,6 +1103,7 @@
  	    }
  	}
      }
@@ -1474,7 +1474,7 @@
    else if (sdetails->addr_type != AF_LOCAL)
      return _("bad address");
    
-@@ -1112,10 +1120,12 @@
+@@ -1115,10 +1123,12 @@
  	memcpy(&sdetails->addr->in.sin_addr,
  		&((struct sockaddr_in *) sdetails->hostinfo->ai_addr)->sin_addr,
  		sizeof(sdetails->addr->in.sin_addr));
@@ -1487,7 +1487,7 @@
  
        /* Iterate to the next available address */
        sdetails->valid = sdetails->hostinfo->ai_next != NULL;
-@@ -1218,6 +1228,7 @@
+@@ -1221,6 +1231,7 @@
    return NULL;
  }
  
@@ -1495,7 +1495,7 @@
  static char *domain_rev6(int from_file, char *server, struct in6_addr *addr6, int size)
  {
    int i, j;
-@@ -1305,6 +1315,7 @@
+@@ -1308,6 +1318,7 @@
    
    return NULL;
  }
