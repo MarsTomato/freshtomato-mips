@@ -1251,6 +1251,7 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_BCMARM
 	{ "qos_mode",			"1"				}, /* 1 = HTB + Leaf Qdisc, 2 = CAKE SQM */
 	{ "qos_classify",		"1"				},
+	{ "qos_stats",			"0"				}, /* per-connection QoS statistics */
 	{ "qos_pfifo",			"3"				},	/* Set FQ_Codel Default Qdisc Scheduler */
 	{ "qos_cake_prio_mode",		"0"				},
 	{ "qos_cake_wash",		"0"				},
@@ -1791,6 +1792,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "tor_socksport",		"9050"				},
 	{ "tor_transport",		"9040"				},
 	{ "tor_dnsport",		"9053"				},
+	{ "tor_ctrlport",		"9051"				},
 	{ "tor_datadir",		"/tmp/tor"			},
 	{ "tor_iface",			"br0"				},
 	{ "tor_users",			"192.168.1.0/24"		},
