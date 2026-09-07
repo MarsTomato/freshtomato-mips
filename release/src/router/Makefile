@@ -184,7 +184,7 @@ endif
 FFMPEG_FILTER_CONFIG= $(foreach c, $(2), --$(1)="$(c)")
 
 FFMPEG_DEMUXERS := avi flac matroska mov mp3 mpegps mpegts mpegvideo ogg
-FFMPEG_DECODERS := aac ac3 flac h264 hevc jpegls mp2 mp3 mpeg1video mpeg2video mpeg4 mpegvideo png vc1 vorbis wmav1 wmav2
+FFMPEG_DECODERS := aac ac3 flac h264 jpegls mp2 mp3 mpeg1video mpeg2video mpeg4 mpegvideo png vc1 vorbis wmav1 wmav2
 FFMPEG_PROTOCOLS := file
 
 FFMPEG_CONFIGURE_DEMUXERS := $(call FFMPEG_FILTER_CONFIG,enable-demuxer,$(FFMPEG_DEMUXERS))
@@ -4490,7 +4490,7 @@ samba3/source3/Makefile:
 
 samba3: samba3/source3/Makefile
 	@$(SEP)
-	$(MAKE) -C samba3/source3 all $(PARALLEL_BUILD)
+	$(MAKE) -C samba3/source3 all
 
 samba3-install:
 	@install -D samba3/source3/bin/samba_multicall $(INSTALLDIR)/samba3/usr/bin/samba_multicall
