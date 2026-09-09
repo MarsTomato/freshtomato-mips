@@ -255,10 +255,10 @@ static int dhcp6_maybe_relay(struct state *state, unsigned char *inbuff, size_t 
 	      /* the packet data is unaligned, copy to aligned storage */
 	      memcpy(&align, inbuff + 2, IN6ADDRSZ); 
 
-	      /* RFC6221 para 4 says if link_address in encapulation
+	      /* RFC6221 para 4 says if link_address in encapsulation
 		 is zero, ignore it, and, by implication, use the link
 		 address of any enclosing encapsulation or, failing that
-		 of the arrival interface on the the server. */
+		 of the arrival interface on the server. */
 	      if (!dhcp6_maybe_relay(state, opt6_ptr(opt, 0), opt6_len(opt), client_addr,
 				     IN6_IS_ADDR_UNSPECIFIED(&align) ? link_address : &align, now))
 		return 0;
@@ -474,10 +474,8 @@ static int dhcp6_no_relay(struct state *state, int msg_type, unsigned char *inbu
   if (state->mac_len != 0)
     {
       if (option_bool(OPT_LOG_OPTS))
-	{
-	  print_mac(daemon->dhcp_buff, state->mac, state->mac_len);
-	  my_syslog(MS_DHCP | LOG_INFO, _("%u client MAC address: %s"), state->xid, daemon->dhcp_buff);
-	}
+	my_syslog(MS_DHCP | LOG_INFO, _("%u client MAC address: %s"), state->xid,
+		  print_mac(state->mac, state->mac_len));
 
       for (mac_opt = daemon->dhcp_macs; mac_opt; mac_opt = mac_opt->next)
 	if ((unsigned)mac_opt->hwaddr_len == state->mac_len &&
@@ -2077,14 +2075,6 @@ static void log6_quiet(struct state *state, char *type, struct in6_addr *addr, c
 
 static void log6_packet(struct state *state, char *type, struct in6_addr *addr, char *string)
 {
-  int clid_len = state->clid_len;
-
-  /* avoid buffer overflow */
-  if (clid_len > 100)
-    clid_len = 100;
-  
-  print_mac(daemon->namebuff, state->clid, clid_len);
-
   if (addr)
     {
       inet_ntop(AF_INET6, addr, daemon->dhcp_buff2, DHCP_BUFF_SZ - 1);
@@ -2099,14 +2089,14 @@ static void log6_packet(struct state *state, char *type, struct in6_addr *addr, 
 	      type,
 	      state->iface_name, 
 	      daemon->dhcp_buff2,
-	      daemon->namebuff,
+	      print_mac(state->clid, state->clid_len),
 	      string ? string : "");
   else
     my_syslog(MS_DHCP | LOG_INFO, "%s(%s) %s%s %s",
 	      type,
 	      state->iface_name, 
 	      daemon->dhcp_buff2,
-	      daemon->namebuff,
+	      print_mac(state->clid, state->clid_len),
 	      string ? string : "");
 }
 
@@ -2164,12 +2154,12 @@ static unsigned int opt6_uint(unsigned char *opt, int offset, int size)
   return ret;
 } 
 
+/* return 0 if we're not configured to relay. */
 int relay_upstream6(int iface_index, ssize_t sz, 
 		    struct in6_addr *peer_address, u32 scope_id, time_t now)
 {
   unsigned char *header;
   unsigned char *inbuff = daemon->dhcp_packet.iov_base;
-  int msg_type = *inbuff;
   int hopcount, o;
   struct in6_addr multicast;
   unsigned int maclen, mactype;
@@ -2186,10 +2176,22 @@ int relay_upstream6(int iface_index, ssize_t sz,
   
   inet_pton(AF_INET6, ALL_SERVERS, &multicast);
   get_client_mac(peer_address, scope_id, mac, &maclen, &mactype, now);
+
+  /* We need at least four bytes for valid client/server message
+     (type, and transaction ID) A relay-originated message needs more. */
+  if (sz < 4)
+    return 1;
   
-  /* Get hop count from nested relayed message */ 
-  if (msg_type == DHCP6RELAYFORW)
-    hopcount = *((unsigned char *)inbuff+1) + 1;
+  if (inbuff[0] == DHCP6RELAYFORW)
+    {
+      /* must have at least msg_type+hopcount+link_address+peer_address+minimal size option
+	 which is               1   +    1   +    16      +     16     + 2 + 2 = 38 */
+      if (sz < 38)
+	return 1;
+      
+      /* Get hop count from nested relayed message. */
+      hopcount = inbuff[1] + 1;
+    }
   else
     hopcount = 0;
 

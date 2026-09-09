@@ -351,13 +351,12 @@ void asp_usbdevices(int argc, char **argv)
 		return;
 	}
 
-	i = 0;
 	while ((dp = readdir(usb_dir)) != NULL) {
 		/* skip . and .. */
 		if ((strcmp(dp->d_name, ".") == 0) || (strcmp(dp->d_name, "..") == 0))
 			continue;
 
-		snprintf(path, sizeof(path), "/proc/usblp/%s", dp->d_name);
+		snprintf(path, sizeof(path), "/proc/usblp/%.243s", dp->d_name);
 		fp = fopen(path, "r");
 		if (!fp)
 			continue;

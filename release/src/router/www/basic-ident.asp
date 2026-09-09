@@ -22,6 +22,8 @@
 
 function verifyFields(focused, quiet) {
 	if (!v_hostname('_wan_hostname', quiet)) return 0;
+	if (!v_domain('_wan_domain', quiet)) return 0;
+
 	return v_length('_router_name', quiet, 1) && v_length('_wan_hostname', quiet, 0) && v_length('_wan_domain', quiet, 0);
 }
 
@@ -63,11 +65,7 @@ function save() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

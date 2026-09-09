@@ -29,6 +29,20 @@ var shlimit = nvram.ne_shlimit.split(',');
 if (shlimit.length != 3)
 	shlimit = [0,3,60];
 
+function bridgeHasManagementAddress(i) {
+	var ip = nvram['lan'+i+'_ipaddr'] || '';
+	return (nvram['lan'+i+'_ifname'] == 'br'+i) && (ip != '') && (ip != '0.0.0.0');
+}
+
+function bridgeListenerNames() {
+	var names = [];
+
+	for (var i = 1; i <= MAX_BRIDGE_ID; i++)
+		names.push('LAN'+i);
+
+	return names.join(' / ');
+}
+
 var xmenus = [['Status','status'],['Bandwidth','bwm'],['IP Traffic','ipt'],['Tools','tools'],['Basic','basic'],['Advanced','advanced'],['Port Forwarding','forward'],['QoS','qos'],['Misc','misc'],
 /* USB-BEGIN */
               ['USB and NAS','nas'],
@@ -91,7 +105,7 @@ function toggle(service, isup) {
 function verifyFields(focused, quiet) {
 	var ok = 1;
 	var a, b, c;
-	var i;
+	var i, remoteMode;
 
 	var o = (E('_web_css').value == 'online');
 	var p = nvram.ttb_css;
@@ -131,8 +145,8 @@ function verifyFields(focused, quiet) {
 /* ADVTHEMES-END */
 
 	a = E('_f_http_local');
-	b = E('_f_http_remote').value;
-	if ((a.value != 3) && (b != 0) && (a.value != b)) {
+	remoteMode = E('_f_http_remote').value;
+	if ((a.value != 3) && (remoteMode != 0) && (a.value != remoteMode)) {
 		ferror.set(a, 'The local HTTP/HTTPS must also be enabled when using remote access', quiet || !ok);
 		ok = 0;
 	}
@@ -143,7 +157,7 @@ function verifyFields(focused, quiet) {
 	elem.display(PR('_f_http_wireless'), a.value != 0);
 
 	for (i = 1; i <= MAX_BRIDGE_ID; i++)
-		elem.display(PR('_f_http_lan'+i+'_listener'), (nvram['lan'+i+'_ifname'] == 'br'+i+'') && (a.value != 0));
+		elem.display(PR('_f_http_lan'+i+'_listener'), bridgeHasManagementAddress(i) && (a.value != 0));
 
 /* IPV6-BEGIN */
 	elem.display(PR('_f_http_ipv6'), (!nvram.ipv6_service == '') && (a.value != 0));
@@ -172,22 +186,19 @@ function verifyFields(focused, quiet) {
 		ok = 0;
 	}
 /* HTTPS-END */
-	b = b != 0;
+	b = remoteMode != 0;
 	a = E('_http_wanport');
 	elem.display(PR(a), b);
 	if (b) {
 		if (!v_port(a, quiet || !ok)) ok = 0;
-		if ((a.value == 80) || (a.value == 443)) {
-			ferror.set(a, 'Ports 80 and 443 are not allowed for remote GUI access', quiet || !ok);
-			ok = 0;
-		}
-		if (a.value == E('_http_lanport').value) {
-			ferror.set(a, 'Ports for local and remote GUI access cannot be the same', quiet || !ok);
-			ok = 0;
-		}
 /* HTTPS-BEGIN */
-		if (a.value == E('_https_lanport').value) {
-			ferror.set(a, 'Ports for local and remote GUI access cannot be the same', quiet || !ok);
+		/*
+		 * Sharing a port is valid only when the local and remote
+		 * listeners use the same protocol.
+		 */
+		if (((remoteMode == 1) && ((E('_f_http_local').value & 2) != 0) && (a.value == E('_https_lanport').value)) ||
+		    ((remoteMode == 2) && ((E('_f_http_local').value & 1) != 0) && (a.value == E('_http_lanport').value))) {
+			ferror.set(a, 'Remote GUI port conflicts with the local GUI port for the other protocol', quiet || !ok);
 			ok = 0;
 		}
 /* HTTPS-END */
@@ -251,18 +262,51 @@ function verifyFields(focused, quiet) {
 	return ok;
 }
 
+function confirmRemoteAccessRisks() {
+	var a = E('_http_wanport');
+	var remoteMode = parseInt(E('_f_http_remote').value, 10);
+	var remotePort = parseInt(a.value, 10);
+	var localPort = parseInt(E('_http_lanport').value, 10);
+	var protocol = 'HTTP';
+	var warnings = [];
+
+	if (remoteMode == 0)
+		return 1;
+
+/* HTTPS-BEGIN */
+	if (remoteMode == 2) {
+		protocol = 'HTTPS';
+		localPort = parseInt(E('_https_lanport').value, 10);
+	}
+/* HTTPS-END */
+
+	if ((remotePort == 80) || (remotePort == 443))
+		warnings.push('Port '+remotePort+' is a standard web port and is commonly scanned by automated attacks.');
+
+	if (remotePort == localPort)
+		warnings.push('The same port will be used for local and remote '+protocol+' access.');
+
+	if ((warnings.length != 0) &&
+	    !confirm('WARNING:\n\n- '+warnings.join('\n- ')+'\n\nDo you want to proceed and accept this configuration?')) {
+		ferror.set(a, 'Action cancelled: remote GUI port risk not accepted.', 0);
+		return 0;
+	}
+
+	return 1;
+}
+
 function save() {
 	var fom, rem, loc, a, b, i;
 	var local = 0, remote = 0;
 
-	if (!verifyFields(null, 0))
+	if (!verifyFields(null, 0) || !confirmRemoteAccessRisks())
 		return;
 
 	fom = E('t_fom');
 
 	fom.http_lan_listeners.value = 0; /* init with 0 and check */
 	for (i = 1; i <= MAX_BRIDGE_ID; i++) {
-		if (fom['_f_http_lan'+i+'_listener'].checked)
+		if (bridgeHasManagementAddress(i) && fom['_f_http_lan'+i+'_listener'].checked)
 			fom.http_lan_listeners.value = fom.http_lan_listeners.value | (2 ** (i - 1)); /* set hex value bit, listener enabled for LAN(i) */
 	}
 /* IPV6-BEGIN */
@@ -284,17 +328,23 @@ function save() {
 /* HTTPS-END */
 
 	/* prepare redirect url */
-	i = 0;
-	if (location.port == '') {
-		if (location.protocol == 'https:')
-			i = 443;
-		else
-			i = 80;
-	}
+	i = parseInt(location.port || ((location.protocol == 'https:') ? 443 : 80), 10);
 
-	if ((rem != 0) && (location.hostname != nvram.lan_ipaddr) && (location.port == nvram.http_wanport))
+	/*
+	 * Detect how the current page was reached from the active NVRAM
+	 * configuration. The form already contains the new settings here.
+	 */
+	if ((nvram.remote_management == 1) && (location.hostname != nvram.lan_ipaddr) && (i == parseInt(nvram.http_wanport, 10))
+/* HTTPS-BEGIN */
+	    && ((location.protocol == 'https:') == (nvram.remote_mgt_https == 1))
+/* HTTPS-END */
+	    )
 		remote = 1;
-	else if ((loc != 0) && ((location.port == nvram.http_lanport) || (location.port == nvram.https_lanport) || (i == nvram.http_lanport) || (i == nvram.https_lanport)))
+	else if (((location.protocol == 'http:') && (nvram.http_enable == 1) && (i == parseInt(nvram.http_lanport, 10)))
+/* HTTPS-BEGIN */
+	         || ((location.protocol == 'https:') && (nvram.https_enable == 1) && (i == parseInt(nvram.https_lanport, 10)))
+/* HTTPS-END */
+	         )
 		local = 1;
 
 	if (location.protocol == 'https:') {
@@ -312,13 +362,13 @@ function save() {
 	if (a == 's') {
 		if (local && fom.https_lanport.value != 443)
 			b += ':'+fom.https_lanport.value;
-		else if (remote && fom.http_wanport != 443)
+		else if (remote && parseInt(fom.http_wanport.value, 10) != 443)
 			b += ':'+fom.http_wanport.value;
 	}
 	else {
 		if (local && fom.http_lanport.value != 80)
 			b += ':'+fom.http_lanport.value;
-		else if (remote && fom.http_wanport != 80)
+		else if (remote && parseInt(fom.http_wanport.value, 10) != 80)
 			b += ':'+fom.http_wanport.value;
 	}
 	fom._nextpage.value = b+'/admin-access.asp';
@@ -393,9 +443,10 @@ function earlyInit() {
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
+
+	E('http_lan_listener_names').innerHTML = bridgeListenerNames();
+
+	restoreVisibility(cprefix, 'notes');
 
 	changed = 0;
 	up.initPage(250, 5);
@@ -493,7 +544,7 @@ function init() {
 				        (nvram.remote_mgt_https == 1) ? 2 :
 /* HTTPS-END */
 				        1) : 0 },
-				{ title: 'Port', indent: 2, name: 'http_wanport', type: 'text', maxlen: 5, size: 7, suffix: '&nbsp;<small>not allowed: 80 and 443<\/small>', value: fixPort(nvram.http_wanport, 8080) },
+				{ title: 'Port', indent: 2, name: 'http_wanport', type: 'text', maxlen: 5, size: 7, suffix: '&nbsp;<small>standard ports 80 and 443 are not recommended<\/small>', value: fixPort(nvram.http_wanport, 8080) },
 /* HTTPS-BEGIN */
 			null,
 			{ title: 'SSL Certificate', rid: 'row_sslcert' },
@@ -505,15 +556,39 @@ function init() {
 			{ title: 'UI files path', name: 'web_dir', type: 'select',
 				options: [['default','Default: /www'], ['jffs', 'Custom: /jffs/www (Experts Only!)'], ['opt', 'Custom: /opt/www (Experts Only!)'], ['tmp', 'Custom: /tmp/www (Experts Only!)']], suffix: '<br>&nbsp;<small>Please be sure of your decision before change this settings!<\/small>', value: nvram.web_dir },
 			{ title: 'Theme UI', name: 'web_css', type: 'select',
-				options: [['default','Default'],['red','Tomato'],
+				options: [
+					  ['default','Default'],
+/* BCMARM-BEGIN */
+					  ['usbred','USB Red'],
+/* BCMARM-END */
+					  ['red','Tomato'],
+/* BCMARM-BEGIN */
+					  ['black','Black'],
+					  ['blue','Blue'],
+					  ['bluegreen','Blue &amp; Green (Lighter)'],
+					  ['bluegreen2','Blue &amp; Green (Darker)'],
+					  ['brown','Brown'],
+					  ['cyan','Cyan'],
+					  ['olive','Olive'],
+					  ['pumpkin','Pumpkin'],
+					  ['asus','Asus RT-N16'],
+					  ['rtn66u','Asus RT-N66U'],
+					  ['asusred','Asus Red'],
+					  ['linksysred','Linksys Red'],
+/* BCMARM-END */
 /* ADVTHEMES-BEGIN */
-					  ['at-dark','Advanced Dark'],['at-red','Advanced Red'],['at-blue','Advanced Blue'],['at-green','Advanced Green'],
+					  ['at-dark','Advanced Dark'],
+					  ['at-red','Advanced Red'],
+					  ['at-blue','Advanced Blue'],
+					  ['at-green','Advanced Green'],
 /* ADVTHEMES-END */
-					  ['ext/custom','Custom (ext/custom.css)'], ['online', 'Online from TTB (TomatoThemeBase)']], 
+					  ['ext/custom','Custom (ext/custom.css)'],
+					  ['online','Online from TTB (TomatoThemeBase)']
+					],
 /* ADVTHEMES-BEGIN */
-					  suffix: '&nbsp;<small id="web_css_warn" style="display:none">requires a modern browser<\/small>',
+					suffix: '&nbsp;<small id="web_css_warn" style="display:none">requires a modern browser<\/small>',
 /* ADVTHEMES-END */
-					  value: nvram.web_css },
+					value: nvram.web_css },
 /* ADVTHEMES-BEGIN */
 				{ title: 'Dynamic BW/IPT/WL charts', indent: 2, name: 'f_web_adv_scripts', type: 'checkbox', suffix: '&nbsp;<small>JS based, supported only by modern browsers<\/small>', value: nvram.web_adv_scripts == 1 },
 /* ADVTHEMES-END */
@@ -527,7 +602,7 @@ function init() {
 		];
 
 		for (i = 1; i <= MAX_BRIDGE_ID; i++)
-			m.splice(i+3, 0, { title: 'Listen on LAN'+i+' (br'+i+')', name: 'f_http_lan'+i+'_listener', type: 'checkbox', value: (nvram.http_lan_listeners & (2 ** (i - 1)))},);
+			m.splice(i+3, 0, { title: 'Listen on LAN'+i+' (br'+i+')', name: 'f_http_lan'+i+'_listener', type: 'checkbox', value: bridgeHasManagementAddress(i) && (nvram.http_lan_listeners & (2 ** (i - 1)))},);
 
 		var webmx = get_config('web_mx', '').toLowerCase();
 		for (var i = 0; i < xmenus.length; ++i)
@@ -611,7 +686,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<i>SSH Daemon (dropbear) also accepts additional configuration in the following files:</i><br>
 	<ul>
@@ -623,17 +698,13 @@ function init() {
 	These files are appended to the automatically generated configuration files resulting from the settings in the GUI.<br><br>
 	<i>Web Admin:</i><br>
 	<ul>
-		<li><b>Listen on LAN1 / LAN2 / LAN3</b> - enable/disable httpd listening interfaces. (by default communication is allowed! Please use <a href="admin-scripts.asp">Firewall script</a> to add your own rules, ie. br0 = private network, br1 = IOT)</li>
+		<li><b>Listen on <span id="http_lan_listener_names"></span></b> - enable/disable httpd listening interfaces. (by default communication is allowed! Please use <a href="admin-scripts.asp">Firewall script</a> to add your own rules, ie. br0 = private network, br1 = IOT)</li>
 	</ul>
 </div>
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

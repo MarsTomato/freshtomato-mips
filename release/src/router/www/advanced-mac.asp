@@ -38,13 +38,12 @@ function et0plus(plus) {
 }
 
 function defmac(which) {
-	if (which == 'wan')  return et0plus(16);
-	if (which == 'wan2') return et0plus(17);
-/* MULTIWAN-BEGIN */
-	if (which == 'wan3') return et0plus(18);
-	if (which == 'wan4') return et0plus(19);
-/* MULTIWAN-END */
-	else {
+	for (var uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
+		var u = (uidx > 1) ? uidx : '';
+		if (which == 'wan'+u)
+			return et0plus(15 + uidx);
+	}
+	if (which.indexOf('wl') == 0) {
 /* REMOVE-BEGIN
 // align to wlconf setup AND FreshTomato initial mac setup
 REMOVE-END */
@@ -92,33 +91,38 @@ function bclone(which) {
 }
 
 function checkUniqueMac() {
-	var uidx, u1, u2, a1, a2;
+	var uidx, uidx2, u1, u2, a1, a2;
+	var retValue = 1;
 
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
-		for (uidx2 = uidx; uidx2 <= nvram.mwan_num; ++ uidx2 ) {
-			u1 = (uidx > 1) ? uidx : '';
-			a1 = E('_f_wan'+u+'_hwaddr');
+		u1 = (uidx > 1) ? uidx : '';
+		a1 = E('_f_wan'+u1+'_hwaddr');
+		for (uidx2 = uidx + 1; uidx2 <= nvram.mwan_num; ++uidx2) {
 			u2 = (uidx2 > 1) ? uidx2 : '';
-			a2 = E('_f_wan'+u+'_hwaddr');
+			a2 = E('_f_wan'+u2+'_hwaddr');
 			if (a1 && a2 && (a1.value == a2.value)) {
 				ferror.set(a1, 'Addresses must be unique', true);
 				ferror.set(a2, 'Addresses must be unique', true);
+				retValue = 0;
 			}
 		}
 	}
 
-	for (uidx = 0; uidx <= wl_ifaces.length; ++uidx) {
-		for (uidx2 = uidx; uidx2 <= wl_ifaces.length; ++ uidx2 ) {
-			if (uidx != uidx2) {
-				a1 = E('_f_wl'+uidx+'_hwaddr');
-				a2 = E('_f_wl'+uidx2+'_hwaddr');
-				if (a1 && a2 && (a1.value == a2.value)) {
-					ferror.set(a1, 'Addresses must be unique', true);
-					ferror.set(a2, 'Addresses must be unique', true);
-				}
+	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
+		u1 = wl_fface(uidx);
+		a1 = E('_f_wl'+u1+'_hwaddr');
+		for (uidx2 = uidx + 1; uidx2 < wl_ifaces.length; ++uidx2) {
+			u2 = wl_fface(uidx2);
+			a2 = E('_f_wl'+u2+'_hwaddr');
+			if (a1 && a2 && (a1.value == a2.value)) {
+				ferror.set(a1, 'Addresses must be unique', true);
+				ferror.set(a2, 'Addresses must be unique', true);
+				retValue = 0;
 			}
 		}
 	}
+
+	return retValue;
 }
 
 function verifyFields(focused, quiet) {
@@ -135,9 +139,9 @@ function verifyFields(focused, quiet) {
 		u = wl_fface(uidx);
 		a = E('_f_wl'+u+'_hwaddr');
 		if (!v_mac(a, quiet)) retValue = 0;
-
-		checkUniqueMac();
 	}
+
+	if (!checkUniqueMac()) retValue = 0;
 
 	return retValue;
 }
@@ -163,9 +167,7 @@ function save() {
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
+	restoreVisibility(cprefix, 'notes');
 }
 
 </script>
@@ -187,13 +189,11 @@ function init() {
 <input type="hidden" name="_nextpage" value="advanced-mac.asp">
 <input type="hidden" name="_nextwait" value="10">
 <input type="hidden" name="_service" value="*">
-<input type="hidden" name="wan_mac">
-<input type="hidden" name="wan2_mac">
-<!-- MULTIWAN-BEGIN -->
-<input type="hidden" name="wan3_mac">
-<input type="hidden" name="wan4_mac">
-<!-- MULTIWAN-END -->
 <script>
+	for (var uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
+		var u = (uidx > 1) ? uidx : '';
+		W('<input type="hidden" name="wan'+u+'_mac">');
+	}
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		var u = wl_fface(uidx);
 		W('<input type="hidden" id="_wl'+u+'_hwaddr" name="wl'+u+'_hwaddr">');
@@ -232,7 +232,7 @@ function init() {
 		<tr><td>Computer's MAC Address:</td><td><b><script>W(('<% compmac(); %>').toUpperCase());</script></b></td></tr>
 	</table>
 </div>
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<li><b>Default</b> - Reset the MAC address to the Burn-in address, this is defined by the vendor</li>
@@ -249,11 +249,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

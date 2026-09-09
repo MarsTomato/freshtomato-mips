@@ -23,7 +23,7 @@
 
 <script>
 
-//	<% nvram ("t_model_name,vlan0ports,vlan1ports,vlan2ports,vlan3ports,vlan4ports,vlan5ports,vlan6ports,vlan7ports,vlan8ports,vlan9ports,vlan10ports,vlan11ports,vlan12ports,vlan13ports,vlan14ports,vlan15ports,vlan0hwname,vlan1hwname,vlan2hwname,vlan3hwname,vlan4hwname,vlan5hwname,vlan6hwname,vlan7hwname,vlan8hwname,vlan9hwname,vlan10hwname,vlan11hwname,vlan12hwname,vlan13hwname,vlan14hwname,vlan15hwname,wan_ifnameX,manual_boot_nv,boardtype,boardflags,lan_ifname,lan_ifnames,vlan0tag,vlan0vid,vlan1vid,vlan2vid,vlan3vid,vlan4vid,vlan5vid,vlan6vid,vlan7vid,vlan8vid,vlan9vid,vlan10vid,vlan11vid,vlan12vid,vlan13vid,vlan14vid,vlan15vid,model,wl_ssid,wl_radio,wl_net_mode,wl_nband,boardnum,boardrev,trunk_vlan_so");%>
+//	<% nvram ("t_model_name,vlan0ports,vlan1ports,vlan2ports,vlan3ports,vlan4ports,vlan5ports,vlan6ports,vlan7ports,vlan8ports,vlan9ports,vlan10ports,vlan11ports,vlan12ports,vlan13ports,vlan14ports,vlan15ports,vlan0hwname,vlan1hwname,vlan2hwname,vlan3hwname,vlan4hwname,vlan5hwname,vlan6hwname,vlan7hwname,vlan8hwname,vlan9hwname,vlan10hwname,vlan11hwname,vlan12hwname,vlan13hwname,vlan14hwname,vlan15hwname,wan_ifnameX,manual_boot_nv,boardtype,boardflags,lan_ifname,lan_ifnames,vlan0tag,vlan0vid,vlan1vid,vlan2vid,vlan3vid,vlan4vid,vlan5vid,vlan6vid,vlan7vid,vlan8vid,vlan9vid,vlan10vid,vlan11vid,vlan12vid,vlan13vid,vlan14vid,vlan15vid,model,wl_ssid,wl_radio,wl_net_mode,wl_nband,boardnum,boardrev,trunk_vlan_so,mwan_num,eth_desc");%>
 
 var cprefix = 'advanced_vlan';
 var port_vlan_supported = 0;
@@ -36,38 +36,55 @@ var trunk_vlan_supported = 1; /* Enable on all routers */
 
 var unknown_router = 0;
 
-function calcWanPortCount() {
-	var count = 0;
-	var maxWan = parseInt(nvram.mwan_num, 10);
-	if (isNaN(maxWan) || (maxWan < 0)) maxWan = 0;
+var VLAN_COUNT = MAX_VLAN_ID + 1;
+var VLAN_OFFSET_MAX = 4095 - MAX_VLAN_ID;
 
-	for (var uidx = 1; uidx <= maxWan; ++uidx) {
-		var u = (uidx > 1) ? uidx : '';
-		if ((nvram['wan'+u+'_sta'] == '') && (nvram['wan'+u+'_proto'] != 'lte') && (nvram['wan'+u+'_proto'] != 'ppp3g'))
-			++count;
-	}
-	return count;
+var VLAN_BRIDGE_NONE = 1;
+var VLAN_BRIDGE_WAN0 = 2;
+var VLAN_BRIDGE_LAN0 = 3;
+var VLAN_BRIDGE_WAN1 = VLAN_BRIDGE_LAN0 + MAX_BRIDGE_ID + 1;
+var WLAN_BRIDGE_NONE = MAX_BRIDGE_ID + 1;
+
+function lanPrefix(i) {
+	return 'lan'+(i ? i : '');
 }
 
-function portCaption(i) {
-	var wanCount = calcWanPortCount();
-
-	var orig;
-	if (i < wanCount)
-		orig = (i === 0 && (nvram.model == 'DSL-AC68U')) ? 'DSL' : ('WAN'+i);
-
-	if (!orig)
-		orig = (wanCount > 0) ? ('LAN'+(i - 1)) : ('LAN'+i);
-
-	/* Return only first and last character when the caption is longer than 1
-	 * (e.g. "LAN0" -> "L0", "WAN1" -> "W1"). Single-char captions stay
-	 * as-is.
-	 */
-	if (orig && orig.length > 1)
-		return String(orig).charAt(0) + String(orig).charAt(orig.length - 1);
-
-	return orig;
+function wanPrefix(i) {
+	var n = i + 1;
+	return 'wan'+((n > 1) ? n : '');
 }
+
+function vlanBridgeLan(i) {
+	return VLAN_BRIDGE_LAN0 + i;
+}
+
+function vlanBridgeWan(i) {
+	return i ? (VLAN_BRIDGE_WAN1 + i - 1) : VLAN_BRIDGE_WAN0;
+}
+
+var vlanBridgeOptions = [[VLAN_BRIDGE_NONE, 'none'], [VLAN_BRIDGE_WAN0, 'WAN0']];
+var vlanBridgeNames = {};
+vlanBridgeNames[VLAN_BRIDGE_NONE] = 'none';
+vlanBridgeNames[VLAN_BRIDGE_WAN0] = 'WAN0';
+
+for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+	var label = 'LAN'+i+' (br'+i+')';
+	var value = vlanBridgeLan(i);
+	vlanBridgeOptions.push([value, label]);
+	vlanBridgeNames[value] = label;
+}
+
+for (var i = 1; i < MAXWAN_NUM; ++i) {
+	var label = 'WAN'+i;
+	var value = vlanBridgeWan(i);
+	vlanBridgeOptions.push([value, label]);
+	vlanBridgeNames[value] = label;
+}
+
+var wlanBridgeOptions = [];
+for (var i = 0; i <= MAX_BRIDGE_ID; ++i)
+	wlanBridgeOptions.push([i, 'LAN'+i+' (br'+i+')']);
+wlanBridgeOptions.push([WLAN_BRIDGE_NONE, 'none']);
 
 /* caption/rendering is handled by ethernet-icon.js (renderEthIcon)
  * keep the VLAN page markup minimal and call into renderEthIcon() from show()
@@ -79,7 +96,8 @@ function show() {
 		return 0;
 
 	for (var i = 0 ; i <= MAX_PORT_ID ; i++) {
-		port = etherstates['port'+i];
+		var displayIndex = displayPortIndex(i);
+		port = etherstates['port'+displayIndex];
 		if (port === undefined) continue;
 		state = _ethstates(port);
 		var p = (state[0] || '').split('_');
@@ -90,11 +108,11 @@ function show() {
 		sp = ''+spn;
 		du = (du || '').toUpperCase();
 		if ((du !== 'FD') && (du !== 'HD')) du = 'HD';
-		var cap = portCaption(i);
+		var cap = portCaption(displayIndex, 1); /* shorten */
 		var o = E('ethsvg_'+i);
-		var captionText = renderEthIcon(o, sp, du, cap);
+		renderEthIcon(o, sp, du, cap);
 		if (o)
-			o.title = captionText || state[1] || '';
+			o.title = state[1] ? state[1] : cap;
 	}
 }
 
@@ -175,9 +193,7 @@ switch (nvram['t_model_name']) {
 		COL_P2N = '2';
 		COL_P3N = '1';
 		COL_P4N = '0';
-/* EXTSW-BEGIN */
 		COL_P5N = '5';
-/* EXTSW-END */
 		break;
 	case 'vlan-testid3':
 	case 'Asus RT-AC3200':
@@ -387,21 +403,22 @@ switch (nvram['boardtype']) {
 var COL_VID = 0;
 var COL_MAP = 1;
 var COL_P0  = 2;
-var COL_P1  = 3;
-var COL_P2  = 4;
-var COL_P3  = 5;
-var COL_P4  = 6;
-var COL_VID_DEF;
-var COL_BRI;
-/* EXTSW-NO-BEGIN */
-COL_VID_DEF = 7;
-COL_BRI = 8;
-/* EXTSW-NO-END */
-/* EXTSW-BEGIN */
-COL_P5 = 7;
-COL_VID_DEF = 8;
-COL_BRI = 9;
-/* EXTSW-END */
+var COL_VID_DEF = COL_P0 + MAX_PORT_ID + 1;
+var COL_BRI = COL_VID_DEF + 1;
+var COL_PN = [];
+
+for (var i = 0; i <= MAX_PORT_ID; ++i) {
+	var colName = window['COL_P'+i+'N'];
+	COL_PN.push((typeof colName == 'undefined') ? i.toString() : colName);
+}
+
+function portCol(i) {
+	return COL_P0 + i;
+}
+
+function portColName(i) {
+	return (typeof COL_PN[i] == 'undefined') ? i.toString() : COL_PN[i];
+}
 
 /* RTNPLUS-NO-BEGIN */
 var vlt = nvram.vlan0tag | '0';
@@ -423,45 +440,40 @@ if (port_vlan_supported) {
 	var vlg = new TomatoGrid();
 	vlg.setup = function() {
 		var portOptions = [[0,''],[1,'🌕 On'],[2,'🌓 Tag']];
+		var vidOptions = [];
+		for (var i = 0; i <= MAX_VLAN_ID; ++i)
+			vidOptions.push([i, i.toString()]);
+
 		var cols = [
-			{ type: 'select', options: [[0,'0'],[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6'],[7,'7'],[8,'8'],[9,'9'],[10,'10'],[11,'11'],[12,'12'],[13,'13'],[14,'14'],[15,'15']], prefix: '<div class="centered">', suffix: '<\/div>' },
-			{ type: 'text', maxlen: 4, prefix: '<div class="centered">', suffix: '<\/div>' },
-			{ type: 'select', options: portOptions, prefix: '<div class="centered">', suffix: '<\/div>' },
-			{ type: 'select', options: portOptions, prefix: '<div class="centered">', suffix: '<\/div>' },
-			{ type: 'select', options: portOptions, prefix: '<div class="centered">', suffix: '<\/div>' },
-			{ type: 'select', options: portOptions, prefix: '<div class="centered">', suffix: '<\/div>' },
-			{ type: 'select', options: portOptions, prefix: '<div class="centered">', suffix: '<\/div>' }
+			{ type: 'select', options: vidOptions, prefix: '<div class="centered">', suffix: '<\/div>' },
+			{ type: 'text', maxlen: 4, prefix: '<div class="centered">', suffix: '<\/div>' }
 		];
 
-/* EXTSW-BEGIN */
-		cols.push({ type: 'select', options: portOptions, prefix: '<div class="centered">', suffix: '<\/div>' });
-/* EXTSW-END */
+		for (var i = 0; i <= MAX_PORT_ID; ++i)
+			cols.push({ type: 'select', options: portOptions, prefix: '<div class="centered">', suffix: '<\/div>' });
 
 		/* Default VLAN */
 		cols.push({ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' });
 
-		var bridgeOptions = [[1,'none'],[2,'WAN0'],[3,'LAN0 (br0)'],[4,'LAN1 (br1)'],[5,'LAN2 (br2)'],[6,'LAN3 (br3)'],[7,'WAN1']];
-/* MULTIWAN-BEGIN */
-		bridgeOptions.push([8,'WAN2'],[9,'WAN3']);
-/* MULTIWAN-END */
-		cols.push({ type: 'select', options: bridgeOptions, prefix: '<div class="centered">', suffix: '<\/div>' });
+		cols.push({ type: 'select', options: vlanBridgeOptions, prefix: '<div class="centered">', suffix: '<\/div>' });
 
-		this.init('vlan-grid', 'sort', (MAX_VLAN_ID + 1), cols);
+		this.init('vlan-grid', 'sort', VLAN_COUNT, cols);
 
 		var ethIconScale = 100; /* percentage */
 		var ethIconW = Math.round(46 * ethIconScale / 100);
 		var ethIconH = Math.round(35 * ethIconScale / 100);
+		var ethDesc = (nvram.eth_desc || '').split('%');
 
-		var headers = ['VLAN', 'VID',
-		               '<div id="vport_0"><span class="eth-icon" id="ethsvg_0" data-w="'+ethIconW+'" data-h="'+ethIconH+'"><\/span><\/div>',
-		               '<div id="vport_1"><span class="eth-icon" id="ethsvg_1" data-w="'+ethIconW+'" data-h="'+ethIconH+'"><\/span><\/div>',
-		               '<div id="vport_2"><span class="eth-icon" id="ethsvg_2" data-w="'+ethIconW+'" data-h="'+ethIconH+'"><\/span><\/div>',
-		               '<div id="vport_3"><span class="eth-icon" id="ethsvg_3" data-w="'+ethIconW+'" data-h="'+ethIconH+'"><\/span><\/div>',
-		               '<div id="vport_4"><span class="eth-icon" id="ethsvg_4" data-w="'+ethIconW+'" data-h="'+ethIconH+'"><\/span><\/div>'
-		];
-/* EXTSW-BEGIN */
-		headers.push('<div id="vport_5"><span class="eth-icon" id="ethsvg_5" data-w="'+ethIconW+'" data-h="'+ethIconH+'"><\/span><\/div>');
-/* EXTSW-END */
+		function portHeader(i) {
+			var displayIndex = displayPortIndex(i);
+			var desc = escapeHTML(ethDescClean(ethDesc[displayIndex])) || '&nbsp;';
+			return '<div id="vport_'+i+'"><div class="small" style="padding-bottom:5px">'+desc+'<\/div><span class="eth-icon" id="ethsvg_'+i+'" data-w="'+ethIconW+'" data-h="'+ethIconH+'"><\/span><\/div>';
+		}
+
+		var headers = ['VLAN', 'VID'];
+		for (var i = 0; i <= MAX_PORT_ID; ++i)
+			headers.push(portHeader(i));
+
 		headers.push('Native<br>VLAN', 'Bridge');
 		this.headerSet(headers);
 
@@ -478,11 +490,11 @@ if (port_vlan_supported) {
 		/* find out which vlans are supposed to be bridged to each LAN */
 		var bridged = [];
 
-		for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
-			var j = (i == 0) ? '' : i.toString();
-			var l = nvram['lan'+j+'_ifnames'].split(' ');
+		for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+			var p = lanPrefix(i);
+			var l = (nvram[p+'_ifnames'] || '').split(' ');
 /* REMOVE-BEGIN
-			alert('lan'+j+'_ifnames='+l);
+			alert(p+'_ifnames='+l);
 REMOVE-END */
 			for (var k = 0 ; k < l.length; k++) {
 /* REMOVE-BEGIN
@@ -490,28 +502,28 @@ REMOVE-END */
 REMOVE-END */
 				if (l[k].indexOf('vlan') != -1) {
 /* REMOVE-BEGIN
-					alert('lan'+j+'_ifname=br'+nvram['lan'+j+'_ifname'].replace('br',''));
+					alert(p+'_ifname='+nvram[p+'_ifname']);
 REMOVE-END */
-					if (nvram['lan'+j+'_ifname'] != '')
-						bridged[parseInt(l[k].replace('vlan',''))] = (3 + parseInt(nvram['lan'+j+'_ifname'].replace('br',''))).toString();
+					if ((nvram[p+'_ifname'] || '') != '')
+						bridged[parseInt(l[k].replace('vlan',''), 10)] = vlanBridgeLan(i).toString();
 					else
-						bridged[parseInt(l[k].replace('vlan',''))] = '1';
+						bridged[parseInt(l[k].replace('vlan',''), 10)] = VLAN_BRIDGE_NONE.toString();
 				}
 /* WLAN */
 				for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 					if (l[k].indexOf(wl_ifaces[uidx][0]) != -1)
-						E('_f_bridge_wlan'+uidx+'_to').selectedIndex = i;
+						E('_f_bridge_wlan'+uidx+'_to').value = i;
 				}
 			}
 		}
 
-/* WAN port */
-		bridged[parseInt(nvram['wan_ifnameX'].replace('vlan',''))] = '2';
-		bridged[parseInt(nvram['wan2_ifnameX'].replace('vlan',''))] = '7';
-/* MULTIWAN-BEGIN */
-		bridged[parseInt(nvram['wan3_ifnameX'].replace('vlan',''))] = '8';
-		bridged[parseInt(nvram['wan4_ifnameX'].replace('vlan',''))] = '9';
-/* MULTIWAN-END */
+/* WAN ports */
+		for (var i = 0; i < MAXWAN_NUM; ++i) {
+			var p = wanPrefix(i);
+			var vlan = parseInt((nvram[p+'_ifnameX'] || '').replace('vlan',''), 10);
+			if (isFinite(vlan))
+				bridged[vlan] = vlanBridgeWan(i).toString();
+		}
 
 		/* go thru all possible VLANs */
 		for (var i = 0 ; i <= MAX_VLAN_ID ; i++) {
@@ -525,14 +537,18 @@ REMOVE-END */
 				}
 				/* which ports are members of this VLAN? */
 				var m = nvram['vlan'+i+'ports'].split(' ');
-				for (var j = 0; j < (m.length) ; j++) {
-					port[parseInt(m[j].charAt(0))] = '1';
-					tagged[parseInt(m[j].charAt(0))] = (((trunk_vlan_supported) || (PORT_VLAN_SUPPORT_OVERRIDE)) && (m[j].indexOf('t') != -1)) ? '1' : '0';
+				for (var j = 0; j < m.length; ++j) {
+					var portId = parseInt(m[j], 10);
+					if (!isFinite(portId))
+						continue;
+					port[portId] = '1';
+					tagged[portId] = (((trunk_vlan_supported) || (PORT_VLAN_SUPPORT_OVERRIDE)) && (m[j].indexOf('t') != -1)) ? '1' : '0';
 				}
 
 				if (port_vlan_supported) {
-					if ((nvram['vlan'+i+'ports']).indexOf('*') != -1)
-						SWITCH_INTERNAL_PORT = (nvram['vlan'+i+'ports']).charAt((nvram['vlan'+i+'ports']).indexOf('*') - 1);
+					var internalPort = (nvram['vlan'+i+'ports'] || '').match(/(?:^|\s)(\d+)\*/);
+					if (internalPort)
+						SWITCH_INTERNAL_PORT = internalPort[1];
 
 					var pt = function(n) {
 						return (port[n] == '1') ? ((((trunk_vlan_supported) || (PORT_VLAN_SUPPORT_OVERRIDE)) && (tagged[n] == '1')) ? '2' : '1') : '0';
@@ -540,16 +556,11 @@ REMOVE-END */
 
 					var row = [
 						i.toString(),
-						((nvram['vlan'+i+'vid'] != '') && (nvram['vlan'+i+'vid'] > 0)) ? (nvram['vlan'+i+'vid']).toString() : '0',
-						pt(COL_P0N),
-						pt(COL_P1N),
-						pt(COL_P2N),
-						pt(COL_P3N),
-						pt(COL_P4N)
+						((nvram['vlan'+i+'vid'] != '') && (nvram['vlan'+i+'vid'] > 0)) ? (nvram['vlan'+i+'vid']).toString() : '0'
 					];
-/* EXTSW-BEGIN */
-					row.push(pt(COL_P5N));
-/* EXTSW-END */
+					for (var j = 0; j <= MAX_PORT_ID; ++j)
+						row.push(pt(portColName(j)));
+
 					row.push((((nvram['vlan'+i+'ports']).indexOf('*') != -1) ? '1' : '0'));
 					row.push((bridged[i] != null) ? bridged[i] : '1');
 					vlg.insertData(-1, row);
@@ -575,38 +586,24 @@ REMOVE-END */
 		return this.countElem(COL_VID, v);
 	}
 
-	vlg.countWan = function() {
-		return this.countElem(COL_BRI, 2);
+	vlg.countWan = function(wan) {
+		return this.countElem(COL_BRI, vlanBridgeWan(wan));
 	}
-
-	vlg.countWan2 = function() {
-		return this.countElem(COL_BRI, 7);
-	}
-
-/* MULTIWAN-BEGIN */
-	vlg.countWan3 = function() {
-		return this.countElem(COL_BRI, 8);
-	}
-
-	vlg.countWan4 = function() {
-		return this.countElem(COL_BRI, 9);
-	}
-/* MULTIWAN-END */
 
 	vlg.countLan = function(l) {
-		return this.countElem(COL_BRI, l + 3);
+		return this.countElem(COL_BRI, vlanBridgeLan(l));
 	}
 
 	vlg.verifyFields = function(row, quiet) {
-		var i, j, old, oldP0, oldP1, oldP2, oldP3, oldP4, oldP5, me, checkNative, valid = 1;
+		var i, j, old, me, checkNative, valid = 1;
 		var f = fields.getAll(row);
 
 		for (i = 0; i<= MAX_VLAN_ID ; i++)
 			f[COL_VID].options[i].disabled = (this.countVID(i) > 0);
 
-		for (i = 0; i <= MAX_BRIDGE_ID; i++) {
-			j = (i == 0) ? '' : i.toString();
-			f[COL_BRI].options[i + 2].disabled = (nvram['lan'+j+'_ifname'].length < 1);
+		for (i = 0; i <= MAX_BRIDGE_ID; ++i) {
+			j = lanPrefix(i);
+			f[COL_BRI].options[i + 2].disabled = ((nvram[j+'_ifname'] || '').length < 1);
 		}
 
 		if (!v_range(f[COL_MAP], quiet, 0, 4094))
@@ -626,26 +623,15 @@ REMOVE-END */
 			if (val !== 0 && val !== 1 && val !== 2)
 				f[col].value = '0';
 		}
-		enforcePortState(COL_P0);
-		enforcePortState(COL_P1);
-		enforcePortState(COL_P2);
-		enforcePortState(COL_P3);
-		enforcePortState(COL_P4);
-/* EXTSW-BEGIN */
-		enforcePortState(COL_P5);
-/* EXTSW-END */
+		for (i = 0; i <= MAX_PORT_ID; ++i)
+			enforcePortState(portCol(i));
 
 		/* Modifications to enable Native VLAN support (allow one untagged vlan per port) by default */
 		var err_vlan = 'Only one untagged VLAN per port is allowed (Native VLAN)';
 		old = ((row == this.editor) && this.source) ? this.source.getRowData() : null;
-		oldP0 = (old && (old.length > COL_P0)) ? old[COL_P0] : '0';
-		oldP1 = (old && (old.length > COL_P1)) ? old[COL_P1] : '0';
-		oldP2 = (old && (old.length > COL_P2)) ? old[COL_P2] : '0';
-		oldP3 = (old && (old.length > COL_P3)) ? old[COL_P3] : '0';
-		oldP4 = (old && (old.length > COL_P4)) ? old[COL_P4] : '0';
-/* EXTSW-BEGIN */
-		oldP5 = (old && (old.length > COL_P5)) ? old[COL_P5] : '0';
-/* EXTSW-END */
+		var oldPort = [];
+		for (i = 0; i <= MAX_PORT_ID; ++i)
+			oldPort[i] = (old && (old.length > portCol(i))) ? old[portCol(i)] : '0';
 		me = this;
 		checkNative = function(col, oldVal) {
 			if (f[col].value == '1') {
@@ -659,14 +645,8 @@ REMOVE-END */
 			else
 				ferror.clear(f[col]);
 		}
-		checkNative(COL_P0, oldP0);
-		checkNative(COL_P1, oldP1);
-		checkNative(COL_P2, oldP2);
-		checkNative(COL_P3, oldP3);
-		checkNative(COL_P4, oldP4);
-/* EXTSW-BEGIN */
-		checkNative(COL_P5, oldP5);
-/* EXTSW-END */
+		for (i = 0; i <= MAX_PORT_ID; ++i)
+			checkNative(portCol(i), oldPort[i]);
 
 		if (this.countDefaultVID() > 0) {
 			f[COL_VID_DEF].disabled = 1;
@@ -687,44 +667,31 @@ REMOVE-END */
 		else
 			ferror.clear(f[COL_VID]);
 
-		if ((this.countWan() > 0) && (f[COL_BRI].selectedIndex == 1)) {
-			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN0 at any time', quiet);
-			valid = 0;
-		}
-		else
-			ferror.clear(f[COL_BRI]);
+		var bridge = parseInt(f[COL_BRI].value, 10);
+		var bridgeError = '';
 
-		if ((this.countWan2() > 0) && (f[COL_BRI].selectedIndex == 6)) {
-			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN1 at any time', quiet);
-			valid = 0;
-		}
-		else
-			ferror.clear(f[COL_BRI]);
-
-/* MULTIWAN-BEGIN */
-		if ((this.countWan3() > 0) && (f[COL_BRI].selectedIndex == 7)) {
-			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN2 at any time', quiet);
-			valid = 0;
-		}
-		else
-			ferror.clear(f[COL_BRI]);
-
-		if ((this.countWan4() > 0) && (f[COL_BRI].selectedIndex == 8)) {
-			ferror.set(f[COL_BRI], 'Only one VID can be used as WAN3 at any time', quiet);
-			valid = 0;
-		}
-		else
-			ferror.clear(f[COL_BRI]);
-/* MULTIWAN-END */
-
-		for (i = 0; i < 4; i++) {
-			if ((this.countLan(i) > 0) && (f[COL_BRI].selectedIndex == (i + 2))) {
-				ferror.set(f[COL_BRI], 'One and only one VID can be used for LAN'+i+' (br'+i+') at any time', quiet);
-				valid = 0;
+		for (i = 0; i < MAXWAN_NUM; ++i) {
+			if ((this.countWan(i) > 0) && (bridge == vlanBridgeWan(i))) {
+				bridgeError = 'Only one VID can be used as WAN'+i+' at any time';
+				break;
 			}
-			else
-				ferror.clear(f[COL_BRI]);
 		}
+
+		if (!bridgeError) {
+			for (i = 0; i <= MAX_BRIDGE_ID; ++i) {
+				if ((this.countLan(i) > 0) && (bridge == vlanBridgeLan(i))) {
+					bridgeError = 'One and only one VID can be used for LAN'+i+' (br'+i+') at any time';
+					break;
+				}
+			}
+		}
+
+		if (bridgeError) {
+			ferror.set(f[COL_BRI], bridgeError, quiet);
+			valid = 0;
+		}
+		else
+			ferror.clear(f[COL_BRI]);
 
 		return valid;
 	}
@@ -737,53 +704,37 @@ REMOVE-END */
 		var view = [
 			data[COL_VID],
 /* RTNPLUS-NO-BEGIN */
-			((data[COL_MAP].toString() == '') || (data[COL_MAP].toString() == '0')) ? (parseInt(E('_vlan0tag').value) * 1 + data[COL_VID] * 1).toString() : data[COL_MAP].toString(),
+			((data[COL_MAP].toString() == '') || (data[COL_MAP].toString() == '0')) ? (parseInt(E('_vlan0tag').value) * 1 + data[COL_VID] * 1).toString() : data[COL_MAP].toString()
 /* RTNPLUS-NO-END */
 /* RTNPLUS-BEGIN */
-			((data[COL_MAP].toString() == '') || (data[COL_MAP].toString() == '0')) ? (data[COL_VID] * 1).toString() : data[COL_MAP].toString(),
+			((data[COL_MAP].toString() == '') || (data[COL_MAP].toString() == '0')) ? (data[COL_VID] * 1).toString() : data[COL_MAP].toString()
 /* RTNPLUS-END */
-			pv(data[COL_P0]),
-			pv(data[COL_P1]),
-			pv(data[COL_P2]),
-			pv(data[COL_P3]),
-			pv(data[COL_P4])
 		];
-/* EXTSW-BEGIN */
-		view.push(pv(data[COL_P5]));
-/* EXTSW-END */
+		for (var i = 0; i <= MAX_PORT_ID; ++i)
+			view.push(pv(data[portCol(i)]));
+
 		view.push(
 			(data[COL_VID_DEF].toString() != '0') ? '🌑' : '',
-			['','WAN0','LAN0 (br0)','LAN1 (br1)','LAN2 (br2)','LAN3 (br3)','WAN1'
-/* MULTIWAN-BEGIN */
-			,'WAN2','WAN3'
-/* MULTIWAN-END */
-			][data[COL_BRI] - 1]
+			vlanBridgeNames[data[COL_BRI]] || ''
 		);
 		return view;
 	}
 
 	vlg.dataToFieldValues = function (data) {
-		var values = [data[COL_VID], data[COL_MAP], data[COL_P0], data[COL_P1], data[COL_P2], data[COL_P3], data[COL_P4]];
-/* EXTSW-BEGIN */
-		values.push(data[COL_P5]);
-/* EXTSW-END */
+		var values = [data[COL_VID], data[COL_MAP]];
+		for (var i = 0; i <= MAX_PORT_ID; ++i)
+			values.push(data[portCol(i)]);
+
 		values.push((data[COL_VID_DEF] != 0) ? 1 : 0, data[COL_BRI]);
 		return values;
 	}
 
 	vlg.fieldValuesToData = function(row) {
 		var f = fields.getAll(row);
-		var data = [f[COL_VID].value,
-			f[COL_MAP].value,
-			parseInt(f[COL_P0].value, 10) || 0,
-			parseInt(f[COL_P1].value, 10) || 0,
-			parseInt(f[COL_P2].value, 10) || 0,
-			parseInt(f[COL_P3].value, 10) || 0,
-			parseInt(f[COL_P4].value, 10) || 0
-		];
-/* EXTSW-BEGIN */
-		data.push(parseInt(f[COL_P5].value, 10) || 0);
-/* EXTSW-END */
+		var data = [f[COL_VID].value, f[COL_MAP].value];
+		for (var i = 0; i <= MAX_PORT_ID; ++i)
+			data.push(parseInt(f[portCol(i)].value, 10) || 0);
+
 		data.push(f[COL_VID_DEF].checked ? 1 : 0, f[COL_BRI].value);
 		return data;
 	}
@@ -876,9 +827,9 @@ REMOVE-END */
 	vlg.resetNewEditor = function() {
 		var f = fields.getAll(this.newEditor);
 
-		for (var i = 0; i <= MAX_BRIDGE_ID; i++) {
-			var j = ((i == 0) ? '' : i.toString());
-			f[COL_BRI].options[i + 2].disabled = (nvram['lan'+j+'_ifname'].length < 1);
+		for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+			var p = lanPrefix(i);
+			f[COL_BRI].options[i + 2].disabled = ((nvram[p+'_ifname'] || '').length < 1);
 		}
 
 		f[COL_MAP].value = '0';
@@ -886,21 +837,15 @@ REMOVE-END */
 		f[COL_VID].selectedIndex = 0;
 		var t = MAX_VLAN_ID;
 		while ((this.countVID(f[COL_VID].selectedIndex) > 0) && (t > 0)) {
-			f[COL_VID].selectedIndex = (f[COL_VID].selectedIndex%(MAX_VLAN_ID)) + 1;
+			f[COL_VID].selectedIndex = (f[COL_VID].selectedIndex + 1) % VLAN_COUNT;
 			t--;
 		}
 
 		for (var i = 0; i <= MAX_VLAN_ID ; i++)
 			f[COL_VID].options[i].disabled = (this.countVID(i) > 0);
 
-		f[COL_P0].value = '0';
-		f[COL_P1].value = '0';
-		f[COL_P2].value = '0';
-		f[COL_P3].value = '0';
-		f[COL_P4].value = '0';
-/* EXTSW-BEGIN */
-		f[COL_P5].value = '0';
-/* EXTSW-END */
+		for (var i = 0; i <= MAX_PORT_ID; ++i)
+			f[portCol(i)].value = '0';
 		f[COL_VID_DEF].checked = 0;
 		if (this.countDefaultVID() > 0)
 			f[COL_VID_DEF].disabled = 1;
@@ -934,7 +879,7 @@ function verifyFields(focused, quiet) {
 
 		for (var i = 0; i < data.length; ++i) {
 			/* port columns */
-			for (var col = COL_P0; col <= COL_P4; ++col) {
+			for (var col = COL_P0; col < COL_VID_DEF; ++col) {
 				if (data[i][col] == 2) { /* only Tag */
 					data[i][col] = 1; /* downgrade Tag -> On */
 					changed = true;
@@ -954,26 +899,19 @@ function verifyFields(focused, quiet) {
 /* MIPSR2P-NO-END */
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		var wlan = E('_f_bridge_wlan'+uidx+'_to');
-		if (nvram.lan_ifname.length < 1)
-			wlan.options[0].disabled = 1;
-
-		if (nvram.lan1_ifname.length < 1)
-			wlan.options[1].disabled = 1;
-
-		if (nvram.lan2_ifname.length < 1)
-			wlan.options[2].disabled = 1;
-
-		if (nvram.lan3_ifname.length < 1)
-			wlan.options[3].disabled = 1;
+		for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+			var p = lanPrefix(i);
+			wlan.options[i].disabled = ((nvram[p+'_ifname'] || '').length < 1);
+		}
 	}
 
 /* RTNPLUS-NO-BEGIN */
-	if (!v_range('_vlan0tag', quiet, 0, 4080))
+	if (!v_range('_vlan0tag', quiet, 0, VLAN_OFFSET_MAX))
 		return 0;
 
 	var e = E('_vlan0tag');
 	var v = parseInt(e.value);
-	e.value = v - (v % 16);
+	e.value = v - (v % VLAN_COUNT);
 	if ((e.value != vlt) && (typeof(vlg) != 'undefined')) {
 		vlg.populate();
 		vlt = e.value;
@@ -1001,53 +939,32 @@ function save() {
 		fom['vlan'+i+'vid'].value = '';
 	}
 
-	for (i = 0; i <= MAX_BRIDGE_ID; i++) {
-		j = (i == 0) ? '' : i;
-		fom['lan'+j+'_ifnames'].value = '';
-	}
+	for (i = 0; i <= MAX_BRIDGE_ID; ++i)
+		fom[lanPrefix(i)+'_ifnames'].value = '';
 
-	for (i = 1; i <= MAXWAN_NUM; ++i) {
-		j = (i > 1) ? i : '';
-		fom['wan'+j+'_ifnameX'].value = '';
-		fom['wan'+j+'_iface'].value = '';
-		fom['wan'+j+'_iface'].disabled = 1;
-		fom['wan'+j+'_ifname'].value = '';
-		fom['wan'+j+'_ifname'].disabled = 1;
-		fom['wan'+j+'_hwaddr'].value = '';
-		fom['wan'+j+'_hwaddr'].disabled = 1;
-		fom['wan'+j+'_proto'].value = '';
-		fom['wan'+j+'_proto'].disabled = 1;
+	for (i = 0; i < MAXWAN_NUM; ++i) {
+		j = wanPrefix(i);
+		fom[j+'_ifnameX'].value = '';
+		fom[j+'_iface'].value = '';
+		fom[j+'_iface'].disabled = 1;
+		fom[j+'_ifname'].value = '';
+		fom[j+'_ifname'].disabled = 1;
+		fom[j+'_hwaddr'].value = '';
+		fom[j+'_hwaddr'].disabled = 1;
+		fom[j+'_proto'].value = '';
+		fom[j+'_proto'].disabled = 1;
 	}
 
 	d = vlg.getAllData();
 
 	for (i = 0; i < d.length; ++i) {
 		p = '';
-		p += (d[i][COL_P0].toString() != '0') ? COL_P0N : '';
-		p += (((trunk_vlan_supported || PORT_VLAN_SUPPORT_OVERRIDE)) && (d[i][COL_P0].toString() == '2')) ? 't' : '';
-		p += trailingSpace(p);
-
-		p += (d[i][COL_P1].toString() != '0') ? COL_P1N : '';
-		p += (((trunk_vlan_supported || PORT_VLAN_SUPPORT_OVERRIDE)) && (d[i][COL_P1].toString() == '2')) ? 't' : '';
-		p += trailingSpace(p);
-
-		p += (d[i][COL_P2].toString() != '0') ? COL_P2N : '';
-		p += (((trunk_vlan_supported || PORT_VLAN_SUPPORT_OVERRIDE)) && (d[i][COL_P2].toString() == '2')) ? 't' : '';
-		p += trailingSpace(p);
-
-		p += (d[i][COL_P3].toString() != '0') ? COL_P3N : '';
-		p += (((trunk_vlan_supported || PORT_VLAN_SUPPORT_OVERRIDE)) && (d[i][COL_P3].toString() == '2')) ? 't' : '';
-		p += trailingSpace(p);
-
-		p += (d[i][COL_P4].toString() != '0') ? COL_P4N : '';
-		p += (((trunk_vlan_supported || PORT_VLAN_SUPPORT_OVERRIDE)) && (d[i][COL_P4].toString() == '2')) ? 't' : '';
-		p += trailingSpace(p);
-
-/* EXTSW-BEGIN */
-		p += (d[i][COL_P5].toString() != '0') ? COL_P5N : '';
-		p += (((trunk_vlan_supported || PORT_VLAN_SUPPORT_OVERRIDE)) && (d[i][COL_P5].toString() == '2')) ? 't' : '';
-		p += trailingSpace(p);
-/* EXTSW-END */
+		for (j = 0; j <= MAX_PORT_ID; ++j) {
+			var col = portCol(j);
+			p += (d[i][col].toString() != '0') ? portColName(j) : '';
+			p += (((trunk_vlan_supported || PORT_VLAN_SUPPORT_OVERRIDE)) && (d[i][col].toString() == '2')) ? 't' : '';
+			p += trailingSpace(p);
+		}
 
 		p += (d[i][COL_VID_DEF].toString() != '0') ? (SWITCH_INTERNAL_PORT+'*') : SWITCH_INTERNAL_PORT;
 
@@ -1070,37 +987,36 @@ function save() {
 
 		fom['vlan'+d[i][COL_VID]+'vid'].value = ((d[i][COL_MAP].toString() != '') && (d[i][COL_MAP].toString() != '0')) ? d[i][COL_MAP] : '';
 
-		fom['wan_ifnameX'].value += (d[i][COL_BRI] == '2') ? 'vlan'+d[i][0] : '';
-		fom['lan_ifnames'].value += (d[i][COL_BRI] == '3') ? 'vlan'+d[i][0] : '';
+		var bridge = parseInt(d[i][COL_BRI], 10);
+		for (j = 0; j <= MAX_BRIDGE_ID; ++j) {
+			if (bridge == vlanBridgeLan(j))
+				fom[lanPrefix(j)+'_ifnames'].value += 'vlan'+d[i][0];
+		}
+		for (j = 0; j < MAXWAN_NUM; ++j) {
+			if (bridge == vlanBridgeWan(j))
+				fom[wanPrefix(j)+'_ifnameX'].value += 'vlan'+d[i][0];
+		}
 /* REMOVE-BEGIN
 		fom['lan_ifnames'].value += trailingSpace(fom['lan_ifnames'].value);
 		alert('vlan'+d[i][0]+'ports='+fom['vlan'+d[i][0]+'ports'].value+'\nvlan'+d[i][0]+'hwname='+fom['vlan'+d[i][0]+'hwname'].value);
 REMOVE-END */
-		fom['lan1_ifnames'].value += (d[i][COL_BRI] == '4') ? 'vlan'+d[i][0] : '';
-		fom['lan2_ifnames'].value += (d[i][COL_BRI] == '5') ? 'vlan'+d[i][0] : '';
-		fom['lan3_ifnames'].value += (d[i][COL_BRI] == '6') ? 'vlan'+d[i][0] : '';
-		fom['wan2_ifnameX'].value += (d[i][COL_BRI] == '7') ? 'vlan'+d[i][0] : '';
-/* MULTIWAN-BEGIN */
-		fom['wan3_ifnameX'].value += (d[i][COL_BRI] == '8') ? 'vlan'+d[i][0] : '';
-		fom['wan4_ifnameX'].value += (d[i][COL_BRI] == '9') ? 'vlan'+d[i][0] : '';
-/* MULTIWAN-END */
 	}
 
 	/* count active WANs / wipe out relevant fields for inactive or just disabled WAN - needed in various places for the proper operation of FW */
 	k = 0;
-	for (i = 1; i <= MAXWAN_NUM; ++i) {
-		j = (i > 1) ? i : '';
-		if (fom['wan'+j+'_ifnameX'].value.length > 1)
+	for (i = 0; i < MAXWAN_NUM; ++i) {
+		j = wanPrefix(i);
+		if (fom[j+'_ifnameX'].value.length > 1)
 			k++;
 		else {
-			fom['wan'+j+'_iface'].disabled = 0;
-			fom['wan'+j+'_iface'].value = '';
-			fom['wan'+j+'_ifname'].disabled = 0;
-			fom['wan'+j+'_ifname'].value = '';
-			fom['wan'+j+'_hwaddr'].disabled = 0;
-			fom['wan'+j+'_hwaddr'].value = '';
-			fom['wan'+j+'_proto'].disabled = 0;
-			fom['wan'+j+'_proto'].value = 'disabled';
+			fom[j+'_iface'].disabled = 0;
+			fom[j+'_iface'].value = '';
+			fom[j+'_ifname'].disabled = 0;
+			fom[j+'_ifname'].value = '';
+			fom[j+'_hwaddr'].disabled = 0;
+			fom[j+'_hwaddr'].value = '';
+			fom[j+'_proto'].disabled = 0;
+			fom[j+'_proto'].value = 'disabled';
 		}
 	}
 	//fom.mwan_num.value = (k < 1 ? 1 : k);
@@ -1108,34 +1024,25 @@ REMOVE-END */
 
 	for (i = 0; i < wl_ifaces.length; ++i) {
 		var wlan = E('_f_bridge_wlan'+i+'_to');
+		var bridge = parseInt(wlan.value, 10);
 /* REMOVE-BEGIN
-		alert(wlan.selectedIndex);
+		alert(bridge);
 REMOVE-END */
-		switch (parseInt(wlan.selectedIndex)) {
-			case 0:
-				fom['lan_ifnames'].value += ' '+wl_ifaces[i][0];
-			break;
-			case 1:
-				fom['lan1_ifnames'].value += ' '+wl_ifaces[i][0];
-			break;
-			case 2:
-				fom['lan2_ifnames'].value += ' '+wl_ifaces[i][0];
-			break;
-			case 3:
-				fom['lan3_ifnames'].value += ' '+wl_ifaces[i][0];
-			break;
-		}
+		if ((bridge >= 0) && (bridge <= MAX_BRIDGE_ID))
+			fom[lanPrefix(bridge)+'_ifnames'].value += ' '+wl_ifaces[i][0];
 	}
 /* REMOVE-BEGIN
-	var lif = nvram['lan_ifnames'].split(' ');
-	for (var j = 0; j < lif.length; j++) {
+	var lif = (nvram['lan_ifnames'] || '').split(' ');
+	for (var j = 0; j < lif.length; ++j) {
 		fom['lan_ifnames'].value += (lif[j].indexOf('vlan') != -1) ? '' : lif[j];
 		fom['lan_ifnames'].value += trailingSpace(fom['lan_ifnames'].value);
 	}
-	alert('lan_ifnames='+fom['lan_ifnames'].value+'\n' +
-		'lan1_ifnames='+fom['lan1_ifnames'].value+'\n' +
-		'lan2_ifnames='+fom['lan2_ifnames'].value+'\n' +
-		'lan3_ifnames='+fom['lan3_ifnames'].value);
+	var debugLan = [];
+	for (var j = 0; j <= MAX_BRIDGE_ID; ++j) {
+		var p = lanPrefix(j)+'_ifnames';
+		debugLan.push(p+'='+fom[p].value);
+	}
+	alert(debugLan.join('\n'));
 REMOVE-END */
 
 	/* Prevent vlan reset to default at init */
@@ -1143,7 +1050,7 @@ REMOVE-END */
 
 	e = E('footer-msg');
 
-	if (vlg.countWan() != 1) {
+	if (vlg.countWan(0) != 1) {
 		e.innerHTML = 'Cannot proceed: one VID must be assigned to WAN.';
 		e.style.display = 'inline-block';
 		setTimeout(
@@ -1205,9 +1112,7 @@ function init() {
 		E('sesdiv').style.display = 'block';
 		vlg.recolor();
 		vlg.resetNewEditor();
-		var c;
-		if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-			toggleVisibility(cprefix, 'notes');
+		restoreVisibility(cprefix, 'notes');
 	}
 	else
 		E('notice-msg').innerHTML = '<div id="notice">The feature is not supported on this router.<\/div>';
@@ -1238,85 +1143,30 @@ function init() {
 <input type="hidden" name="_reboot" value="1">
 <input type="hidden" name="_nvset" value="1">
 <input type="hidden" name="_commit" value="1">
-<input type="hidden" name="vlan0ports">
-<input type="hidden" name="vlan1ports">
-<input type="hidden" name="vlan2ports">
-<input type="hidden" name="vlan3ports">
-<input type="hidden" name="vlan4ports">
-<input type="hidden" name="vlan5ports">
-<input type="hidden" name="vlan6ports">
-<input type="hidden" name="vlan7ports">
-<input type="hidden" name="vlan8ports">
-<input type="hidden" name="vlan9ports">
-<input type="hidden" name="vlan10ports">
-<input type="hidden" name="vlan11ports">
-<input type="hidden" name="vlan12ports">
-<input type="hidden" name="vlan13ports">
-<input type="hidden" name="vlan14ports">
-<input type="hidden" name="vlan15ports">
-<input type="hidden" name="vlan0hwname">
-<input type="hidden" name="vlan1hwname">
-<input type="hidden" name="vlan2hwname">
-<input type="hidden" name="vlan3hwname">
-<input type="hidden" name="vlan4hwname">
-<input type="hidden" name="vlan5hwname">
-<input type="hidden" name="vlan6hwname">
-<input type="hidden" name="vlan7hwname">
-<input type="hidden" name="vlan8hwname">
-<input type="hidden" name="vlan9hwname">
-<input type="hidden" name="vlan10hwname">
-<input type="hidden" name="vlan11hwname">
-<input type="hidden" name="vlan12hwname">
-<input type="hidden" name="vlan13hwname">
-<input type="hidden" name="vlan14hwname">
-<input type="hidden" name="vlan15hwname">
-<input type="hidden" name="wan_ifnameX">
-<input type="hidden" name="wan2_ifnameX">
-<!-- MULTIWAN-BEGIN -->
-<input type="hidden" name="wan3_ifnameX">
-<input type="hidden" name="wan4_ifnameX">
-<input type="hidden" name="wan3_iface" value="" disabled="disabled">
-<input type="hidden" name="wan4_iface" value="" disabled="disabled">
-<input type="hidden" name="wan3_ifname" value="" disabled="disabled">
-<input type="hidden" name="wan4_ifname" value="" disabled="disabled">
-<input type="hidden" name="wan3_hwaddr" value="" disabled="disabled">
-<input type="hidden" name="wan4_hwaddr" value="" disabled="disabled">
-<input type="hidden" name="wan3_proto" value="" disabled="disabled">
-<input type="hidden" name="wan4_proto" value="" disabled="disabled">
-<!-- MULTIWAN-END -->
-<input type="hidden" name="wan_iface" value="" disabled="disabled">
-<input type="hidden" name="wan2_iface" value="" disabled="disabled">
-<input type="hidden" name="wan_ifname" value="" disabled="disabled">
-<input type="hidden" name="wan2_ifname" value="" disabled="disabled">
-<input type="hidden" name="wan_hwaddr" value="" disabled="disabled">
-<input type="hidden" name="wan2_hwaddr" value="" disabled="disabled">
-<input type="hidden" name="wan_proto" value="" disabled="disabled">
-<input type="hidden" name="wan2_proto" value="" disabled="disabled">
+<script>
+for (var i = 0; i <= MAX_VLAN_ID; ++i) {
+	W('<input type="hidden" name="vlan'+i+'ports">');
+	W('<input type="hidden" name="vlan'+i+'hwname">');
+	W('<input type="hidden" name="vlan'+i+'vid">');
+}
+
+for (var i = 0; i < MAXWAN_NUM; ++i) {
+	var p = wanPrefix(i);
+	W('<input type="hidden" name="'+p+'_ifnameX">');
+	W('<input type="hidden" name="'+p+'_iface" value="" disabled="disabled">');
+	W('<input type="hidden" name="'+p+'_ifname" value="" disabled="disabled">');
+	W('<input type="hidden" name="'+p+'_hwaddr" value="" disabled="disabled">');
+	W('<input type="hidden" name="'+p+'_proto" value="" disabled="disabled">');
+}
+
+for (var i = 0; i <= MAX_BRIDGE_ID; ++i)
+	W('<input type="hidden" name="'+lanPrefix(i)+'_ifnames">');
+</script>
 <input type="hidden" name="mwan_num">
 <input type="hidden" name="manual_boot_nv">
-<input type="hidden" name="lan_ifnames">
-<input type="hidden" name="lan1_ifnames">
-<input type="hidden" name="lan2_ifnames">
-<input type="hidden" name="lan3_ifnames">
 <!-- MIPSR2P-NO-BEGIN -->
 <input type="hidden" name="trunk_vlan_so">
 <!-- MIPSR2P-NO-END -->
-<input type="hidden" name="vlan0vid">
-<input type="hidden" name="vlan1vid">
-<input type="hidden" name="vlan2vid">
-<input type="hidden" name="vlan3vid">
-<input type="hidden" name="vlan4vid">
-<input type="hidden" name="vlan5vid">
-<input type="hidden" name="vlan6vid">
-<input type="hidden" name="vlan7vid">
-<input type="hidden" name="vlan8vid">
-<input type="hidden" name="vlan9vid">
-<input type="hidden" name="vlan10vid">
-<input type="hidden" name="vlan11vid">
-<input type="hidden" name="vlan12vid">
-<input type="hidden" name="vlan13vid">
-<input type="hidden" name="vlan14vid">
-<input type="hidden" name="vlan15vid">
 
 <!-- MIPSR2P-BEGIN -->
 <div id="unknown_router" style="display:none">
@@ -1344,7 +1194,7 @@ function init() {
 	<div class="section">
 		<script>
 			createFieldTable('', [
-				{ title: 'First 802.1Q VLAN tag', name: 'vlan0tag', type: 'text', maxlen: 4, size: 6, value: fixInt(nvram.vlan0tag, 0, 4080, 0), suffix: '&nbsp; <small><i>(range: 0 - 4080; must be a multiple of 16; set to 0 to disable)<\/i><\/small>' }
+				{ title: 'First 802.1Q VLAN tag', name: 'vlan0tag', type: 'text', maxlen: 4, size: 6, value: fixInt(nvram.vlan0tag, 0, VLAN_OFFSET_MAX, 0), suffix: '&nbsp; <small><i>(range: 0 - '+VLAN_OFFSET_MAX+'; must be a multiple of '+VLAN_COUNT+'; set to 0 to disable)<\/i><\/small>' }
 			]);
 		</script>
 	</div>
@@ -1362,7 +1212,7 @@ function init() {
 						ssid = '<s title="Disabled!" style="cursor:help">'+ssid+'<\/s>';
 
 					f.push( { title: wl_display_ifname(uidx), name: 'f_bridge_wlan'+uidx+'_to', type: 'select',
-								options: [[0,'LAN0 (br0)'],[1,'LAN1 (br1)'],[2,'LAN2 (br2)'],[3,'LAN3 (br3)'],[4,'none']], suffix: '&nbsp;&nbsp;⇔&nbsp; SSID: '+ssid, value: 4, prefix: '⇔ &nbsp;&nbsp;&nbsp;' } );
+								options: wlanBridgeOptions, suffix: '&nbsp;&nbsp;⇔&nbsp; SSID: '+ssid, value: WLAN_BRIDGE_NONE, prefix: '⇔ &nbsp;&nbsp;&nbsp;' } );
 				}
 			}
 			createFieldTable('', f);
@@ -1382,7 +1232,7 @@ function init() {
 	</div>
 <!-- MIPSR2P-NO-END -->
 
-	<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+	<script>writeToggleSectionTitle('Notes', 'notes');</script>
 	<div class="section" id="sesdiv_notes" style="display:none">
 		<div>*** If you notice that the order of the LAN Ports are incorrect, try the <a href="basic-network.asp">Invert Ports Order</a> first, if not read <a href="https://www.linksysinfo.org/index.php?threads/can-vlan-gui-port-order-be-corrected.70160/#post-247634" target="_blank" rel="noopener noreferrer"> <b>this</b></a> ***</div>
 		<br>
@@ -1403,7 +1253,7 @@ function init() {
 		</ul>
 		<br>
 <!-- RTNPLUS-NO-BEGIN -->
-		<div><i>VID Offset:</i> First 802.1Q VLAN tag to be used as <i>base/initial tag/VID</i> for VLAN and VID assignments. This allows using VIDs larger than 15 on (older) devices, in contiguous blocks/ranges with up to 16 VLANs/VIDs. Set to '0' (zero) to disable this feature and VLANs will have the very same/identical value for its VID, as usual (from 0 to 15).</div>
+		<div><i>VID Offset:</i> First 802.1Q VLAN tag to be used as <i>base/initial tag/VID</i> for VLAN and VID assignments. This allows using VIDs larger than <script>W(MAX_VLAN_ID);</script> on (older) devices, in contiguous blocks/ranges with up to <script>W(VLAN_COUNT);</script> VLANs/VIDs. Set to '0' (zero) to disable this feature and VLANs will have the very same/identical value for its VID, as usual (from 0 to <script>W(MAX_VLAN_ID);</script>).</div>
 		<br>
 <!-- RTNPLUS-NO-END -->
 		Wireless bridging:
@@ -1437,11 +1287,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

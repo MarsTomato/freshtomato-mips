@@ -1,6 +1,11 @@
 
 include ../common.mak
 
+# Seven-character commit ID embedded in the GUI during image creation.
+# It may be overridden by the build environment, e.g. GIT_HASH=1234567.
+GIT_HASH ?= $(shell hash=$$(git -C "$(CURDIR)" rev-parse --verify HEAD 2>/dev/null); \
+	if [ -n "$$hash" ]; then printf '%.7s' "$$hash"; else printf 'unknown'; fi)
+
 all:
 
 clean:
@@ -31,16 +36,61 @@ install:
 			-e "/^<!--$$/,/^-->$$/! { s,^\s\+, , }" $$F > $(INSTALLDIR)/www/$$F; \
 	done
 
-# Only include MultiWAN options if MULTIWAN is configured in.
-ifneq ($(TCONFIG_MULTIWAN),y)
-	cd $(INSTALLDIR)/www && \
-	for F in $(wildcard *.asp *.js); do \
-		sed -i $$F -e "/MULTIWAN-BEGIN/,/MULTIWAN-END/d"; \
-	done
+# Replace the build-time placeholder after about.asp has been copied/squashed.
+	sed -i $(INSTALLDIR)/www/about.asp -e "s,@GIT_HASH@,$(GIT_HASH),g"
+
+# Remove legacy ARM-only themes from MIPS images
+ifneq ($(TCONFIG_BCMARM),y)
+	rm -f \
+		$(INSTALLDIR)/www/asus-bg.png \
+		$(INSTALLDIR)/www/asus.css \
+		$(INSTALLDIR)/www/asus.png \
+		$(INSTALLDIR)/www/asusred.css \
+		$(INSTALLDIR)/www/asusred_logo.png \
+		$(INSTALLDIR)/www/black.css \
+		$(INSTALLDIR)/www/blue.css \
+		$(INSTALLDIR)/www/bluegreen.css \
+		$(INSTALLDIR)/www/bluegreen2.css \
+		$(INSTALLDIR)/www/brown.css \
+		$(INSTALLDIR)/www/cyan.css \
+		$(INSTALLDIR)/www/linksysred.css \
+		$(INSTALLDIR)/www/linksysred_logo.png \
+		$(INSTALLDIR)/www/olive.css \
+		$(INSTALLDIR)/www/pumpkin.css \
+		$(INSTALLDIR)/www/red_bg.gif \
+		$(INSTALLDIR)/www/rtn66u.css \
+		$(INSTALLDIR)/www/rtn66u.png \
+		$(INSTALLDIR)/www/tomatousb.png \
+		$(INSTALLDIR)/www/usbred.css \
+		$(INSTALLDIR)/www/white_arrow.gif
+endif
+
+# Distinguish version
+ifneq ($(TCONFIG_BCMARM),y)
+	sed -i $(INSTALLDIR)/www/status-data.jsx -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/qos-classify.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/qos-graphs.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/qos-settings.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/qos-detailed.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/qos-ctrate.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/nas-usb.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/nas-samba.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+else
+	sed -i $(INSTALLDIR)/www/status-data.jsx -e "/BCMARM-NO-BEGIN/,/BCMARM-NO-END/d"
+	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/BCMARM-NO-BEGIN/,/BCMARM-NO-END/d"
+	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/BCMARM-NO-BEGIN/,/BCMARM-NO-END/d"
+	sed -i $(INSTALLDIR)/www/qos-graphs.asp -e "/BCMARM-NO-BEGIN/,/BCMARM-NO-END/d"
+	sed -i $(INSTALLDIR)/www/qos-settings.asp -e "/BCMARM-NO-BEGIN/,/BCMARM-NO-END/d"
+	sed -i $(INSTALLDIR)/www/nas-usb.asp -e "/BCMARM-NO-BEGIN/,/BCMARM-NO-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/BCMARM-NO-BEGIN/,/BCMARM-NO-END/d"
 endif
 
 # Distinguish the VLAN version page that needs to be added
-ifeq ($(filter y,$(TCONFIG_BLINK) $(TCONFIG_BCMARM)),)
+ifeq ($(TCONFIG_RTNPLUS),)
 	sed -i $(INSTALLDIR)/www/advanced-vlan.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 else
 	sed -i $(INSTALLDIR)/www/advanced-vlan.asp -e "/RTNPLUS-NO-BEGIN/,/RTNPLUS-NO-END/d"
@@ -55,11 +105,16 @@ ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
 else
 	sed -i $(INSTALLDIR)/www/advanced-vlan.asp -e "/MIPSR2P-BEGIN/,/MIPSR2P-END/d"
 endif
-# Only include external switch options if EXTSW is enabled (RT-AC88U)
-ifneq ($(TCONFIG_EXTSW),y)
-	sed -i $(INSTALLDIR)/www/advanced-vlan.asp -e "/EXTSW-BEGIN/,/EXTSW-END/d"
+
+# Only expose Layer 7 controls when L7 support is configured in.
+ifneq ($(TCONFIG_L7),y)
+	sed -i $(INSTALLDIR)/www/advanced-ctnf.asp -e "/L7-BEGIN/,/L7-END/d"
+	sed -i $(INSTALLDIR)/www/qos-classify.asp -e "/L7-BEGIN/,/L7-END/d"
+	sed -i $(INSTALLDIR)/www/restrict-edit.asp -e "/L7-BEGIN/,/L7-END/d"
 else
-	sed -i $(INSTALLDIR)/www/advanced-vlan.asp -e "/EXTSW-NO-BEGIN/,/EXTSW-NO-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-ctnf.asp -e "/L7-NO-BEGIN/,/L7-NO-END/d"
+	sed -i $(INSTALLDIR)/www/qos-classify.asp -e "/L7-NO-BEGIN/,/L7-NO-END/d"
+	sed -i $(INSTALLDIR)/www/restrict-edit.asp -e "/L7-NO-BEGIN/,/L7-NO-END/d"
 endif
 
 # Only include the CIFS pages if CIFS is configured in.
@@ -68,6 +123,7 @@ ifneq ($(TCONFIG_CIFS),y)
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/admin-bwm.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/admin-iptraffic.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
+	sed -i $(INSTALLDIR)/www/admin-stats.js -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/nas-media.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/nas-bittorrent.asp -e "/CIFS-BEGIN/,/CIFS-END/d"
 	sed -i $(INSTALLDIR)/www/isup.jsx -e "/CIFS-BEGIN/,/CIFS-END/d"
@@ -79,6 +135,7 @@ ifneq ($(TCONFIG_JFFS2),y)
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-bwm.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-iptraffic.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
+	sed -i $(INSTALLDIR)/www/admin-stats.js -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-upgrade.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/nas-media.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
@@ -113,7 +170,7 @@ endif
 
 # Only include Paragon NTFS settings if Paragon is configured in.
 ifneq ($(TCONFIG_UFSDA),y)
- ifneq ($(TCONFIG_UFSDN),y)
+ ifneq ($(TCONFIG_UFSD),y)
 	sed -i $(INSTALLDIR)/www/nas-usb.asp -e "/PARAGON-BEGIN/,/PARAGON-END/d"
  endif
 endif
@@ -164,6 +221,24 @@ ifneq ($(TCONFIG_NOCAT),y)
 	sed -i $(INSTALLDIR)/www/about.asp -e "/NOCAT-BEGIN/,/NOCAT-END/d"
 endif
 
+# Only include DMZ forwarding when configured.
+ifneq ($(TCONFIG_DMZ),y)
+	rm -f $(INSTALLDIR)/www/forward-dmz.asp
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/\['DMZ',[[:space:]]*'dmz\.asp'\],/d"
+else
+ ifneq ($(TCONFIG_DMZMAC),y)
+	sed -i $(INSTALLDIR)/www/forward-dmz.asp \
+		-e "/DMZMAC-BEGIN/,/DMZMAC-END/d" \
+		-e "/DMZMAC-NO-BEGIN/d" \
+		-e "/DMZMAC-NO-END/d"
+ else
+	sed -i $(INSTALLDIR)/www/forward-dmz.asp \
+		-e "/DMZMAC-NO-BEGIN/,/DMZMAC-NO-END/d" \
+		-e "/DMZMAC-BEGIN/d" \
+		-e "/DMZMAC-END/d"
+ endif
+endif
+
 # only add php-fpm part for ARM routers
 ifneq ($(TCONFIG_BCMARM),y)
 	sed -i $(INSTALLDIR)/www/web-nginx.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
@@ -194,15 +269,17 @@ ifneq ($(TCONFIG_ZFS),y)
 endif
 
 # only add for RT-N+ routers
-ifeq ($(filter y,$(TCONFIG_BLINK) $(TCONFIG_BCMARM)),)
+ifeq ($(TCONFIG_RTNPLUS),)
 	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 	sed -i $(INSTALLDIR)/www/status-data.jsx -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 	sed -i $(INSTALLDIR)/www/basic-ipv6.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-wlanvifs.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 else
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/RTNPLUS-NO-BEGIN/,/RTNPLUS-NO-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-wlanvifs.asp -e "/RTNPLUS-NO-BEGIN/,/RTNPLUS-NO-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/RTNPLUS-NO-BEGIN/,/RTNPLUS-NO-END/d"
 endif
 
 # Only include IPv6 options if IPv6 is configured in.
@@ -261,7 +338,6 @@ ifneq ($(TCONFIG_USB),y)
 	rm -f $(INSTALLDIR)/www/wwan-sms.asp
 	sed -i $(INSTALLDIR)/www/tomato.css -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/USB-BEGIN/,/USB-END/d"
-	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/USB-BEGIN/,/USB-END/d"
@@ -276,7 +352,6 @@ ifeq ($(TCONFIG_REMOVE_USBAPP),y)
 	rm -f $(INSTALLDIR)/www/wwan-sms.asp
 	sed -i $(INSTALLDIR)/www/tomato.css -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/USB-BEGIN/,/USB-END/d"
-	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-buttons.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/USB-BEGIN/,/USB-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/USB-BEGIN/,/USB-END/d"
@@ -308,7 +383,7 @@ ifneq ($(TCONFIG_BCMARM),y)
 endif
 
 # Only for RT-N+ (enable SDK6 country code + rev selection also for newer SDK5 wl driver 5.100.x and up)
-ifneq ($(TCONFIG_BLINK),y)
+ifeq ($(TCONFIG_RTNPLUS),)
 	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
 endif
 
@@ -339,7 +414,7 @@ ifneq ($(TCONFIG_ROAM),y)
 endif
 
 # Only include AC stuff if needed
-ifeq ($(filter y,$(TCONFIG_BLINK) $(TCONFIG_BCMARM)),)
+ifeq ($(TCONFIG_RTNPLUS),)
 	sed -i $(INSTALLDIR)/www/wireless.js -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 endif
 
@@ -453,19 +528,27 @@ ifneq ($(TCONFIG_IPERF),y)
 	sed -i $(INSTALLDIR)/www/about.asp -e "/IPERF-BEGIN/,/IPERF-END/d"
 endif
 
+# Only include Adblock if it is configured in
+ifeq ($(TCONFIG_ADBLOCK),y)
 # Only include Adblock v2 if it is required (not for MIPS R1)
-ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
+ ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
 	rm -f $(INSTALLDIR)/www/advanced-adblock-v1.asp
 	mv $(INSTALLDIR)/www/advanced-adblock-v2.asp $(INSTALLDIR)/www/advanced-adblock.asp || true
-else
+ else
 	rm -f $(INSTALLDIR)/www/advanced-adblock-v2.asp
 	mv $(INSTALLDIR)/www/advanced-adblock-v1.asp $(INSTALLDIR)/www/advanced-adblock.asp || true
+ endif
+else
+	rm -f $(INSTALLDIR)/www/advanced-adblock-v1.asp
+	rm -f $(INSTALLDIR)/www/advanced-adblock-v2.asp
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/ADBLOCK-BEGIN/,/ADBLOCK-END/d"
 endif
 
 # Only include the https option if it is compiled in
 ifneq ($(TCONFIG_HTTPS),y)
-	rm -f $(INSTALLDIR)/www/advanced-adblock.asp
-	sed -i $(INSTALLDIR)/www/tomato.js -e "/HTTPS-BEGIN/,/HTTPS-END/d"
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/HTTPS-BEGIN/,/HTTPS-END/d" -e "/OUI-BEGIN/,/OUI-END/d"
+	sed -i $(INSTALLDIR)/www/status-devices.asp -e "/OUI-BEGIN/,/OUI-END/d"
+	sed -i $(INSTALLDIR)/www/tools-survey.asp -e "/OUI-BEGIN/,/OUI-END/d"
 	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/HTTPS-BEGIN/,/HTTPS-END/d"
 # depends on USB and NAS pages - only if USB Support is configured in
  ifeq ($(TCONFIG_USB),y)
@@ -648,7 +731,7 @@ endif
 
 # clean up
 	cd $(INSTALLDIR)/www && \
-	for F in $(wildcard *.asp *.js *.jsx *.html) tomato.css; do \
+	for F in $(wildcard *.asp *.js *.jsx *.html *.svg) tomato.css; do \
 		[ -f $(INSTALLDIR)/www/$$F ] && sed -i $$F \
 		-e "/USB-BEGIN/d"	-e "/USB-END/d" \
 		-e "/UPS-BEGIN/d"	-e "/UPS-END/d" \
@@ -695,8 +778,9 @@ endif
 		-e "/PARAGON-BEGIN/d"	-e "/PARAGON-END/d" \
 		-e "/TUXERA-BEGIN/d"	-e "/TUXERA-END/d" \
 		-e "/TUXERAHFS-BEGIN/d"	-e "/TUXERAHFS-END/d" \
-		-e "/MULTIWAN-BEGIN/d"	-e "/MULTIWAN-END/d" \
 		-e "/HTTPS-BEGIN/d"	-e "/HTTPS-END/d" \
+		-e "/ADBLOCK-BEGIN/d"	-e "/ADBLOCK-END/d" \
+		-e "/OUI-BEGIN/d"	-e "/OUI-END/d" \
 		-e "/KEYGEN-BEGIN/d"	-e "/KEYGEN-END/d" \
 		-e "/TERMLIB-BEGIN/d"	-e "/TERMLIB-END/d" \
 		-e "/TERMLIB0-BEGIN/d"	-e "/TERMLIB0-END/d" \
@@ -720,17 +804,17 @@ endif
 		-e "/WIREGUARD-BEGIN/d"	-e "/WIREGUARD-END/d" \
 		-e "/DDNS4CLS-BEGIN/d"	-e "/DDNS4CLS-END/d" \
 		-e "/DDNS2CLS-BEGIN/d"	-e "/DDNS2CLS-END/d" \
-		-e "/EXTSW-BEGIN/d"	-e "/EXTSW-END/d" \
-		-e "/EXTSW-NO-BEGIN/d"	-e "/EXTSW-NO-END/d" \
 		-e "/USBAP-BEGIN/d"	-e "/USBAP-END/d" \
 		-e "/MIPSR2P-BEGIN/d"	-e "/MIPSR2P-END/d" \
 		-e "/MIPSR2P-NO-BEGIN/d" -e "/MIPSR2P-NO-END/d" \
+		-e "/L7-BEGIN/d"	-e "/L7-END/d" \
+		-e "/L7-NO-BEGIN/d"	-e "/L7-NO-END/d" \
 		|| true; \
 	done
 
 # remove C-style comments from java, asp and css files. All "control" comments have been processed by now.
 	for F in $(wildcard *.js *.jsx *.asp *.css); do \
-		[ -f $(INSTALLDIR)/www/$$F ] && $(TOP)/www/remcoms2.sh $(INSTALLDIR)/www/$$F c; \
+		[ -f $(INSTALLDIR)/www/$$F ] && $(TOP)/www/remcoms2.sh $(INSTALLDIR)/www/$$F c || true; \
 	done
 
 # use HTML compressor to compress HTML as much as possible

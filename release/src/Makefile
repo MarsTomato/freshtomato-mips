@@ -75,18 +75,7 @@ lowercase_B = $(shell echo $(B) | tr A-Z a-z)
 beta = $(if $(filter $(TOMATO_EXPERIMENTAL),1),-beta,)
 
 revision = $(if $(filter $(MIPS32),r2),R2,R1)
-ifneq ($(CONFIG_RT),)
- ND = "RT"
-else
- ifeq ($(CONFIG_BCMWL6),y)
-  ND = "RTAC"
- else
-  ifeq ($(CONFIG_BCMWL5),y)
-   ND = "RTN"
-  endif
- endif
-endif
-branch_rev = $(shell echo K26MIPS$(revision)_$(ND))
+branch_rev = K26MIPS$(revision)_$(TARGET_VARIANT)
 
 ifneq ($(V2),)
 	current_V2 = $(shell echo -$(V2))
@@ -401,332 +390,408 @@ what:
 	@echo ""
 
 # The methodology for making the different builds is to
-# copy the "base" config file to the "target" config file in
-# the appropriate directory, and then edit it by removing and
-# inserting the desired configuration lines.
-# You can't just delete the "whatever=y" line, you must have
-# a "...is not set" line, or the make oldconfig will stop and ask
-# what to do.
+# copy the "base" config file to the "target" config file and
+# replace boolean TCONFIG values in place. Every TCONFIG symbol
+# changed by RouterOptions must already exist in config_base as
+# either "TCONFIG_x=y" or "# TCONFIG_x is not set".
 
-# Options for "make bin" :
+# Common options for "make bin":
 # BUILD_DESC (Std|Lite|Ext|...)
-# MIPS32 (r2|r1)
-# WNR3500LV2 (0|1)
-# KERN_SIZE_OPT KERN_SIZE_OPT_MORE
+# KERN_SIZE_OPT
 # USB ("USB"|"")
 # JFFSv1 | NO_JFFS
-# NO_CIFS, NO_ZEBRA, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT, NO_FTP, NO_BLINK, HAVEGED
-# SAMBA3, OPENVPN, DONT_OPTIMIZE_SIZE, OPTIMIZE_SIZE_MORE, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, CTF, NGINX, NANO, BCMNAT, PROXY
-# NFS, BTCLIENT, BTGUI, TR_EXTRAS, SNMP, SDHC, HFS, UPS, DNSCRYPT, STUBBY, PPTPD, TOR, IPSEC, RAID, MICROSD, USBAP, NO_USBAPP, IPERF, KEYGEN, NO_KEYGEN, TERMLIB, ADVTHEMES, BRCM_NAND_JFFS2, BONDING, MDNS, SDK6MIPS, ROAM OPENSSL11 OPENSSL30 WOLFSSL WOLFSSLMIN
+# NO_CIFS NO_SAMBA NO_HTTPS NO_ADBLOCK NO_DMZ NO_DMZMAC NO_XXTP NO_L7 NO_L7PAT NO_LIBOPT NO_FTP NO_USBAPP NO_KEYGEN
+# FTPSSL OPENVPN IPV6SUPP EBTABLES NTFS UFSD MEDIASRV BBEXTRAS USBEXTRAS BCM57 SLIM NOCAT NGINX NANO PROXY
+# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT DNSSEC STUBBY PPTPD TOR TINC IPSEC RAID MICROSD USBAP IPERF
+# KEYGEN HAVEGED CTF BRCM_NAND_JFFS2 MDNS ROAM OPENSSL11 OPENSSL30 WOLFSSL WOLFSSLMIN QRCODE AIO MWAN_MAX BRIDGE_COUNT
+# NAND NVRAM_64K NVRAM_SIZE
+# MIPS-specific options:
+# MIPS32 (r2|r1)
+# WNR3500LV2 (0|1)
+# KERN_SIZE_OPT_MORE NO_ZEBRA OPTIMIZE_SIZE_MORE BCMNAT SDHC TERMLIB ADVTHEMES BONDING
+# AC66U R6300V1 WNDR4500V1 WNDR4500V2 FULL_EXTRAS
 
 define RouterOptions
 	@( \
-	sed -i "/TCONFIG_EMF/d" $(1); \
-	if [ "$(SLIM)" = "y" ]; then \
-		echo "# TCONFIG_EMF is not set" >>$(1); \
-	else \
-		echo "TCONFIG_EMF=y" >>$(1); \
+	config_y() { \
+		grep -q -e "^$$1=y$$" -e "^# $$1 is not set$$" $(1) || { echo "ERROR: $$1 missing from $(1)" >&2; exit 1; }; \
+		sed -i "s/^# $$1 is not set$$/$$1=y/" $(1); \
+	}; \
+	config_n() { \
+		grep -q -e "^$$1=y$$" -e "^# $$1 is not set$$" $(1) || { echo "ERROR: $$1 missing from $(1)" >&2; exit 1; }; \
+		sed -i "s/^$$1=y$$/# $$1 is not set/" $(1); \
+	}; \
+	config_value() { \
+		grep -q "^$$1=" $(1) || { echo "ERROR: $$1 missing from $(1)" >&2; exit 1; }; \
+		sed -i "s/^$$1=.*/$$1=$$2/" $(1); \
+	}; \
+	config_range() { \
+		case "$$2" in ''|*[!0-9]*) echo "ERROR: $$1 must be an integer in range $$3..$$4" >&2; exit 1;; esac; \
+		if [ "$$2" -lt "$$3" ] || [ "$$2" -gt "$$4" ]; then echo "ERROR: $$1=$$2 outside supported range $$3..$$4" >&2; exit 1; fi; \
+		config_value "$$1" "$$2"; \
+	}; \
+	if [ -n "$(MWAN_MAX)" ]; then \
+		config_range TCONFIG_MWAN_MAX "$(MWAN_MAX)" 1 8; \
+	elif [ "$(TARGET_PLATFORM)" = "MIPS" ]; then \
+		if [ "$(NVRAM_64K)" = "y" ] || [ "$(NVRAM_SIZE)" = "60" ] || [ "$(NVRAM_SIZE)" = "64" ]; then \
+			config_range TCONFIG_MWAN_MAX "4" 1 8; \
+		else \
+			config_range TCONFIG_MWAN_MAX "2" 1 8; \
+		fi; \
+	elif [ "$(TARGET_PLATFORM)" = "ARM" ]; then \
+		if [ "$(NVRAM_64K)" = "y" ] || [ "$(NVRAM_128K)" = "y" ] || [ "$(NVRAM_SIZE)" = "60" ] || [ "$(NVRAM_SIZE)" = "64" ]; then \
+			config_range TCONFIG_MWAN_MAX "4" 1 8; \
+		else \
+			config_range TCONFIG_MWAN_MAX "2" 1 8; \
+		fi; \
 	fi; \
-	sed -i "/TCONFIG_JFFSV1/d" $(1); \
-	if [ "$(JFFSv1)" = "y" ]; then \
-		echo "TCONFIG_JFFSV1=y" >>$(1); \
+	if [ -n "$(BRIDGE_COUNT)" ]; then \
+		config_range TCONFIG_BRIDGE_COUNT "$(BRIDGE_COUNT)" 1 16; \
+	fi; \
+	config_n TCONFIG_BCMARM; \
+	config_n TCONFIG_BCM7; \
+	config_n TCONFIG_BCM714; \
+	config_n TCONFIG_MIPS_RT; \
+	config_n TCONFIG_MIPS_RTN; \
+	config_n TCONFIG_MIPS_RTAC; \
+	case "$(TARGET_PLATFORM):$(TARGET_VARIANT)" in \
+		ARM:SDK6) config_y TCONFIG_BCMARM ;; \
+		ARM:SDK7) config_y TCONFIG_BCMARM; config_y TCONFIG_BCM7 ;; \
+		ARM:SDK714) config_y TCONFIG_BCMARM; config_y TCONFIG_BCM7; config_y TCONFIG_BCM714 ;; \
+		MIPS:RT) config_y TCONFIG_MIPS_RT ;; \
+		MIPS:RTN) config_y TCONFIG_MIPS_RTN ;; \
+		MIPS:RTAC) config_y TCONFIG_MIPS_RTAC ;; \
+		*) echo "ERROR: unsupported target platform '$(TARGET_PLATFORM):$(TARGET_VARIANT)'" >&2; exit 1 ;; \
+	esac; \
+	if [ "$(AIO)" = "y" ]; then \
+		config_y TCONFIG_AIO; \
+	fi; \
+	if [ "$(TARGET_PLATFORM)" = "MIPS" ]; then \
+		if [ "$(AIO)" = "y" ]; then \
+			config_n TCONFIG_OPTIMIZE_SIZE; \
+		else \
+			config_y TCONFIG_OPTIMIZE_SIZE; \
+		fi; \
+	elif [ "$(DO_OPTIMIZE_SIZE)" = "y" ]; then \
+		config_y TCONFIG_OPTIMIZE_SIZE; \
+	fi; \
+	if [ "$(SLIM)" = "y" ]; then \
+		config_n TCONFIG_EMF; \
 	else \
-		echo "# TCONFIG_JFFSV1 is not set" >>$(1); \
+		config_y TCONFIG_EMF; \
+	fi; \
+	if [ "$(JFFSv1)" = "y" ]; then \
+		config_y TCONFIG_JFFSV1; \
+	else \
+		config_n TCONFIG_JFFSV1; \
 	fi; \
 	if [ "$(IPSEC)" = "y" ]; then \
-		echo "TCONFIG_IPSEC=y" >>$(1); \
+		config_y TCONFIG_IPSEC; \
 	else \
-		echo "# TCONFIG_IPSEC is not set" >>$(1); \
+		config_n TCONFIG_IPSEC; \
 	fi; \
 	if [ "$(RAID)" = "y" ]; then \
-		echo "TCONFIG_RAID=y" >>$(1); \
+		config_y TCONFIG_RAID; \
 	else \
-		echo "# TCONFIG_RAID is not set" >>$(1); \
+		config_n TCONFIG_RAID; \
 	fi; \
 	if [ "$(MIPS32)" = "r2" ]; then \
-		echo "TCONFIG_MIPSR2=y" >>$(1); \
+		config_y TCONFIG_MIPSR2; \
 	else \
-		echo "# TCONFIG_MIPSR2 is not set" >>$(1); \
+		config_n TCONFIG_MIPSR2; \
 	fi; \
 	if [ "$(USB)" = "USB" ]; then \
-		sed -i "/TCONFIG_USB is not set/d" $(1); \
-		echo "TCONFIG_USB=y" >>$(1); \
+		config_y TCONFIG_USB; \
 		if [ "$(USBEXTRAS)" = "y" ]; then \
-			sed -i "/TCONFIG_USB_EXTRAS/d" $(1); \
-			echo "TCONFIG_USB_EXTRAS=y" >>$(1); \
+			config_y TCONFIG_USB_EXTRAS; \
 		fi; \
 		if [ "$(NTFS)" = "y" ]; then \
-			sed -i "/TCONFIG_NTFS/d" $(1); \
-			echo "TCONFIG_NTFS=y" >>$(1); \
+			config_y TCONFIG_NTFS; \
 		fi; \
 		if [ "$(UFSD)" = "y" ]; then \
-			sed -i "/TCONFIG_UFSD/d" $(1); \
-			echo "TCONFIG_UFSD=y" >>$(1); \
+			config_y TCONFIG_UFSD; \
+		elif [ "$(UFSD)" = "ASUS" ]; then \
+			config_y TCONFIG_UFSDA; \
+		fi; \
+		if [ "$(TUXERA)" = "y" ]; then \
+			config_y TCONFIG_TUXERA; \
+		fi; \
+		if [ "$(TUXERA_HFS)" = "y" ]; then \
+			config_y TCONFIG_TUX_HFS; \
+		fi; \
+		if [ "$(ZFS)" = "y" ]; then \
+			config_y TCONFIG_ZFS; \
 		fi; \
 		if [ "$(HFS)" = "y" ]; then \
-			sed -i "/TCONFIG_HFS/d" $(1); \
-			echo "TCONFIG_HFS=y" >>$(1); \
+			config_y TCONFIG_HFS; \
 		fi; \
 		if [ "$(MEDIASRV)" = "y" ]; then \
-			sed -i "/TCONFIG_MEDIA_SERVER/d" $(1); \
-			echo "TCONFIG_MEDIA_SERVER=y" >>$(1); \
+			config_y TCONFIG_MEDIA_SERVER; \
 		fi; \
 	else \
-		sed -i "/TCONFIG_USB=y/d" $(1); \
-		echo "# TCONFIG_USB is not set" >>$(1); \
-	fi; \
-	if [ "$(NO_FTP)" = "y" ]; then \
-		sed -i "/TCONFIG_FTP/d" $(1); \
-		echo "# TCONFIG_FTP is not set" >>$(1); \
+		config_n TCONFIG_USB; \
 	fi; \
 	if [ "$(NO_SAMBA)" = "y" ]; then \
-		sed -i "/TCONFIG_SAMBASRV/d" $(1); \
-		echo "# TCONFIG_SAMBASRV is not set" >>$(1); \
+		config_n TCONFIG_SAMBASRV; \
 	fi; \
 	if [ "$(NO_ZEBRA)" = "y" ]; then \
-		sed -i "/TCONFIG_ZEBRA/d" $(1); \
-		echo "# TCONFIG_ZEBRA is not set" >>$(1); \
+		config_n TCONFIG_ZEBRA; \
 	fi; \
 	if [ "$(NO_JFFS)" = "y" ]; then \
-		sed -i "/TCONFIG_JFFS2/d" $(1); \
-		echo "# TCONFIG_JFFS2 is not set" >>$(1); \
-		sed -i "/TCONFIG_JFFSV1/d" $(1); \
-		echo "# TCONFIG_JFFSV1 is not set" >>$(1); \
+		config_n TCONFIG_JFFS2; \
 	fi; \
 	if [ "$(NO_CIFS)" = "y" ]; then \
-		sed -i "/TCONFIG_CIFS/d" $(1); \
-		echo "# TCONFIG_CIFS is not set" >>$(1); \
+		config_n TCONFIG_CIFS; \
 	fi; \
 	if [ "$(NO_HTTPS)" = "y" ]; then \
-		sed -i "/TCONFIG_HTTPS/d" $(1); \
-		echo "# TCONFIG_HTTPS is not set" >>$(1); \
+		config_n TCONFIG_HTTPS; \
+	fi; \
+	if [ "$(NO_ADBLOCK)" = "y" ]; then \
+		config_n TCONFIG_ADBLOCK; \
+	fi; \
+	if [ "$(NO_DMZ)" = "y" ]; then \
+		config_n TCONFIG_DMZ; \
+	elif [ "$(NO_DMZMAC)" = "y" ]; then \
+		config_n TCONFIG_DMZMAC; \
 	fi; \
 	if [ "$(NO_XXTP)" = "y" ]; then \
-		sed -i "/TCONFIG_L2TP/d" $(1); \
-		echo "# TCONFIG_L2TP is not set" >>$(1); \
-		sed -i "/TCONFIG_PPTP/d" $(1); \
-		echo "# TCONFIG_PPTP is not set" >>$(1); \
+		config_n TCONFIG_L2TP; \
+		config_n TCONFIG_PPTP; \
+	fi; \
+	if [ "$(NO_L7)" = "y" ]; then \
+		config_n TCONFIG_L7; \
+	elif [ "$(NO_L7PAT)" = "y" ]; then \
+		config_n TCONFIG_L7PAT; \
 	fi; \
 	if [ "$(NO_LIBOPT)" = "y" ]; then \
-		sed -i "/TCONFIG_OPTIMIZE_SHARED_LIBS/d" $(1); \
-		echo "# TCONFIG_OPTIMIZE_SHARED_LIBS is not set" >>$(1); \
+		config_n TCONFIG_OPTIMIZE_SHARED_LIBS; \
 	fi; \
 	if [ "$(EBTABLES)" = "y" ]; then \
-		sed -i "/TCONFIG_EBTABLES/d" $(1); \
-		echo "TCONFIG_EBTABLES=y" >>$(1); \
+		config_y TCONFIG_EBTABLES; \
 	fi; \
 	if [ "$(IPV6SUPP)" = "y" ]; then \
-		sed -i "/TCONFIG_IPV6/d" $(1); \
-		echo "TCONFIG_IPV6=y" >>$(1); \
+		config_y TCONFIG_IPV6; \
 	fi; \
 	if [ "$(NOCAT)" = "y" ]; then \
-		sed -i "/TCONFIG_NOCAT/d" $(1); \
-		echo "TCONFIG_NOCAT=y" >>$(1); \
+		config_y TCONFIG_NOCAT; \
 	fi; \
 	if [ "$(NGINX)" = "y" ]; then \
-		sed -i "/TCONFIG_NGINX/d" $(1); \
-		echo "TCONFIG_NGINX=y" >>$(1); \
+		config_y TCONFIG_NGINX; \
 	fi; \
-	sed -i "/TCONFIG_MULTIWAN/d" $(1); \
-	if [ "$(NVRAM_SIZE)" = "60" ] || [ "$(NVRAM_SIZE)" = "64" ] || [ "$(NVRAM_64K)" = "y" ]; then \
-		echo "TCONFIG_MULTIWAN=y" >>$(1); \
-	else \
-		echo "# TCONFIG_MULTIWAN is not set" >>$(1); \
+	if [ "$(FTPSSL)" = "y" ] && [ "$(NO_FTP)" = "y" ]; then \
+		echo "ERROR: FTPSSL requires FTP; remove NO_FTP or FTPSSL" >&2; \
+		exit 1; \
+	fi; \
+	if [ "$(FTPSSL)" = "y" ] && { [ "$(WOLFSSL)" = "y" ] || [ "$(WOLFSSLMIN)" = "y" ]; }; then \
+		echo "ERROR: FTPSSL is not supported with WOLFSSL/WOLFSSLMIN" >&2; \
+		exit 1; \
+	fi; \
+	if [ "$(FTPSSL)" = "y" ]; then \
+		config_y TCONFIG_FTP_SSL; \
 	fi; \
 	if [ "$(OPENVPN)" = "y" ]; then \
-		sed -i "/# TCONFIG_OPENVPN is not set/d" $(1); \
-		echo "TCONFIG_OPENVPN=y" >>$(1); \
-		sed -i "/TCONFIG_FTP_SSL/d" $(1); \
-		echo "TCONFIG_FTP_SSL=y" >>$(1); \
+		config_y TCONFIG_OPENVPN; \
+	fi; \
+	if [ "$(NO_FTP)" = "y" ]; then \
+		config_n TCONFIG_FTP; \
+		config_n TCONFIG_FTP_SSL; \
+	fi; \
+	if [ "$(WIREGUARD)" = "y" ]; then \
+		config_y TCONFIG_WIREGUARD; \
 	fi; \
 	if [ "$(PPTPD)" = "y" ]; then \
-		sed -i "/TCONFIG_PPTPD/d" $(1); \
-		echo "TCONFIG_PPTPD=y" >>$(1); \
+		config_y TCONFIG_PPTPD; \
 	fi; \
 	if [ "$(BTCLIENT)" = "y" ]; then \
-		sed -i "/TCONFIG_BT/d" $(1); \
-		echo "TCONFIG_BT=y" >>$(1); \
-		sed -i "/TCONFIG_BBT/d" $(1); \
-		echo "TCONFIG_BBT=y" >>$(1); \
+		config_y TCONFIG_BT; \
+		config_y TCONFIG_BBT; \
 	fi; \
 	if [ "$(BTGUI)" = "y" ]; then \
-		sed -i "/TCONFIG_BT/d" $(1); \
-		echo "TCONFIG_BT=y" >>$(1); \
+		config_y TCONFIG_BT; \
 	fi; \
 	if [ "$(TR_EXTRAS)" = "y" ]; then \
-		sed -i "/TCONFIG_TR_EXTRAS/d" $(1); \
-		echo "TCONFIG_TR_EXTRAS=y" >>$(1); \
+		config_y TCONFIG_TR_EXTRAS; \
 	fi; \
 	if [ "$(NFS)" = "y" ]; then \
-		sed -i "/TCONFIG_NFS/d" $(1); \
-		echo "TCONFIG_NFS=y" >>$(1); \
+		config_y TCONFIG_NFS; \
 	fi; \
 	if [ "$(SNMP)" = "y" ]; then \
-		sed -i "/TCONFIG_SNMP/d" $(1); \
-		echo "TCONFIG_SNMP=y" >>$(1); \
+		config_y TCONFIG_SNMP; \
 	fi; \
 	if [ "$(SDHC)" = "y" ]; then \
-		sed -i "/TCONFIG_SDHC/d" $(1); \
-		echo "TCONFIG_SDHC=y" >>$(1); \
+		config_y TCONFIG_SDHC; \
 	fi; \
 	if [ "$(DNSSEC)" = "y" ]; then \
-		sed -i "/TCONFIG_DNSSEC/d" $(1); \
-		echo "TCONFIG_DNSSEC=y" >>$(1); \
+		config_y TCONFIG_DNSSEC; \
 	fi; \
 	if [ "$(UPS)" = "y" ]; then \
-		sed -i "/TCONFIG_UPS/d" $(1); \
-		echo "TCONFIG_UPS=y" >>$(1); \
+		config_y TCONFIG_UPS; \
 	fi; \
 	if [ "$(NANO)" = "y" ]; then \
-		sed -i "/TCONFIG_NANO/d" $(1); \
-		echo "TCONFIG_NANO=y" >>$(1); \
+		config_y TCONFIG_NANO; \
 	fi; \
 	if [ "$(DNSCRYPT)" = "y" ]; then \
-		sed -i "/TCONFIG_DNSCRYPT/d" $(1); \
-		echo "TCONFIG_DNSCRYPT=y" >>$(1); \
+		config_y TCONFIG_DNSCRYPT; \
 	fi; \
 	if [ "$(STUBBY)" = "y" ]; then \
-		sed -i "/TCONFIG_STUBBY/d" $(1); \
-		echo "TCONFIG_STUBBY=y" >>$(1); \
+		config_y TCONFIG_STUBBY; \
 	fi; \
 	if [ "$(NVRAM_64K)" = "y" ]; then \
-		sed -i "/TCONFIG_NVRAM_64K/d" $(1); \
-		echo "TCONFIG_NVRAM_64K=y" >>$(1); \
+		config_y TCONFIG_NVRAM_64K; \
+	fi; \
+	if [ "$(NVRAM_128K)" = "y" ]; then \
+		config_y TCONFIG_NVRAM_128K; \
+	fi; \
+	if [ "$(DRAM_512M)" = "y" ]; then \
+		config_y TCONFIG_DRAM_512M; \
 	fi; \
 	if [ "$(TOR)" = "y" ]; then \
-		sed -i "/TCONFIG_TOR/d" $(1); \
-		echo "TCONFIG_TOR=y" >>$(1); \
+		config_y TCONFIG_TOR; \
 	fi; \
 	if [ "$(MICROSD)" = "y" ]; then \
-		sed -i "/TCONFIG_MICROSD/d" $(1); \
-		echo "TCONFIG_MICROSD=y" >>$(1); \
+		config_y TCONFIG_MICROSD; \
 	fi; \
 	if [ "$(USBAP)" = "y" ]; then \
-		sed -i "/TCONFIG_USBAP/d" $(1); \
-		echo "TCONFIG_USBAP=y" >>$(1); \
+		config_y TCONFIG_USBAP; \
 		if [ "$(NO_USBAPP)" = "y" ]; then \
-			sed -i "/TCONFIG_REMOVE_USBAPP/d" $(1); \
-			echo "TCONFIG_REMOVE_USBAPP=y" >>$(1); \
-			sed -i "/TCONFIG_FTP/d" $(1); \
-			echo "# TCONFIG_FTP is not set" >>$(1); \
-			echo "# TCONFIG_FTP_SSL is not set" >>$(1); \
-			sed -i "/TCONFIG_SAMBA/d" $(1); \
-			echo "# TCONFIG_SAMBASRV is not set" >>$(1); \
-			echo "# TCONFIG_SAMBA3 is not set" >>$(1); \
+			config_y TCONFIG_REMOVE_USBAPP; \
 		fi; \
 	fi; \
-	if [ "$(ASUS_TRX)" = "RT-AC66U" ]; then \
-		sed -i "/TCONFIG_AC66U/d" $(1); \
-		echo "TCONFIG_AC66U=y" >>$(1); \
-	else \
-		sed -i "/TCONFIG_AC66U/d" $(1); \
-		echo "# TCONFIG_AC66U is not set" >>$(1); \
+	model_flags=0; \
+	[ "$(AC66U)" = "y" ] && model_flags=$$((model_flags + 1)); \
+	[ "$(R6300V1)" = "y" ] && model_flags=$$((model_flags + 1)); \
+	[ "$(WNDR4500V1)" = "y" ] && model_flags=$$((model_flags + 1)); \
+	[ "$(WNDR4500V2)" = "y" ] && model_flags=$$((model_flags + 1)); \
+	if [ "$$model_flags" -gt 1 ]; then \
+		echo "ERROR: select only one RT-AC model discriminator (AC66U, R6300V1, WNDR4500V1 or WNDR4500V2)" >&2; \
+		exit 1; \
 	fi; \
-	if [ "$(ASUS_TRX)" = "R6300V1" ]; then \
-		sed -i "/TCONFIG_R6300V1/d" $(1); \
-		echo "TCONFIG_R6300V1=y" >>$(1); \
+	if [ "$$model_flags" -gt 0 ] && [ "$(TARGET_VARIANT)" != "RTAC" ]; then \
+		echo "ERROR: RT-AC model discriminators require the RT-AC target family" >&2; \
+		exit 1; \
 	fi; \
-	if [ "$(ASUS_TRX)" = "WNDR4500V1" ]; then \
-		sed -i "/TCONFIG_WNDR4500V1/d" $(1); \
-		echo "TCONFIG_WNDR4500V1=y" >>$(1); \
+	if [ "$(AC66U)" = "y" ]; then \
+		config_y TCONFIG_AC66U; \
 	fi; \
-	if [ "$(ASUS_TRX)" = "WNDR4500V2" ]; then \
-		sed -i "/TCONFIG_WNDR4500V2/d" $(1); \
-		echo "TCONFIG_WNDR4500V2=y" >>$(1); \
+	if [ "$(R6300V1)" = "y" ]; then \
+		config_y TCONFIG_R6300V1; \
 	fi; \
-	if [ "$(BUILD_DESC)" = "AIO" ]; then \
-		sed -i "/TCONFIG_AIO/d" $(1); \
-		echo "TCONFIG_AIO=y" >>$(1); \
+	if [ "$(WNDR4500V1)" = "y" ]; then \
+		config_y TCONFIG_WNDR4500V1; \
 	fi; \
-	if [ "$(DONT_OPTIMIZE_SIZE)" = "y" ]; then \
-		sed -i "/TCONFIG_OPTIMIZE_SIZE=y/d" $(1); \
-		echo "# TCONFIG_OPTIMIZE_SIZE is not set" >>$(1); \
+	if [ "$(WNDR4500V2)" = "y" ]; then \
+		config_y TCONFIG_WNDR4500V2; \
 	fi; \
 	if [ "$(CTF)" = "y" ]; then \
-		sed -i "/TCONFIG_CTF/d" $(1); \
-		echo "TCONFIG_CTF=y" >>$(1); \
+		config_y TCONFIG_CTF; \
 	fi; \
 	if [ "$(NAND)" = "y" ]; then \
-		sed -i "/TCONFIG_NAND/d" $(1); \
-		echo "TCONFIG_NAND=y" >>$(1); \
+		config_y TCONFIG_NAND; \
 	fi; \
-	if [ "$(SDK6MIPS)" = "y" ]; then \
-		sed -i "/TCONFIG_BCMWL6/d" $(1); \
-		echo "TCONFIG_BCMWL6=y" >>$(1); \
+	if [ "$(AC3200)" = "y" ]; then \
+		config_y TCONFIG_AC3200; \
+	fi; \
+	if [ "$(AC5300)" = "y" ]; then \
+		config_y TCONFIG_AC5300; \
+	fi; \
+	if [ "$(BSD)" = "y" ]; then \
+		config_y TCONFIG_BCMBSD; \
 	fi; \
 	if [ "$(ROAM)" = "y" ]; then \
-		sed -i "/TCONFIG_ROAM/d" $(1); \
-		echo "TCONFIG_ROAM=y" >>$(1); \
+		config_y TCONFIG_ROAM; \
 	fi; \
 	if [ "$(BCMNAT)" = "y" ]; then \
-		sed -i "/TCONFIG_BCMNAT/d" $(1); \
-		echo "TCONFIG_BCMNAT=y" >>$(1); \
+		config_y TCONFIG_BCMNAT; \
+	fi; \
+	if [ "$(BCMSMP)" = "y" ]; then \
+		config_y TCONFIG_BCMSMP; \
+	fi; \
+	if [ "$(PROXYSTA)" = "y" ]; then \
+		config_y TCONFIG_PROXYSTA; \
+	fi; \
+	if [ "$(DPSTA)" = "y" ]; then \
+		config_y TCONFIG_DPSTA; \
+	fi; \
+	if [ "$(GRO)" = "y" ]; then \
+		config_y TCONFIG_GROCTRL; \
+	fi; \
+	if [ "$(BCMFA)" = "y" ]; then \
+		config_y TCONFIG_BCMFA; \
 	fi; \
 	if [ "$(TINC)" = "y" ]; then \
-		sed -i "/TCONFIG_TINC/d" $(1); \
-		echo "TCONFIG_TINC=y" >>$(1); \
+		config_y TCONFIG_TINC; \
+	fi; \
+	ssl_providers=0; \
+	[ "$(OPENSSL11)" = "y" ] && ssl_providers=$$((ssl_providers + 1)); \
+	[ "$(OPENSSL30)" = "y" ] && ssl_providers=$$((ssl_providers + 1)); \
+	if [ "$(WOLFSSL)" = "y" ] || [ "$(WOLFSSLMIN)" = "y" ]; then ssl_providers=$$((ssl_providers + 1)); fi; \
+	if [ "$$ssl_providers" -gt 1 ]; then \
+		echo "ERROR: select only one TLS/SSL provider (OPENSSL11, OPENSSL30 or WOLFSSL/WOLFSSLMIN)" >&2; \
+		exit 1; \
 	fi; \
 	if [ "$(OPENSSL11)" = "y" ]; then \
-		sed -i "/TCONFIG_OPENSSL11/d" $(1); \
-		echo "TCONFIG_OPENSSL11=y" >>$(1); \
+		config_y TCONFIG_OPENSSL11; \
 	fi; \
 	if [ "$(OPENSSL30)" = "y" ]; then \
-		sed -i "/TCONFIG_OPENSSL30/d" $(1); \
-		echo "TCONFIG_OPENSSL30=y" >>$(1); \
+		config_y TCONFIG_OPENSSL30; \
 	fi; \
 	if [ "$(WOLFSSL)" = "y" ]; then \
-		sed -i "s/# TCONFIG_WOLFSSL is not set/TCONFIG_WOLFSSL=y/g" $(1); \
+		config_y TCONFIG_WOLFSSL; \
 	fi; \
 	if [ "$(WOLFSSLMIN)" = "y" ]; then \
-		sed -i "s/# TCONFIG_WOLFSSL is not set/TCONFIG_WOLFSSL=y/g" $(1); \
-		sed -i "s/# TCONFIG_WOLFSSLMIN is not set/TCONFIG_WOLFSSLMIN=y/g" $(1); \
+		config_y TCONFIG_WOLFSSL; \
+		config_y TCONFIG_WOLFSSLMIN; \
 	fi; \
 	if [ "$(IPERF)" = "y" ]; then \
-		sed -i "/TCONFIG_IPERF/d" $(1); \
-		echo "TCONFIG_IPERF=y" >>$(1); \
+		config_y TCONFIG_IPERF; \
 	fi; \
 	if [ "$(KEYGEN)" = "y" ] && [ "$(NO_KEYGEN)" = "" ]; then \
-		sed -i "/TCONFIG_KEYGEN/d" $(1); \
-		echo "TCONFIG_KEYGEN=y" >>$(1); \
+		config_y TCONFIG_KEYGEN; \
 	fi; \
 	if [ "$(TERMLIB)" = "y" ]; then \
-		sed -i "/TCONFIG_TERMLIB/d" $(1); \
-		echo "TCONFIG_TERMLIB=y" >>$(1); \
+		config_y TCONFIG_TERMLIB; \
 	fi; \
 	if [ "$(ADVTHEMES)" = "y" ]; then \
-		sed -i "/TCONFIG_ADVTHEMES/d" $(1); \
-		echo "TCONFIG_ADVTHEMES=y" >>$(1); \
+		config_y TCONFIG_ADVTHEMES; \
 	fi; \
 	if [ "$(NVRAM_SIZE)" = "32" ]; then \
-		sed -i "/TCONFIG_NVRAM_32K/d" $(1); \
-		echo "TCONFIG_NVRAM_32K=y" >>$(1); \
-	fi; \
-	if [ "$(OPTIMIZE_SIZE_MORE)" = "y" ]; then \
-		sed -i "/TCONFIG_OPTIMIZE_SIZE_MORE/d" $(1); \
-		echo "TCONFIG_OPTIMIZE_SIZE_MORE=y" >>$(1); \
+		config_y TCONFIG_NVRAM_32K; \
 	fi; \
 	if [ "$(BRCM_NAND_JFFS2)" = "y" ]; then \
-		sed -i "/TCONFIG_BRCM_NAND_JFFS2/d" $(1); \
-		echo "TCONFIG_BRCM_NAND_JFFS2=y" >>$(1); \
+		config_y TCONFIG_BRCM_NAND_JFFS2; \
 	fi; \
 	if [ "$(BONDING)" = "y" ]; then \
-		sed -i "s/# TCONFIG_BONDING is not set/TCONFIG_BONDING=y/g" $(1); \
+		config_y TCONFIG_BONDING; \
 	fi; \
 	if [ "$(MDNS)" = "y" ]; then \
-		sed -i "s/# TCONFIG_MDNS is not set/TCONFIG_MDNS=y/g" $(1); \
+		config_y TCONFIG_MDNS; \
 	fi; \
 	if [ "$(PROXY)" = "y" ]; then \
-		sed -i "s/# TCONFIG_PROXY is not set/TCONFIG_PROXY=y/g" $(1); \
+		config_y TCONFIG_PROXY; \
 	fi; \
 	if [ "$(QRCODE)" = "y" ]; then \
-		sed -i "/TCONFIG_QRCODE/d" $(1); \
-		echo "TCONFIG_QRCODE=y" >>$(1); \
+		config_y TCONFIG_QRCODE; \
 	fi; \
-	if [ "$(NO_BLINK)" = "y" ]; then \
-		sed -i "s/TCONFIG_BLINK=y/# TCONFIG_BLINK is not set/g" $(1); \
+	if [ "$(FANCTRL)" = "y" ]; then \
+		config_y TCONFIG_FANCTRL; \
+	fi; \
+	if [ "$(OPTIMIZE_SIZE_MORE)" = "y" ]; then \
+		config_y TCONFIG_OPTIMIZE_SIZE_MORE; \
+	fi; \
+	if [ "$(CONNTRACK_TOOL)" = "y" ]; then \
+		config_y TCONFIG_CONNTRACK_TOOL; \
+	fi; \
+	if [ "$(IRQBALANCE)" = "y" ]; then \
+		config_y TCONFIG_IRQBALANCE; \
+	fi; \
+	if [ "$(NO_TRXKEY)" = "y" ]; then \
+		config_n TCONFIG_TRXKEY; \
+	fi; \
+	if [ "$(EXTSW)" = "y" ]; then \
+		config_y TCONFIG_EXTSW; \
 	fi; \
 	if [ "$(HAVEGED)" = "y" ]; then \
-		sed -i "s/# TCONFIG_HAVEGED is not set/TCONFIG_HAVEGED=y/g" $(1); \
+		config_y TCONFIG_HAVEGED; \
 	fi; \
 	)
 endef
@@ -750,7 +815,7 @@ define BusyboxOptions
 		echo "CONFIG_NICE=y" >>$(1); \
 		sed -i "/CONFIG_SETCONSOLE/d" $(1); \
 		echo "CONFIG_SETCONSOLE=y" >>$(1); \
-		if [ "$(CONFIG_RT)" = "" ]; then \
+		if [ "$(TARGET_VARIANT)" != "RT" ]; then \
 			sed -i "/CONFIG_MKFIFO/d" $(1); \
 			echo "CONFIG_MKFIFO=y" >>$(1); \
 		fi; \
@@ -839,7 +904,7 @@ define BusyboxOptions
 		sed -i "/CONFIG_FEATURE_LS_COLOR_IS_DEFAULT/d" $(1); \
 		echo "CONFIG_FEATURE_LS_COLOR_IS_DEFAULT=y" >>$(1); \
 	fi; \
-	if [ "$(BUILD_DESC)" = "AIO" ] || [ "$(BUILD_DESC)" = "Mega-VPN" ]; then \
+	if [ "$(FULL_EXTRAS)" = "y" ]; then \
 		sed -i "s/# CONFIG_TIME is not set/CONFIG_TIME=y/g" $(1); \
 		sed -i "s/# CONFIG_GETOPT is not set/CONFIG_GETOPT=y/g" $(1); \
 		sed -i "s/# CONFIG_FEATURE_GETOPT_LONG is not set/CONFIG_FEATURE_GETOPT_LONG=y/g" $(1); \
@@ -961,7 +1026,7 @@ define KernelConfig
 	else \
 		echo "# CONFIG_BCM57XX is not set" >>$(1); \
 	fi; \
-	if [ "$(CONFIG_RT)" = "" ]; then \
+	if [ "$(TARGET_VARIANT)" != "RT" ]; then \
 		if [ "$(USBAP)" = "y" ]; then \
 			sed -i "s/# CONFIG_WL_USBAP is not set/CONFIG_WL_USBAP=y/g" $(1); \
 			sed -i "s/CONFIG_WL_APSTA=\"wlconfig_lx_router_apsta\"/CONFIG_WL_APSTA=\"wlconfig_lx_router_high\"/g" $(1); \
@@ -996,15 +1061,15 @@ define KernelConfig
 			echo "CONFIG_BRIDGE_EBT_IP6=m" >>$(1); \
 		fi; \
 	fi; \
-	if [ "$(CONFIG_RT)" = "" ]; then \
+	if [ "$(TARGET_VARIANT)" != "RT" ]; then \
 		if [ "$(NVRAM_64K)" = "y" ]; then \
 			sed -i "s/# CONFIG_NVRAM_64K is not set/CONFIG_NVRAM_64K=y/g" $(1); \
 		fi; \
 	else \
 		sed -i "s/# CONFIG_NVRAM_64K is not set//g" $(1); \
 	fi; \
-	if [ "$(CONFIG_RT)" = "" ]; then \
-		if [ "$(BUILD_DESC)" = "AIO" ] || [ "$(BUILD_DESC)" = "Mega-VPN" ]; then \
+	if [ "$(TARGET_VARIANT)" != "RT" ]; then \
+		if [ "$(FULL_EXTRAS)" = "y" ]; then \
 			sed -i "s/# CONFIG_NETFILTER_XT_MATCH_STATISTIC is not set/CONFIG_NETFILTER_XT_MATCH_STATISTIC=m/g" $(1); \
 			sed -i "s/# CONFIG_NETFILTER_XT_MATCH_COMMENT is not set/CONFIG_NETFILTER_XT_MATCH_COMMENT=y/g" $(1); \
 		fi; \
@@ -1030,7 +1095,14 @@ endif
 	$(call BusyboxOptions, router/busybox/config_$(lowercase_B))
 
 	@$(MAKE) setprofile N=$(TPROFILE) B=$(B) DESC="$(BUILD_DESC)" USB="$(USB)"
+ifneq ($(CONFIG_ONLY),y)
+ifeq ($(CONFIG_SHARED_ONLY),y)
+	@$(MAKE) -C router busybox
+	@$(MAKE) -C router shared
+else
 	@$(MAKE) all
+endif
+endif
 
 include targets.mak
 
@@ -1084,6 +1156,9 @@ setprofile:
 		cp config_current .config
 
 	@$(MAKE) -C router oldconfig
+	@cp -f $(LINUXDIR)/.config $(LINUXDIR)/config_current
+	@cp -f router/busybox/.config router/busybox/config_current
+	@cp -f router/.config router/config_current
 
 include help.mak
 

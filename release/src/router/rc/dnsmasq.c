@@ -66,6 +66,27 @@ static int check_bridge_modes(void) {
 	return 0;
 }
 
+static int bridge_has_l3(unsigned int bridge)
+{
+	char key[32];
+	const char *ipaddr = bridge_nvram_get(bridge, "ipaddr", key, sizeof(key));
+
+	return (*ipaddr && (strcmp(ipaddr, "0.0.0.0") != 0));
+}
+
+static void write_l2_bridge_exclusions(FILE *f)
+{
+	unsigned int bridge;
+	char key[32];
+	const char *ifname;
+
+	for (bridge = 0; bridge < BRIDGE_COUNT; bridge++) {
+		ifname = bridge_nvram_get(bridge, "ifname", key, sizeof(key));
+		if ((*ifname) && (strncmp(ifname, "br", 2) == 0) && !bridge_has_l3(bridge))
+			fprintf(f, "except-interface=%s\n", ifname);
+	}
+}
+
 static void write_basic_config(FILE *f)
 {
 	const char *nv;
@@ -200,12 +221,9 @@ static void write_tor_dns(FILE *f)
 
 	if (nvram_get_int("tor_enable") && nvram_get_int("dnsmasq_onion_support")) {
 		for (i = 1; i < BRIDGE_COUNT; i++) {
-			memset(buf, 0, sizeof(buf));
 			snprintf(buf, sizeof(buf), "br%d", i);
 			if (nvram_match("tor_iface", buf)) {
-				memset(buf, 0, sizeof(buf));
-				snprintf(buf, sizeof(buf), "lan%d_ipaddr", i);
-				t_ip = nvram_safe_get(buf);
+				t_ip = bridge_nvram_get(i, "ipaddr", buf, sizeof(buf));
 				break;
 			}
 		}
@@ -228,12 +246,11 @@ static void write_wan_dns(FILE *f, const int mwan_num)
 		get_wan_prefix(wan_unit, wan_prefix);
 
 		/* allow RFC1918 responses for server domain (fix connect PPTP/L2TP WANs) */
-		memset(key, 0, sizeof(key));
 		proto = get_wanx_proto(wan_prefix);
 		if (proto == WP_PPTP)
-			nv = nvram_safe_get(strlcat_r(wan_prefix, "_pptp_server_ip", key, sizeof(key)));
+			nv = wan_nvram_get(wan_unit, "pptp_server_ip", key, sizeof(key));
 		else if (proto == WP_L2TP)
-			nv = nvram_safe_get(strlcat_r(wan_prefix, "_l2tp_server_ip", key, sizeof(key)));
+			nv = wan_nvram_get(wan_unit, "l2tp_server_ip", key, sizeof(key));
 
 		if (nv && *nv)
 			fprintf(f, "rebind-domain-ok=%s\n", nv);
@@ -257,7 +274,9 @@ static void write_dhcp_ignore(FILE *f)
 
 	/* ignore DHCP requests from unknown devices for given LAN */
 	for (i = 0; i < BRIDGE_COUNT; i++) {
-		memset(buf, 0, sizeof(buf));
+		if (!bridge_has_l3(i))
+			continue;
+
 		snprintf(buf, sizeof(buf), (i == 0 ? "dhcpd_ostatic" : "dhcpd%u_ostatic"), i);
 		if (nvram_get_int(buf))
 			fprintf(f, "dhcp-ignore=tag:br%u,tag:!known\n", i);
@@ -286,25 +305,25 @@ static void write_dhcp_ranges(FILE *f, int *do_dhcpd_hosts, int *do_dns_ptr, cha
 	do_dns = *do_dns_ptr;
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br != 0)
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
+		char bridge[12];
+		get_bridge_suffix(br, bridge, sizeof(bridge));
 
-		snprintf(lanN_proto, sizeof(lanN_proto), "lan%s_proto", bridge);
-		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
-		snprintf(lanN_ipaddr, sizeof(lanN_ipaddr), "lan%s_ipaddr", bridge);
-		snprintf(lanN_netmask, sizeof(lanN_netmask), "lan%s_netmask", bridge);
+		get_bridge_nvram_key(br, "proto", lanN_proto, sizeof(lanN_proto));
+		get_bridge_nvram_key(br, "ifname", lanN_ifname, sizeof(lanN_ifname));
+		get_bridge_nvram_key(br, "ipaddr", lanN_ipaddr, sizeof(lanN_ipaddr));
+		get_bridge_nvram_key(br, "netmask", lanN_netmask, sizeof(lanN_netmask));
 		snprintf(dhcpdN_startip, sizeof(dhcpdN_startip), "dhcpd%s_startip", bridge);
 		snprintf(dhcpdN_endip, sizeof(dhcpdN_endip), "dhcpd%s_endip", bridge);
+
+		/* 0.0.0.0 marks a pure L2 bridge: do not bind DNS, DHCP or RA to it. */
+		if (!bridge_has_l3(br) || !*nvram_safe_get(lanN_ifname))
+			continue;
 
 		do_dhcpd = nvram_match(lanN_proto, "dhcp");
 		if (do_dhcpd) {
 			(*do_dhcpd_hosts)++;
 
 			router_ip = nvram_safe_get(lanN_ipaddr);
-			memset(lan_base, 0, sizeof(lan_base));
 			strlcpy(lan_base, router_ip, sizeof(lan_base));
 			if ((p = strrchr(lan_base, '.')) != NULL)
 				*(p + 1) = 0;
@@ -317,7 +336,6 @@ static void write_dhcp_ranges(FILE *f, int *do_dhcpd_hosts, int *do_dns_ptr, cha
 			if (dhcp_lease <= 0)
 				dhcp_lease = 1440;
 
-			memset(sdhcp_lease, 0, buf_sz);
 			e = nvram_get("dhcpd_slt");
 			nval = (e && *e) ? atoi(e) : 0;
 			if (nval < 0)
@@ -399,8 +417,13 @@ static FILE *write_static_hosts(void)
 {
 	FILE *hf;
 	unsigned int i;
+	unsigned int mwan_num = mwan_active_num();
 	char tmp[32];
 	const char *router_ip, *hostname, *p;
+
+	/* WAN0 remains available in DNS configuration for AP-only mode. */
+	if (mwan_num == 0)
+		mwan_num = 1;
 
 	/* write static lease entries & create hosts file */
 	router_ip = nvram_safe_get("lan_ipaddr");
@@ -412,9 +435,8 @@ static FILE *write_static_hosts(void)
 		else if ((hostname = nvram_safe_get("lan_hostname")) && (*hostname)) /* FIXME: it has to be implemented (lan_hostname is always empty) */
 			fprintf(hf, "%s %s\n", router_ip, hostname);
 #endif
-		for (i = 1; i <= MWAN_MAX; i++) {
-			memset(tmp, 0, sizeof(tmp));
-			snprintf(tmp, sizeof(tmp), (i == 1 ? "wan" : "wan%u"), i);
+		for (i = 1; i <= mwan_num; i++) {
+			get_wan_prefix(i, tmp);
 			p = get_wanip(tmp);
 			if ((!*p) || (strcmp(p, "0.0.0.0") == 0))
 				p = "127.0.0.1";
@@ -426,25 +448,231 @@ static FILE *write_static_hosts(void)
 	return hf;
 }
 
+#ifdef TCONFIG_DMZMAC
+static int dmz_valid_mac(const char *mac, unsigned char ea[ETHER_ADDR_LEN])
+{
+	unsigned int i;
+	int nonzero = 0;
+
+	if (!ether_atoe(mac, ea))
+		return 0;
+
+	/* Only individual, non-zero Ethernet addresses make sense here. */
+	if (ea[0] & 0x01)
+		return 0;
+
+	for (i = 0; i < ETHER_ADDR_LEN; i++) {
+		if (ea[i]) {
+			nonzero = 1;
+			break;
+		}
+	}
+
+	return nonzero;
+}
+
+/*
+ * Validate a dhcpd_static MAC list the same way write_static_reservations()
+ * does. Return 1 if target is present, 0 if it is not, and -1 if the list
+ * itself is invalid and would not generate a dhcp-host entry.
+ */
+static int dmz_mac_list_state(const char *list, const unsigned char target[ETHER_ADDR_LEN])
+{
+	unsigned char ea[ETHER_ADDR_LEN];
+	char copy[64], *save, *mac;
+	int matched = 0;
+
+	if (!list || !*list)
+		return -1;
+
+	strlcpy(copy, list, sizeof(copy));
+	save = NULL;
+
+	for (mac = strtok_r(copy, ",", &save); mac != NULL; mac = strtok_r(NULL, ",", &save)) {
+		if (!ether_atoe(mac, ea))
+			return -1;
+
+		if (memcmp(ea, target, ETHER_ADDR_LEN) == 0)
+			matched = 1;
+	}
+
+	return matched;
+}
+
+static int dmz_dhcp_enabled_for_ip(const char *ip, const struct in_addr *addr, char *ifname_out, const size_t ifname_len)
+{
+	struct in_addr lan, mask, network, broadcast;
+	char ifname[IFNAMSIZ + 1];
+	char ifkey[24], ipkey[24], maskkey[24], protokey[24];
+	unsigned int i;
+
+	if (!lan_ifname_for_ipv4(ip, ifname, sizeof(ifname)))
+		return 0;
+
+	for (i = 0; i < BRIDGE_COUNT; i++) {
+		get_bridge_nvram_key(i, "ifname", ifkey, sizeof(ifkey));
+		if (strcmp(nvram_safe_get(ifkey), ifname) != 0)
+			continue;
+
+		get_bridge_nvram_key(i, "proto", protokey, sizeof(protokey));
+		if (!nvram_match(protokey, "dhcp"))
+			return 0;
+
+		get_bridge_nvram_key(i, "ipaddr", ipkey, sizeof(ipkey));
+		get_bridge_nvram_key(i, "netmask", maskkey, sizeof(maskkey));
+		if ((inet_pton(AF_INET, nvram_safe_get(ipkey), &lan) != 1) ||
+		    (inet_pton(AF_INET, nvram_safe_get(maskkey), &mask) != 1))
+			return 0;
+
+		network.s_addr = lan.s_addr & mask.s_addr;
+		broadcast.s_addr = network.s_addr | ~mask.s_addr;
+
+		if ((addr->s_addr == lan.s_addr) ||
+		    (addr->s_addr == network.s_addr) ||
+		    (addr->s_addr == broadcast.s_addr))
+			return 0;
+
+		if (ifname_out)
+			strlcpy(ifname_out, ifname, ifname_len);
+
+		return 1;
+	}
+
+	return 0;
+}
+
+static int dmz_static_reservation_state(const unsigned char target_mac[ETHER_ADDR_LEN], const struct in_addr *target_ip, const char *target_ifname)
+{
+	char *nve, *nvp, *p;
+	const char *mac, *ip, *name, *bind, *ip6;
+	struct in_addr in4;
+	char ifname[IFNAMSIZ + 1];
+	int mac_state, same_mac, state = 0;
+
+	nve = nvp = strdup(nvram_safe_get("dhcpd_static"));
+	while (nvp && (p = strsep(&nvp, ">")) != NULL) {
+		mac = ip = name = bind = ip6 = NULL;
+
+		if ((vstrsep(p, "<", &mac, &ip, &name, &bind, &ip6)) < 4)
+			continue;
+
+		mac_state = dmz_mac_list_state(mac, target_mac);
+		if (mac_state < 0)
+			continue;
+		same_mac = (mac_state > 0);
+
+		if (!ip || !*ip)
+			continue;
+
+		if (inet_pton(AF_INET, ip, &in4) != 1)
+			continue;
+
+		if (same_mac) {
+			if (in4.s_addr != target_ip->s_addr) {
+				/*
+				 * dnsmasq allows multiple dhcp-host entries for the same
+				 * MAC when their addresses belong to different subnets.
+				 */
+				if (lan_ifname_for_ipv4(ip, ifname, sizeof(ifname)) && strcmp(ifname, target_ifname) != 0)
+					continue;
+
+				state = -1;
+				break;
+			}
+			state = 1;
+		}
+		else if (in4.s_addr == target_ip->s_addr) {
+			state = -1;
+			break;
+		}
+	}
+
+	if (nve)
+		free(nve);
+
+	return state;
+}
+
+static void write_dmz_reservation(FILE *f, const char *sdhcp_lease)
+{
+	const char *mac, *ip;
+	struct in_addr in4;
+	unsigned char ea[ETHER_ADDR_LEN];
+	char canonical_mac[18], target_ifname[IFNAMSIZ + 1];
+	int state;
+
+	if (!nvram_get_int("dmz_enable"))
+		return;
+
+	mac = nvram_safe_get("dmz_macaddr");
+	if (!*mac)
+		return;
+
+	ip = nvram_safe_get("dmz_ipaddr");
+
+	if (!dmz_valid_mac(mac, ea)) {
+		logmsg(LOG_WARNING, "DMZ: invalid MAC address '%s'; DHCP reservation not added", mac);
+		return;
+	}
+
+	if ((inet_pton(AF_INET, ip, &in4) != 1) ||
+	    (in4.s_addr == INADDR_ANY) ||
+	    (in4.s_addr == INADDR_LOOPBACK) ||
+	    (in4.s_addr == INADDR_BROADCAST)) {
+		logmsg(LOG_WARNING, "DMZ: invalid IPv4 address '%s'; DHCP reservation not added", ip);
+		return;
+	}
+
+	if (!dmz_dhcp_enabled_for_ip(ip, &in4, target_ifname, sizeof(target_ifname))) {
+		logmsg(LOG_WARNING, "DMZ: IPv4 address '%s' is not on a DHCP-enabled LAN; DHCP reservation not added", ip);
+		return;
+	}
+
+	state = dmz_static_reservation_state(ea, &in4, target_ifname);
+	if (state < 0) {
+		logmsg(LOG_WARNING, "DMZ: MAC/IP conflicts with Static DHCP; DHCP reservation not added");
+		return;
+	}
+	if (state > 0)
+		return;
+
+	ether_etoa(ea, canonical_mac);
+	fprintf(f, "dhcp-host=%s,%s", canonical_mac, ip);
+
+	if (nvram_get_int("dhcpd_slt") != 0)
+		fprintf(f, ",%s", sdhcp_lease);
+
+	fprintf(f, "\n");
+}
+#endif /* TCONFIG_DMZMAC */
+
+
 static void write_static_reservations(FILE *f, FILE *hf, int do_dhcpd_hosts, const char *sdhcp_lease)
 {
 	char *nve, *nvp, *p;
-	const char *mac, *ip, *name, *bind;
+	const char *mac, *ip, *name, *bind, *ip6;
 	struct in_addr in4;
+#ifdef TCONFIG_IPV6
+	struct in6_addr in6;
+#endif
 	unsigned char ea[ETHER_ADDR_LEN];
+	char mac_copy[64];
+	char *m_save, *m_tok;
+	int macs_ok;
 
 	/* add dhcp reservations
 	 *
-	 * FORMAT (static ARP binding after hostname):
-	 * 00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a>
+	 * FORMAT (static ARP binding after hostname; [ ] denotes an optional IPv6 reservation):
+	 * 00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a[<::50]>
 	 * 00:aa:bb:cc:dd:ee,00:aa:bb:cc:dd:ee<123.123.123.123<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xyz<a>
 	 */
 
 	nve = nvp = strdup(nvram_safe_get("dhcpd_static"));
 	while (nvp && (p = strsep(&nvp, ">")) != NULL) {
-		mac = ip = name = bind = NULL;
+		mac = ip = name = bind = ip6 = NULL;
 
-		if ((vstrsep(p, "<", &mac, &ip, &name, &bind)) < 4)
+		/* minimum 4 fields required (5th, IPv6, is optional) */
+		if ((vstrsep(p, "<", &mac, &ip, &name, &bind, &ip6)) < 4)
 			continue;
 
 		/* validate IP */
@@ -452,18 +680,58 @@ static void write_static_reservations(FILE *f, FILE *hf, int do_dhcpd_hosts, con
 		    (in4.s_addr == INADDR_LOOPBACK) || (in4.s_addr == INADDR_BROADCAST))) /* invalid IP (if any) */
 			continue;
 
-		/* add to hosts file */
-		if (hf && *ip && *name)
-			fprintf(hf, "%s %s\n", ip, name);
+#ifdef TCONFIG_IPV6
+		/* validate IPv6 */
+		if (ip6 && *ip6 && (inet_pton(AF_INET6, ip6, &in6) <= 0))
+			ip6 = NULL;
+#else
+		ip6 = NULL; /* no IPv6 support in this build */
+#endif
+
+		/* add to hosts file (gives the reservation forward A/AAAA and reverse PTR records) */
+		if (hf && *name) {
+			if (*ip)
+				fprintf(hf, "%s %s\n", ip, name);
+#ifdef TCONFIG_IPV6
+			/* skip a suffix-only reservation (e.g. ::50) in the hosts file - dnsmasq fills in the prefix at lease time */
+			if (ip6 && *ip6 && (in6.s6_addr32[0] || in6.s6_addr32[1]))
+				fprintf(hf, "%s %s\n", ip6, name);
+#endif
+		}
+
+		/* validate MAC(s) - dhcpd_static may carry a single MAC or a pair joined by ',' for one reservation */
+		macs_ok = 0;
+		if (mac && *mac) {
+			m_save = NULL;
+			strlcpy(mac_copy, mac, sizeof(mac_copy));
+			macs_ok = 1;
+			for (m_tok = strtok_r(mac_copy, ",", &m_save);
+			     m_tok != NULL;
+			     m_tok = strtok_r(NULL, ",", &m_save)) {
+				if (!ether_atoe(m_tok, ea)) {
+					macs_ok = 0;
+					break;
+				}
+			}
+		}
 
 		/* add to dnsmasq conf */
-		if (do_dhcpd_hosts > 0 && ether_atoe(mac, ea)) {
-			if (*ip)
-				fprintf(f, "dhcp-host=%s,%s", mac, ip);
-			else if (*name)
-				fprintf(f, "dhcp-host=%s,%s", mac, name);
+		if (do_dhcpd_hosts > 0 && macs_ok && (*ip || (ip6 && *ip6) || *name)) {
+			int have_addr = 0;
 
-			if (((*ip) || (*name)) && (nvram_get_int("dhcpd_slt") != 0))
+			fprintf(f, "dhcp-host=%s", mac);
+			if (*ip) {
+				fprintf(f, ",%s", ip);
+				have_addr = 1;
+			}
+			if (ip6 && *ip6) {
+				fprintf(f, ",[%s]", ip6);
+				have_addr = 1;
+			}
+			if (!have_addr && *name)
+				fprintf(f, ",%s", name);
+
+			if (nvram_get_int("dhcpd_slt") != 0)
 				fprintf(f, ",%s", sdhcp_lease);
 
 			fprintf(f, "\n");
@@ -477,10 +745,25 @@ static void write_static_reservations(FILE *f, FILE *hf, int do_dhcpd_hosts, con
 static void write_ipv6_config(FILE *f)
 {
 #ifdef TCONFIG_IPV6
-	if (ipv6_enabled()) {
-		char mtu_str[16] = { 0 };
+	if (ipv6_enabled() && (nvram_get_int("ipv6_radvd") || nvram_get_int("ipv6_dhcpd"))) {
+		unsigned int bridge;
+		char key[32], mtu_str[16] = { 0 };
+		const char *ifname;
+		int have_l3_bridge = 0;
 		int ipv6_lease = 0; /* DHCP IPv6 lease time */
 		int service = get_ipv6_service();
+		char lease_unit = 'h';
+
+		for (bridge = 0; bridge < BRIDGE_COUNT; bridge++) {
+			ifname = bridge_nvram_get(bridge, "ifname", key, sizeof(key));
+			if (bridge_has_l3(bridge) && (*ifname) && (strncmp(ifname, "br", 2) == 0)) {
+				have_l3_bridge = 1;
+				break;
+			}
+		}
+
+		if (!have_l3_bridge)
+			return;
 
 		/* get mtu for IPv6 --> only for "wan" (no multiwan support) */
 		switch (service) {
@@ -497,53 +780,46 @@ static void write_ipv6_config(FILE *f)
 			break;
 		}
 
-		/* Router Advertisements - enable-ra should be enabled in both cases (SLAAC and/or DHCPv6) */
-		if (nvram_get_int("ipv6_radvd") || nvram_get_int("ipv6_dhcpd")) {
-			fprintf(f, "enable-ra\n");
-			if (nvram_get_int("ipv6_fast_ra"))
-				fprintf(f, "ra-param=br*, mtu:%s, 15, 600\n", mtu_str); /* interface = br*, mtu = XYZ, ra-interval = 15 sec, router-lifetime = 600 sec (10 min) */
-			else /* default case */
-				fprintf(f, "ra-param=br*, mtu:%s, 60, 1200\n", mtu_str); /* interface = br*, mtu = XYZ, ra-interval = 60 sec, router-lifetime = 1200 sec (20 min) */
-		}
-
 		/* check for DHCPv6 PD (and use IPv6 preferred lifetime in that case) */
 		if (service == IPV6_NATIVE_DHCP) {
 			ipv6_lease = nvram_get_int("ipv6_pd_pltime"); /* get IPv6 preferred lifetime (seconds) */
 			if ((ipv6_lease < IPV6_MIN_LIFETIME) || (ipv6_lease > ONEMONTH_LIFETIME)) /* check lease time and limit the range (120 sec up to one month) */
 				ipv6_lease = IPV6_MIN_LIFETIME;
-
-			/* only SLAAC and NO DHCPv6 */
-			if ((nvram_get_int("ipv6_radvd")) && (!nvram_get_int("ipv6_dhcpd")))
-				fprintf(f, "dhcp-range=::, constructor:br*, ra-names, ra-stateless, 64, %ds\n", ipv6_lease);
-
-			/* only DHCPv6 and NO SLAAC */
-			if ((nvram_get_int("ipv6_dhcpd")) && (!nvram_get_int("ipv6_radvd")))
-				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, %ds\n", ipv6_lease);
-
-			/* SLAAC and DHCPv6 (2 IPv6 IPs) */
-			if ((nvram_get_int("ipv6_radvd")) && (nvram_get_int("ipv6_dhcpd")))
-				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %ds\n", ipv6_lease);
+			lease_unit = 's';
 		}
 		else {
 			ipv6_lease = nvram_get_int("ipv6_lease_time"); /* get DHCP IPv6 lease time via GUI */
 			if ((ipv6_lease < 1) || (ipv6_lease > 720)) /* check lease time and limit the range (1...720 hours, 30 days should be enough) */
 				ipv6_lease = 12;
-
-			/* only SLAAC and NO DHCPv6 */
-			if ((nvram_get_int("ipv6_radvd")) && (!nvram_get_int("ipv6_dhcpd")))
-				fprintf(f, "dhcp-range=::, constructor:br*, ra-names, ra-stateless, 64, %dh\n", ipv6_lease);
-
-			/* only DHCPv6 and NO SLAAC */
-			if ((nvram_get_int("ipv6_dhcpd")) && (!nvram_get_int("ipv6_radvd")))
-				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, 64, %dh\n", ipv6_lease);
-
-			/* SLAAC and DHCPv6 (2 IPv6 IPs) */
-			if ((nvram_get_int("ipv6_radvd")) && (nvram_get_int("ipv6_dhcpd")))
-				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:br*, ra-names, 64, %dh\n", ipv6_lease);
 		}
 
-		/* check for SLAAC and/or DHCPv6 */
-		if ((nvram_get_int("ipv6_radvd")) || (nvram_get_int("ipv6_dhcpd"))) {
+		/* Router Advertisements and DHCPv6 are configured only on L3 bridges. */
+		fprintf(f, "enable-ra\n");
+		for (bridge = 0; bridge < BRIDGE_COUNT; bridge++) {
+			ifname = bridge_nvram_get(bridge, "ifname", key, sizeof(key));
+			if (!bridge_has_l3(bridge) || !*ifname || (strncmp(ifname, "br", 2) != 0))
+				continue;
+
+			if (nvram_get_int("ipv6_fast_ra"))
+				fprintf(f, "ra-param=%s, mtu:%s, 15, 600\n", ifname, mtu_str); /* ra-interval = 15 sec, router-lifetime = 600 sec (10 min) */
+			else
+				fprintf(f, "ra-param=%s, mtu:%s, 60, 1200\n", ifname, mtu_str); /* ra-interval = 60 sec, router-lifetime = 1200 sec (20 min) */
+
+			/* only SLAAC and NO DHCPv6 */
+			if (nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd"))
+				fprintf(f, "dhcp-range=::, constructor:%s, ra-names, ra-stateless, 64, %d%c\n", ifname, ipv6_lease, lease_unit);
+
+			/* only DHCPv6 and NO SLAAC */
+			if (nvram_get_int("ipv6_dhcpd") && !nvram_get_int("ipv6_radvd"))
+				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:%s, 64, %d%c\n", ifname, ipv6_lease, lease_unit);
+
+			/* SLAAC and DHCPv6 (2 IPv6 IPs) */
+			if (nvram_get_int("ipv6_radvd") && nvram_get_int("ipv6_dhcpd"))
+				fprintf(f, "dhcp-range=::2, ::FFFF:FFFF, constructor:%s, ra-names, 64, %d%c\n", ifname, ipv6_lease, lease_unit);
+		}
+
+		/* DHCPv6 DNS servers */
+		{
 			char dns6[MAX_DNS6_SERVER_LAN][INET6_ADDRSTRLEN] = {{ 0 }, { 0 }};
 			char word[INET6_ADDRSTRLEN], *next = NULL;
 			struct in6_addr addr;
@@ -589,14 +865,11 @@ static void write_tftp_config(FILE *f)
 		           nvram_safe_get("dnsmasq_tftp_path"));
 
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			memset(key, 0, sizeof(key));
-			memset(lan_ifname, 0, sizeof(lan_ifname));
 			snprintf(key, sizeof(key), (i == 0 ? "dnsmasq_pxelan" : "dnsmasq_pxelan%u"), i);
-			snprintf(lan_ifname, sizeof(lan_ifname), (i == 0 ? "lan_ifname" : "lan%u_ifname"), i);
+			get_bridge_nvram_key(i, "ifname", lan_ifname, sizeof(lan_ifname));
 
-			if (nvram_get_int(key) && strlen(nvram_safe_get(lan_ifname)) > 0) {
-				memset(lan_ip, 0, sizeof(lan_ip));
-				snprintf(lan_ip, sizeof(lan_ip), (i == 0 ? "lan_ipaddr" : "lan%u_ipaddr"), i);
+			if (bridge_has_l3(i) && nvram_get_int(key) && strlen(nvram_safe_get(lan_ifname)) > 0) {
+				get_bridge_nvram_key(i, "ipaddr", lan_ip, sizeof(lan_ip));
 				fprintf(f, "dhcp-boot=pxelinux.0,,%s\n", nvram_safe_get(lan_ip));
 			}
 		}
@@ -647,18 +920,15 @@ static void start_dnsmasq_wet(void)
 	           4096);
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br != 0)
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
-
-		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
-		nv = nvram_safe_get(lanN_ifname);
+		nv = bridge_nvram_get(br, "ifname", lanN_ifname, sizeof(lanN_ifname));
 
 		if (strncmp(nv, "br", 2) == 0) {
-			fprintf(f, "interface=%s\n", nv);
-			fprintf(f, "no-dhcp-interface=%s\n", nv);
+			if (bridge_has_l3(br)) {
+				fprintf(f, "interface=%s\n", nv);
+				fprintf(f, "no-dhcp-interface=%s\n", nv);
+			}
+			else
+				fprintf(f, "except-interface=%s\n", nv);
 		}
 	}
 
@@ -691,11 +961,13 @@ void start_dnsmasq(void) {
 		return;
 	}
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+	mwan_num = mwan_active_num();
+	/* WAN0 stores static DNS settings even when WAN is disabled. */
+	if (mwan_num == 0)
 		mwan_num = 1;
 
 	write_basic_config(f);
+	write_l2_bridge_exclusions(f);
 	write_tor_dns(f);
 	write_wan_dns(f, mwan_num);
 	write_dhcp_ignore(f);
@@ -703,6 +975,9 @@ void start_dnsmasq(void) {
 
 	hf = write_static_hosts();
 	write_static_reservations(f, hf, do_dhcpd_hosts, sdhcp_lease);
+#ifdef TCONFIG_DMZMAC
+	write_dmz_reservation(f, sdhcp_lease);
+#endif /* TCONFIG_DMZMAC */
 
 	if (hf) {
 		/* add directory with additional hosts files */
@@ -771,6 +1046,7 @@ void stop_dnsmasq(void)
 void reload_dnsmasq(void)
 {
 	/* notify dnsmasq */
+	logmsg(LOG_INFO, "reloading dnsmasq");
 	killall("dnsmasq", SIGINT);
 }
 

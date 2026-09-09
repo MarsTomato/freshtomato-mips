@@ -199,8 +199,7 @@ void asp_lanip(int argc, char **argv)
 
 	web_puts("\nvar lanip = [");
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		memset(s, 0, sizeof(s));
-		snprintf(s, sizeof(s), (br == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), br);
+		get_bridge_nvram_key(br, "ipaddr", s, sizeof(s));
 		if ((nv = nvram_get(s)) != NULL) {
 			memset(s, 0, sizeof(s));
 			snprintf(s, sizeof(s), "%s", nv);
@@ -237,6 +236,8 @@ void asp_psup(int argc, char **argv)
 		web_printf("%stelnetd%s%d%s", isup, c, pidof("telnetd") > 0, e);
 		web_printf("%sminiupnpd%s%d%s", isup, c, pidof("miniupnpd") > 0, e);
 		web_printf("%sdnsmasq%s%d%s", isup, c, pidof("dnsmasq") > 0, e);
+		web_printf("%sqos%s%d%s", isup, c, qos_status(), e);
+		web_printf("%sbwl%s%d%s", isup, c, bwlimit_status(), e);
 #ifdef TCONFIG_NGINX
 		web_printf("%snginx%s%d%s", isup, c, pidof("nginx") > 0, e);
 		web_printf("%smysqld%s%d%s", isup, c, pidof("mysqld") > 0, e);
@@ -414,20 +415,13 @@ static void print_ipv6_infos(void) /* show IPv6 DUID and addresses: wan, dns, la
 
 	/* check LAN */
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br != 0)
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
+		char bridge[12];
+		get_bridge_suffix(br, bridge, sizeof(bridge));
 
-		memset(buffer2, 0, sizeof(buffer2));
-		snprintf(buffer2, sizeof(buffer2), "lan%s_ipaddr", bridge);
-		if (strcmp(nvram_safe_get(buffer2), "") != 0) {
+		if (*bridge_nvram_get(br, "ipaddr", buffer2, sizeof(buffer2))) {
 			/* check LANx IPv6 address and copy to buffer */
-			memset(buffer2, 0, sizeof(buffer2));
-			snprintf(buffer2, sizeof(buffer2), "lan%s_ifname", bridge);
 			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get(buffer2), AF_INET6, 0); /* global address */
+			p_tmp = getifaddr(bridge_nvram_get(br, "ifname", buffer2, sizeof(buffer2)), AF_INET6, 0); /* global address */
 			if (p_tmp != NULL) {
 				memset(buffer, 0, sizeof(buffer));
 				snprintf(buffer, sizeof(buffer), "%s", p_tmp);
@@ -435,7 +429,7 @@ static void print_ipv6_infos(void) /* show IPv6 DUID and addresses: wan, dns, la
 			}
 			/* check LAN IPv6 link local address and copy to buffer */
 			p_tmp = NULL;
-			p_tmp = getifaddr(nvram_safe_get(buffer2), AF_INET6, 1); /* link local address */
+			p_tmp = getifaddr(bridge_nvram_get(br, "ifname", buffer2, sizeof(buffer2)), AF_INET6, 1); /* link local address */
 			if (p_tmp != NULL) {
 				memset(buffer, 0, sizeof(buffer));
 				snprintf(buffer, sizeof(buffer), "%s", p_tmp);
@@ -456,34 +450,15 @@ static void print_ipv6_infos(void) /* show IPv6 DUID and addresses: wan, dns, la
 		}
 	}
 
-	/* IPv6 DNS */
-	dns = nvram_safe_get("ipv6_dns"); /* check static dns first */
-
-	memset(buffer, 0, sizeof(buffer));
-	foreach(buffer, dns, next) {
-		/* verify that this is a valid IPv6 address */
-		if ((cnt == 0) && inet_pton(AF_INET6, buffer, &addr) == 1) {
-			web_printf("\tip6_wan_dns1: '%s',\n", buffer);
-			cnt++; /* found and UP */
-		}
-		else if ((cnt == 1) && inet_pton(AF_INET6, buffer, &addr) == 1) {
-			web_printf("\tip6_wan_dns2: '%s',\n", buffer);
-			cnt++;  /* found and UP */
-		}
-	}
-	if (cnt == 0) { /* check auto dns if no valid static dns found */
-		dns = nvram_safe_get("ipv6_get_dns");
+	/* Check static DNS first; use learned DNS only when no static address is valid. */
+	for (br = 0; (br < 2) && (cnt == 0); br++) {
+		dns = nvram_safe_get(br ? "ipv6_get_dns" : "ipv6_dns");
 
 		memset(buffer, 0, sizeof(buffer));
 		foreach(buffer, dns, next) {
-			/* verify that this is a valid IPv6 address */
-			if ((cnt == 0) && inet_pton(AF_INET6, buffer, &addr) == 1) {
-				web_printf("\tip6_wan_dns1: '%s',\n", buffer);
-				cnt++; /* found and UP */
-			}
-			else if ((cnt == 1) && inet_pton(AF_INET6, buffer, &addr) == 1) {
-				web_printf("\tip6_wan_dns2: '%s',\n", buffer);
-				cnt++;  /* found and UP */
+			if ((cnt < 2) && (inet_pton(AF_INET6, buffer, &addr) == 1)) {
+				cnt++;
+				web_printf("\tip6_wan_dns%d: '%s',\n", cnt, buffer);
 			}
 		}
 	}
@@ -896,7 +871,7 @@ void asp_sysinfo(int argc, char **argv)
 	char system_type[64];
 	char cpuclk[32];
 	char cfe_version[16];
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	char wl_tempsense[256];
 #endif
 
@@ -913,7 +888,7 @@ void asp_sysinfo(int argc, char **argv)
 	get_cpuinfo(system_type, sizeof(system_type), cpuclk, sizeof(cpuclk));
 #endif
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	get_wl_tempsense(wl_tempsense, sizeof(wl_tempsense));
 #endif
 
@@ -943,7 +918,7 @@ void asp_sysinfo(int argc, char **argv)
 #ifdef TCONFIG_BCMARM
 	           "\tcputemp: '%s',\n"
 #endif
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	           "\twlsense: '%s',\n"
 #endif
 	           "\tcfeversion: '%s'",
@@ -961,7 +936,7 @@ void asp_sysinfo(int argc, char **argv)
 #ifdef TCONFIG_BCMARM
 	           cputemp,
 #endif
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	           wl_tempsense,
 #endif
 	           cfe_version);
@@ -1272,7 +1247,7 @@ void asp_statfs(int argc, char **argv)
 
 	/* used for /cifs/, /jffs/... if it returns squashfs type, assume it's not mounted */
 	if ((statfs(argv[0], &sf) != 0) || (sf.f_type == 0x73717368)
-#if defined(TCONFIG_BCMARM) || defined(TCONFIG_BLINK)
+#ifdef TCONFIG_RTNPLUS
 	    || (sf.f_type == 0x71736873)
 #endif
 	) {
@@ -1341,9 +1316,9 @@ void wo_wakeup(char *url)
 
 			eval("ether-wake", "-b", "-i", nvram_safe_get("lan_ifname"), mac);
 			for (i = 1; i < BRIDGE_COUNT; i++) {
-				snprintf(buf, sizeof(buf), "lan%d_ifname", i);
-				if (strcmp(nvram_safe_get(buf), "") != 0)
-					eval("ether-wake", "-b", "-i", nvram_safe_get(buf), mac);
+				char *ifname = bridge_nvram_get(i, "ifname", buf, sizeof(buf));
+				if (*ifname)
+					eval("ether-wake", "-b", "-i", ifname, mac);
 			}
 			mac = p + 1;
 		}

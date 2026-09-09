@@ -39,6 +39,7 @@
 
 
 #include "rc.h"
+#include <defaults.h>
 
 #ifndef TCONFIG_BCMARM
  #include <sys/time.h>
@@ -50,41 +51,22 @@
 #define LOGMSG_NVDEBUG		"services_debug"
 
 
-const char adblockexe[] = "/usr/sbin/adblock";
-const char upnppath[] = "/etc/upnp";
-const char upnpcfg[] = "/etc/upnp/config";
-const char upnpcfgalt[] = "/etc/upnp/config.alt";
+const char adblockexe[]    = "/usr/sbin/adblock";
+const char upnppath[]      = "/etc/upnp";
+const char upnpcfg[]       = "/etc/upnp/config";
+const char upnpcfgalt[]    = "/etc/upnp/config.alt";
 const char upnpcfgcustom[] = "/etc/upnp/config.custom";
-const char igmpcfg[] = "/etc/igmp.conf";
+const char igmpcfg[]       = "/etc/igmp.conf";
 #ifdef TCONFIG_ZEBRA
-const char zebracfg[] = "/etc/zebra.conf";
-const char ripdcfg[] = "/etc/ripd.conf";
+const char zebracfg[]      = "/etc/zebra.conf";
+const char ripdcfg[]       = "/etc/ripd.conf";
 #endif
 #ifdef TCONFIG_MDNS
-const char avahicfgpath[] = "/etc/avahi";
-const char avahicfg[] = "avahi-daemon.conf";
-const char avahisrvpath[] = "/etc/avahi/services";
-const char avahicfgalt[] = "/etc/avahi/avahi-daemon_alt.conf";
+const char avahicfgpath[]  = "/etc/avahi";
+const char avahicfg[]      = "avahi-daemon.conf";
+const char avahisrvpath[]  = "/etc/avahi/services";
+const char avahicfgalt[]   = "/etc/avahi/avahi-daemon_alt.conf";
 #endif /* TCONFIG_MDNS */
-
-#ifdef TCONFIG_BCMARM
- extern struct nvram_tuple rstats_defaults[];
-#endif /* TCONFIG_BCMARM */
-#ifdef TCONFIG_BCMARM
- extern struct nvram_tuple cstats_defaults[];
-#endif /* TCONFIG_BCMARM */
-#if defined(TCONFIG_FTP) && defined(TCONFIG_BCMARM)
- extern struct nvram_tuple ftp_defaults[];
-#endif /* TCONFIG_FTP && TCONFIG_BCMARM */
-#if defined(TCONFIG_SNMP) && defined(TCONFIG_BCMARM)
- extern struct nvram_tuple snmp_defaults[];
-#endif /* TCONFIG_SNMP && TCONFIG_BCMARM */
-#ifdef TCONFIG_BCMARM
- extern struct nvram_tuple upnp_defaults[];
-#endif /* TCONFIG_BCMARM */
-#ifdef TCONFIG_BCMBSD
- extern struct nvram_tuple bsd_defaults[];
-#endif /* TCONFIG_BCMBSD */
 
 /* Pop an alarm to recheck pids in 500 msec */
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
@@ -199,7 +181,6 @@ static void start_porthealth(void)
 
 void add_rstats_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	struct nvram_tuple *t;
 
 	/* Restore defaults if necessary */
@@ -208,14 +189,10 @@ void add_rstats_defaults(void)
 			nvram_set(t->name, t->value);
 		}
 	}
-#else
-	eval("nvram", "rstats_defaults", "--add");
-#endif /* TCONFIG_BCMARM */
 }
 
 void del_rstats_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	if (nvram_match("rstats_enable", "0")) {
 		struct nvram_tuple *t;
 
@@ -224,14 +201,10 @@ void del_rstats_defaults(void)
 			nvram_unset(t->name);
 		}
 	}
-#else
-	eval("nvram", "rstats_defaults", "--del");
-#endif /* TCONFIG_BCMARM */
 }
 
 void add_cstats_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	struct nvram_tuple *t;
 
 	/* Restore defaults if necessary */
@@ -240,14 +213,10 @@ void add_cstats_defaults(void)
 			nvram_set(t->name, t->value);
 		}
 	}
-#else
-	eval("nvram", "cstats_defaults", "--add");
-#endif /* TCONFIG_BCMARM */
 }
 
 void del_cstats_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	if (nvram_match("cstats_enable", "0")) {
 		struct nvram_tuple *t;
 
@@ -256,15 +225,11 @@ void del_cstats_defaults(void)
 			nvram_unset(t->name);
 		}
 	}
-#else
-	eval("nvram", "cstats_defaults", "--del");
-#endif /* TCONFIG_BCMARM */
 }
 
 #ifdef TCONFIG_FTP
 void add_ftp_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	struct nvram_tuple *t;
 
 	/* Restore defaults if necessary */
@@ -273,14 +238,10 @@ void add_ftp_defaults(void)
 			nvram_set(t->name, t->value);
 		}
 	}
-#else
-	eval("nvram", "ftp_defaults", "--add");
-#endif /* TCONFIG_BCMARM */
 }
 
 void del_ftp_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	if (nvram_match("ftp_enable", "0")) {
 		struct nvram_tuple *t;
 
@@ -289,16 +250,12 @@ void del_ftp_defaults(void)
 			nvram_unset(t->name);
 		}
 	}
-#else
-	eval("nvram", "ftp_defaults", "--del");
-#endif /* TCONFIG_BCMARM */
 }
 #endif /* TCONFIG_FTP */
 
 #ifdef TCONFIG_SNMP
 void add_snmp_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	struct nvram_tuple *t;
 
 	/* Restore defaults if necessary */
@@ -307,14 +264,10 @@ void add_snmp_defaults(void)
 			nvram_set(t->name, t->value);
 		}
 	}
-#else
-	eval("nvram", "snmp_defaults", "--add");
-#endif /* TCONFIG_BCMARM */
 }
 
 void del_snmp_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	if (nvram_match("snmp_enable", "0")) {
 		struct nvram_tuple *t;
 
@@ -323,15 +276,11 @@ void del_snmp_defaults(void)
 			nvram_unset(t->name);
 		}
 	}
-#else
-	eval("nvram", "snmp_defaults", "--del");
-#endif /* TCONFIG_BCMARM */
 }
 #endif /* TCONFIG_SNMP */
 
 void add_upnp_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	struct nvram_tuple *t;
 
 	/* Restore defaults if necessary */
@@ -340,14 +289,10 @@ void add_upnp_defaults(void)
 			nvram_set(t->name, t->value);
 		}
 	}
-#else
-	eval("nvram", "upnp_defaults", "--add");
-#endif /* TCONFIG_BCMARM */
 }
 
 void del_upnp_defaults(void)
 {
-#ifdef TCONFIG_BCMARM
 	if (nvram_match("upnp_enable", "0")) {
 		struct nvram_tuple *t;
 
@@ -356,9 +301,6 @@ void del_upnp_defaults(void)
 			nvram_unset(t->name);
 		}
 	}
-#else
-	eval("nvram", "upnp_defaults", "--del");
-#endif /* TCONFIG_BCMARM */
 }
 
 #ifdef TCONFIG_BCMBSD
@@ -496,9 +438,10 @@ void start_stubby(void)
 
 	mkdir_if_none("/etc/stubby");
 
+
 	/* alternative (user) configuration file */
 	if (f_exists(stubby_conf_alt)) {
-		eval("stubby", "-g", "-C", (char *)stubby_conf_alt);
+		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", (char *)stubby_conf_alt);
 		return;
 	}
 
@@ -511,7 +454,7 @@ void start_stubby(void)
 		fprintf(fc, "%s\n", nvram_safe_get("stubby_custom"));
 		fclose(fc);
 
-		eval("stubby", "-g", "-C", (char *)stubby_conf_custom);
+		eval("stubby", "-g", "-v", nvram_safe_get("stubby_log"), "-C", (char *)stubby_conf_custom);
 		return;
 	}
 
@@ -624,6 +567,7 @@ void generate_mdns_config(void)
 	FILE *fp;
 	char avahi_config[80], tmp[8];
 	unsigned int i;
+	unsigned int mwan_num = mwan_active_num();
 
 	snprintf(avahi_config, sizeof(avahi_config), "%s/%s", avahicfgpath, avahicfg);
 
@@ -640,8 +584,8 @@ void generate_mdns_config(void)
 	            "deny-interfaces=",
 	            ipv6_enabled() ? "yes" : "no");
 
-	for (i = 1; i <= MWAN_MAX; i++) {
-		snprintf(tmp, sizeof(tmp), (i == 1 ? "wan" : "wan%d"), i);
+	for (i = 1; i <= mwan_num; i++) {
+		get_wan_prefix(i, tmp);
 		if ((check_wanup(tmp)) || (i == 1))
 			fprintf(fp, "%s%s", (i == 1 ? "" : ","), get_wanface(tmp));
 	}
@@ -817,8 +761,9 @@ void dns_to_resolv(void)
 	int exclusive = 0;
 	char tmp[64];
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+	mwan_num = mwan_active_num();
+	/* WAN0 stores static DNS settings even when WAN is disabled. */
+	if (mwan_num == 0)
 		mwan_num = 1;
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
@@ -829,7 +774,7 @@ void dns_to_resolv(void)
 		    get_wanx_proto(wan_prefix) != WP_DISABLED &&
 		    get_wanx_proto(wan_prefix) != WP_PPTP &&
 		    get_wanx_proto(wan_prefix) != WP_L2TP &&
-		    !nvram_get_int(strlcat_r(wan_prefix, "_ppp_demand", tmp, sizeof(tmp))))
+		    !atoi(wan_nvram_get(wan_unit, "ppp_demand", tmp, sizeof(tmp))))
 		{
 			logmsg(LOG_DEBUG, "*** %s: %s (proto:%d) is not UP, not P-t-P or On Demand, SKIP ADD", __FUNCTION__, wan_prefix, get_wanx_proto(wan_prefix));
 			continue;
@@ -859,7 +804,7 @@ void dns_to_resolv(void)
 				dns = get_dns(wan_prefix); /* static buffer */
 				if (dns->count == 0) {
 					/* put a pseudo DNS IP to trigger Connect On Demand */
-					if (nvram_match(strlcat_r(wan_prefix, "_ppp_demand", tmp, sizeof(tmp)), "1")) {
+					if (prefix_nvram_match(wan_prefix, "ppp_demand", "1", tmp, sizeof(tmp))) {
 						switch (get_wanx_proto(wan_prefix)) {
 							case WP_PPPOE:
 							case WP_PPP3G:
@@ -872,7 +817,7 @@ void dns_to_resolv(void)
 								 * Further info: https://linksysinfo.org/index.php?threads/tomato-using-1-1-1-1-for-pppoe-connect-on-demand.74102/
 								 * Also add possibility to change that IP (198.51.100.1) in GUI by the user
 								 */
-								trig_ip = nvram_safe_get(strlcat_r(wan_prefix, "_ppp_demand_dnsip", tmp, sizeof(tmp)));
+								trig_ip = prefix_nvram_get(wan_prefix, "ppp_demand_dnsip", tmp, sizeof(tmp));
 								logmsg(LOG_DEBUG, "*** %s: no servers for %s: put a pseudo DNS (non-routable on public internet) IP %s to trigger Connect On Demand", __FUNCTION__, wan_prefix, trig_ip);
 								fprintf(f, "nameserver %s\n", trig_ip);
 								break;
@@ -970,9 +915,7 @@ void start_ipv6_tunnel(void)
 	char wan_prefix[] = "wanXX";
 	int wan_unit, mwan_num;
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
-		mwan_num = 1;
+	mwan_num = mwan_active_num();
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, wan_prefix);
@@ -1059,9 +1002,7 @@ void start_6rd_tunnel(void)
 	char *wan_6rd;
 	int wan_unit, mwan_num, ping_ok;
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
-		mwan_num = 1;
+	mwan_num = mwan_active_num();
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, wan_prefix);
@@ -1232,15 +1173,17 @@ void start_ipv6(void)
 		/* HINT: "ipv6_accept_ra" bit 0 ==> used for wan, "ipv6_accept_ra" bit 1 ==> used for lan interfaces (br0...br3) */
 		/* check lanX / brX if available */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-			if (strcmp(nvram_safe_get(buffer), "") != 0) {
-				snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+			char *lan_ipaddr = bridge_nvram_get(i, "ipaddr", buffer, sizeof(buffer));
+
+			if (*lan_ipaddr && strcmp(lan_ipaddr, "0.0.0.0") != 0) {
+				char *lan_ifname = bridge_nvram_get(i, "ifname", buffer, sizeof(buffer));
+
 				if (((nvram_get_int("ipv6_accept_ra") & 0x02) != 0) && !nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd"))
 					/* accept_ra for brX */
-					accept_ra(nvram_safe_get(buffer));
+					accept_ra(lan_ifname);
 				else
 					/* accept_ra default value for brX */
-					accept_ra_reset(nvram_safe_get(buffer));
+					accept_ra_reset(lan_ifname);
 			}
 		}
 	}
@@ -1280,14 +1223,13 @@ void start_upnp(void)
 	int enable, upnp_port, https;
 	int ports[4];
 	char uuid[45];
-	char lanN_ipaddr[] = "lanXX_ipaddr";
-	char lanN_netmask[] = "lanXX_netmask";
-	char lanN_ifname[] = "lanXX_ifname";
 	char upnp_lanN[] = "upnp_lanXX";
+	char lan_prefix[12], key[24];
 	char tmp[8];
 	char *lanip, *lanmask, *lanifname;
 	char br;
 	unsigned int i;
+	unsigned int mwan_num = mwan_active_num();
 
 	enable = nvram_get_int("upnp_enable");
 
@@ -1320,8 +1262,8 @@ void start_upnp(void)
 	if ((upnp_port < 0) || (upnp_port >= 0xFFFF))
 		upnp_port = 0;
 
-	for (i = 1; i <= MWAN_MAX; i++) {
-		snprintf(tmp, sizeof(tmp), (i == 1 ? "wan" : "wan%d"), i);
+	for (i = 1; i <= mwan_num; i++) {
+		get_wan_prefix(i, tmp);
 		if ((check_wanup(tmp)) || (i == 1))
 			fprintf(f, "ext_ifname=%s\n", get_wanface(tmp));
 	}
@@ -1336,6 +1278,7 @@ void start_upnp(void)
 	           "upnp_nat_postrouting_chain=pupnp\n"
 	           "notify_interval=%d\n"
 	           "system_uptime=yes\n"
+	           "ext_allow_private_ipv4=yes\n"
 	           "friendly_name=FreshTomato UPnP IGD &amp; PCP\n"
 	           "model_name=%s\n"
 	           "model_url=https://freshtomato.org/\n"
@@ -1343,8 +1286,7 @@ void start_upnp(void)
 	           "manufacturer_url=https://freshtomato.org/\n"
 	           /* Empty strings so that 1 and 00000000 are not reported */
 	           "model_number=\n"
-	           "serial=\n"
-	           "\n",
+	           "serial=\n",
 	           upnp_port,
 	           (enable & 1) ? "yes" : "no",			/* upnp enable */
 	           (enable & 2) ? "yes" : "no",			/* pcp_pmp enable */
@@ -1365,20 +1307,15 @@ void start_upnp(void)
 	fprintf(f, "%s\n", nvram_safe_get("upnp_custom"));
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2];
-		bridge[0] = br ? '0' + br : '\0';
-		bridge[1] = '\0';
+		/* upnp_lan is bridge zero; higher bridges use upnp_lanN. */
+		get_bridge_prefix(br, lan_prefix, sizeof(lan_prefix));
+		snprintf(upnp_lanN, sizeof(upnp_lanN), "upnp_%s", lan_prefix);
 
-		snprintf(lanN_ipaddr, sizeof(lanN_ipaddr), "lan%s_ipaddr", bridge);
-		snprintf(lanN_netmask, sizeof(lanN_netmask), "lan%s_netmask", bridge);
-		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
-		snprintf(upnp_lanN, sizeof(upnp_lanN), "upnp_lan%s", bridge);
+		lanip = bridge_nvram_get(br, "ipaddr", key, sizeof(key));
+		lanmask = bridge_nvram_get(br, "netmask", key, sizeof(key));
+		lanifname = bridge_nvram_get(br, "ifname", key, sizeof(key));
 
-		lanip = nvram_safe_get(lanN_ipaddr);
-		lanmask = nvram_safe_get(lanN_netmask);
-		lanifname = nvram_safe_get(lanN_ifname);
-
-		if ((strcmp(nvram_safe_get(upnp_lanN), "1") == 0) && (strcmp(lanifname, "") != 0)) {
+		if (nvram_match(upnp_lanN, "1") && *lanifname) {
 			fprintf(f, "listening_ip=%s\n", lanifname);
 
 			/* not implemented in GUI */
@@ -1392,7 +1329,7 @@ void start_upnp(void)
 				fprintf(f, "allow 1024-65535 %s/%s 1024-65535\n", lanip, lanmask);
 		}
 	}
-	fprintf(f, "\ndeny 0-65535 0.0.0.0/0 0-65535\n");
+	fprintf(f, "deny 0-65535 0.0.0.0/0 0-65535\n");
 
 	fclose(f);
 
@@ -1453,33 +1390,39 @@ void stop_hotplug2(void)
 void start_zebra(void)
 {
 	FILE *fp;
-
-	char *lan_tx = nvram_safe_get("dr_lan_tx");
-	char *lan_rx = nvram_safe_get("dr_lan_rx");
-	char *lan1_tx = nvram_safe_get("dr_lan1_tx");
-	char *lan1_rx = nvram_safe_get("dr_lan1_rx");
-	char *lan2_tx = nvram_safe_get("dr_lan2_tx");
-	char *lan2_rx = nvram_safe_get("dr_lan2_rx");
-	char *lan3_tx = nvram_safe_get("dr_lan3_tx");
-	char *lan3_rx = nvram_safe_get("dr_lan3_rx");
+	int i, enabled;
+	char lan_tx[32];
+	char lan_rx[32];
+	char lan_ifname[32];
+	char lan_prefix[12];
+	const char *tx;
+	const char *rx;
+	const char *ifname;
 	char *wan_tx = nvram_safe_get("dr_wan_tx");
 	char *wan_rx = nvram_safe_get("dr_wan_rx");
-	char *lan_ifname = nvram_safe_get("lan_ifname");
-	char *lan1_ifname = nvram_safe_get("lan1_ifname");
-	char *lan2_ifname = nvram_safe_get("lan2_ifname");
-	char *lan3_ifname = nvram_safe_get("lan3_ifname");
 	char *wan_ifname = nvram_safe_get("wan_ifname");
 
 	if (serialize_restart("zebra", 1))
 		return;
 
-	if ((*lan_tx == '0') && (*lan_rx == '0') &&
-	    (*lan1_tx == '0') && (*lan1_rx == '0') &&
-	    (*lan2_tx == '0') && (*lan2_rx == '0') &&
-	    (*lan3_tx == '0') && (*lan3_rx == '0') &&
-	    (*wan_tx == '0') && (*wan_rx == '0')) {
-		return;
+	enabled = ((*wan_tx != '0') || (*wan_rx != '0'));
+
+	if (!enabled) {
+		for (i = 0; i < BRIDGE_COUNT; ++i) {
+			/* Feature keys use "lan" for br0 and "lanN" for higher bridges. */
+			get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+			snprintf(lan_tx, sizeof(lan_tx), "dr_%s_tx", lan_prefix);
+			snprintf(lan_rx, sizeof(lan_rx), "dr_%s_rx", lan_prefix);
+
+			if ((*nvram_safe_get(lan_tx) != '0') || (*nvram_safe_get(lan_rx) != '0')) {
+				enabled = 1;
+				break;
+			}
+		}
 	}
+
+	if (!enabled)
+		return;
 
 	f_write(zebracfg, NULL, 0, 0, 0); /* blank */
 
@@ -1490,45 +1433,32 @@ void start_zebra(void)
 
 	fprintf(fp, "router rip\n");
 
-	if (strcmp(lan_ifname, "") != 0)
-		fprintf(fp, "network %s\n", lan_ifname);
-	if (strcmp(lan1_ifname, "") != 0)
-		fprintf(fp, "network %s\n", lan1_ifname);
-	if (strcmp(lan2_ifname, "") != 0)
-		fprintf(fp, "network %s\n", lan2_ifname);
-	if (strcmp(lan3_ifname, "") != 0)
-		fprintf(fp, "network %s\n", lan3_ifname);
+	for (i = 0; i < BRIDGE_COUNT; ++i) {
+		ifname = bridge_nvram_get(i, "ifname", lan_ifname, sizeof(lan_ifname));
+
+		if (*ifname)
+			fprintf(fp, "network %s\n", ifname);
+	}
 
 	fprintf(fp, "network %s\n", wan_ifname);
 	fprintf(fp, "redistribute connected\n");
 
-	if (strcmp(lan_ifname, "") != 0) {
-		fprintf(fp, "interface %s\n", lan_ifname);
-		if (*lan_tx != '0')
-			fprintf(fp, "ip rip send version %s\n", lan_tx);
-		if (*lan_rx != '0')
-			fprintf(fp, "ip rip receive version %s\n", lan_rx);
-	}
-	if (strcmp(lan1_ifname, "") != 0) {
-		fprintf(fp, "interface %s\n", lan1_ifname);
-		if (*lan1_tx != '0')
-			fprintf(fp, "ip rip send version %s\n", lan1_tx);
-		if (*lan1_rx != '0')
-			fprintf(fp, "ip rip receive version %s\n", lan1_rx);
-	}
-	if (strcmp(lan2_ifname, "") != 0) {
-		fprintf(fp, "interface %s\n", lan2_ifname);
-		if (*lan2_tx != '0')
-			fprintf(fp, "ip rip send version %s\n", lan2_tx);
-		if (*lan2_rx != '0')
-			fprintf(fp, "ip rip receive version %s\n", lan2_rx);
-	}
-	if (strcmp(lan3_ifname, "") != 0) {
-		fprintf(fp, "interface %s\n", lan3_ifname);
-		if (*lan3_tx != '0')
-			fprintf(fp, "ip rip send version %s\n", lan3_tx);
-		if (*lan3_rx != '0')
-			fprintf(fp, "ip rip receive version %s\n", lan3_rx);
+	for (i = 0; i < BRIDGE_COUNT; ++i) {
+		get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+		snprintf(lan_tx, sizeof(lan_tx), "dr_%s_tx", lan_prefix);
+		snprintf(lan_rx, sizeof(lan_rx), "dr_%s_rx", lan_prefix);
+
+		tx = nvram_safe_get(lan_tx);
+		rx = nvram_safe_get(lan_rx);
+		ifname = bridge_nvram_get(i, "ifname", lan_ifname, sizeof(lan_ifname));
+
+		if (*ifname) {
+			fprintf(fp, "interface %s\n", ifname);
+			if (*tx != '0')
+				fprintf(fp, "ip rip send version %s\n", tx);
+			if (*rx != '0')
+				fprintf(fp, "ip rip receive version %s\n", rx);
+		}
 	}
 
 	fprintf(fp, "interface %s\n", wan_ifname);
@@ -1540,30 +1470,23 @@ void start_zebra(void)
 
 	fprintf(fp, "router rip\n");
 
-	if (strcmp(lan_ifname, "") != 0) {
-		if (*lan_tx == '0')
-			fprintf(fp, "distribute-list private out %s\n", lan_ifname);
-		if (*lan_rx == '0')
-			fprintf(fp, "distribute-list private in %s\n", lan_ifname);
+	for (i = 0; i < BRIDGE_COUNT; ++i) {
+		get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+		snprintf(lan_tx, sizeof(lan_tx), "dr_%s_tx", lan_prefix);
+		snprintf(lan_rx, sizeof(lan_rx), "dr_%s_rx", lan_prefix);
+
+		tx = nvram_safe_get(lan_tx);
+		rx = nvram_safe_get(lan_rx);
+		ifname = bridge_nvram_get(i, "ifname", lan_ifname, sizeof(lan_ifname));
+
+		if (*ifname) {
+			if (*tx == '0')
+				fprintf(fp, "distribute-list private out %s\n", ifname);
+			if (*rx == '0')
+				fprintf(fp, "distribute-list private in %s\n", ifname);
+		}
 	}
-	if (strcmp(lan1_ifname, "") != 0) {
-		if (*lan1_tx == '0')
-			fprintf(fp, "distribute-list private out %s\n", lan1_ifname);
-		if (*lan1_rx == '0')
-			fprintf(fp, "distribute-list private in %s\n", lan1_ifname);
-	}
-	if (strcmp(lan2_ifname, "") != 0) {
-		if (*lan2_tx == '0')
-			fprintf(fp, "distribute-list private out %s\n", lan2_ifname);
-		if (*lan2_rx == '0')
-			fprintf(fp, "distribute-list private in %s\n", lan2_ifname);
-	}
-	if (strcmp(lan3_ifname, "") != 0) {
-		if (*lan3_tx == '0')
-			fprintf(fp, "distribute-list private out %s\n", lan3_ifname);
-		if (*lan3_rx == '0')
-			fprintf(fp, "distribute-list private in %s\n", lan3_ifname);
-	}
+
 	if (*wan_tx == '0')
 		fprintf(fp, "distribute-list private out %s\n", wan_ifname);
 	if (*wan_rx == '0')
@@ -1740,13 +1663,11 @@ void start_igmp_proxy(void)
 	int wan_unit, mwan_num, count = 0;
 	int ret = 1;
 	int i, enabled_interface;
-	char lanN_ifname[] = "lanXX_ifname";
-	char multicast_lanN[] = "multicast_lanXX";
+	char lan_prefix[12];
+	char key[32];
 	char br;
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
-		mwan_num = 1;
+	mwan_num = mwan_active_num();
 
 	/* only if enabled */
 	if (!nvram_get_int("multicast_pass"))
@@ -1759,14 +1680,16 @@ void start_igmp_proxy(void)
 	else if ((fp = fopen(igmpcfg, "w")) != NULL) {
 		fprintf(fp, "user nobody\n"); /* drop privileges */
 
-		/* check that lan, lan1, lan2 and lan3 are not selected and use custom config */
+		/* check that no LAN bridge is selected and use custom config */
 		/* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces,
 		 * see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
 		 * see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
 		 */
 		enabled_interface=0;
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			snprintf(igmp_buffer, sizeof(igmp_buffer), (i == 0 ? "multicast_lan" : "multicast_lan%d"), i);
+			/* Preserve the legacy multicast_lan / multicast_lanN NVRAM names. */
+			get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+			snprintf(igmp_buffer, sizeof(igmp_buffer), "multicast_%s", lan_prefix);
 			enabled_interface += nvram_get_int(igmp_buffer);
 		}
 		if (!enabled_interface) {
@@ -1821,20 +1744,19 @@ void start_igmp_proxy(void)
 			}
 
 			for (br = 0; br < BRIDGE_COUNT; br++) {
-				char bridge[2];
-				bridge[0] = br ? '0' + br : '\0';
-				bridge[1] = '\0';
+				char *lan_ifname;
 
-				snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
-				snprintf(multicast_lanN, sizeof(multicast_lanN), "multicast_lan%s", bridge);
+				get_bridge_prefix(br, lan_prefix, sizeof(lan_prefix));
+				snprintf(key, sizeof(key), "multicast_%s", lan_prefix);
+				lan_ifname = bridge_nvram_get(br, "ifname", igmp_buffer, sizeof(igmp_buffer));
 
-				if ((strcmp(nvram_safe_get(multicast_lanN), "1") == 0) && (strcmp(nvram_safe_get(lanN_ifname), "") != 0)) {
+				if (nvram_match(key, "1") && *lan_ifname) {
 				/*
 				 * Configuration for Downstream Interface
 				 * Example:
 				 * phyint br0 downstream ratelimit 0 threshold 1
 				 */
-					fprintf(fp, "phyint %s downstream ratelimit 0 threshold 1\n", nvram_safe_get(lanN_ifname));
+					fprintf(fp, "phyint %s downstream ratelimit 0 threshold 1\n", lan_ifname);
 				}
 			}
 			fclose(fp);
@@ -1871,7 +1793,7 @@ void stop_igmp_proxy(void)
 void start_udpxy(void)
 {
 	char wan_prefix[] = "wan"; /* not yet mwan ready, use wan for now */
-	char buffer[32], buffer2[16], lan_ifname[32];
+	char buffer[32], buffer2[16], lan_ifname[32], lan_prefix[12];
 	char *argv[12];
 	int i, argc, bind_lan;
 
@@ -1888,20 +1810,14 @@ void start_udpxy(void)
 		bind_lan = 0;
 		lan_ifname[0] = '\0';
 
-		/* check interface to listen on */
-		/* check udpxy enabled/selected for br0 - br3 */
+		/* Check configured bridges and bind udpxy to the first selected one. */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			int ret1 = 0, ret2 = 0;
+			/* Preserve the legacy udpxy_lan / udpxy_lanN NVRAM names. */
+			get_bridge_prefix(i, lan_prefix, sizeof(lan_prefix));
+			snprintf(buffer2, sizeof(buffer2), "udpxy_%s", lan_prefix);
 
-			snprintf(buffer2, sizeof(buffer2), (i == 0 ? "udpxy_lan" : "udpxy_lan%d"), i);
-			ret1 = nvram_match(buffer2, "1");
-
-			snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-			ret2 = strcmp(nvram_safe_get(buffer2), "") != 0;
-
-			if (ret1 && ret2) {
-				snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-				strlcpy(lan_ifname, nvram_safe_get(buffer2), sizeof(lan_ifname));
+			if (nvram_match(buffer2, "1") && *bridge_nvram_get(i, "ipaddr", buffer2, sizeof(buffer2))) {
+				strlcpy(lan_ifname, bridge_nvram_get(i, "ifname", buffer2, sizeof(buffer2)), sizeof(lan_ifname));
 				bind_lan = 1;
 				break; /* start udpxy only once and only for one lanX */
 			}
@@ -1946,10 +1862,8 @@ void start_ntpd(void)
 	FILE *f;
 	char *servers, *ptr;
 	const char *ntp_server;
-	int servers_len = 0, ntp_updates_int = 0, index = 2, i;
-	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL, NULL, NULL }; /* -ddddddd -q -S /sbin/ntpd_synced -l */
-	char *sh_argv[12];
-	int sh_index;
+	int servers_len = 0, ntp_updates_int = 0, index = 1, ret;
+	char *ntpd_argv[] = { "/usr/sbin/ntpd", NULL, NULL, NULL, NULL, NULL, NULL }; /* -ddddddd -q -S /sbin/ntpd_synced -l */
 
 	if (serialize_restart("ntpd", 1))
 		return;
@@ -1999,37 +1913,31 @@ void start_ntpd(void)
 		if (nvram_contains_word("log_events", "ntp")) /* add verbose (doesn't work right now) */
 			ntpd_argv[index++] = "-ddddddd";
 
+		/* Register the synchronization hook before the first update.
+		 * In one-shot mode BusyBox must run it before exiting.
+		 */
+		ntpd_argv[index++] = "-S";
+		ntpd_argv[index++] = "/sbin/ntpd_synced";
+
 		if (ntp_updates_int == 0) /* only at startup, then quit */
 			ntpd_argv[index++] = "-q";
 		else if (ntp_updates_int >= 1) { /* auto adjusted timing by ntpd since it doesn't currently implement minpoll and maxpoll */
-			ntpd_argv[index++] = "-S";
-			ntpd_argv[index++] = "/sbin/ntpd_synced";
-
 			if (nvram_get_int("ntpd_enable")) /* enable local NTP server */
 				ntpd_argv[index++] = "-l";
+
+			/* add daily restart to cron */
+			eval("cru", "a", "ntpd_restart", "11 4 * * * /sbin/ntpd_restart");
 		}
 
-		sh_index = 0;
-		sh_argv[sh_index++] = "/bin/sh";
-		sh_argv[sh_index++] = "-c";
-		sh_argv[sh_index++] = "ulimit -c 0 -e 15 -r 15 -l 64 -m 8192 -n 512 -s 8192 -u 16 -v 8192; exec \"$@\"";
-		sh_argv[sh_index++] = "ntpd";
-
-		for (i = 0; ntpd_argv[i]; ++i)
-			sh_argv[sh_index++] = ntpd_argv[i];
-
-		sh_argv[sh_index] = NULL;
-
-		_eval(sh_argv, NULL, 0, NULL);
+		ret = _eval(ntpd_argv, NULL, 0, NULL);
 
 		if (!nvram_contains_word("debug_norestart", "ntpd"))
 			pid_ntpd = -2;
 
-		sleep(1);
-		if (pidof("ntpd") > 0)
-			logmsg(LOG_INFO, "ntpd is started");
-		else
+		if (ret)
 			logmsg(LOG_ERR, "starting ntpd failed ...");
+		else
+			logmsg(LOG_INFO, "ntpd is started");
 	}
 }
 
@@ -2037,6 +1945,9 @@ void stop_ntpd(void)
 {
 	if (serialize_restart("ntpd", 0))
 		return;
+
+	/* always try to remove from cron */
+	eval("cru", "d", "ntpd_restart");
 
 	pid_ntpd = -1;
 	if (pidof("ntpd") > 0) {
@@ -2056,10 +1967,40 @@ int ntpd_synced_main(int argc, char *argv[])
 	char *server_hostname = safe_getenv("server_hostname");
 	char *server_ip = safe_getenv("server_ip");
 	char *discipline_jitter = safe_getenv("discipline_jitter");
+	char *end;
+	unsigned long stratum_num;
+	int initial_sync = 0;
+	int became_ready = 0;
+	int lock;
 
-	if (!nvram_match("ntp_ready", "1") && (argc == 2 && !strcmp(argv[1], "step"))) {
-		nvram_set("ntp_ready", "1");
-		logmsg(LOG_INFO, "initial clock set");
+	if (argc == 2) {
+		if (!strcmp(argv[1], "step")) {
+			initial_sync = 1;
+		}
+		else if (!strcmp(argv[1], "stratum")) {
+			stratum_num = strtoul(stratum, &end, 10);
+			if (*stratum != '\0' && *end == '\0'
+			 && stratum_num > 0 && stratum_num < 16
+			) {
+				initial_sync = 1;
+			}
+		}
+	}
+
+	/* A step may be followed almost immediately by a stratum hook.
+	 * Serialize the transition so dependent services are restarted once.
+	 */
+	if (initial_sync) {
+		lock = file_lock("ntpd_synced");
+		if (!nvram_match("ntp_ready", "1")) {
+			nvram_set("ntp_ready", "1");
+			became_ready = 1;
+		}
+		file_unlock(lock);
+	}
+
+	if (became_ready) {
+		logmsg(LOG_INFO, "initial clock synchronized");
 
 		stop_httpd();
 		start_httpd();
@@ -2112,7 +2053,21 @@ int ntpd_synced_main(int argc, char *argv[])
 	return 0;
 }
 
-static void stop_rstats(void)
+int ntpd_restart_main(int argc, char *argv[])
+{
+	logmsg(LOG_INFO, "ntpd: daily service restart");
+	stop_ntpd();
+	start_ntpd();
+	return 0;
+}
+
+/*
+ * Stop a statistics daemon while allowing its backup helper to finish.
+ * @param daemon  daemon process name used by pidof() and the final log message
+ * @param caller  wrapper function name preserved in the debug log
+ * @return        none
+ */
+static void stop_stats(const char *daemon, const char *caller)
 {
 	int n, m;
 	pid_t pid, pidz, ppidz;
@@ -2120,7 +2075,7 @@ static void stop_rstats(void)
 
 	n = 60;
 	m = 15;
-	while ((n-- > 0) && ((pid = pidof("rstats")) > 0)) {
+	while ((n-- > 0) && ((pid = pidof((char *)daemon)) > 0)) {
 		w = 1;
 		pidz = pidof("gzip");
 		if (pidz < 0)
@@ -2131,7 +2086,7 @@ static void stop_rstats(void)
 			ppidz = ppid(ppid(pidz));
 
 		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			logmsg(LOG_DEBUG, "*** %s: (PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", __FUNCTION__, pid, pidz, ppidz);
+			logmsg(LOG_DEBUG, "*** %s: (PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", caller, pid, pidz, ppidz);
 			--m;
 		}
 		else
@@ -2140,7 +2095,12 @@ static void stop_rstats(void)
 		sleep(1);
 	}
 	if ((w == 1) && (n > 0))
-		logmsg(LOG_INFO, "rstats stopped");
+		logmsg(LOG_INFO, "%s stopped", daemon);
+}
+
+static void stop_rstats(void)
+{
+	stop_stats("rstats", __FUNCTION__);
 }
 
 static void start_rstats(int new)
@@ -2159,33 +2119,7 @@ static void start_rstats(int new)
 
 static void stop_cstats(void)
 {
-	int n, m;
-	pid_t pid, pidz, ppidz;
-	int w = 0;
-
-	n = 60;
-	m = 15;
-	while ((n-- > 0) && ((pid = pidof("cstats")) > 0)) {
-		w = 1;
-		pidz = pidof("gzip");
-		if (pidz < 0)
-			pidz = pidof("cp");
-
-		ppidz = -1;
-		if (pidz > 0)
-			ppidz = ppid(ppid(pidz));
-
-		if ((m > 0) && (pidz > 0) && (pid == ppidz)) {
-			logmsg(LOG_DEBUG, "*** %s: (PID %d) shutting down, waiting for helper process to complete (PID %d, PPID %d)", __FUNCTION__, pid, pidz, ppidz);
-			--m;
-		}
-		else
-			kill(pid, SIGTERM);
-
-		sleep(1);
-	}
-	if ((w == 1) && (n > 0))
-		logmsg(LOG_INFO, "cstats stopped");
+	stop_stats("cstats", __FUNCTION__);
 }
 
 static void start_cstats(int new)
@@ -2251,9 +2185,10 @@ static void start_media_server(int force)
 				buffer3[0] = '\0';
 
 				for (i = 0; i < BRIDGE_COUNT; i++) {
-					snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+					char *lan_ifname = bridge_nvram_get(i, "ifname", buffer, sizeof(buffer));
+
 					snprintf(buffer2, sizeof(buffer2), "br%d", i);
-					if ((strlen(nvram_safe_get(buffer)) > 0) && (strstr(msi, buffer2) != NULL)) { /* bridge is up & present in 'ms_ifname' */
+					if (*lan_ifname && (strstr(msi, buffer2) != NULL)) { /* bridge is up & present in 'ms_ifname' */
 						if (strlen(buffer3) > 0)
 							strlcat(buffer3, ",", sizeof(buffer3));
 
@@ -2644,6 +2579,8 @@ void stop_services(void)
 #endif
 }
 
+#include "services.h"
+
 /* nvram "action_service" is: "service-action[-modifier]"
  * action is something like "stop" or "start" or "restart"
  * optional modifier is "c" for the "service" command-line command
@@ -2653,13 +2590,13 @@ void exec_service(void)
 	const int A_START = 1;
 	const int A_STOP = 2;
 	const int A_RESTART = 1|2;
-	char buffer[128], buffer2[16], buffer3[16];
+	char buffer[128];
 	char *service;
 	char *act;
 	char *next;
 	char *modifier;
+	const struct svc_entry *svc;
 	int action, user;
-	int i;
 	int act_start, act_stop;
 
 	strlcpy(buffer, nvram_safe_get("action_service"), sizeof(buffer));
@@ -2690,734 +2627,10 @@ TOP:
 
 	user = (modifier != NULL && *modifier == 'c');
 
-	if (strcmp(service, "rstats_nvram") == 0) {
-		if (act_stop) del_rstats_defaults();
-		if (act_start) add_rstats_defaults();
+	svc = svc_find(service);
+	if ((svc != NULL) && svc_exec_simple(svc, service, act_start, act_stop, user))
 		goto CLEAR;
-	}
 
-	if (strcmp(service, "cstats_nvram") == 0) {
-		if (act_stop) del_cstats_defaults();
-		if (act_start) add_cstats_defaults();
-		goto CLEAR;
-	}
-
-#ifdef TCONFIG_FTP
-	if (strcmp(service, "ftp_nvram") == 0) {
-		if (act_stop) del_ftp_defaults();
-		if (act_start) add_ftp_defaults();
-		goto CLEAR;
-	}
-#endif /* TCONFIG_FTP */
-
-#ifdef TCONFIG_SNMP
-	if (strcmp(service, "snmp_nvram") == 0) {
-		if (act_stop) del_snmp_defaults();
-		if (act_start) add_snmp_defaults();
-		goto CLEAR;
-	}
-#endif /* TCONFIG_SNMP */
-
-	if (strcmp(service, "upnp_nvram") == 0) {
-		if (act_stop) del_upnp_defaults();
-		if (act_start) add_upnp_defaults();
-		goto CLEAR;
-	}
-
-#ifdef TCONFIG_BCMBSD
-	if (strcmp(service, "bsd_nvram") == 0) {
-		if (act_stop) del_bsd_defaults();
-		if (act_start) add_bsd_defaults();
-		goto CLEAR;
-	}
-#endif /* TCONFIG_BCMBSD */
-
-	for (i = 1; i <= MWAN_MAX; i++) {
-		snprintf(buffer2, sizeof(buffer2), (i == 1 ? "dhcpc_wan" : "dhcpc_wan%d"), i);
-		if (strcmp(service, buffer2) == 0) {
-			snprintf(buffer2, sizeof(buffer2), (i == 1 ? "wan" : "wan%d"), i);
-			if (act_stop) stop_dhcpc(buffer2);
-			if (act_start) start_dhcpc(buffer2);
-			goto CLEAR;
-		}
-	}
-
-	if (strcmp(service, "dnsmasq") == 0) {
-		if (act_stop) stop_dnsmasq();
-		if (act_start && !nvram_get_int("g_upgrade")) {
-			dns_to_resolv();
-			start_dnsmasq();
-		}
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "dns") == 0) {
-		if (act_start) reload_dnsmasq();
-		goto CLEAR;
-	}
-
-#ifdef TCONFIG_DNSCRYPT
-	if ((strcmp(service, "dnscrypt") == 0) || (strcmp(service, "dnscrypt_proxy") == 0)) {
-		if (act_stop) stop_dnscrypt();
-		if (act_start) start_dnscrypt();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_STUBBY
-	if (strcmp(service, "stubby") == 0) {
-		if (act_stop) stop_stubby();
-		if (act_start) start_stubby();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_MDNS
-	if ((strcmp(service, "mdns") == 0) || (strcmp(service, "avahi_daemon") == 0)) {
-		if (act_stop) stop_mdns();
-		if (act_start) start_mdns();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_IRQBALANCE
-	if (strcmp(service, "irqbalance") == 0) {
-		if (act_stop) stop_irqbalance();
-		if (act_start) start_irqbalance();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_HAVEGED
-	if (strcmp(service, "haveged") == 0) {
-		if (act_stop) stop_haveged();
-		if (act_start) start_haveged();
-		goto CLEAR;
-	}
-#endif
-
-	if (strcmp(service, "adblock") == 0) {
-		if (act_stop) stop_adblock();
-		if (act_start) start_adblock(1); /* update lists immediately */
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "firewall") == 0) {
-		if (act_stop) {
-			stop_firewall();
-			stop_igmp_proxy();
-			stop_udpxy();
-		}
-		if (act_start) {
-			start_firewall();
-			start_igmp_proxy();
-			start_udpxy();
-		}
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "restrict") == 0) {
-		if (act_stop)
-			stop_firewall();
-
-		if (act_start) {
-			i = nvram_get_int("rrules_radio"); /* -1 = not used, 0 = enabled by rule, 1 = disabled by rule */
-
-			start_firewall();
-
-			/* if radio was disabled by access restriction, but no rule is handling it now, enable it */
-			if (i == 1) {
-				if (nvram_get_int("rrules_radio") < 0)
-					eval("radio", "on");
-			}
-		}
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "arpbind") == 0) {
-		if (act_stop) stop_arpbind();
-		if (act_start) start_arpbind();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "bwlimit") == 0) {
-		if (act_stop) {
-			stop_bwlimit();
-#ifdef TCONFIG_NOCAT
-			stop_nocat();
-#endif
-		}
-		if (act_start) {
-			start_bwlimit();
-#ifdef TCONFIG_NOCAT
-			start_nocat();
-#endif
-		}
-		restart_firewall(); /* always restart */
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "qos") == 0) {
-		if (act_stop) {
-			for (i = 1; i <= MWAN_MAX; i++) {
-				snprintf(buffer2, sizeof(buffer2), (i == 1 ? "wan" : "wan%d"), i);
-				stop_qos(buffer2);
-			}
-		}
-		if (act_start) {
-			for (i = 1; i <= MWAN_MAX; i++) {
-				snprintf(buffer2, sizeof(buffer2), (i == 1 ? "wan" : "wan%d"), i);
-				if ((check_wanup(buffer2)) || (i == 1))
-					start_qos(buffer2);
-			}
-			if (nvram_get_int("qos_reset"))
-				f_write_string("/proc/net/clear_marks", "1", 0, 0);
-		}
-		restart_firewall(); /* always restart */
-		goto CLEAR;
-	}
-
-	if ((strcmp(service, "upnp") == 0) || (strcmp(service, "miniupnpd") == 0)) {
-		if (act_stop) stop_upnp();
-		restart_firewall(); /* always restart */
-		if (act_start) start_upnp();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "telnetd") == 0) {
-		if (act_stop) stop_telnetd();
-		if (act_start) start_telnetd();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "sshd") == 0 || strcmp(service, "dropbear") == 0) {
-		if (act_stop) stop_sshd();
-		if (act_start) start_sshd();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "httpd") == 0) {
-		if (act_stop) stop_httpd();
-		if (act_start) start_httpd();
-		goto CLEAR;
-	}
-
-#ifdef TCONFIG_IPV6
-	if (strcmp(service, "dhcp6") == 0) {
-		if (act_stop) stop_dhcp6c();
-		if (act_start) start_dhcp6c();
-		goto CLEAR;
-	}
-#endif
-
-	if (strncmp(service, "admin", 5) == 0) {
-		if (act_stop) {
-			if (!(strcmp(service, "adminnosshd") == 0))
-				stop_sshd();
-			stop_telnetd();
-			stop_httpd();
-		}
-		if (act_start) {
-			stop_httpd();
-			start_httpd();
-			if (!(strcmp(service, "adminnosshd") == 0))
-				create_passwd();
-			if (nvram_get_int("telnetd_eas"))
-				start_telnetd();
-			if (nvram_get_int("sshd_eas") && (!(strcmp(service, "adminnosshd") == 0)))
-				start_sshd();
-		}
-		restart_firewall(); /* always restart */
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "ddns") == 0) {
-		if (act_stop) stop_ddns();
-		if (act_start) start_ddns();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "ntpd") == 0) {
-		if (act_stop) stop_ntpd();
-		if (act_start) start_ntpd();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "logging") == 0) {
-		if (act_stop) stop_syslog();
-		if (act_start) start_syslog();
-		if (!user) {
-			/* always restarted except from "service" command */
-			stop_cron();
-			start_cron();
-			restart_firewall();
-		}
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "crond") == 0) {
-		if (act_stop) stop_cron();
-		if (act_start) start_cron();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "hotplug") == 0) {
-		if (act_stop) stop_hotplug2();
-		if (act_start) start_hotplug2();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "upgrade") == 0) {
-		if (act_start) {
-			nvram_set("g_upgrade", "1");
-
-			if (nvram_get_int("webmon_bkp"))
-				xstart("/usr/sbin/webmon_bkp", "hourly"); /* make a copy before upgrade */
-
-			stop_sched();
-			stop_cron();
-#ifdef TCONFIG_NGINX
-			stop_mysql();
-			stop_nginx();
-#endif
-#ifdef TCONFIG_NFS
-			stop_nfs();
-#endif
-#ifdef TCONFIG_USB
-			restart_nas_services(1, 0); /* Samba, FTP and Media Server */
-#endif
-#ifdef TCONFIG_BT
-			stop_bittorrent();
-#endif
-#ifdef TCONFIG_NOCAT
-			stop_nocat();
-#endif
-#ifdef TCONFIG_TOR
-			stop_tor();
-#endif
-			killall("rstats", SIGTERM);
-			killall("cstats", SIGTERM);
-			killall("buttons", SIGTERM);
-			stop_upnp();
-			if (!nvram_get_int("remote_upgrade")) {
-				killall("xl2tpd", SIGTERM);
-				killall("pppd", SIGTERM);
-				stop_dnsmasq();
-				killall("udhcpc", SIGTERM);
-				stop_wan();
-			} else
-				stop_adblock();
-
-#ifdef TCONFIG_SNMP
-			stop_snmp();
-#endif
-			stop_tomatoanon();
-			remove_conntrack();
-#ifdef TCONFIG_ZEBRA
-			stop_zebra();
-#endif
-#ifdef TCONFIG_IRQBALANCE
-			stop_irqbalance();
-#endif
-#ifdef TCONFIG_MDNS
-			stop_mdns();
-#endif
-#ifdef TCONFIG_HAVEGED
-			stop_haveged();
-#endif
-			stop_jffs2();
-			stop_syslog();
-			sleep(1);
-#ifdef TCONFIG_USB
-#ifdef TCONFIG_USBAP
-			stop_wireless();
-			sleep(1);
-#endif
-			remove_storage_main(1);
-			stop_usb();
-#endif /* TCONFIG_USB */
-		}
-		goto CLEAR;
-	}
-
-#ifdef TCONFIG_CIFS
-	if (strcmp(service, "cifs") == 0) {
-		if (act_stop) stop_cifs();
-		if (act_start) start_cifs();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_JFFS2
-	if (strncmp(service, "jffs", 4) == 0) { /* could be jffs/jffs2 */
-		if (act_stop) stop_jffs2();
-		if (act_start) start_jffs2();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_ZEBRA
-	if (strcmp(service, "zebra") == 0) {
-		if (act_stop) stop_zebra();
-		if (act_start) start_zebra();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_SDHC
-	if (strcmp(service, "mmc") == 0) {
-		if (act_stop) stop_mmc();
-		if (act_start) start_mmc();
-		goto CLEAR;
-	}
-#endif
-
-	if (strcmp(service, "routing") == 0) {
-		if (act_stop) {
-#ifdef TCONFIG_ZEBRA
-			stop_zebra();
-#endif
-			do_static_routes(0); /* remove old '_saved' */
-			for (i = 0; i < BRIDGE_COUNT; i++) {
-				snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-				if ((i == 0) || (strcmp(nvram_safe_get(buffer2), "") != 0))
-					eval("brctl", "stp", nvram_safe_get(buffer2), "0");
-			}
-		}
-		if (act_start) {
-			do_static_routes(1); /* add new */
-#ifdef TCONFIG_ZEBRA
-			start_zebra();
-#endif
-			for (i = 0; i < BRIDGE_COUNT; i++) {
-				snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-				if ((i == 0) || (strcmp(nvram_safe_get(buffer2), "") != 0)) {
-					snprintf(buffer3, sizeof(buffer3), (i == 0 ? "lan_stp" : "lan%d_stp"), i);
-					eval("brctl", "stp", nvram_safe_get(buffer2), nvram_safe_get(buffer3));
-				}
-			}
-		}
-		restart_firewall(); /* always restart */
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "ctnf") == 0) {
-		if (act_start) {
-			setup_conntrack();
-			restart_firewall(); /* always restart */
-		}
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "wan") == 0) {
-		if (act_stop) stop_wan();
-		if (act_start) {
-			rename("/tmp/ppp/wan_log", "/tmp/ppp/wan_log.~");
-			start_wan();
-			for (i = 1; i <= MWAN_MAX; i++) {
-				snprintf(buffer2, sizeof(buffer2), (i == 1 ? "wan" : "wan%d"), i);
-				sleep(5);
-				force_to_dial(buffer2);
-			}
-		}
-		goto CLEAR;
-	}
-
-	for (i = 1; i <= MWAN_MAX; i++) {
-		snprintf(buffer2, sizeof(buffer2), "wan%d", i);
-		if (strcmp(service, buffer2) == 0) {
-			snprintf(buffer2, sizeof(buffer2), (i == 1 ? "wan" : "wan%d"), i);
-			if (act_stop) stop_wan_if(buffer2);
-			if (act_start) {
-				start_wan_if(buffer2);
-				sleep(5);
-				force_to_dial(buffer2);
-			}
-			goto CLEAR;
-		}
-	}
-
-	if (strcmp(service, "net") == 0) {
-		if (act_stop) {
-#ifdef TCONFIG_USB
-			stop_nas_services();
-#endif
-#ifdef TCONFIG_PPPRELAY
-			stop_pppoerelay();
-#endif
-			stop_httpd();
-#ifdef TCONFIG_MDNS
-			stop_mdns();
-#endif
-			stop_dnsmasq();
-			stop_nas();
-			stop_wan();
-			stop_arpbind();
-			stop_lan();
-			stop_vlan();
-		}
-		if (act_start) {
-			start_vlan();
-			start_lan();
-			start_arpbind();
-			start_nas();
-			start_dnsmasq();
-#ifdef TCONFIG_MDNS
-			start_mdns();
-#endif
-			start_httpd();
-			start_wl();
-#ifdef TCONFIG_USB
-			start_nas_services();
-#endif
-			/* last one as ssh telnet httpd samba etc can fail to load until start_wan_done */
-			start_wan();
-		}
-		goto CLEAR;
-	}
-
-	if ((strcmp(service, "wireless") == 0) || (strcmp(service, "wl") == 0)) { /* for tomato user --> 'service wl start' will restart wl allways (failsafe, even if wl was not stopped!) */
-		if (act_stop) stop_wireless();
-		if (act_start) restart_wireless();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "wlgui") == 0) { /* for GUI to restart wireless (only stop wl once!) */
-		if (act_stop) stop_wireless();
-		if (act_start) start_wireless();
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "nas") == 0) {
-		if (act_stop) stop_nas();
-		if (act_start) {
-			start_nas();
-			start_wl();
-		}
-		goto CLEAR;
-	}
-
-#ifdef TCONFIG_BCMBSD
-	if (strcmp(service, "bsd") == 0) {
-		if (act_stop) stop_bsd();
-		if (act_start) start_bsd();
-		goto CLEAR;
-	}
-#endif /* TCONFIG_BCMBSD */
-
-#ifdef TCONFIG_ROAM
-	if ((strcmp(service, "roamast") == 0) || (strcmp(service, "rssi") == 0)) {
-		if (act_stop) stop_roamast();
-		if (act_start) start_roamast();
-		goto CLEAR;
-	}
-#endif
-
-	if (strncmp(service, "rstats", 6) == 0) {
-		if (act_stop) stop_rstats();
-		if (act_start) {
-			if (strcmp(service, "rstatsnew") == 0)
-				start_rstats(1);
-			else
-				start_rstats(0);
-		}
-		goto CLEAR;
-	}
-
-	if (strncmp(service, "cstats", 6) == 0) {
-		if (act_stop) stop_cstats();
-		if (act_start) {
-			if (strcmp(service, "cstatsnew") == 0)
-				start_cstats(1);
-			else
-				start_cstats(0);
-		}
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "sched") == 0) {
-		if (act_stop) stop_sched();
-		if (act_start) start_sched();
-		goto CLEAR;
-	}
-
-#ifdef TCONFIG_BT
-	if ((strcmp(service, "bittorrent") == 0) || (strcmp(service, "transmission") == 0) || (strcmp(service, "transmission_da") == 0)) {
-		if (act_stop) stop_bittorrent();
-		if (act_start) start_bittorrent(1); /* force (re)start */
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_NFS
-	if ((strcmp(service, "nfs") == 0) || (strcmp(service, "nfsd") == 0)) {
-		if (act_stop) stop_nfs();
-		if (act_start) start_nfs();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_SNMP
-	if (strcmp(service, "snmp") == 0) {
-		if (act_stop) stop_snmp();
-		if (act_start) start_snmp();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_TOR
-	if (strcmp(service, "tor") == 0) {
-		if (act_stop) stop_tor();
-		if (act_start) start_tor(1); /* force (re)start */
-		restart_firewall(); /* always restart */
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_UPS
-	if (strcmp(service, "ups") == 0) {
-		if (act_stop) stop_ups();
-		if (act_start) start_ups();
-		goto CLEAR;
-	}
-#endif
-
-	if (strcmp(service, "tomatoanon") == 0) {
-		if (act_stop) stop_tomatoanon();
-		if (act_start) start_tomatoanon();
-		goto CLEAR;
-	}
-
-#ifdef TCONFIG_BCMARM
-	if (strcmp(service, "porthealth") == 0) {
-		if (act_stop) stop_porthealth();
-		if (act_start) start_porthealth();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_USB
-	if (strcmp(service, "usb") == 0) {
-		if (act_stop) stop_usb();
-		if (act_start) {
-			start_usb();
-			/* restart Samba and ftp since they may be killed by stop_usb() */
-			restart_nas_services(1, 1);
-			/* remount all partitions by simulating hotplug event */
-			add_remove_usbhost("-1", 1);
-		}
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "usbapps") == 0) {
-		if (act_stop) stop_nas_services();
-		if (act_start) start_nas_services();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_FTP
-	if ((strcmp(service, "ftpd") == 0) || (strcmp(service, "vsftpd") == 0)) {
-		if (act_stop) stop_ftpd();
-		setup_conntrack();
-		if (act_start) start_ftpd(1); /* force (re)start */
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_MEDIA_SERVER
-	if ((strcmp(service, "media") == 0) || (strcmp(service, "minidlna") == 0)) {
-		if (act_stop) stop_media_server();
-		if (act_start) start_media_server(1); /* force (re)start */
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_SAMBASRV
-	if ((strcmp(service, "samba") == 0) || (strcmp(service, "smbd") == 0)) {
-		if (act_stop) stop_samba();
-		if (act_start) {
-			create_passwd();
-			stop_dnsmasq();
-			start_dnsmasq();
-			start_samba(1); /* force (re)start */
-		}
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_OPENVPN
-	if (strncmp(service, "vpnclient", 9) == 0) {
-		if (act_stop) stop_ovpn_client(atoi(&service[9]));
-		if (act_start) start_ovpn_client(atoi(&service[9]));
-		goto CLEAR;
-	}
-
-	if (strncmp(service, "vpnserver", 9) == 0) {
-		if (act_stop) stop_ovpn_server(atoi(&service[9]));
-		if (act_start) start_ovpn_server(atoi(&service[9]));
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_WIREGUARD
-	if (strncmp(service, "wireguard", 9) == 0) {
-		if (act_stop) stop_wireguard(atoi(&service[9]));
-		if (act_start) start_wireguard(atoi(&service[9]));
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_TINC
-	if ((strcmp(service, "tinc") == 0) || (strcmp(service, "tincd") == 0)) {
-		if (act_stop) stop_tinc();
-		if (act_start) start_tinc(1); /* force (re)start */
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_FANCTRL
-	if (strcmp(service, "fanctrl") == 0) {
-		if (act_stop) stop_phy_tempsense();
-		if (act_start) start_phy_tempsense();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_NOCAT
-	if (strcmp(service, "splashd") == 0) {
-		if (act_stop) stop_nocat();
-		if (act_start) start_nocat();
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_NGINX
-	if (strcmp(service, "nginx") == 0) {
-		if (act_stop) stop_nginx();
-		if (act_start) start_nginx(1); /* force (re)start */
-		goto CLEAR;
-	}
-	if ((strcmp(service, "mysql") == 0) || (strcmp(service, "mysqld") == 0)) {
-		if (act_stop) stop_mysql();
-		if (act_start) start_mysql(1); /* force (re)start */
-		goto CLEAR;
-	}
-#endif
-
-#ifdef TCONFIG_PPTPD
-	if (strcmp(service, "pptpd") == 0) {
-		if (act_stop) stop_pptpd();
-		if (act_start) start_pptpd(1); /* force (re)start */
-		goto CLEAR;
-	}
-
-	if (strcmp(service, "pptpclient") == 0) {
-		if (act_stop) stop_pptpc();
-		if (act_start) start_pptpc();
-		goto CLEAR;
-	}
-#endif
 
 	logmsg(LOG_WARNING, "no such service: %s", service);
 
@@ -3484,12 +2697,741 @@ static void do_service(const char *name, const char *action, int user)
 		logmsg(LOG_DEBUG, "*** %s: OUT waited %d second(s) for execution of 'action_service': [%s]", __FUNCTION__, ((200 - n) / 10), s);
 }
 
+static int svc_num_suffix_max(unsigned char flags)
+{
+	if (flags & SVCF_MWAN_SUF)
+		return MWAN_MAX;
+#ifdef TCONFIG_OPENVPN
+	if (flags & SVCF_OVPNC_SUF)
+		return OVPN_CLIENT_COUNT;
+
+	if (flags & SVCF_OVPNS_SUF)
+		return OVPN_SERVER_COUNT;
+#endif
+#ifdef TCONFIG_WIREGUARD
+	if (flags & SVCF_WG_SUF)
+		return WG_INTERFACE_COUNT - 1;
+#endif
+
+	return -1;
+}
+
+static int svc_num_suffix_ok(const char *s, unsigned char flags, unsigned char min)
+{
+	const char *p;
+	int n;
+	int max;
+
+	if (*s == '\0')
+		return 0;
+
+	for (p = s; *p; p++) {
+		if ((*p < '0') || (*p > '9'))
+			return 0;
+	}
+
+	n = atoi(s);
+	if (n < min)
+		return 0;
+
+	max = svc_num_suffix_max(flags);
+	if ((max >= 0) && (n > max))
+		return 0;
+
+	return 1;
+}
+
+static int svc_match(const struct svc_entry *e, const char *name)
+{
+	const char *suffix;
+	int len;
+
+	if (!(e->flags & SVCF_PREFIX))
+		return (strcmp(name, e->name) == 0);
+
+	len = strlen(e->name);
+	if (strncmp(name, e->name, len) != 0)
+		return 0;
+
+	suffix = name + len;
+	if (e->flags & SVCF_NUM_SUF)
+		return svc_num_suffix_ok(suffix, e->flags, e->arg);
+
+	return 1;
+}
+
+static const struct svc_entry *svc_find(const char *name)
+{
+	int i;
+
+	for (i = 0; svc_table[i].name; i++) {
+		if (svc_match(&svc_table[i], name))
+			return &svc_table[i];
+	}
+
+	return NULL;
+}
+
+static int svc_exec_simple(const struct svc_entry *svc, const char *service, int act_start, int act_stop, int user)
+{
+	const struct svc_op *op;
+	char ifname[16];
+	char stp[16];
+	int i;
+	int n;
+	unsigned int mwan_num = mwan_active_num();
+	unsigned int mwan_configured = mwan_configured_num();
+
+	if ((svc == NULL) || (svc->op == SVCOP_NONE))
+		return 0;
+
+	if (svc->op & SVCOP_SPECIAL) {
+		switch (svc->op) {
+		case SVCOP_ADMIN:
+			if (act_stop) {
+				if (!svc->arg)
+					stop_sshd();
+				stop_telnetd();
+				stop_httpd();
+			}
+			if (act_start) {
+				stop_httpd();
+				start_httpd();
+				if (!svc->arg)
+					create_passwd();
+				if (nvram_get_int("telnetd_eas"))
+					start_telnetd();
+				if (nvram_get_int("sshd_eas") && !svc->arg)
+					start_sshd();
+			}
+			restart_firewall(); /* always restart */
+			return 1;
+#ifdef TCONFIG_USB
+		case SVCOP_USB:
+			if (act_stop)
+				stop_usb();
+			if (act_start) {
+				start_usb();
+				/* restart Samba and ftp since they may be killed by stop_usb() */
+				restart_nas_services(1, 1);
+				/* remount all partitions by simulating hotplug event */
+				add_remove_usbhost("-1", 1);
+			}
+			return 1;
+#endif
+		case SVCOP_NET:
+			if (act_stop) {
+#ifdef TCONFIG_USB
+				stop_nas_services();
+#endif
+#ifdef TCONFIG_PPPRELAY
+				stop_pppoerelay();
+#endif
+				stop_httpd();
+#ifdef TCONFIG_MDNS
+				stop_mdns();
+#endif
+				stop_dnsmasq();
+				stop_nas();
+				stop_wan();
+				stop_arpbind();
+				stop_lan();
+				stop_vlan();
+			}
+			if (act_start) {
+				start_vlan();
+				start_lan();
+				start_arpbind();
+				start_nas();
+				start_dnsmasq();
+#ifdef TCONFIG_MDNS
+				start_mdns();
+#endif
+				start_httpd();
+				start_wl();
+#ifdef TCONFIG_USB
+				start_nas_services();
+#endif
+				/* last one as ssh, telnet, httpd, samba, etc can fail to load until start_wan_done */
+				start_wan();
+			}
+			return 1;
+		case SVCOP_UPGRADE:
+			if (act_start) {
+				nvram_set("g_upgrade", "1");
+
+				if (nvram_get_int("webmon_bkp"))
+					xstart("/usr/sbin/webmon_bkp", "hourly"); /* make a copy before upgrade */
+
+				stop_sched();
+				stop_cron();
+#ifdef TCONFIG_NGINX
+				stop_mysql();
+				stop_nginx();
+#endif
+#ifdef TCONFIG_NFS
+				stop_nfs();
+#endif
+#ifdef TCONFIG_USB
+				restart_nas_services(1, 0); /* Samba, FTP and Media Server */
+#endif
+#ifdef TCONFIG_BT
+				stop_bittorrent();
+#endif
+#ifdef TCONFIG_NOCAT
+				stop_nocat();
+#endif
+#ifdef TCONFIG_TOR
+				stop_tor();
+#endif
+				killall("rstats", SIGTERM);
+				killall("cstats", SIGTERM);
+				killall("buttons", SIGTERM);
+				stop_upnp();
+				if (!nvram_get_int("remote_upgrade")) {
+					killall("xl2tpd", SIGTERM);
+					killall("pppd", SIGTERM);
+					stop_dnsmasq();
+					killall("udhcpc", SIGTERM);
+					stop_wan();
+				} else
+					stop_adblock();
+
+#ifdef TCONFIG_SNMP
+				stop_snmp();
+#endif
+				stop_tomatoanon();
+				remove_conntrack();
+#ifdef TCONFIG_ZEBRA
+				stop_zebra();
+#endif
+#ifdef TCONFIG_IRQBALANCE
+				stop_irqbalance();
+#endif
+#ifdef TCONFIG_MDNS
+				stop_mdns();
+#endif
+#ifdef TCONFIG_HAVEGED
+				stop_haveged();
+#endif
+				stop_jffs2();
+				stop_syslog();
+				sleep(1);
+#ifdef TCONFIG_USB
+#ifdef TCONFIG_USBAP
+				stop_wireless();
+				sleep(1);
+#endif
+				remove_storage_main(1);
+				stop_usb();
+#endif /* TCONFIG_USB */
+			}
+			return 1;
+		case SVCOP_FIREWALL:
+			if (act_stop) {
+				stop_firewall();
+				stop_igmp_proxy();
+				stop_udpxy();
+			}
+			if (act_start) {
+				start_firewall();
+				start_igmp_proxy();
+				start_udpxy();
+			}
+			return 1;
+		case SVCOP_RESTRICT:
+			if (act_stop)
+				stop_firewall();
+
+			if (act_start) {
+				i = nvram_get_int("rrules_radio"); /* -1 = not used, 0 = enabled by rule, 1 = disabled by rule */
+
+				start_firewall();
+
+				/* if radio was disabled by access restriction, but no rule is handling it now, enable it */
+				if (i == 1) {
+					if (nvram_get_int("rrules_radio") < 0)
+						eval("radio", "on");
+				}
+			}
+			return 1;
+		case SVCOP_BWLIMIT:
+			if (act_stop) {
+				stop_bwlimit();
+#ifdef TCONFIG_NOCAT
+				stop_nocat();
+#endif
+			}
+			if (act_start) {
+				start_bwlimit();
+#ifdef TCONFIG_NOCAT
+				start_nocat();
+#endif
+			}
+			restart_firewall(); /* always restart */
+			return 1;
+		case SVCOP_QOS:
+			if (act_stop) {
+				for (i = 1; i <= (int)mwan_configured; i++) {
+					get_wan_prefix(i, ifname);
+					stop_qos(ifname);
+				}
+			}
+			if (act_start) {
+				for (i = 1; i <= (int)mwan_num; i++) {
+					get_wan_prefix(i, ifname);
+					if ((check_wanup(ifname)) || (i == 1))
+						start_qos(ifname);
+				}
+				if (nvram_get_int("qos_reset"))
+					f_write_string("/proc/net/clear_marks", "1", 0, 0);
+			}
+			restart_firewall(); /* always restart */
+			return 1;
+		case SVCOP_ROUTING:
+			if (act_stop) {
+#ifdef TCONFIG_ZEBRA
+				stop_zebra();
+#endif
+				do_static_routes(0); /* remove old '_saved' */
+				for (i = 0; i < BRIDGE_COUNT; i++) {
+					char *lan_ifname = bridge_nvram_get(i, "ifname", ifname, sizeof(ifname));
+
+					if ((i == 0) || *lan_ifname)
+						eval("brctl", "stp", lan_ifname, "0");
+				}
+			}
+			if (act_start) {
+				do_static_routes(1); /* add new */
+#ifdef TCONFIG_ZEBRA
+				start_zebra();
+#endif
+				for (i = 0; i < BRIDGE_COUNT; i++) {
+					char *lan_ifname = bridge_nvram_get(i, "ifname", ifname, sizeof(ifname));
+
+					if ((i == 0) || *lan_ifname)
+						eval("brctl", "stp", lan_ifname, bridge_nvram_get(i, "stp", stp, sizeof(stp)));
+				}
+			}
+			restart_firewall(); /* always restart */
+			return 1;
+		case SVCOP_DNSMASQ:
+			if (svc->arg) {
+				if (act_start)
+					reload_dnsmasq();
+				return 1;
+			}
+			if (act_stop)
+				stop_dnsmasq();
+			if (act_start && !nvram_get_int("g_upgrade")) {
+				dns_to_resolv();
+				start_dnsmasq();
+			}
+			return 1;
+		case SVCOP_LOGGING:
+			if (act_stop)
+				stop_syslog();
+			if (act_start)
+				start_syslog();
+			if (!user) { /* always restarted except from "service" command */
+				stop_cron();
+				start_cron();
+				restart_firewall();
+			}
+			return 1;
+		case SVCOP_CTNF:
+			if (act_start) {
+				setup_conntrack();
+				restart_firewall();
+			}
+			return 1;
+		case SVCOP_WIRELESS: /* for tomato user --> 'service wl start' will restart wl allways (failsafe, even if wl was not stopped!) */
+			if (act_stop)
+				stop_wireless();
+			if (act_start)
+				restart_wireless();
+			return 1;
+		case SVCOP_WLGUI: /* for GUI to restart wireless (only stop wl once!) */
+			if (act_stop)
+				stop_wireless();
+			if (act_start)
+				start_wireless();
+			return 1;
+		case SVCOP_NAS:
+			if (act_stop)
+				stop_nas();
+			if (act_start) {
+				start_nas();
+				start_wl();
+			}
+			return 1;
+#ifdef TCONFIG_USB
+		case SVCOP_USBAPPS:
+			if (act_stop)
+				stop_nas_services();
+			if (act_start)
+				start_nas_services();
+			return 1;
+#endif
+#ifdef TCONFIG_SAMBASRV
+		case SVCOP_SAMBA:
+			if (act_stop)
+				stop_samba();
+			if (act_start) {
+				create_passwd();
+				stop_dnsmasq();
+				start_dnsmasq();
+				start_samba(svc->arg);
+			}
+			return 1;
+#endif
+		case SVCOP_RSTATS:
+			if (act_stop)
+				stop_rstats();
+			if (act_start)
+				start_rstats(svc->arg);
+			return 1;
+		case SVCOP_CSTATS:
+			if (act_stop)
+				stop_cstats();
+			if (act_start)
+				start_cstats(svc->arg);
+			return 1;
+		case SVCOP_ADBLOCK:
+			if (act_stop)
+				stop_adblock();
+			if (act_start)
+				start_adblock(svc->arg);
+			return 1;
+		case SVCOP_UPNP:
+			if (act_stop)
+				stop_upnp();
+			restart_firewall();
+			if (act_start)
+				start_upnp();
+			return 1;
+#ifdef TCONFIG_BT
+		case SVCOP_BITTORRENT:
+			if (act_stop)
+				stop_bittorrent();
+			if (act_start)
+				start_bittorrent(svc->arg);
+			return 1;
+#endif
+#ifdef TCONFIG_FTP
+		case SVCOP_FTPD:
+			if (act_stop)
+				stop_ftpd();
+			setup_conntrack();
+			if (act_start)
+				start_ftpd(svc->arg);
+			return 1;
+#endif
+#ifdef TCONFIG_MEDIA_SERVER
+		case SVCOP_MEDIA:
+			if (act_stop)
+				stop_media_server();
+			if (act_start)
+				start_media_server(svc->arg);
+			return 1;
+#endif
+#ifdef TCONFIG_TINC
+		case SVCOP_TINC:
+			if (act_stop)
+				stop_tinc();
+			if (act_start)
+				start_tinc(svc->arg);
+			return 1;
+#endif
+#ifdef TCONFIG_NGINX
+		case SVCOP_NGINX:
+			if (act_stop)
+				stop_nginx();
+			if (act_start)
+				start_nginx(svc->arg);
+			return 1;
+		case SVCOP_MYSQL:
+			if (act_stop)
+				stop_mysql();
+			if (act_start)
+				start_mysql(svc->arg);
+			return 1;
+#endif
+#ifdef TCONFIG_PPTPD
+		case SVCOP_PPTPD:
+			if (act_stop)
+				stop_pptpd();
+			if (act_start)
+				start_pptpd(svc->arg);
+			return 1;
+#endif
+#ifdef TCONFIG_TOR
+		case SVCOP_TOR:
+			/* Internal GUI action: request a fresh Tor identity without restarting Tor. */
+			if (strcmp(service, "tor_newnym") == 0) {
+				if (act_start)
+					tor_newnym();
+				return 1;
+			}
+
+			if (act_stop)
+				stop_tor();
+			if (act_start)
+				start_tor(svc->arg);
+
+			if (act_start || act_stop)
+				tor_runtime_set(act_start ? 1 : 0);
+
+			restart_firewall();
+			return 1;
+#endif
+#ifdef TCONFIG_OPENVPN
+		case SVCOP_VPNCLIENT:
+			n = atoi(service + 9);
+			if (act_stop)
+				stop_ovpn_client(n);
+			if (act_start)
+				start_ovpn_client(n);
+			return 1;
+		case SVCOP_VPNSERVER:
+			n = atoi(service + 9);
+			if (act_stop)
+				stop_ovpn_server(n);
+			if (act_start)
+				start_ovpn_server(n);
+			return 1;
+#endif
+#ifdef TCONFIG_WIREGUARD
+		case SVCOP_WIREGUARD:
+			n = atoi(service + 9);
+			if (act_stop)
+				stop_wireguard(n);
+			if (act_start)
+				start_wireguard(n);
+			return 1;
+#endif
+		case SVCOP_DHCPC_WAN:
+			n = (service[9] == '\0') ? 1 : atoi(service + 9);
+			snprintf(ifname, sizeof(ifname), (n == 1 ? "wan" : "wan%d"), n);
+			if (act_stop)
+				stop_dhcpc(ifname);
+			if (act_start)
+				start_dhcpc(ifname);
+			return 1;
+		case SVCOP_WAN:
+			if (act_stop)
+				stop_wan();
+			if (act_start) {
+				rename("/tmp/ppp/wan_log", "/tmp/ppp/wan_log.~");
+				start_wan();
+				for (i = 1; i <= (int)mwan_num; i++) {
+					get_wan_prefix(i, ifname);
+					sleep(5);
+					force_to_dial(ifname);
+				}
+			}
+			return 1;
+		case SVCOP_WAN_IF:
+			n = atoi(service + 3);
+			snprintf(ifname, sizeof(ifname), (n == 1 ? "wan" : "wan%d"), n);
+			if (act_stop)
+				stop_wan_if(ifname);
+			if (act_start) {
+				start_wan_if(ifname);
+				sleep(5);
+				force_to_dial(ifname);
+			}
+			return 1;
+		}
+		return 0;
+	}
+
+	if (svc->op >= SVCOP_MAX)
+		return 0;
+
+	op = &svc_ops[svc->op];
+
+	if (act_stop && (op->stop != NULL))
+		op->stop();
+	if (act_start && (op->start != NULL))
+		op->start();
+
+	return 1;
+}
+
+#ifdef TCONFIG_WIREGUARD
+static int svc_wireguard_status(const char *name)
+{
+	char iface[8];
+	int unit;
+
+	unit = atoi(name + 9);
+	snprintf(iface, sizeof(iface), "wg%d", unit);
+
+	if (wg_status(iface)) {
+		printf("%s: running (%s)\n", name, iface);
+		return 0;
+	}
+
+	printf("%s: stopped (%s)\n", name, iface);
+	return 1;
+}
+#endif
+
+static const char *svc_proc_name_for(const struct svc_entry *e, const char *name)
+{
+	if ((e == NULL) || (e->flags & SVCF_NO_STATUS) || (e->proc == P_NONE))
+		return NULL;
+
+	if (e->proc == P_SELF)
+		return name;
+
+	if (e->proc >= P_MAX)
+		return NULL;
+
+	return svc_proc_name[e->proc];
+}
+
+static void svc_list(void)
+{
+	int i;
+	int n;
+	int max;
+	int first;
+
+	first = 1;
+
+	for (i = 0; svc_table[i].name; i++) {
+		if (!(svc_table[i].flags & SVCF_LIST))
+			continue;
+
+		if ((svc_table[i].flags & SVCF_PREFIX) && (svc_table[i].flags & SVCF_NUM_SUF)) {
+			max = svc_num_suffix_max(svc_table[i].flags);
+			if (max < svc_table[i].arg)
+				continue;
+
+			for (n = svc_table[i].arg; n <= max; n++) {
+				if (first)
+					first = 0;
+				else
+					putchar(' ');
+
+				printf("%s%d", svc_table[i].name, n);
+			}
+			continue;
+		}
+
+		if (first)
+			first = 0;
+		else
+			putchar(' ');
+
+		fputs(svc_table[i].name, stdout);
+	}
+
+	putchar('\n');
+}
+
+static int svc_bool_status(const char *name, int running)
+{
+	if (running) {
+		printf("%s: running\n", name);
+		return 0;
+	}
+
+	printf("%s: stopped\n", name);
+
+	return 1;
+}
+
+static int svc_status(const char *name)
+{
+	const struct svc_entry *e;
+	const char *proc;
+	pid_t pid;
+
+	e = svc_find(name);
+
+	if (e != NULL) {
+		switch (e->op) {
+		case SVCOP_BWLIMIT:
+			return svc_bool_status(name, bwlimit_status());
+		case SVCOP_QOS:
+			return svc_bool_status(name, qos_status());
+		}
+	}
+
+#ifdef TCONFIG_WIREGUARD
+	if ((e != NULL) && (e->proc == P_WIREGUARD))
+		return svc_wireguard_status(name);
+#endif
+	proc = svc_proc_name_for(e, name);
+
+	if (proc == NULL) {
+		printf("%s: no process status available\n", name);
+		return 0;
+	}
+
+	pid = pidof(proc);
+	if (pid > 0) {
+		printf("%s: running (pid %d)\n", name, (int)pid);
+		return 0;
+	}
+
+	printf("%s: stopped\n", name);
+
+	return 1;
+}
+
+static void svc_help(const char *prog)
+{
+	printf(
+		"Usage:  %s <service> start|stop|restart|status\n"
+		"        %s list\n"
+		"        %s help\n"
+		"\n"
+		"  start    Start the service\n"
+		"  stop     Stop the service\n"
+		"  restart  Restart the service\n"
+		"  status   Show runtime status when available\n"
+		"  list     Show public service names\n",
+		prog, prog, prog);
+}
+
 int service_main(int argc, char *argv[])
 {
-	if (argc != 3)
-		usage_exit(argv[0], "<service> <action>");
+	const struct svc_entry *svc;
+	const char *action;
 
-	do_service(argv[1], argv[2], 1);
+	if ((argc < 2) || (strcmp(argv[1], "help") == 0)) {
+		svc_help(argv[0]);
+		return 0;
+	}
+
+	if ((argc == 2) && (strcmp(argv[1], "list") == 0)) {
+		svc_list();
+		return 0;
+	}
+
+	if (argc != 3)
+		usage_exit(argv[0], "<service> <action> | list | help");
+
+	svc = svc_find(argv[1]);
+	if (svc == NULL) {
+		fprintf(stderr, "%s: unknown service '%s'\n", argv[0], argv[1]);
+		return 1;
+	}
+
+	action = argv[2];
+	if (strcmp(action, "status") == 0)
+		return svc_status(argv[1]);
+
+	if ((strcmp(action, "start") != 0) && (strcmp(action, "stop") != 0) && (strcmp(action, "restart") != 0)) {
+		fprintf(stderr, "%s: unknown action '%s'\n", argv[0], action);
+		return 1;
+	}
+
+	do_service(argv[1], action, 1);
 	printf("\nDone.\n");
 
 	return 0;
@@ -3506,7 +3448,7 @@ void stop_service(const char *name)
 }
 
 #ifdef TCONFIG_BCMBSD
-int start_bsd(void)
+void start_bsd(void)
 {
 	int ret;
 	int bsd_enable = nvram_get_int("smart_connect_x");
@@ -3543,11 +3485,9 @@ int start_bsd(void)
 
 	stop_bsd();
 
-	/* 0 = off, 1 = on (all-band), 2 = 5 GHz only! (no support, maybe later) */
 	if (!bsd_enable) {
-		ret = -1;
 		logmsg(LOG_INFO, "wireless band steering disabled");
-		return ret;
+		return;
 	}
 	else
 		ret = eval("/usr/sbin/bsd");
@@ -3556,8 +3496,6 @@ int start_bsd(void)
 		logmsg(LOG_ERR, "starting wireless band steering failed ...");
 	else
 		logmsg(LOG_INFO, "wireless band steering is started");
-
-	return ret;
 }
 
 void stop_bsd(void)
@@ -3581,16 +3519,13 @@ void stop_roamast(void)
 void start_roamast(void)
 {
 	char *cmd[] = {"roamast", NULL};
-	char prefix[] = "wl_XXXX";
-	char tmp[32];
 	pid_t pid;
 	int i;
 
 	stop_roamast();
 
 	for (i = 0; i < TOMATO_WLIF_MAX; i++) {
-		snprintf(prefix, sizeof(prefix), "wl%d_", i);
-		if (nvram_get_int(strlcat_r(prefix, "user_rssi", tmp, sizeof(tmp))) != 0) {
+		if (nvram_get_int(wl_nvname("user_rssi", i, 0)) != 0) {
 			_eval(cmd, NULL, 0, &pid);
 			logmsg(LOG_INFO, "wireless roaming assistant is started");
 			break;

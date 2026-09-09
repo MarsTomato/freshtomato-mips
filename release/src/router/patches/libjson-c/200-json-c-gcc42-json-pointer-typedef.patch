@@ -1,0 +1,28 @@
+--- libjson-c/json_pointer.h
++++ libjson-c/json_pointer.h
+@@ -139,8 +139,11 @@
+  * When setting an object field, 'key' will be the target key and 'idx' will
+  * be -1.
+  */
++#ifndef JSON_C_JSON_POINTER_SET_CB_DEFINED
++#define JSON_C_JSON_POINTER_SET_CB_DEFINED
+ typedef int(*json_pointer_set_cb)(json_object *parent, const char *key, size_t idx,
+                                     json_object *value, void *priv);
++#endif /* JSON_C_JSON_POINTER_SET_CB_DEFINED */
+ 
+ /**
+  * Variant of 'json_pointer_set()' that allows specifying a custom callback
+--- libjson-c/json_pointer_private.h
++++ libjson-c/json_pointer_private.h
+@@ -32,8 +32,11 @@
+ // replaced by json_pointer_set_cb
+ // typedef int(*json_pointer_array_set_cb)(json_object *parent, size_t idx,
+ //                                         json_object *value, void *priv);
++#ifndef JSON_C_JSON_POINTER_SET_CB_DEFINED
++#define JSON_C_JSON_POINTER_SET_CB_DEFINED
+ typedef int(*json_pointer_set_cb)(json_object *parent, const char *key, size_t idx,
+                                     json_object *value, void *priv);
++#endif /* JSON_C_JSON_POINTER_SET_CB_DEFINED */
+ 
+ // replaced by json_pointer_set_with_cb
+ // int json_pointer_set_with_array_cb(struct json_object **obj, const char *path,

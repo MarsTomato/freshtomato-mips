@@ -1,13 +1,187 @@
-
 mainmenu "FreshTomato Configuration"
+
+# Shared feature catalog for ARM and MIPS builds.
+# Platform and image policy belongs in config_base and target makefiles.
+
+menu "Build and target configuration"
 
 config TCONFIG_OPTIMIZE_SHARED_LIBS
 	bool "Optimize shared libraries (remove unused symbols)"
 	default y
 
+config TCONFIG_BCMARM
+	bool "BCM ARM"
+	select TCONFIG_ADVTHEMES
+	select TCONFIG_TERMLIB
+	default n
+
+choice
+	prompt "MIPS target family"
+	depends on !TCONFIG_BCMARM
+	optional
+
+config TCONFIG_MIPS_RT
+	bool "MIPS RT"
+
+config TCONFIG_MIPS_RTN
+	bool "MIPS RT-N"
+
+config TCONFIG_MIPS_RTAC
+	bool "MIPS RT-AC"
+
+endchoice
+
+config TCONFIG_MIPS
+	def_bool TCONFIG_MIPS_RT || TCONFIG_MIPS_RTN || TCONFIG_MIPS_RTAC
+
+config TCONFIG_RTNPLUS
+	def_bool TCONFIG_BCMARM || TCONFIG_MIPS_RTN || TCONFIG_MIPS_RTAC
+
 config TCONFIG_MIPSR2
 	bool "MIPS R2 flag"
+	depends on TCONFIG_MIPS
 	default n
+
+config TCONFIG_BCMWL6
+	def_bool TCONFIG_BCMARM || TCONFIG_MIPS_RTAC
+
+config TCONFIG_BCMWL6A
+	def_bool TCONFIG_BCMARM && TCONFIG_BCMWL6
+
+config TCONFIG_BCM7
+	bool "BCM SDK 7"
+	depends on TCONFIG_BCMARM
+	select TCONFIG_5301X
+	select TCONFIG_BCMDCS
+	select TCONFIG_TRAFFIC_MGMT_RSSI_POLICY
+	select TCONFIG_TOAD
+	default n
+
+config TCONFIG_BCM714
+	bool "BCM SDK 7.14"
+	depends on TCONFIG_BCMARM
+	select TCONFIG_BCM7
+	default n
+
+config TCONFIG_BCMSMP
+	bool "BCM SMP"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_NVRAM_32K
+	bool "NVRAM_32K"
+	default n
+
+config TCONFIG_NVRAM_64K
+	bool "NVRAM_64K"
+	default n
+
+config TCONFIG_NVRAM_128K
+	bool "NVRAM_128K"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_DRAM_512M
+	bool "DRAM_512M"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_AIO
+	bool "Flag to detect AIO target"
+	default n
+
+config TCONFIG_OPTIMIZE_SIZE
+	bool "Flag to detect small targets used for size optimization"
+	default n
+
+config TCONFIG_OPTIMIZE_SIZE_MORE
+	bool "Flag to optimize code even more"
+	depends on TCONFIG_OPTIMIZE_SIZE && TCONFIG_MIPS
+	default n
+
+config TCONFIG_TRXKEY
+	bool "Include Asus New TRX Key (allow upgrade to AsusWRT via GUI)"
+	depends on TCONFIG_BCMARM
+	default n
+
+endmenu
+
+menu "Networking and routing"
+
+config TCONFIG_MWAN_MAX
+	int "Maximum number of WAN interfaces"
+	range 1 8
+	default 2
+
+config TCONFIG_BRIDGE_COUNT
+	int "Number of LAN bridges"
+	range 1 16
+	default 4
+
+config TCONFIG_IPV6
+	bool "IPv6 Support"
+	default n
+
+config TCONFIG_EBTABLES
+	bool "Ebtables"
+	default n
+
+config TCONFIG_EMF
+	bool "Broadcom EMF (Efficient Multicast Forwarding & IGMP Snooping)"
+	default n
+
+config TCONFIG_CTF
+	bool "CTF (Cut-Through Forwarding)"
+	default n
+
+config TCONFIG_BCMNAT
+	bool "Broadcom FastNAT (bcm_nat)"
+	depends on TCONFIG_MIPS
+	default n
+
+config TCONFIG_ZEBRA
+	bool "Zebra"
+	depends on TCONFIG_MIPS
+	default n
+
+config TCONFIG_L7
+	bool "Layer 7 Netfilter"
+	default y
+
+config TCONFIG_L7PAT
+	bool "Standard Layer 7 Patterns"
+	depends on TCONFIG_L7
+	default y
+
+config TCONFIG_BONDING
+	bool "Include bonding module and link aggregation script"
+	default n
+
+config TCONFIG_PROXY
+	bool "udpxy and igmpproxy"
+	default n
+
+config TCONFIG_MDNS
+	bool "MDNS Support"
+	default n
+
+config TCONFIG_DMZ
+	bool "DMZ host forwarding"
+	default y
+
+config TCONFIG_DMZMAC
+	bool "DMZ target by MAC address (DHCP reservation)"
+	depends on TCONFIG_DMZ
+	default y
+
+config TCONFIG_CONNTRACK_TOOL
+	bool "Conntrack Userspace Tool"
+	depends on TCONFIG_BCMARM
+	default n
+
+endmenu
+
+menu "VPN, security and cryptography"
 
 config TCONFIG_L2TP
 	bool "L2TP"
@@ -22,67 +196,84 @@ config TCONFIG_PPTPD
 	depends on TCONFIG_PPTP
 	default n
 
-config TCONFIG_MULTIWAN
-	bool "MultiWAN support"
+config TCONFIG_OPENVPN
+	bool "OpenVPN"
+	default n
+
+config TCONFIG_WIREGUARD
+	bool "WireGuard"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_IPSEC
+	bool "IPSec Support"
+	default n
+
+config TCONFIG_TINC
+	bool "TINC"
 	default n
 
 config TCONFIG_HTTPS
 	bool "HTTPS"
 	default y
 
-config TCONFIG_CIFS
-	bool "CIFS Client"
+config TCONFIG_ADBLOCK
+	bool "Adblock"
+	depends on TCONFIG_HTTPS
 	default y
 
-config TCONFIG_BRCM_NAND_JFFS2
-	bool "JFFS Support on BRCM Nand Flash Partition"
+config TCONFIG_DNSSEC
+	bool "DNSSEC"
 	default n
 
-config TCONFIG_JFFS2
-	bool "JFFS Support"
-	default y
+choice
+	prompt "TLS/SSL provider"
+	optional
 
-config TCONFIG_JFFSV1
-	bool "  Use JFFSv1 (if not selected, JFFS2 is used)"
-	depends on TCONFIG_JFFS2
-	default y
+config TCONFIG_OPENSSL30
+	bool "OpenSSL 3.0.x"
 
-config TCONFIG_ZEBRA
-	bool "Zebra"
-	default y
+config TCONFIG_OPENSSL11
+	bool "OpenSSL 1.1.x"
+
+config TCONFIG_WOLFSSL
+	bool "WolfSSL"
+
+endchoice
+
+config TCONFIG_WOLFSSLMIN
+	bool "WolfSSL (lean version)"
+	depends on TCONFIG_WOLFSSL
+	default n
+
+config TCONFIG_KEYGEN
+	bool "TLS keys generator in GUI for VPN Server"
+	depends on TCONFIG_OPENVPN
+	default n
+
+config TCONFIG_HAVEGED
+	bool "Haveged, an entrophy daemon"
+	default n
+
+endmenu
+
+menu "DNS and network services"
 
 config TCONFIG_DDNS
 	bool "Dynamic DNS"
 	default y
 
-config TCONFIG_L7
-	bool "Layer 7 Netfilter"
-	default y
-
-config TCONFIG_L7PAT
-	bool "  Standard Layer 7 Patterns"
-	depends on TCONFIG_L7
-	default y
-
-config TCONFIG_OPENVPN
-	bool "OpenVPN"
+config TCONFIG_DNSCRYPT
+	bool "DNScrypt-proxy"
 	default n
 
-config TCONFIG_IPV6
-	bool "IPv6 Support"
+config TCONFIG_STUBBY
+	bool "Stubby - DNS-over-TLS resolver"
 	default n
 
-config TCONFIG_EBTABLES
-	bool "Ebtables"
+config TCONFIG_TOR
+	bool "TOR Project"
 	default n
-
-config TCONFIG_EMF
-	bool "Broadcom EMF (Efficient Multicast Forwarding & IGMP Snooping)"
-	default n
-
-config TCONFIG_USB
-	bool "USB Support"
-	default y
 
 config TCONFIG_NOCAT
 	bool "NoCat Splash"
@@ -92,101 +283,117 @@ config TCONFIG_NGINX
 	bool "NGinX Web Server"
 	default n
 
+config TCONFIG_SNMP
+	bool "SNMP"
+	default n
+
+endmenu
+
+menu "Storage, filesystems and USB"
+
+config TCONFIG_USB
+	bool "USB Support"
+	default y
+
+config TCONFIG_CIFS
+	bool "CIFS Client"
+	default y
+
+config TCONFIG_JFFS2
+	bool "JFFS Support"
+	default y
+
+config TCONFIG_JFFSV1
+	bool "Use JFFSv1 (if not selected, JFFS2 is used)"
+	depends on TCONFIG_JFFS2
+	default y
+
+config TCONFIG_BRCM_NAND_JFFS2
+	bool "JFFS Support on BRCM Nand Flash Partition"
+	depends on TCONFIG_NAND
+	default n
+
+config TCONFIG_NAND
+	bool "NAND flash support"
+	default n
+
 config TCONFIG_MEDIA_SERVER
 	bool "Media Server (MiniDLNA)"
 	depends on TCONFIG_USB
 	default n
 
 config TCONFIG_FTP
-	bool "  FTP Server"
-	depends on TCONFIG_USB
+	bool "FTP Server"
+	depends on TCONFIG_USB && !TCONFIG_REMOVE_USBAPP
 	default y
 
 config TCONFIG_FTP_SSL
-	bool "    FTP SSL Support"
-	depends on TCONFIG_FTP
+	bool "FTP SSL Support"
+	depends on TCONFIG_FTP && !TCONFIG_WOLFSSL
 	default n
 
 config TCONFIG_SAMBASRV
-	bool "  Samba File Sharing"
-	depends on TCONFIG_USB
+	bool "Samba File Sharing"
+	depends on TCONFIG_USB && !TCONFIG_REMOVE_USBAPP
 	default y
 
 config TCONFIG_USB_EXTRAS
-	bool "  Additional modules and utilities"
+	bool "Additional modules and utilities"
 	depends on TCONFIG_USB
 	default n
 
 config TCONFIG_NTFS
-	bool "  NTFS-3g Support"
+	bool "NTFS-3g Support"
 	depends on TCONFIG_USB
-	default n
-
-config TCONFIG_BT
-	bool "  Bittorrent client gui only"
-	default n
-
-config TCONFIG_BBT
-	bool "  Bittorrent client binaries only"
-	default n
-
-config TCONFIG_TR_EXTRAS
-	bool "  Transmission extra tools"
-	default n
-	depends on TCONFIG_BT
-
-config TCONFIG_NFS
-	bool "  NFS Server"
-	default n
-
-config TCONFIG_SNMP
-	bool "  SNMP"
-	default n
-
-config TCONFIG_SDHC
-	bool "  SDHC/MMC mod for WRT54G/GL"
 	default n
 
 config TCONFIG_HFS
-	bool "  HFS/HFS+ filesystem support "
-	default n
-
-config TCONFIG_UPS
-	bool "  UPS Monitor"
+	bool "HFS/HFS+ filesystem support"
 	depends on TCONFIG_USB
 	default n
 
-config TCONFIG_NANO
-	bool "  NANO - user-friendly file editor"
+config TCONFIG_ZFS
+	bool "zfs"
+	depends on TCONFIG_BCMARM && TCONFIG_USB
 	default n
 
-config TCONFIG_DNSCRYPT
-	bool "  DNScrypt-proxy"
+choice
+	prompt "NTFS filesystem driver"
+	depends on TCONFIG_USB && TCONFIG_NTFS
+	optional
+
+config TCONFIG_UFSD
+	bool "Paragon NTFS driver for Asus routers"
+	depends on TCONFIG_MIPS_RTAC
+
+config TCONFIG_UFSDA
+	bool "Paragon NTFS driver for Asus routers"
+	depends on TCONFIG_BCMARM
+
+config TCONFIG_TUXERA
+	bool "Tuxera NTFS driver for Asus routers"
+	depends on TCONFIG_BCMARM
+
+endchoice
+
+config TCONFIG_TUX_HFS
+	bool "Tuxera HFS/HFS+ driver for Asus routers"
+	depends on TCONFIG_BCMARM && TCONFIG_USB && TCONFIG_HFS && TCONFIG_TUXERA
 	default n
 
-config TCONFIG_NVRAM_64K
-	bool "NVRAM_64K"
-	default n
-
-config TCONFIG_STUBBY
-	bool "  Stubby - DNS-over-TLS resolver"
-	default n
-
-config TCONFIG_TOR
-	bool "  TOR Project"
-	default n
-
-config TCONFIG_IPSEC
-	bool "IPSec Support"
-	default n
-
-config TCONFIG_RAID
-	bool "RAID Support: mdadm plus md modules"
+config TCONFIG_UPS
+	bool "UPS Monitor"
+	depends on TCONFIG_USB
 	default n
 
 config TCONFIG_MICROSD
 	bool "Support SD card (RT-N66u only)"
-	depends on TCONFIG_USB
+	depends on TCONFIG_USB && (TCONFIG_MIPS_RTN || TCONFIG_MIPS_RTAC)
+	default n
+
+config TCONFIG_SDHC
+	bool "SDHC/MMC mod for WRT54G/GL"
+	depends on TCONFIG_MIPS_RT
 	default n
 
 config TCONFIG_USBAP
@@ -199,74 +406,33 @@ config TCONFIG_REMOVE_USBAPP
 	depends on TCONFIG_USBAP
 	default n
 
-config TCONFIG_AC66U
-	bool "Flag to distinguish RT-AC66U from RT-N66U"
+config TCONFIG_NFS
+	bool "NFS Server"
 	default n
 
-config TCONFIG_R6300V1
-	bool "Flag to distinguish Netgear R6300 v1 from WNDR4500 v1 and WNDR4500 v2"
+config TCONFIG_RAID
+	bool "RAID Support: mdadm plus md modules"
 	default n
 
-config TCONFIG_WNDR4500V1
-	bool "Flag to distinguish Netgear WNDR4500 v1 from R6300 v1 and WNDR4500 v2"
+endmenu
+
+menu "Applications and utilities"
+
+config TCONFIG_BT
+	bool "Bittorrent client gui only"
 	default n
 
-config TCONFIG_WNDR4500V2
-	bool "Flag to distinguish Netgear WNDR4500 v2 from R6300 v1 and WNDR4500 v1"
+config TCONFIG_BBT
+	bool "Bittorrent client binaries only"
 	default n
 
-config TCONFIG_AIO
-	bool "Flag to detect AIO target"
+config TCONFIG_TR_EXTRAS
+	bool "Transmission extra tools"
 	default n
+	depends on TCONFIG_BBT
 
-config TCONFIG_CTF
-	bool "CTF (Cut-Through Forwarding)"
-	default n
-
-config TCONFIG_BCMNAT
-	bool "Broadcom FastNAT (bcm_nat)"
-	default n
-
-config TCONFIG_NAND
-	bool "NAND flash support"
-	default n
-
-config TCONFIG_UFSD
-	bool "Paragon NTFS driver for Asus routers"
-	default n
-
-config TCONFIG_BCMARM
-	bool "Bcm Arm"
-	default n
-
-config TCONFIG_ROAM
-	bool "WL roaming assistant (RSSI)"
-	default n
-
-config TCONFIG_DNSSEC
-	bool "DNSSEC"
-	default n
-
-config TCONFIG_TINC
-	bool "TINC"
-	default n
-
-config TCONFIG_OPENSSL30
-	bool "OpenSSL 3.0.x"
-	default n
-
-config TCONFIG_OPENSSL11
-	bool "OpenSSL 1.1.x"
-	depends on !TCONFIG_OPENSSL30
-	default n
-
-config TCONFIG_WOLFSSL
-	bool "WolfSSL"
-	default n
-
-config TCONFIG_WOLFSSLMIN
-	bool "WolfSSL (lean version)"
-	depends on TCONFIG_WOLFSSL
+config TCONFIG_NANO
+	bool "NANO - user-friendly file editor"
 	default n
 
 config TCONFIG_IPERF
@@ -277,10 +443,6 @@ config TCONFIG_QRCODE
 	bool "WiFi QR Code generator"
 	default n
 
-config TCONFIG_KEYGEN
-	bool "TLS keys generator in GUI for VPN Server"
-	default n
-
 config TCONFIG_TERMLIB
 	bool "Termlib based tools-shell.asp"
 	default n
@@ -289,42 +451,111 @@ config TCONFIG_ADVTHEMES
 	bool "Advanced Themes similar to AdvancedTomato"
 	default n
 
+config TCONFIG_FANCTRL
+	bool "FANCTRL"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_IRQBALANCE
+	bool "irqbalance Tool"
+	depends on TCONFIG_BCMARM
+	default n
+
+endmenu
+
+menu "Broadcom wireless and hardware"
+
+choice
+	prompt "MIPS RT-AC model discriminator"
+	depends on TCONFIG_MIPS_RTAC
+	optional
+
+config TCONFIG_AC66U
+	bool "Flag to distinguish RT-AC66U from RT-N66U"
+
+config TCONFIG_R6300V1
+	bool "Flag to distinguish Netgear R6300 v1 from WNDR4500 v1 and WNDR4500 v2"
+
+config TCONFIG_WNDR4500V1
+	bool "Flag to distinguish Netgear WNDR4500 v1 from R6300 v1 and WNDR4500 v2"
+
+config TCONFIG_WNDR4500V2
+	bool "Flag to distinguish Netgear WNDR4500 v2 from R6300 v1 and WNDR4500 v1"
+
+endchoice
+
+config TCONFIG_AC3200
+	bool "Tri-Band router (AC3200 or more)"
+	depends on TCONFIG_BCM7
+	default n
+
+config TCONFIG_AC5300
+	bool "Tri-Band router SDK 7.14 (AC5300)"
+	depends on TCONFIG_BCM714
+	select TCONFIG_AC3200
+	default n
+
+config TCONFIG_DHDAP
+	def_bool TCONFIG_BCM7
+
+config TCONFIG_GMAC3
+	def_bool TCONFIG_BCM7
+
+config TCONFIG_PROXYSTA
+	bool "Proxy STA"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_DPSTA
+	bool "Broadcom dpsta"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_GROCTRL
+	bool "GRO Control"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_BCMFA
+	bool "BCM FA"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_5301X
+	bool "BCM 5301x"
+	depends on TCONFIG_BCM7
+	default n
+
+config TCONFIG_BCMDCS
+	bool "Broadcom Dynamic Channel Selection"
+	depends on TCONFIG_BCM7
+	default n
+
+config TCONFIG_TRAFFIC_MGMT_RSSI_POLICY
+	bool "Traffic Management RSSI policy"
+	depends on TCONFIG_BCM7
+	default n
+
+config TCONFIG_TOAD
+	bool "Traffic Ordering Agent Daemon"
+	depends on TCONFIG_BCM7
+	default n
+
+config TCONFIG_BCMBSD
+	bool "Brcm Band Steer Selection"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_ROAM
+	bool "WL roaming assistant (RSSI)"
+	default n
+
 config TCONFIG_BLINK
-	bool "wireless lan LED blink & bridge LED status (on or off) - for RT-N and RT-AC branch"
-	default y
-
-config TCONFIG_NVRAM_32K
-	bool "NVRAM_32K"
-	default n
-
-config TCONFIG_OPTIMIZE_SIZE
-	bool "Flag to detect small targets used for size optimization"
-	default y
-
-config TCONFIG_OPTIMIZE_SIZE_MORE
-	bool "Flag to optimize code even more"
-	default n
-
-config TCONFIG_BONDING
-	bool "Include bonding module and link aggregation script"
-	default n
-
-config TCONFIG_MDNS
-	bool "MDNS Support"
-	default n
-
-config TCONFIG_BCMWL6
-	bool "BCM WL 6"
-	default n
-
-config TCONFIG_PROXY
-	bool "udpxy and igmpproxy"
-	default n
-
-config TCONFIG_HAVEGED
-	bool "Haveged, an entrophy daemon"
-	default n
+	def_bool TCONFIG_MIPS_RTN || TCONFIG_MIPS_RTAC
 
 config TCONFIG_EXTSW
 	bool "Add RTL8365MB switch support (RT-AC88U)"
+	depends on TCONFIG_BCM714
 	default n
+
+endmenu

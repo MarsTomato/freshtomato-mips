@@ -79,15 +79,13 @@ int get_sta_wan_prefix(char *sPrefix, const size_t buf_sz)
 	char tmp[32];
 	int found = 0;
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
-		mwan_num = 1;
+	mwan_num = mwan_active_num();
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		memset(prefix, 0, sizeof(prefix));
 		get_wan_prefix(wan_unit, prefix);
 
-		if (strcmp(nvram_safe_get(strlcat_r(prefix, "_sta", tmp, sizeof(tmp))), "")) {
+		if (*wan_nvram_get(wan_unit, "sta", tmp, sizeof(tmp))) {
 			found = 1;
 			break;
 		}
@@ -113,16 +111,16 @@ void get_wan_info(char *sPrefix)
 	switch (proto) {
 		case WP_L2TP:
 		case WP_PPTP:
-			strlcpy(wan_info.wan_ipaddr, nvram_safe_get(strlcat_r(sPrefix, "_ppp_get_ip", tmp, sizeof(tmp))), sizeof(wan_info.wan_ipaddr));
+			strlcpy(wan_info.wan_ipaddr, prefix_nvram_get(sPrefix, "ppp_get_ip", tmp, sizeof(tmp)), sizeof(wan_info.wan_ipaddr));
 			break;
 		case WP_PPPOE:
 			if (using_dhcpc(sPrefix))
-				strlcpy(wan_info.wan_ipaddr, nvram_safe_get(strlcat_r(sPrefix, "_ppp_get_ip", tmp, sizeof(tmp))), sizeof(wan_info.wan_ipaddr));
+				strlcpy(wan_info.wan_ipaddr, prefix_nvram_get(sPrefix, "ppp_get_ip", tmp, sizeof(tmp)), sizeof(wan_info.wan_ipaddr));
 			else
-				strlcpy(wan_info.wan_ipaddr, nvram_safe_get(strlcat_r(sPrefix, "_ipaddr", tmp, sizeof(tmp))), sizeof(wan_info.wan_ipaddr));
+				strlcpy(wan_info.wan_ipaddr, prefix_nvram_get(sPrefix, "ipaddr", tmp, sizeof(tmp)), sizeof(wan_info.wan_ipaddr));
 			break;
 		default:
-			strlcpy(wan_info.wan_ipaddr, nvram_safe_get(strlcat_r(sPrefix, "_ipaddr", tmp, sizeof(tmp))), sizeof(wan_info.wan_ipaddr));
+			strlcpy(wan_info.wan_ipaddr, prefix_nvram_get(sPrefix, "ipaddr", tmp, sizeof(tmp)), sizeof(wan_info.wan_ipaddr));
 			break;
 	}
 
@@ -130,7 +128,7 @@ void get_wan_info(char *sPrefix)
 	if ((proto == WP_L2TP) || (proto == WP_PPTP) || (proto == WP_PPPOE) || (proto == WP_PPP3G))
 		strlcpy(wan_info.wan_netmask, "255.255.255.255", sizeof(wan_info.wan_netmask));
 	else
-		strlcpy(wan_info.wan_netmask, nvram_safe_get(strlcat_r(sPrefix, "_netmask", tmp, sizeof(tmp))), sizeof(wan_info.wan_netmask));
+		strlcpy(wan_info.wan_netmask, prefix_nvram_get(sPrefix, "netmask", tmp, sizeof(tmp)), sizeof(wan_info.wan_netmask));
 
 	/* WAN gateway */
 	strlcpy(wan_info.wan_gateway, wan_gateway(sPrefix), sizeof(wan_info.wan_gateway));
@@ -139,7 +137,7 @@ void get_wan_info(char *sPrefix)
 	wan_info.dns = get_dns(sPrefix); /* static buffer */
 
 	/* WAN weight */
-	wan_info.wan_weight = atoi(nvram_safe_get(strlcat_r(sPrefix, "_weight", tmp, sizeof(tmp))));
+	wan_info.wan_weight = atoi(prefix_nvram_get(sPrefix, "weight", tmp, sizeof(tmp)));
 
 	logmsg(LOG_DEBUG, "*** %s: PREFIX=[%s], wan_name=[%s] wan_ipaddr=[%s] wan_netmask=[%s] wan_gateway=[%s] wan_weight=[%d]", __FUNCTION__, sPrefix, wan_info.wan_name, wan_info.wan_ipaddr, wan_info.wan_netmask, wan_info.wan_gateway, wan_info.wan_weight);
 }
@@ -235,8 +233,8 @@ void mwan_table_add(char *sPrefix)
 	/* delete already existed table first */
 	mwan_table_del(sPrefix);
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
+	mwan_num = mwan_active_num();
+	if (mwan_num <= 1)
 		return;
 
 	wan_unit = get_wan_unit(sPrefix);
@@ -278,12 +276,9 @@ void mwan_table_add(char *sPrefix)
 
 		/* ip route add 192.168.1.0/24 dev br0 proto kernel scope link  src 192.168.1.1  table 2 */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			snprintf(nvram_var, sizeof(nvram_var), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-			lan_ifname = nvram_safe_get(nvram_var);
-			snprintf(nvram_var, sizeof(nvram_var), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-			lan_ipaddr = nvram_safe_get(nvram_var);
-			snprintf(nvram_var, sizeof(nvram_var), (i == 0 ? "lan_netmask" : "lan%d_netmask"), i);
-			lan_netmask = nvram_safe_get(nvram_var);
+			lan_ifname = bridge_nvram_get(i, "ifname", nvram_var, sizeof(nvram_var));
+			lan_ipaddr = bridge_nvram_get(i, "ipaddr", nvram_var, sizeof(nvram_var));
+			lan_netmask = bridge_nvram_get(i, "netmask", nvram_var, sizeof(nvram_var));
 
 			if ((lan_ifname[0] == '\0') || (lan_ipaddr[0] == '\0') || (lan_netmask[0] == '\0'))
 				continue;
@@ -312,8 +307,8 @@ void mwan_state_files(void)
 	char tmp[64];
 	FILE *f;
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
+	mwan_num = mwan_active_num();
+	if (mwan_num <= 1)
 		return;
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
@@ -339,8 +334,10 @@ void mwan_status_update(void)
 	unsigned int i;
 	char prefix[16];
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
+	mwan_num = mwan_active_num();
+	memset(mwan_curr, '0', MWAN_MAX);
+
+	if (mwan_num <= 1)
 		return;
 
 	logmsg(LOG_DEBUG, "*** %s: IN, mwan_curr=%s", __FUNCTION__, mwan_curr);
@@ -359,7 +356,7 @@ void mwan_status_update(void)
 			mwan_curr[wan_unit - 1] = '0'; /* disconnected */
 	}
 
-	for (i = 1; i <= MWAN_MAX; i++) { /* let's stick to our iteration (1 ---> <= MWAN_MAX) */
+	for (i = 1; i <= (unsigned int)mwan_num; i++) {
 		if (mwan_curr[i - 1] >= '2') {
 			allwan_down = 0;
 			break;
@@ -401,8 +398,8 @@ void mwan_load_balance(void)
 	char *lb_argv[8 + (MWAN_MAX * 8)];
 	unsigned int i;
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
+	mwan_num = mwan_active_num();
+	if (mwan_num <= 1)
 		return;
 
 	logmsg(LOG_DEBUG, "*** %s: IN, mwan_curr=%s", __FUNCTION__, mwan_curr);
@@ -451,7 +448,7 @@ void mwan_load_balance(void)
 	}
 
 	/* check if all down */
-	for (i = 1; i <= MWAN_MAX; i++) { /* let's stick to our iteration (1 ---> <= MWAN_MAX) */
+	for (i = 1; i <= (unsigned int)mwan_num; i++) {
 		if (mwan_curr[i - 1] != '0') {
 			not_allwan_down = 1;
 			break;
@@ -530,13 +527,13 @@ int mwan_route_main(int argc, char **argv)
 		fclose(fp);
 	}
 
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
+	mwan_num = mwan_active_num();
+	if (mwan_num <= 1)
 		return 0;
 
 	logmsg(LOG_DEBUG, "*** %s: MWAN: mwanroute launched", __FUNCTION__);
 
-	while(1) {
+	while (mwan_active_num() > 1) {
 		mwan_status_update();
 
 		if (strcmp(mwan_last, mwan_curr)) {
@@ -549,4 +546,6 @@ int mwan_route_main(int argc, char **argv)
 		strlcpy(mwan_last, mwan_curr, sizeof(mwan_last));
 		sleep(check_time);
 	}
+
+	return 0;
 }

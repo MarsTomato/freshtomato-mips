@@ -119,7 +119,9 @@ const aspapi_t aspapi[] = {
 	{ "dns",			asp_dns				},
 	{ "ident",			asp_ident			},
 	{ "lanip",			asp_lanip			},
+#ifdef TCONFIG_L7
 	{ "layer7",			asp_layer7			},
+#endif
 	{ "link_uptime",		asp_link_uptime			},
 	{ "netdev",			asp_netdev			},
 
@@ -573,6 +575,7 @@ static const nvset_t nvset_list[] = {
 
 	{ "lan_state",			V_01				},
 	{ "lan_desc",			V_01				},
+	{ "eth_desc",			V_LENGTH(0, 120)		},
 	{ "lan_invert",			V_01				},
 	{ "lan_dhcp",			V_01				},	/* DHCP client [0|1] - obtain a LAN (br0) IP via DHCP */
 	{ "lan_proto",			V_WORD				},	/* static, dhcp */
@@ -630,7 +633,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_key4",			V_LENGTH(0, 26)			},
 	{ "wl_crypto",			V_LENGTH(3, 8)			},	/* tkip, aes, tkip+aes */
 	{ "wl_wpa_psk",			V_LENGTH(8, 64)			},
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "wl_wpa_gtk_rekey",		V_RANGE(0, 2592000)		},	/* 0 - disabled; range 1 sec up to 30 days (2592000 sec) */
 #else
 	{ "wl_wpa_gtk_rekey",		V_RANGE(60, 7200)		},	/* keep good old range for K26 (SDK5.10) */
@@ -667,7 +670,7 @@ static const nvset_t nvset_list[] = {
 /* basic-ipv6 */
 #ifdef TCONFIG_IPV6
 	{ "ipv6_service",		V_LENGTH(0, 16)			},	/* '', native, native-pd, 6to4, sit, other */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "ipv6_debug",			V_01				},	/* enable/show debug infos */
 #endif
 	{ "ipv6_duid_type",		V_RANGE(1, 4)			},	/* see RFC8415 Section 11; DUID-LLT = 1, DUID-EN = 2, DUID-LL = 3, DUID-UUID = 4 */
@@ -716,7 +719,9 @@ static const nvset_t nvset_list[] = {
 	{ "ct_udp_timeout",		V_LENGTH(5, 15)			},
 	{ "ct_timeout",			V_LENGTH(5, 15)			},
 	{ "nf_ttl",			V_LENGTH(1, 6)			},
+#ifdef TCONFIG_L7
 	{ "nf_l7in",			V_01				},
+#endif
 	{ "nf_sip",			V_01				},
 	{ "ct_hashsize",		V_NUM				},
 	{ "nf_rtsp",			V_01				},
@@ -782,6 +787,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan_dhcp_pass",		V_01				},
 	{ "ipsec_pass",			V_RANGE(0, 3)			},	/* Enable IPSec Passthrough */
 	{ "fw_blackhole",		V_01				},	/* MTU black hole detection */
+	{ "tcp_clamp_disable",		V_01				},	/* Adjust TCP MSS for forwarded traffic on WAN and VPN interfaces to avoid MTU-related connection issues. */
 #ifdef TCONFIG_EMF
 	{ "emf_entry",			V_NONE				},
 	{ "emf_uffp_entry",		V_NONE				},
@@ -790,7 +796,7 @@ static const nvset_t nvset_list[] = {
 #endif
 
 /* advanced-adblock */
-#ifdef TCONFIG_HTTPS
+#ifdef TCONFIG_ADBLOCK
 	{ "adblock_enable",		V_01				},
 	{ "adblock_blacklist",		V_LENGTH(0, 4096)		},
 	{ "adblock_blacklist_custom",	V_LENGTH(0, 4096)		},
@@ -798,7 +804,7 @@ static const nvset_t nvset_list[] = {
 	{ "adblock_logs",		V_RANGE(0, 7)			},
 	{ "adblock_limit",		V_LENGTH(0, 32)			},
 	{ "adblock_path",		V_LENGTH(0, 64)			},
-#endif
+#endif /* TCONFIG_ADBLOCK */
 
 /* advanced-misc */
 #ifdef TCONFIG_BCMARM
@@ -884,7 +890,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan_mac",			V_LENGTH(0, 17)			},
 	{ "wl_macaddr",			V_LENGTH(0, 17)			},
 	{ "wl_hwaddr",			V_LENGTH(0, 17)			},
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	{ "wl_clap_hwaddr",		V_LENGTH(0, 17)			},	/* ap mac addr for the FT client (sta/psta/wet) to connect to (default "empty" / not needed) */
 #endif
 
@@ -998,11 +1004,16 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wmf_bss_enable",		V_01				},	/* Wireless Multicast Forwarding Enable/Disable */
 #endif /* TCONFIG_BCMARM */
 
+#ifdef TCONFIG_DMZ
 /* forward-dmz */
 	{ "dmz_enable",			V_01				},
 	{ "dmz_ipaddr",			V_LENGTH(0, 15)			},
+#ifdef TCONFIG_DMZMAC
+	{ "dmz_macaddr",		V_LENGTH(0, 17)			},
+#endif
 	{ "dmz_sip",			V_LENGTH(0, 512)		},
 	{ "dmz_ra",			V_01				},
+#endif /* TCONFIG_DMZ */
 
 /* forward-upnp */
 	{ "upnp_enable",		V_NUM				},
@@ -1345,6 +1356,7 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_BCMARM
 	{ "qos_pfifo",			V_NUM				},
 	{ "qos_classify",		V_01				},
+	{ "qos_stats",			V_01				},
 	{ "qos_cake_prio_mode",		V_NUM				},
 	{ "qos_cake_wash",		V_01				},
 #else
@@ -1558,6 +1570,7 @@ static const nvset_t nvset_list[] = {
 	{ "tor_socksport",		V_RANGE(1, 65535)		},
 	{ "tor_transport",		V_RANGE(1, 65535)		},
 	{ "tor_dnsport",		V_RANGE(1, 65535)		},
+	{ "tor_ctrlport",		V_RANGE(1, 65535)		},
 	{ "tor_datadir",		V_TEXT(0, 24)			},
 	{ "tor_iface",			V_LENGTH(0, 50)			},
 	{ "tor_users",			V_LENGTH(0, 4096)		},
@@ -2024,57 +2037,45 @@ static void asp_css(int argc, char **argv)
 #if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
 static void asp_discovery(int argc, char **argv)
 {
-	char buf[128] = "/usr/sbin/discovery.sh ";
-	unsigned int i;
+	char *cmd[6];
+	const char *p;
+	int n, is_number;
 
 	if (argc == 0 || (argc == 1 && strcmp(argv[0], "off") == 0))
 		return;
 
-	/* include 'arping' as a valid command */
-	const char* valid_commands[] = {"arping", "traceroute", "nc", "all"};
-	int valid_command = 0;
-
-	for (i = 0; i < sizeof(valid_commands)/sizeof(valid_commands[0]); i++) {
-		if (strcmp(argv[0], valid_commands[i]) == 0) {
-			valid_command = 1;
-			strlcat(buf, argv[0], sizeof(buf));
-			break;
-		}
-	}
-
-	if (!valid_command) {
+	if (strcmp(argv[0], "arping") != 0 && strcmp(argv[0], "traceroute") != 0 && strcmp(argv[0], "nc") != 0 && strcmp(argv[0], "all") != 0) {
 		fprintf(stderr, "Invalid discovery command: %s\n", argv[0]);
 		return;
 	}
 
+	n = 0;
+	cmd[n++] = "/usr/sbin/discovery.sh";
+	cmd[n++] = argv[0];
+
 	/* append target (wan/lan/both) */
-	if (argc > 1) {
-		const char *target = argv[1];
-		if (strcmp(target, "lan") == 0 || strcmp(target, "wan") == 0 || strcmp(target, "both") == 0) {
-			strlcat(buf, " ", sizeof(buf));
-			strlcat(buf, target, sizeof(buf));
-		}
-	}
+	if (argc > 1 && (strcmp(argv[1], "lan") == 0 || strcmp(argv[1], "wan") == 0 || strcmp(argv[1], "both") == 0))
+		cmd[n++] = argv[1];
 
 	/* append 'clear' flag */
-	if (argc > 2 && strcmp(argv[2], "clear") == 0) {
-		strlcat(buf, " clear", sizeof(buf));
-	}
+	if (argc > 2 && strcmp(argv[2], "clear") == 0)
+		cmd[n++] = argv[2];
 
 	/* append probe limit (numeric) */
-	if (argc > 3) {
-		int is_number = 1;
-		const char *p;
+	if (argc > 3 && *argv[3]) {
+		is_number = 1;
 		for (p = argv[3]; *p; ++p) {
-			if (!isdigit(*p)) {
+			if (!isdigit((unsigned char)*p)) {
 				is_number = 0;
 				break;
 			}
 		}
 		if (is_number)
-			snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), " %s", argv[3]);
+			cmd[n++] = argv[3];
 	}
-	system(buf);
+
+	cmd[n] = NULL;
+	_eval(cmd, NULL, 0, NULL);
 }
 #endif
 

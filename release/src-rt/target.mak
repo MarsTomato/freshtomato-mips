@@ -1,4 +1,6 @@
 export LINUXDIR := $(SRCBASE)/linux/linux-2.6
+export TARGET_PLATFORM := MIPS
+export TARGET_VARIANT := RTN
 
 EXTRA_CFLAGS := -DLINUX26 -DCONFIG_BCMWL5 -pipe
 

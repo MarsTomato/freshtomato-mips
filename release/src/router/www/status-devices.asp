@@ -156,7 +156,7 @@ dg.populate = function() {
 	}
 
 	/* special case: pppoe/pptp/l2tp WAN */
-	for (i = MAX_PORT_ID; i >= 1; --i) {
+	for (i = MAXWAN_NUM; i >= 1; --i) {
 		k = (i == 1) ? '' : i.toString();
 		var proto = nvram['wan'+k+'_proto'];
 		if ((proto == 'pppoe' || proto == 'pptp' || proto == 'l2tp') && nvram['wan'+k+'_hwaddr']) {
@@ -280,7 +280,7 @@ dg.populate = function() {
 		for (j = c.length - 1; j >= 0; --j) {
 			if ((e = find(c[j], a[1])) == null) {
 				/* special case for gateway */
-				for (l = 1; l <= MAX_PORT_ID; l++) {
+				for (l = 1; l <= MAXWAN_NUM; l++) {
 					k = (l == 1) ? '' : l.toString();
 					wan_gw = nvram['wan'+k+'_gateway'];
 					if (wan_gw != '' && wan_gw != '0.0.0.0' && (e = find(c[j], null)) != null && e.ip != '' && lanip.indexOf(e.ip.substr(0, e.ip.lastIndexOf('.'))) == -1) {
@@ -349,7 +349,7 @@ dg.populate = function() {
 		}
 
 		/* find WANx, proto */
-		for (j = 1; j <= MAX_PORT_ID; j++) {
+		for (j = 1; j <= MAXWAN_NUM; j++) {
 			k = (j == 1) ? '' : j.toString();
 			if (((nvram['wan'+k+'_ifname'] == e.ifname) || (nvram['wan'+k+'_ifnameX'] == e.ifname) || (nvram['wan'+k+'_iface'] == e.ifname)) && e.ifname != '' && nvram['wan'+k+'_hwaddr'] != '') {
 				e.wan = 'WAN'+(j ? (j - 1) : '0')+' ';
@@ -397,8 +397,11 @@ dg.populate = function() {
 		e = list[i];
 
 		if ((e.mac.match(/^(..):(..):(..)/)) && e.proto != 'pppoe' && e.proto != 'pptp' && e.proto != 'l2tp') {
-			b = '<a href="javascript:searchOUI(\''+RegExp.$1+'-'+RegExp.$2+'-'+RegExp.$3+'\','+i+')" title="OUI Search">'+e.mac+'<\/a><div style="display:none" id="gW_'+i+'">&nbsp; <img src="spin.svg" alt="" style="vertical-align:middle"><\/div>'+
-			    '<br><small class="pics">'+
+			b = e.mac;
+/* OUI-BEGIN */
+			b = '<a href="javascript:searchOUI(\''+RegExp.$1+'-'+RegExp.$2+'-'+RegExp.$3+'\','+i+')" title="OUI Search">'+e.mac+'<\/a><div style="display:none" id="gW_'+i+'">&nbsp; <img src="spin.svg" alt="" style="vertical-align:middle"><\/div>';
+/* OUI-END */
+			b += '<br><small class="pics">'+
 			    '<a href="javascript:addStatic('+i+')" title="DHCP Reservation">[DR]<\/a> '+
 			    '<a href="javascript:addbwlimit('+i+')" title="BW Limiter">[BWL]<\/a> '+
 			    '<a href="javascript:addRestrict('+i+')" title="Access Restriction">[AR]<\/a>';
@@ -792,9 +795,7 @@ function earlyInit() {
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-	toggleVisibility(cprefix, 'notes');
+	restoreVisibility(cprefix, 'notes');
 	dg.recolor();
 
 	ref.initPage(3000, 3);
@@ -853,7 +854,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 <b>Device List</b>
 <ul>

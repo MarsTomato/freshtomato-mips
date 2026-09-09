@@ -1,6 +1,12 @@
+version 2.94
+	Record that CVE-2026-12969 has been allocated to the
+	buffer OOB read in find_soa() which is fixed in git commit
+	14094e88beca519c53151184cc4553656672b54f, released at 2.93.
+	Thanks to do litli for spotting this.
+	
 version 2.93
 	Fix a corner-case in DNSSEC validation with wildcards. If we have
-	a wildcard record *.example.com and recieve a query for
+	a wildcard record *.example.com and receive a query for
 	a.example.com then that's OK, but we have to check that there isn't
 	an actual a.example.com record. The corner case is when we get a
 	query for *.example.com in that case the non-existence check
@@ -19,7 +25,7 @@ version 2.93
 	(eg rivcoed.org) will still fail. Thanks to Petr Menšík
 	for the bug report.
 
-	Fix DNSSEC fail with CNAME replies to DS queries. As CNAME reply
+	Fix DNSSEC fail with CNAME replies to DS queries. A CNAME reply
 	to a DNSSEC query was confusing the validation logic. It now
 	accepts a signed CNAME reply to a DS query as proof that no DS
 	exists at the domain. This fixes the DS/zone break detection logic.

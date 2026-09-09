@@ -1,6 +1,6 @@
 --- libubox/usock.c
 +++ libubox/usock.c
-@@ -186,7 +186,7 @@
+@@ -200,7 +200,7 @@
  {
  	int socktype = ((type & 0xff) == USOCK_TCP) ? SOCK_STREAM : SOCK_DGRAM;
  	bool server = !!(type & USOCK_SERVER);

@@ -855,6 +855,10 @@ ngx_http_charset_recode_from_utf8(ngx_pool_t *pool, ngx_buf_t *buf,
         ngx_log_debug0(NGX_LOG_DEBUG_HTTP, pool->log, 0,
                        "http charset invalid utf 1");
 
+        if (saved < &ctx->saved[ctx->saved_len]) {
+            saved = &ctx->saved[ctx->saved_len];
+        }
+
     } else {
         dst = ngx_sprintf(dst, "&#%uD;", n);
     }
@@ -1190,6 +1194,13 @@ ngx_http_charset_map_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                            "\"charset_map\" between the same charsets "
                            "\"%V\" and \"%V\"", &value[1], &value[2]);
+        return NGX_CONF_ERROR;
+    }
+
+    if (ngx_strcasecmp(value[1].data, (u_char *) "utf-8") == 0) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "\"charset_map\" with \"utf-8\" charset "
+                           "should be given in the second column");
         return NGX_CONF_ERROR;
     }
 

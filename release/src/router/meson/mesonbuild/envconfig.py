@@ -267,8 +267,8 @@ class Properties:
 @dataclass(unsafe_hash=True)
 class MachineInfo(HoldableObject):
     system: str
-    cpu_family: str
-    cpu: str
+    cpu_family: str | None
+    cpu: str | None
     endian: str
     kernel: T.Optional[str]
     subsystem: T.Optional[str]
@@ -344,6 +344,17 @@ class MachineInfo(HoldableObject):
         """
         return self.system == 'android'
 
+    def is_ohos(self) -> bool:
+        """
+        Machine is OpenHarmony (OHOS)?
+
+        OHOS is modelled as an Android subsystem: it behaves like Android
+        (apps are shared libraries, no versioned sonames, ...) but uses musl
+        instead of Bionic. Machine files select it with system = 'android'
+        and subsystem = 'ohos'.
+        """
+        return self.is_android() and self.subsystem == 'ohos'
+
     def is_haiku(self) -> bool:
         """
         Machine is Haiku?
@@ -395,6 +406,9 @@ class MachineInfo(HoldableObject):
         Machine is OS/2?
         """
         return self.system == 'os/2'
+
+    def is_fuchsia(self) -> bool:
+        return self.system == 'fuchsia'
 
     # Various prefixes and suffixes for import libraries, shared libraries,
     # static libraries, and executables.
@@ -523,6 +537,7 @@ KERNEL_MAPPINGS: T.Mapping[str, str] = {'freebsd': 'freebsd',
                                         'dragonfly': 'dragonfly',
                                         'haiku': 'haiku',
                                         'gnu': 'gnu',
+                                        'fuchsia': 'fuchsia',
                                         }
 
 def detect_windows_arch(compilers: CompilerDict) -> str:
@@ -754,7 +769,7 @@ def machine_info_can_run(machine_info: MachineInfo) -> bool:
     system = detect_system()
     if machine_info.system != system:
         return False
-    if machine_info.subsystem != detect_subsystem(system):
+    if machine_info.subsystem and machine_info.subsystem != detect_subsystem(system):
         return False
     true_build_cpu_family = detect_cpu_family({})
     assert machine_info.cpu_family is not None, 'called on incomplete machine_info'

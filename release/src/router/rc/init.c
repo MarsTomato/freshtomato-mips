@@ -19,6 +19,7 @@
 
 
 #include "rc.h"
+#include <defaults.h>
 #ifdef TCONFIG_AC3200
 #include "shared.h"
 #endif
@@ -39,7 +40,7 @@
 #include <sys/sysinfo.h>
 #include <wlutils.h>
 #include <bcmdevs.h>
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 #include <bcmparams.h>
 #endif
 
@@ -53,9 +54,6 @@
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
 #define LOGMSG_NVDEBUG	"init_debug"
 
-#ifdef TCONFIG_BCMARM
-extern struct nvram_tuple router_defaults[];
-#endif /* TCONFIG_BCMARM */
 int restore_defaults_fb = 0;
 
 
@@ -95,7 +93,7 @@ static void restore_defaults(void)
 	struct nvram_tuple *t;
 #endif
 	int restore_defaults = 0;
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	struct sysinfo info;
 #endif
 
@@ -122,7 +120,7 @@ static void restore_defaults(void)
 	nvram_set("os_version", tomato_version);
 	nvram_set("os_date", tomato_buildtime);
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	/* Adjust et and wl thresh value after reset (for wifi-driver and et_linux.c) */
 	if (restore_defaults) {
 		memset(&info, 0, sizeof(struct sysinfo));
@@ -150,10 +148,10 @@ static void restore_defaults(void)
 #endif
 		}
 	}
-#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+#endif /* TCONFIG_RTNPLUS */
 }
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 static void set_defaults(struct nvram_tuple *t, char *strprefix)
 {
 	char buf[256];
@@ -165,21 +163,20 @@ static void set_defaults(struct nvram_tuple *t, char *strprefix)
 		if ((!strprefix) || (!(*strprefix)))
 			nvram_set(t->name, t->value);
 		else {
-			memset(buf, 0, sizeof(buf));
 			snprintf(buf, sizeof(buf), strprefix, t->name);
 			nvram_set(buf, t->value);
 		}
 		t++;
 	}
 }
-#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+#endif /* TCONFIG_RTNPLUS */
 
 #ifdef CONFIG_BCMWL6A
 /* assign none-exist value */
 void wl_defaults(void)
 {
 	struct nvram_tuple *t;
-	char prefix[]="wlXXXXXX_", tmp[100], tmp2[100];
+	char prefix[]="wlXXXXXXXXXX_", tmp[100], tmp2[100];
 	char word[256], *next;
 	int unit;
 	char wlx_vifnames[64], wl_vifnames[64], lan_ifnames[128];
@@ -686,12 +683,9 @@ static int wlshutdown_ethx_rtac5300(void)
 
 		/* 2 - check bridges and remove eth1 radio from the interface list */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+			get_bridge_nvram_key(i, "ifname", buffer, sizeof(buffer));
 			if (strcmp(nvram_safe_get(buffer), "") != 0) { /* check brX */
-				memset(buffer, 0, sizeof(buffer));
-				memset(tmp, 0, sizeof(tmp));
-				snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifnames" : "lan%d_ifnames"), i);
+				get_bridge_nvram_key(i, "ifnames", buffer, sizeof(buffer));
 				snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get(buffer));
 
 				if (!remove_from_list("eth1", tmp, sizeof(tmp))) {
@@ -703,7 +697,6 @@ static int wlshutdown_ethx_rtac5300(void)
 		}
 
 		/* 3 - adjust nvram wl_ifnames and remove eth1 radio from the interface list */
-		memset(tmp, 0, sizeof(tmp));
 		snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("wl_ifnames"));
 		remove_from_list("eth1", tmp, sizeof(tmp));
 		nvram_set("wl_ifnames", tmp); /* save wl_ifnames back to nvram without eth1 interface */
@@ -722,13 +715,11 @@ static int wlshutdown_ethx_rtac5300(void)
 			/* set devpath */
 			nvram_set("devpath0", "pcie/1/3/");
 
-			memset(tmp, 0, sizeof(tmp));
 			snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("lan_ifnames"));
 			add_to_list("eth1", tmp, sizeof(tmp));
 			/* Add wireless interface eth1 back to br0 (default) */
 			nvram_set("lan_ifnames", tmp);
 
-			memset(tmp, 0, sizeof(tmp));
 			snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("wl_ifnames"));
 			add_to_list("eth1", tmp, sizeof(tmp));
 			nvram_set("wl_ifnames", tmp); /* save wl_ifnames */
@@ -746,12 +737,9 @@ static int wlshutdown_ethx_rtac5300(void)
 
 		/* 2 - check bridges and remove eth2 radio from the interface list */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+			get_bridge_nvram_key(i, "ifname", buffer, sizeof(buffer));
 			if (strcmp(nvram_safe_get(buffer), "") != 0) { /* check brX */
-				memset(buffer, 0, sizeof(buffer));
-				memset(tmp, 0, sizeof(tmp));
-				snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifnames" : "lan%d_ifnames"), i);
+				get_bridge_nvram_key(i, "ifnames", buffer, sizeof(buffer));
 				snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get(buffer));
 
 				if (!remove_from_list("eth2", tmp, sizeof(tmp))) {
@@ -763,7 +751,6 @@ static int wlshutdown_ethx_rtac5300(void)
 		}
 
 		/* 3 - adjust nvram wl_ifnames and remove eth2 radio from the interface list */
-		memset(tmp, 0, sizeof(tmp));
 		snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("wl_ifnames"));
 		remove_from_list("eth2", tmp, sizeof(tmp));
 		nvram_set("wl_ifnames", tmp); /* save wl_ifnames back to nvram without eth2 interface */
@@ -781,13 +768,11 @@ static int wlshutdown_ethx_rtac5300(void)
 			/* set devpath */
 			nvram_set("devpath1", "pcie/1/4/");
 
-			memset(tmp, 0, sizeof(tmp));
 			snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("lan_ifnames"));
 			add_to_list("eth2", tmp, sizeof(tmp));
 			/* Add wireless interface eth2 back to br0 (default) */
 			nvram_set("lan_ifnames", tmp);
 
-			memset(tmp, 0, sizeof(tmp));
 			snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("wl_ifnames"));
 			add_to_list("eth2", tmp, sizeof(tmp));
 			nvram_set("wl_ifnames", tmp); /* save wl_ifnames */
@@ -804,12 +789,9 @@ static int wlshutdown_ethx_rtac5300(void)
 
 		/* 2 - check bridges and remove eth3 radio from the interface list */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+			get_bridge_nvram_key(i, "ifname", buffer, sizeof(buffer));
 			if (strcmp(nvram_safe_get(buffer), "") != 0) { /* check brX */
-				memset(buffer, 0, sizeof(buffer));
-				memset(tmp, 0, sizeof(tmp));
-				snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifnames" : "lan%d_ifnames"), i);
+				get_bridge_nvram_key(i, "ifnames", buffer, sizeof(buffer));
 				snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get(buffer));
 
 				if (!remove_from_list("eth3", tmp, sizeof(tmp))) {
@@ -821,7 +803,6 @@ static int wlshutdown_ethx_rtac5300(void)
 		}
 
 		/* 3 - adjust nvram wl_ifnames and remove eth3 radio from the interface list */
-		memset(tmp, 0, sizeof(tmp));
 		snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("wl_ifnames"));
 		remove_from_list("eth3", tmp, sizeof(tmp));
 		nvram_set("wl_ifnames", tmp); /* save wl_ifnames back to nvram without eth3 interface */
@@ -839,13 +820,11 @@ static int wlshutdown_ethx_rtac5300(void)
 			/* set devpath */
 			nvram_set("devpath2", "pcie/2/1/");
 
-			memset(tmp, 0, sizeof(tmp));
 			snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("lan_ifnames"));
 			add_to_list("eth3", tmp, sizeof(tmp));
 			/* Add wireless interface eth3 back to br0 (default) */
 			nvram_set("lan_ifnames", tmp);
 
-			memset(tmp, 0, sizeof(tmp));
 			snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("wl_ifnames"));
 			add_to_list("eth3", tmp, sizeof(tmp));
 			nvram_set("wl_ifnames", tmp); /* save wl_ifnames */
@@ -911,7 +890,7 @@ static int init_vlan_ports(void)
 	int dirty = 0;
 	int model = get_model();
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	char vlanports[] = "vlanXXXXports";
 	char vlanhw[] = "vlanXXXXhwname";
 	char vlanvid[] = "vlanXXXXvid";
@@ -938,18 +917,18 @@ static int init_vlan_ports(void)
 			}
 		}
 	}
-#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+#endif /* TCONFIG_RTNPLUS */
 
 	switch (model) {
 
 #ifndef CONFIG_BCMWL6A
 
-#if !defined(TCONFIG_BLINK) && !defined(TCONFIG_BCMARM) /* RT only */
+#ifndef TCONFIG_RTNPLUS /* RT only */
 	case MODEL_RTN12:
 		dirty |= check_nv("vlan0ports", "3 2 1 0 5*"); /* L1 L2 L3 L4 CPU */
 		dirty |= check_nv("vlan1ports", "4 5"); /* WAN CPU */
 		break;
-#endif /* !TCONFIG_BLINK && !TCONFIG_BCMARM */
+#endif /* !TCONFIG_RTNPLUS */
 	case MODEL_WRT54G:
 		switch (check_hw_type()) {
 		case HW_BCM5352E: /* G v4, GS v3, v4 */
@@ -1875,6 +1854,324 @@ REBOOT: /* do a simple reboot */
 	}
 }
 
+#ifdef CONFIG_BCMWL6A
+/*
+ * Set dual-band MAC defaults in the unit-based wireless NVRAM namespace.
+ * @param mac      caller scratch buffer; updated to the final 5 GHz MAC
+ * @param mac_len  size of the caller scratch buffer
+ * @return         none
+ */
+static void set_dualband_unit_mac_defaults(char *mac, size_t mac_len)
+{
+	strlcpy(mac, nvram_safe_get("et0macaddr"), mac_len);	/* get et0 MAC address for LAN */
+	inc_mac(mac, +2, mac_len);				/* MAC + 1 will be for WAN */
+	nvram_set("0:macaddr", mac);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
+	nvram_set("wl0_hwaddr", mac);
+	inc_mac(mac, +4, mac_len);				/* do not overlap with VIFs */
+	nvram_set("1:macaddr", mac);				/* fix WL mac for 5G */
+	nvram_set("wl1_hwaddr", mac);
+}
+#endif /* CONFIG_BCMWL6A */
+
+#if defined(CONFIG_BCMWL6A) || defined(TCONFIG_BLINK)
+/*
+ * Set dual-band MAC defaults in the PCI-path wireless NVRAM namespace.
+ * @param mac      caller scratch buffer; updated to the final 5 GHz MAC
+ * @param mac_len  size of the caller scratch buffer
+ * @return         none
+ */
+static void set_dualband_pci_mac_defaults(char *mac, size_t mac_len)
+{
+	strlcpy(mac, nvram_safe_get("et0macaddr"), mac_len);	/* get et0 MAC address for LAN */
+	inc_mac(mac, +2, mac_len);				/* MAC + 1 will be for WAN */
+	nvram_set("pci/1/1/macaddr", mac);			/* fix WL mac for 2,4G */
+	nvram_set("wl0_hwaddr", mac);
+	inc_mac(mac, +4, mac_len);				/* do not overlap with VIFs */
+	nvram_set("pci/2/1/macaddr", mac);			/* fix WL mac for 5G */
+	nvram_set("wl1_hwaddr", mac);
+}
+#endif /* CONFIG_BCMWL6A || TCONFIG_BLINK */
+
+/*
+ * Set the common dual-band wireless interface NVRAM mapping.
+ * @return  none
+ */
+static void set_dualband_wireless_ifnames(void)
+{
+	nvram_set("wl_ifnames", "eth1 eth2");
+	nvram_set("wl_ifname", "eth1");
+	nvram_set("wl0_ifname", "eth1");
+	nvram_set("wl1_ifname", "eth2");
+}
+
+#ifdef TCONFIG_AC3200
+/*
+ * Set the common LAN, WAN and wireless mappings used by tri-band models.
+ * @return  none
+ */
+static void set_triband_network_defaults(void)
+{
+	nvram_set("lan_ifname", "br0");
+	nvram_set("landevs", "vlan1 wl0 wl1 wl2");
+	nvram_set("lan_ifnames", "vlan1 eth2 eth1 eth3");
+	nvram_set("wan_ifnames", "vlan2");
+	nvram_set("wan_ifnameX", "vlan2");
+	nvram_set("wandevs", "vlan2");
+	nvram_set("wl_ifnames", "eth2 eth1 eth3");
+	nvram_set("wl_ifname", "eth2");
+	nvram_set("wl0_ifname", "eth2");
+	nvram_set("wl1_ifname", "eth1");
+	nvram_set("wl2_ifname", "eth3");
+	nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
+	nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+	nvram_set("wl2_vifnames", "wl2.1 wl2.2 wl2.3");
+}
+#endif /* TCONFIG_AC3200 */
+
+#if defined(CONFIG_BCMWL6A) || defined(TCONFIG_BLINK)
+/*
+ * Set the common LAN, WAN and wireless mappings used by dual-band models.
+ * @return  none
+ */
+static void set_base_dualband_network_defaults(void)
+{
+	nvram_set("vlan1hwname", "et0");
+	nvram_set("vlan2hwname", "et0");
+	nvram_set("lan_ifname", "br0");
+	nvram_set("landevs", "vlan1 wl0 wl1");
+	nvram_set("lan_ifnames", "vlan1 eth1 eth2");
+	nvram_set("wan_ifnames", "vlan2");
+	nvram_set("wan_ifnameX", "vlan2");
+	nvram_set("wandevs", "vlan2");
+	set_dualband_wireless_ifnames();
+}
+#endif /* CONFIG_BCMWL6A || TCONFIG_BLINK */
+
+#ifdef CONFIG_BCMWL6A
+/*
+ * Set the common LAN, WAN and wireless mappings used by dual-band WL6 models.
+ * @return  none
+ */
+static void set_dualband_network_defaults(void)
+{
+	set_base_dualband_network_defaults();
+	nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
+	nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+}
+#endif /* CONFIG_BCMWL6A */
+
+#ifdef CONFIG_BCMWL6A
+/*
+ * Set the common USB port map and boot defaults used by WL6 models.
+ * @return  none
+ */
+static void set_usb_boot_defaults(void)
+{
+	nvram_set("usb_usb3", "0");
+	nvram_set("xhci_ports", "1-1");
+	nvram_set("ehci_ports", "2-1 2-2");
+	nvram_set("ohci_ports", "3-1 3-2");
+	nvram_set("boot_wait", "on");
+	nvram_set("wait_time", "3");
+}
+#endif /* CONFIG_BCMWL6A */
+
+#if defined(CONFIG_BCMWL6A) || defined(CONFIG_BCMWL6)
+/*
+ * Set the common 2.4 GHz and 5 GHz channel/bandwidth defaults used by AC models.
+ * @return  none
+ */
+static void set_ac_wifi_channel_defaults(void)
+{
+	nvram_set("wl0_bw_cap", "3");
+	nvram_set("wl0_chanspec", "6u");
+	nvram_set("wl0_channel", "6");
+	nvram_set("wl0_nbw", "40");
+	nvram_set("wl0_nctrlsb", "upper");
+	nvram_set("wl1_bw_cap", "7");
+	nvram_set("wl1_chanspec", "36/80");
+	nvram_set("wl1_channel", "36");
+	nvram_set("wl1_nbw", "80");
+	nvram_set("wl1_nbw_cap", "3");
+	nvram_set("wl1_nctrlsb", "lower");
+}
+#endif /* CONFIG_BCMWL6A || CONFIG_BCMWL6 */
+
+#ifdef CONFIG_BCMWL6A
+/*
+ * Set Singapore regulatory defaults in the unit-based WL6 NVRAM namespace.
+ * @return  none
+ */
+static void set_sg_wifi_country_defaults(void)
+{
+	nvram_set("0:regrev", "12");
+	nvram_set("1:regrev", "12");
+	nvram_set("0:ccode", "SG");
+	nvram_set("1:ccode", "SG");
+}
+
+#endif /* CONFIG_BCMWL6A */
+
+#if defined(CONFIG_BCMWL6A) || defined(CONFIG_BCMWL6)
+/*
+ * Set Singapore regulatory defaults in the PCI-path WL6 NVRAM namespace.
+ * @return  none
+ */
+static void set_pci_sg_wifi_country_defaults(void)
+{
+	nvram_set("pci/1/1/regrev", "12");
+	nvram_set("pci/2/1/regrev", "12");
+	nvram_set("pci/1/1/ccode", "SG");
+	nvram_set("pci/2/1/ccode", "SG");
+}
+#endif /* CONFIG_BCMWL6A || CONFIG_BCMWL6 */
+
+#ifdef CONFIG_BCMWL6A
+/*
+ * Set common 5 GHz receive-gain calibration defaults for selected AC models.
+ * @return  none
+ */
+static void set_5g_rxgain_defaults(void)
+{
+	nvram_set("1:rxgains5gelnagaina0", "1");
+	nvram_set("1:rxgains5gelnagaina1", "1");
+	nvram_set("1:rxgains5gelnagaina2", "1");
+	nvram_set("1:rxgains5ghelnagaina0", "2");
+	nvram_set("1:rxgains5ghelnagaina1", "2");
+	nvram_set("1:rxgains5ghelnagaina2", "3");
+	nvram_set("1:rxgains5ghtrelnabypa0", "1");
+	nvram_set("1:rxgains5ghtrelnabypa1", "1");
+	nvram_set("1:rxgains5ghtrelnabypa2", "1");
+	nvram_set("1:rxgains5ghtrisoa0", "5");
+	nvram_set("1:rxgains5ghtrisoa1", "4");
+	nvram_set("1:rxgains5ghtrisoa2", "4");
+	nvram_set("1:rxgains5gmelnagaina0", "2");
+	nvram_set("1:rxgains5gmelnagaina1", "2");
+	nvram_set("1:rxgains5gmelnagaina2", "3");
+	nvram_set("1:rxgains5gmtrelnabypa0", "1");
+	nvram_set("1:rxgains5gmtrelnabypa1", "1");
+	nvram_set("1:rxgains5gmtrelnabypa2", "1");
+	nvram_set("1:rxgains5gmtrisoa0", "5");
+	nvram_set("1:rxgains5gmtrisoa1", "4");
+	nvram_set("1:rxgains5gmtrisoa2", "4");
+	nvram_set("1:rxgains5gtrelnabypa0", "1");
+	nvram_set("1:rxgains5gtrelnabypa1", "1");
+	nvram_set("1:rxgains5gtrelnabypa2", "1");
+	nvram_set("1:rxgains5gtrisoa0", "7");
+	nvram_set("1:rxgains5gtrisoa1", "6");
+	nvram_set("1:rxgains5gtrisoa2", "5");
+}
+
+/*
+ * Set common 5 GHz SAR and sideband calibration defaults.
+ * @return  none
+ */
+static void set_5g_sideband_calibration_defaults(void)
+{
+	nvram_set("1:sar5g", "15");
+	nvram_set("1:sb20in40hrpo", "0");
+	nvram_set("1:sb20in40lrpo", "0");
+	nvram_set("1:sb20in80and160hr5ghpo", "0");
+	nvram_set("1:sb20in80and160hr5glpo", "0");
+	nvram_set("1:sb20in80and160hr5gmpo", "0");
+	nvram_set("1:sb20in80and160lr5ghpo", "0");
+	nvram_set("1:sb20in80and160lr5glpo", "0");
+	nvram_set("1:sb20in80and160lr5gmpo", "0");
+	nvram_set("1:sb40and80hr5ghpo", "0");
+	nvram_set("1:sb40and80hr5glpo", "0");
+	nvram_set("1:sb40and80hr5gmpo", "0");
+	nvram_set("1:sb40and80lr5ghpo", "0");
+	nvram_set("1:sb40and80lr5glpo", "0");
+	nvram_set("1:sb40and80lr5gmpo", "0");
+	nvram_set("1:sromrev", "11");
+	nvram_set("1:subband5gver", "4");
+}
+
+/*
+ * Set common 5 GHz calibration defaults shared by selected AC models.
+ * @return  none
+ */
+static void set_common_5g_calibration_defaults(void)
+{
+	set_5g_rxgain_defaults();
+	nvram_set("1:sar2g", "18");
+	set_5g_sideband_calibration_defaults();
+}
+
+/*
+ * Set common 5 GHz temperature and radio defaults for selected AC models.
+ * @return  none
+ */
+static void set_5g_temperature_defaults(void)
+{
+	nvram_set("1:tempoffset", "0");
+	nvram_set("1:temps_hysteresis", "5");
+	nvram_set("1:temps_period", "5");
+	nvram_set("1:tempthresh", "120");
+	nvram_set("1:tssiposslope5g", "1");
+	nvram_set("1:tworangetssi5g", "0");
+	nvram_set("1:txchain", "7");
+	nvram_set("1:venid", "0x14E4");
+	nvram_set("1:xtalfreq", "40000");
+}
+#endif /* CONFIG_BCMWL6A */
+
+#ifdef TCONFIG_BLINK
+/*
+ * Set QTD parameters used by the USB wireless radio interface.
+ * @return  none
+ */
+static void set_usb_wifi_qtd_defaults(void)
+{
+	nvram_set("ehciirqt", "3");
+	nvram_set("qtdc_pid", "48407");
+	nvram_set("qtdc_vid", "2652");
+	nvram_set("qtdc0_ep", "4");
+	nvram_set("qtdc0_sz", "0");
+	nvram_set("qtdc1_ep", "18");
+	nvram_set("qtdc1_sz", "10");
+}
+#endif /* TCONFIG_BLINK */
+
+/*
+ * Set the common VLAN, LAN, WAN and wireless mapping for single-band models.
+ * @return  none
+ */
+static void set_singleband_network_defaults(void)
+{
+	nvram_set("vlan1hwname", "et0");
+	nvram_set("vlan2hwname", "et0");
+	nvram_set("lan_ifname", "br0");
+	nvram_set("landevs", "vlan1 wl0");
+	nvram_set("lan_ifnames", "vlan1 eth1");
+	nvram_set("wan_ifnames", "vlan2");
+	nvram_set("wan_ifnameX", "vlan2");
+	nvram_set("wandevs", "vlan2");
+	nvram_set("wl_ifnames", "eth1");
+	nvram_set("wl_ifname", "eth1");
+	nvram_set("wl0_ifname", "eth1");
+}
+
+#ifdef TCONFIG_BLINK
+/*
+ * Set the common reversed-radio mapping and channel defaults used by selected AC models.
+ * @return  none
+ */
+static void set_reversed_dualband_defaults(void)
+{
+	nvram_set("wan_ifnameX", "vlan2");
+	nvram_set("wl_ifnames", "eth1 eth2");
+	nvram_set("wl_ifname", "eth1");
+	nvram_set("wl0_ifname", "eth2");
+	nvram_set("wl1_ifname", "eth1");
+	nvram_set("wl0_bw_cap", "7");
+	nvram_set("wl0_chanspec", "36/80");
+	nvram_set("wl1_bw_cap", "3");
+	nvram_set("wl1_chanspec", "1l");
+	nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
+}
+#endif /* TCONFIG_BLINK */
+
 static int init_nvram(void)
 {
 	int model;
@@ -2257,17 +2554,7 @@ static int init_nvram(void)
 			name = "Share Max N300 (F7D3301/F7D7301) v1";
 			features = SUP_SES | SUP_80211N | SUP_1000ET;
 			if (!nvram_match("t_fix1", (char *)name)) {
-				nvram_set("vlan1hwname", "et0");
-				nvram_set("vlan2hwname", "et0");
-				nvram_set("lan_ifname", "br0");
-				nvram_set("landevs", "vlan1 wl0");
-				nvram_set("lan_ifnames", "vlan1 eth1");
-				nvram_set("wan_ifnames", "vlan2");
-				nvram_set("wan_ifnameX", "vlan2");
-				nvram_set("wandevs", "vlan2");
-				nvram_set("wl_ifnames", "eth1");
-				nvram_set("wl_ifname", "eth1");
-				nvram_set("wl0_ifname", "eth1");
+				set_singleband_network_defaults();
 
 				/* misc - clean-up nvram (remove dummy values for not used second wl interface [5 GHz] ) */
 				/* save nvram space & fix saving country / rev settings (GUI: advanced-wireless.asp) */
@@ -2278,17 +2565,7 @@ static int init_nvram(void)
 			name = "Share N300 (F7D3302/F7D7302) v1";
 			features = SUP_SES | SUP_80211N;
 			if (!nvram_match("t_fix1", (char *)name)) {
-				nvram_set("vlan1hwname", "et0");
-				nvram_set("vlan2hwname", "et0");
-				nvram_set("lan_ifname", "br0");
-				nvram_set("landevs", "vlan1 wl0");
-				nvram_set("lan_ifnames", "vlan1 eth1");
-				nvram_set("wan_ifnames", "vlan2");
-				nvram_set("wan_ifnameX", "vlan2");
-				nvram_set("wandevs", "vlan2");
-				nvram_set("wl_ifnames", "eth1");
-				nvram_set("wl_ifname", "eth1");
-				nvram_set("wl0_ifname", "eth1");
+				set_singleband_network_defaults();
 
 				/* misc - clean-up nvram (remove dummy values for not used second wl interface [5 GHz] ) */
 				/* save nvram space & fix saving country / rev settings (GUI: advanced-wireless.asp) */
@@ -2307,10 +2584,7 @@ static int init_nvram(void)
 				nvram_set("wan_ifnames", "vlan2");
 				nvram_set("wan_ifnameX", "vlan2");
 				nvram_set("wandevs", "vlan2");
-				nvram_set("wl_ifnames", "eth1 eth2");
-				nvram_set("wl_ifname", "eth1");
-				nvram_set("wl0_ifname", "eth1");
-				nvram_set("wl1_ifname", "eth2");
+				set_dualband_wireless_ifnames();
 			}
 			break;
 		case MODEL_F7D4302: /* N600 Dual Band and Fast Ethernet BCM5325E */
@@ -2325,27 +2599,14 @@ static int init_nvram(void)
 				nvram_set("wan_ifnames", "vlan2");
 				nvram_set("wan_ifnameX", "vlan2");
 				nvram_set("wandevs", "vlan2");
-				nvram_set("wl_ifnames", "eth1 eth2");
-				nvram_set("wl_ifname", "eth1");
-				nvram_set("wl0_ifname", "eth1");
-				nvram_set("wl1_ifname", "eth2");
+				set_dualband_wireless_ifnames();
 			}
 			break;
 		case MODEL_F5D8235v3: /* N300 and Gigabit BCM53115 */
 			name = "N F5D8235-4 v3";
 			features = SUP_SES | SUP_80211N | SUP_1000ET;
 			if (!nvram_match("t_fix1", (char *)name)) {
-				nvram_set("vlan1hwname", "et0");
-				nvram_set("vlan2hwname", "et0");
-				nvram_set("lan_ifname", "br0");
-				nvram_set("landevs", "vlan1 wl0");
-				nvram_set("lan_ifnames", "vlan1 eth1");
-				nvram_set("wan_ifnames", "vlan2");
-				nvram_set("wan_ifnameX", "vlan2");
-				nvram_set("wandevs", "vlan2");
-				nvram_set("wl_ifnames", "eth1");
-				nvram_set("wl_ifname", "eth1");
-				nvram_set("wl0_ifname", "eth1");
+				set_singleband_network_defaults();
 			}
 			break;
 		}
@@ -2450,10 +2711,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 		}
 		break;
 	case MODEL_E4200:
@@ -2466,10 +2724,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 
 #ifdef TCONFIG_BLINK /* RTN/RTAC */
 			/* fix MAC addresses */
@@ -2643,13 +2898,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 #ifdef TCONFIG_USBAP
 			nvram_set("wl1_hwaddr", nvram_safe_get("0:macaddr"));
-			nvram_set("ehciirqt", "3");
-			nvram_set("qtdc_pid", "48407");
-			nvram_set("qtdc_vid", "2652");
-			nvram_set("qtdc0_ep", "4");
-			nvram_set("qtdc0_sz", "0");
-			nvram_set("qtdc1_ep", "18");
-			nvram_set("qtdc1_sz", "10");
+			set_usb_wifi_qtd_defaults();
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("landevs", "vlan1 wl0 wl1");
 			nvram_set("wl0_ifname", "wl0");
@@ -2753,16 +3002,7 @@ static int init_nvram(void)
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
 			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth2");
-			nvram_set("wl1_ifname", "eth1");
-			nvram_set("wl0_bw_cap", "7");
-			nvram_set("wl0_chanspec", "36/80");
-			nvram_set("wl1_bw_cap", "3");
-			nvram_set("wl1_chanspec", "1l");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
+			set_reversed_dualband_defaults();
 			//nvram_set("landevs", "vlan1 wl0 wl1");
 			//nvram_set("wandevs", "vlan2");
 
@@ -2788,10 +3028,7 @@ static int init_nvram(void)
 			nvram_set("wan_ifnameX", "vlan2");
 			nvram_set("wan_ifnames", "vlan2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 			nvram_set("wl0_bw_cap", "3");
 			nvram_set("wl0_chanspec", "1l");
 			nvram_set("wl1_bw_cap", "7");
@@ -2817,10 +3054,7 @@ static int init_nvram(void)
 			nvram_set("wan_ifnameX", "vlan2");
 			nvram_set("wan_ifnames", "vlan2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 			nvram_set("wl0_bw_cap", "3");
 			nvram_set("wl0_chanspec", "1l");
 			nvram_set("wl1_bw_cap", "7");
@@ -2946,19 +3180,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 #ifdef TCONFIG_USBAP
 			nvram_set("wl1_hwaddr", nvram_safe_get("0:macaddr"));
-			nvram_set("ehciirqt", "3");
-			nvram_set("qtdc_pid", "48407");
-			nvram_set("qtdc_vid", "2652");
-			nvram_set("qtdc0_ep", "4");
-			nvram_set("qtdc0_sz", "0");
-			nvram_set("qtdc1_ep", "18");
-			nvram_set("qtdc1_sz", "10");
+			set_usb_wifi_qtd_defaults();
 			nvram_set("lan_ifnames", "vlan2 eth1 eth2");
 			nvram_set("landevs", "vlan2 wl0 wl1");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 #else
 			nvram_set("lan_ifnames", "vlan2 eth1");
 			nvram_set("landevs", "vlan2 wl0");
@@ -2991,21 +3216,12 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 			nvram_set("landevs", "vlan1 wl0 wl1");
 			nvram_set("wandevs", "vlan2");
 
 			/* fix MAC addresses for N66U and AC66U */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
 			/* wifi settings/channels */
 #ifdef TCONFIG_BCMWL6
@@ -3039,10 +3255,7 @@ static int init_nvram(void)
 #endif
 #else /* !TCONFIG_AC66U */
 			/* wifi country settings SDK6 */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 
@@ -3166,10 +3379,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 			nvram_set("landevs", "vlan1 wl0 wl1");
 			nvram_set("wandevs", "vlan2");
 
@@ -3366,13 +3576,7 @@ static int init_nvram(void)
 			set_defaults(dir865l_pci_2_1_params, "pci/2/1/%s");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 5G (eth1) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 2,4G (eth2) */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
 			/* wifi settings/channels */
 			/* 5G settings */
@@ -3393,10 +3597,7 @@ static int init_nvram(void)
 			nvram_set("wl1_nctrlsb", "upper");
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			/* fix ssid according to 5G (eth1) and 2.4G (eth2) */
 			nvram_set("wl0_ssid", "FreshTomato50");
@@ -3413,16 +3614,7 @@ static int init_nvram(void)
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth2");
-			nvram_set("wl1_ifname", "eth1");
-			nvram_set("wl0_bw_cap", "7");
-			nvram_set("wl0_chanspec", "36/80");
-			nvram_set("wl1_bw_cap", "3");
-			nvram_set("wl1_chanspec", "1l");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
+			set_reversed_dualband_defaults();
 			//nvram_set("landevs", "vlan1 wl0 wl1");
 			//nvram_set("wandevs", "vlan2");
 
@@ -3454,16 +3646,7 @@ static int init_nvram(void)
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth2");
-			nvram_set("wl1_ifname", "eth1");
-			nvram_set("wl0_bw_cap", "7");
-			nvram_set("wl0_chanspec", "36/80");
-			nvram_set("wl1_bw_cap", "3");
-			nvram_set("wl1_chanspec", "1l");
-			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
+			set_reversed_dualband_defaults();
 
 			/* fix WL mac's */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));
@@ -3553,21 +3736,12 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 			nvram_set("landevs", "vlan1 wl0 wl1");
 			nvram_set("wandevs", "vlan2");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
 			nvram_set("lan_invert", "1");
 
@@ -3800,23 +3974,10 @@ static int init_nvram(void)
 			set_defaults(r6300_pci_2_1_params, "pci/2/1/%s");
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings SDK6 */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 		}
@@ -3831,21 +3992,12 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 			nvram_set("landevs", "vlan1 wl0 wl1");
 			nvram_set("wandevs", "vlan2");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
 			nvram_set("lan_invert", "1");
 
@@ -4005,10 +4157,7 @@ static int init_nvram(void)
 			nvram_set("wl1_nctrlsb", "lower");
 
 			/* wifi country settings SDK6 */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 		}
@@ -4023,21 +4172,12 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 			nvram_set("landevs", "vlan1 wl0 wl1");
 			nvram_set("wandevs", "vlan2");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
 			nvram_set("lan_invert", "1");
 
@@ -4197,10 +4337,7 @@ static int init_nvram(void)
 			nvram_set("wl1_nctrlsb", "lower");
 
 			/* wifi country settings SDK6 */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 		}
@@ -4215,10 +4352,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 			nvram_set("wl0_bw_cap", "7");
 			nvram_set("wl0_chanspec", "36/80");
 			nvram_set("wl1_bw_cap", "3");
@@ -4264,10 +4398,7 @@ static int init_nvram(void)
 			nvram_set("wan_ifnames", "vlan1");
 			nvram_set("lan_ifnames", "vlan2 eth1 eth2");
 			nvram_set("landevs", "vlan2 wl0 wl1");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); /* get et0 MAC address for LAN */
@@ -4343,10 +4474,7 @@ static int init_nvram(void)
 			nvram_set("wan_ifnames", "vlan2");
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); /* get et0 MAC address for LAN */
@@ -4368,13 +4496,7 @@ static int init_nvram(void)
 			nvram_set("wl0_nctrlsb", "lower");
 
 			/* set QTD params in nvram for USB wl radio IC */
-			nvram_set("ehciirqt", "3");
-			nvram_set("qtdc_pid", "48407");
-			nvram_set("qtdc_vid", "2652");
-			nvram_set("qtdc0_ep", "4");
-			nvram_set("qtdc0_sz", "0");
-			nvram_set("qtdc1_ep", "18");
-			nvram_set("qtdc1_sz", "10");
+			set_usb_wifi_qtd_defaults();
 		}
 		break;
 	case MODEL_E3200:
@@ -4386,18 +4508,7 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_base_dualband_network_defaults();
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); 	/* get et0 MAC address for LAN */
@@ -4419,13 +4530,7 @@ static int init_nvram(void)
 			nvram_set("wl1_nctrlsb", "lower");
 
 			/* set QTD params in nvram for USB wl radio IC */
-			nvram_set("ehciirqt", "3");
-			nvram_set("qtdc_pid", "48407");
-			nvram_set("qtdc_vid", "2652");
-			nvram_set("qtdc0_ep", "4");
-			nvram_set("qtdc0_sz", "0");
-			nvram_set("qtdc1_ep", "18");
-			nvram_set("qtdc1_sz", "10");
+			set_usb_wifi_qtd_defaults();
 		}
 		/* E3200 adjust default values for wl_txq_thresh, et_txq_thresh and wl_rpcq_rxthresh (--> not explicitly for WiFi modules) */
 		nvram_set("et_txq_thresh", "256");
@@ -4449,10 +4554,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 		}
 
 		/* Set Key Parameters for Wireless Interfaces: SB (Southbridge) and PCI, to configure HW (as Netgear intends)
@@ -4538,10 +4640,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 		}
 
 		/* Set Key Parameters for Wireless Interfaces: SB (Southbridge) and PCI, to configure HW (as Netgear intends)
@@ -4627,10 +4726,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 		}
 
 		/* Set Key Parameters for Wireless Interfaces: SB (Southbridge) and PCI, to configure HW (as Netgear intends)
@@ -4787,18 +4883,7 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_base_dualband_network_defaults();
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); 	/* get et0 MAC address for LAN */
@@ -4843,18 +4928,7 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_base_dualband_network_defaults();
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); 	/* get et0 MAC address for LAN */
@@ -4913,17 +4987,7 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0");
-			nvram_set("lan_ifnames", "vlan1 eth1");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
+			set_singleband_network_defaults();
 			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
 
 			/* fix MAC addresses */
@@ -4932,15 +4996,7 @@ static int init_nvram(void)
 			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
 			nvram_set("wl0_hwaddr", s);
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
 			nvram_set("wl0_bw_cap", "3");
@@ -4975,39 +5031,12 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi country settings */
 #ifdef TCONFIG_BCMSMP	/* dual core */
@@ -5032,17 +5061,7 @@ static int init_nvram(void)
 #endif
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -5087,58 +5106,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 		}
 		break;
 	case MODEL_DSLAC68U:
@@ -5149,58 +5128,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 		}
 		break;
 	case MODEL_RTAC68U:
@@ -5216,58 +5155,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 		}
 		break;
 	case MODEL_RTAC68UV3:
@@ -5278,58 +5177,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* for RT-AC68U V3 - let tomato set odmpid right! value is empty? */
 			nvram_set("odmpid", "RT-AC68U");
@@ -5343,58 +5202,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 		}
 		break;
 	case MODEL_RTAC66U_B1: /* also for RT-N66U_C1 and RT-AC1750_B1 */
@@ -5411,52 +5230,15 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
 			if (nvram_match("odmpid", "RT-AC1750_B1")) { /* check for RT-AC1750 B1 first (US Retail Edition) */
@@ -5482,58 +5264,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* 2.4 GHz and 5 GHz defaults */
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
@@ -5547,58 +5289,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* 2.4 GHz and 5 GHz defaults */
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
@@ -5614,29 +5316,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_unset("devpath0"); /* unset devpath, we do not use/need it! */
 			nvram_unset("devpath1");
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for wl0 (0:) 5G - eth1 for F9K1113v2 */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for wl1 (1:) 2.4G - eth2 for F9K1113v2 */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
 			/* 5G settings */
 			nvram_set("wl0_bw_cap", "7");
@@ -5659,10 +5342,7 @@ static int init_nvram(void)
 			nvram_set("wl1_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			nvram_set("wl0_ssid", "FreshTomato50");
 			nvram_set("wl1_ssid", "FreshTomato24");
@@ -5854,29 +5534,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("devpath0", "pci/1/1/");
 			nvram_set("devpath1", "pci/2/1/");
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for wl0 (0:) 5G - eth1 for F9K1113v2 and/or wl0 (0:) 5G - eth1 for F9K1113v2 */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for wl1 (1:) 2.4G - eth2 for F9K1113v2 and/or wl1 (1:) 2,4G - eth2 for F9K1113v2 */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
 			/* 5G settings */
 			nvram_set("wl0_bw_cap", "7");
@@ -6090,61 +5751,21 @@ static int init_nvram(void)
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_invert", "1");
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* disable second *fake* LAN interface */
 			nvram_unset("et1macaddr");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -6349,61 +5970,21 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* disable second *fake* LAN interface */
 			nvram_unset("et1macaddr");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -6607,61 +6188,21 @@ static int init_nvram(void)
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_invert", "1");
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* disable second *fake* LAN interface */
 			nvram_unset("et1macaddr");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap", "3");
-			nvram_set("wl0_chanspec", "6u");
-			nvram_set("wl0_channel", "6");
-			nvram_set("wl0_nbw", "40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "80");
-			nvram_set("wl1_nbw_cap", "3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -6864,61 +6405,21 @@ static int init_nvram(void)
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_invert", "1");
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* disable second *fake* LAN interface */
 			nvram_unset("et1macaddr");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -7120,32 +6621,13 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* disable second *fake* LAN interface */
 			nvram_unset("et1macaddr");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
 			/* usb3.0 settings */
 			nvram_set("usb_usb3", "0");
@@ -7161,23 +6643,10 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -7389,20 +6858,7 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* disable *fake* LAN interfaces */
 			nvram_unset("et1macaddr");
@@ -7410,13 +6866,7 @@ static int init_nvram(void)
 			nvram_unset("et3macaddr");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
 			/* usb3.0 settings */
 			nvram_set("usb_usb3", "0");
@@ -7432,23 +6882,10 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -7656,61 +7093,21 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* disable second *fake* LAN interface */
 			nvram_unset("et1macaddr");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_pci_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			struct nvram_tuple r7000_pci_1_1_params[] = {
 				/* 2.4 GHz defaults */
@@ -7937,61 +7334,21 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* disable second *fake* LAN interface - just in case! */
 			nvram_unset("et1macaddr");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* set devpath (device path) for wl driver */
 			nvram_set("devpath0", "pci/1/1/");
@@ -8227,64 +7584,24 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* disable second *fake* LAN interface - just in case! */
 			nvram_unset("et1macaddr");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* set devpath (device path) for wl driver */
 			nvram_set("devpath0", "pci/1/1/");
@@ -8495,55 +7812,24 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* Case DIR868L rev C1 */
 			if (nvram_match("boardrev", "0x1101")) {
 
 				/* fix MAC addresses */
-				strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-				inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-				nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
-				nvram_set("wl0_hwaddr", s);
-				inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-				nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-				nvram_set("wl1_hwaddr", s);
+				set_dualband_unit_mac_defaults(s, sizeof(s));
 
 				/* wifi country settings */
-				nvram_set("0:regrev", "12");
-				nvram_set("1:regrev", "12");
-				nvram_set("0:ccode", "SG");
-				nvram_set("1:ccode", "SG");
+				set_sg_wifi_country_defaults();
 			}
 			else { /* Case DIR868L rev A1/B1 */
 
 				/* fix MAC addresses */
-				strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-				inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-				nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
-				nvram_set("wl0_hwaddr", s);
-				inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-				nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
-				nvram_set("wl1_hwaddr", s);
+				set_dualband_pci_mac_defaults(s, sizeof(s));
 
 				/* wifi country settings */
-				nvram_set("pci/1/1/regrev", "12");
-				nvram_set("pci/2/1/regrev", "12");
-				nvram_set("pci/1/1/ccode", "SG");
-				nvram_set("pci/2/1/ccode", "SG");
+				set_pci_sg_wifi_country_defaults();
 
 				/* enable 5 GHz WLAN for rev A1/B1 */
 				nvram_unset("devpath1");
@@ -8563,17 +7849,7 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -8727,23 +8003,7 @@ static int init_nvram(void)
 				nvram_set("1:rxgains5gtrisoa0", "6");
 				nvram_set("1:rxgains5gtrisoa1", "6");
 				nvram_set("1:rxgains5gtrisoa2", "6");
-				nvram_set("1:sar5g", "15");
-				nvram_set("1:sb20in40hrpo", "0");
-				nvram_set("1:sb20in40lrpo", "0");
-				nvram_set("1:sb20in80and160hr5ghpo", "0");
-				nvram_set("1:sb20in80and160hr5glpo", "0");
-				nvram_set("1:sb20in80and160hr5gmpo", "0");
-				nvram_set("1:sb20in80and160lr5ghpo", "0");
-				nvram_set("1:sb20in80and160lr5glpo", "0");
-				nvram_set("1:sb20in80and160lr5gmpo", "0");
-				nvram_set("1:sb40and80hr5ghpo", "0");
-				nvram_set("1:sb40and80hr5glpo", "0");
-				nvram_set("1:sb40and80hr5gmpo", "0");
-				nvram_set("1:sb40and80lr5ghpo", "0");
-				nvram_set("1:sb40and80lr5glpo", "0");
-				nvram_set("1:sb40and80lr5gmpo", "0");
-				nvram_set("1:sromrev", "11");
-				nvram_set("1:subband5gver", "4");
+				set_5g_sideband_calibration_defaults();
 				nvram_set("1:tempcorrx", "0x3f");
 				nvram_set("1:tempoffset", "0");
 				nvram_set("1:tempsense_option", "0x3");
@@ -9017,59 +8277,19 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 			nvram_set("blink_wl", "0"); /* disable blink by default for WS880 */
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* 2.4 GHz module defaults */
 			nvram_set("devpath0", "pci/1/1");
@@ -9221,51 +8441,7 @@ static int init_nvram(void)
 			nvram_set("1:rxgains2gtrisoa0", "0");
 			nvram_set("1:rxgains2gtrisoa1", "0");
 			nvram_set("1:rxgains2gtrisoa2", "0");
-			nvram_set("1:rxgains5gelnagaina0", "1");
-			nvram_set("1:rxgains5gelnagaina1", "1");
-			nvram_set("1:rxgains5gelnagaina2", "1");
-			nvram_set("1:rxgains5ghelnagaina0", "2");
-			nvram_set("1:rxgains5ghelnagaina1", "2");
-			nvram_set("1:rxgains5ghelnagaina2", "3");
-			nvram_set("1:rxgains5ghtrelnabypa0", "1");
-			nvram_set("1:rxgains5ghtrelnabypa1", "1");
-			nvram_set("1:rxgains5ghtrelnabypa2", "1");
-			nvram_set("1:rxgains5ghtrisoa0", "5");
-			nvram_set("1:rxgains5ghtrisoa1", "4");
-			nvram_set("1:rxgains5ghtrisoa2", "4");
-			nvram_set("1:rxgains5gmelnagaina0", "2");
-			nvram_set("1:rxgains5gmelnagaina1", "2");
-			nvram_set("1:rxgains5gmelnagaina2", "3");
-			nvram_set("1:rxgains5gmtrelnabypa0", "1");
-			nvram_set("1:rxgains5gmtrelnabypa1", "1");
-			nvram_set("1:rxgains5gmtrelnabypa2", "1");
-			nvram_set("1:rxgains5gmtrisoa0", "5");
-			nvram_set("1:rxgains5gmtrisoa1", "4");
-			nvram_set("1:rxgains5gmtrisoa2", "4");
-			nvram_set("1:rxgains5gtrelnabypa0", "1");
-			nvram_set("1:rxgains5gtrelnabypa1", "1");
-			nvram_set("1:rxgains5gtrelnabypa2", "1");
-			nvram_set("1:rxgains5gtrisoa0", "7");
-			nvram_set("1:rxgains5gtrisoa1", "6");
-			nvram_set("1:rxgains5gtrisoa2", "5");
-			nvram_set("1:sar2g", "18");
-			nvram_set("1:sar5g", "15");
-			nvram_set("1:sb20in40hrpo", "0");
-			nvram_set("1:sb20in40lrpo", "0");
-			nvram_set("1:sb20in80and160hr5ghpo", "0");
-			nvram_set("1:sb20in80and160hr5glpo", "0");
-			nvram_set("1:sb20in80and160hr5gmpo", "0");
-			nvram_set("1:sb20in80and160lr5ghpo", "0");
-			nvram_set("1:sb20in80and160lr5glpo", "0");
-			nvram_set("1:sb20in80and160lr5gmpo", "0");
-			nvram_set("1:sb40and80hr5ghpo", "0");
-			nvram_set("1:sb40and80hr5glpo", "0");
-			nvram_set("1:sb40and80hr5gmpo", "0");
-			nvram_set("1:sb40and80lr5ghpo", "0");
-			nvram_set("1:sb40and80lr5glpo", "0");
-			nvram_set("1:sb40and80lr5gmpo", "0");
-			nvram_set("1:sromrev", "11");
-			nvram_set("1:subband5gver", "4");
+			set_common_5g_calibration_defaults();
 			nvram_set("1:subvid", "0x14e4");
 			nvram_set("1:tempcorrx", "0x3f");
 			nvram_set("1:tempoffset", "255");
@@ -9344,10 +8520,7 @@ static int init_nvram(void)
 			nvram_set("wl1_nbw_cap", "1");
 
 			/* wifi country settings */
-			nvram_set("pci/1/1/regrev", "12");
-			nvram_set("pci/2/1/regrev", "12");
-			nvram_set("pci/1/1/ccode", "SG");
-			nvram_set("pci/2/1/ccode", "SG");
+			set_pci_sg_wifi_country_defaults();
 
 			nvram_set("wl0_ssid", "FreshTomato50");
 			nvram_set("wl1_ssid", "FreshTomato24");
@@ -9568,45 +8741,15 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for wl0 (0:) 2,4G - eth1 for EA6350v1 and/or wl0 (0:) 5G - eth1 for EA6200 */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for wl1 (1:) 5G - eth2 for EA6350v1 and/or wl1 (1:) 2,4G - eth2 for EA6200 */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 			
 			if (nvram_match("boardnum", "20140309") ||
 			    nvram_match("boardnum", "20150309")) { /* case EA6350v1 OR EA6350v2 */
@@ -9674,58 +8817,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -9835,60 +8938,8 @@ static int init_nvram(void)
 			nvram_set("1:pdoffset80ma2", "0x0100");
 			nvram_set("1:phycal_tempdelta", "0");
 			nvram_set("1:rxchain", "7");
-			nvram_set("1:rxgains5gelnagaina0", "1");
-			nvram_set("1:rxgains5gelnagaina1", "1");
-			nvram_set("1:rxgains5gelnagaina2", "1");
-			nvram_set("1:rxgains5ghelnagaina0", "2");
-			nvram_set("1:rxgains5ghelnagaina1", "2");
-			nvram_set("1:rxgains5ghelnagaina2", "3");
-			nvram_set("1:rxgains5ghtrelnabypa0", "1");
-			nvram_set("1:rxgains5ghtrelnabypa1", "1");
-			nvram_set("1:rxgains5ghtrelnabypa2", "1");
-			nvram_set("1:rxgains5ghtrisoa0", "5");
-			nvram_set("1:rxgains5ghtrisoa1", "4");
-			nvram_set("1:rxgains5ghtrisoa2", "4");
-			nvram_set("1:rxgains5gmelnagaina0", "2");
-			nvram_set("1:rxgains5gmelnagaina1", "2");
-			nvram_set("1:rxgains5gmelnagaina2", "3");
-			nvram_set("1:rxgains5gmtrelnabypa0", "1");
-			nvram_set("1:rxgains5gmtrelnabypa1", "1");
-			nvram_set("1:rxgains5gmtrelnabypa2", "1");
-			nvram_set("1:rxgains5gmtrisoa0", "5");
-			nvram_set("1:rxgains5gmtrisoa1", "4");
-			nvram_set("1:rxgains5gmtrisoa2", "4");
-			nvram_set("1:rxgains5gtrelnabypa0", "1");
-			nvram_set("1:rxgains5gtrelnabypa1", "1");
-			nvram_set("1:rxgains5gtrelnabypa2", "1");
-			nvram_set("1:rxgains5gtrisoa0", "7");
-			nvram_set("1:rxgains5gtrisoa1", "6");
-			nvram_set("1:rxgains5gtrisoa2", "5");
-			nvram_set("1:sar2g", "18");
-			nvram_set("1:sar5g", "15");
-			nvram_set("1:sb20in40hrpo", "0");
-			nvram_set("1:sb20in40lrpo", "0");
-			nvram_set("1:sb20in80and160hr5ghpo", "0");
-			nvram_set("1:sb20in80and160hr5glpo", "0");
-			nvram_set("1:sb20in80and160hr5gmpo", "0");
-			nvram_set("1:sb20in80and160lr5ghpo", "0");
-			nvram_set("1:sb20in80and160lr5glpo", "0");
-			nvram_set("1:sb20in80and160lr5gmpo", "0");
-			nvram_set("1:sb40and80hr5ghpo", "0");
-			nvram_set("1:sb40and80hr5glpo", "0");
-			nvram_set("1:sb40and80hr5gmpo", "0");
-			nvram_set("1:sb40and80lr5ghpo", "0");
-			nvram_set("1:sb40and80lr5glpo", "0");
-			nvram_set("1:sb40and80lr5gmpo", "0");
-			nvram_set("1:sromrev", "11");
-			nvram_set("1:subband5gver", "4");
-			nvram_set("1:tempoffset", "0");
-			nvram_set("1:temps_hysteresis", "5");
-			nvram_set("1:temps_period", "5");
-			nvram_set("1:tempthresh", "120");
-			nvram_set("1:tssiposslope5g", "1");
-			nvram_set("1:tworangetssi5g", "0");
-			nvram_set("1:txchain", "7");
-			nvram_set("1:venid", "0x14E4");
-			nvram_set("1:xtalfreq", "40000");
+			set_common_5g_calibration_defaults();
+			set_5g_temperature_defaults();
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
 
@@ -9907,58 +8958,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* misc wifi settings */
 			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
@@ -10068,60 +9079,8 @@ static int init_nvram(void)
 			nvram_set("1:pdoffset80ma2", "0");
 			nvram_set("1:phycal_tempdelta", "0");
 			nvram_set("1:rxchain", "7");
-			nvram_set("1:rxgains5gelnagaina0", "1");
-			nvram_set("1:rxgains5gelnagaina1", "1");
-			nvram_set("1:rxgains5gelnagaina2", "1");
-			nvram_set("1:rxgains5ghelnagaina0", "2");
-			nvram_set("1:rxgains5ghelnagaina1", "2");
-			nvram_set("1:rxgains5ghelnagaina2", "3");
-			nvram_set("1:rxgains5ghtrelnabypa0", "1");
-			nvram_set("1:rxgains5ghtrelnabypa1", "1");
-			nvram_set("1:rxgains5ghtrelnabypa2", "1");
-			nvram_set("1:rxgains5ghtrisoa0", "5");
-			nvram_set("1:rxgains5ghtrisoa1", "4");
-			nvram_set("1:rxgains5ghtrisoa2", "4");
-			nvram_set("1:rxgains5gmelnagaina0", "2");
-			nvram_set("1:rxgains5gmelnagaina1", "2");
-			nvram_set("1:rxgains5gmelnagaina2", "3");
-			nvram_set("1:rxgains5gmtrelnabypa0", "1");
-			nvram_set("1:rxgains5gmtrelnabypa1", "1");
-			nvram_set("1:rxgains5gmtrelnabypa2", "1");
-			nvram_set("1:rxgains5gmtrisoa0", "5");
-			nvram_set("1:rxgains5gmtrisoa1", "4");
-			nvram_set("1:rxgains5gmtrisoa2", "4");
-			nvram_set("1:rxgains5gtrelnabypa0", "1");
-			nvram_set("1:rxgains5gtrelnabypa1", "1");
-			nvram_set("1:rxgains5gtrelnabypa2", "1");
-			nvram_set("1:rxgains5gtrisoa0", "7");
-			nvram_set("1:rxgains5gtrisoa1", "6");
-			nvram_set("1:rxgains5gtrisoa2", "5");
-			nvram_set("1:sar2g", "18");
-			nvram_set("1:sar5g", "15");
-			nvram_set("1:sb20in40hrpo", "0");
-			nvram_set("1:sb20in40lrpo", "0");
-			nvram_set("1:sb20in80and160hr5ghpo", "0");
-			nvram_set("1:sb20in80and160hr5glpo", "0");
-			nvram_set("1:sb20in80and160hr5gmpo", "0");
-			nvram_set("1:sb20in80and160lr5ghpo", "0");
-			nvram_set("1:sb20in80and160lr5glpo", "0");
-			nvram_set("1:sb20in80and160lr5gmpo", "0");
-			nvram_set("1:sb40and80hr5ghpo", "0");
-			nvram_set("1:sb40and80hr5glpo", "0");
-			nvram_set("1:sb40and80hr5gmpo", "0");
-			nvram_set("1:sb40and80lr5ghpo", "0");
-			nvram_set("1:sb40and80lr5glpo", "0");
-			nvram_set("1:sb40and80lr5gmpo", "0");
-			nvram_set("1:sromrev", "11");
-			nvram_set("1:subband5gver", "4");
-			nvram_set("1:tempoffset", "0");
-			nvram_set("1:temps_hysteresis", "5");
-			nvram_set("1:temps_period", "5");
-			nvram_set("1:tempthresh", "120");
-			nvram_set("1:tssiposslope5g", "1");
-			nvram_set("1:tworangetssi5g", "0");
-			nvram_set("1:txchain", "7");
-			nvram_set("1:venid", "0x14E4");
-			nvram_set("1:xtalfreq", "40000");
+			set_common_5g_calibration_defaults();
+			set_5g_temperature_defaults();
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
 
@@ -10137,58 +9096,18 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* 2.4 GHz module defaults */
 			nvram_set("0:aa2g", "7");
@@ -10309,33 +9228,7 @@ static int init_nvram(void)
 			nvram_set("1:rpcal5gb0", "41773");
 			nvram_set("1:rpcal5gb3", "42547");
 			nvram_set("1:rxchain", "7");
-			nvram_set("1:rxgains5gelnagaina0", "1");
-			nvram_set("1:rxgains5gelnagaina1", "1");
-			nvram_set("1:rxgains5gelnagaina2", "1");
-			nvram_set("1:rxgains5ghelnagaina0", "2");
-			nvram_set("1:rxgains5ghelnagaina1", "2");
-			nvram_set("1:rxgains5ghelnagaina2", "3");
-			nvram_set("1:rxgains5ghtrelnabypa0", "1");
-			nvram_set("1:rxgains5ghtrelnabypa1", "1");
-			nvram_set("1:rxgains5ghtrelnabypa2", "1");
-			nvram_set("1:rxgains5ghtrisoa0", "5");
-			nvram_set("1:rxgains5ghtrisoa1", "4");
-			nvram_set("1:rxgains5ghtrisoa2", "4");
-			nvram_set("1:rxgains5gmelnagaina0", "2");
-			nvram_set("1:rxgains5gmelnagaina1", "2");
-			nvram_set("1:rxgains5gmelnagaina2", "3");
-			nvram_set("1:rxgains5gmtrelnabypa0", "1");
-			nvram_set("1:rxgains5gmtrelnabypa1", "1");
-			nvram_set("1:rxgains5gmtrelnabypa2", "1");
-			nvram_set("1:rxgains5gmtrisoa0", "5");
-			nvram_set("1:rxgains5gmtrisoa1", "4");
-			nvram_set("1:rxgains5gmtrisoa2", "4");
-			nvram_set("1:rxgains5gtrelnabypa0", "1");
-			nvram_set("1:rxgains5gtrelnabypa1", "1");
-			nvram_set("1:rxgains5gtrelnabypa2", "1");
-			nvram_set("1:rxgains5gtrisoa0", "7");
-			nvram_set("1:rxgains5gtrisoa1", "6");
-			nvram_set("1:rxgains5gtrisoa2", "5");
+			set_5g_rxgain_defaults();
 			nvram_set("1:sb20in40hrpo", "0x0");
 			nvram_set("1:sb20in40lrpo", "0x0");
 			nvram_set("1:sb20in80and160hr5ghpo", "0x0");
@@ -10352,15 +9245,7 @@ static int init_nvram(void)
 			nvram_set("1:sb40and80lr5gmpo", "0x0");
 			nvram_set("1:sromrev", "11");
 			nvram_set("1:subband5gver", "4");
-			nvram_set("1:tempoffset", "0");
-			nvram_set("1:temps_hysteresis", "5");
-			nvram_set("1:temps_period", "5");
-			nvram_set("1:tempthresh", "120");
-			nvram_set("1:tssiposslope5g", "1");
-			nvram_set("1:tworangetssi5g", "0");
-			nvram_set("1:txchain", "7");
-			nvram_set("1:venid", "0x14E4");
-			nvram_set("1:xtalfreq", "40000");
+			set_5g_temperature_defaults();
 		}
 		nvram_set("acs_2g_ch_no_ovlp", "1");
 
@@ -10392,13 +9277,7 @@ static int init_nvram(void)
 			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
 
 			/* fix MAC addresses */
-			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
-			inc_mac(s, +2, sizeof(s));				/* MAC + 1 will be for WAN */
-			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G */
-			nvram_set("wl0_hwaddr", s);
-			inc_mac(s, +4, sizeof(s));				/* do not overlap with VIFs */
-			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
-			nvram_set("wl1_hwaddr", s);
+			set_dualband_unit_mac_defaults(s, sizeof(s));
 
 			/* usb3.0 settings */
 			nvram_set("usb_usb3", "0");
@@ -10414,23 +9293,10 @@ static int init_nvram(void)
 			nvram_set("wait_time", "3");
 
 			/* wifi settings/channels */
-			nvram_set("wl0_bw_cap","3");
-			nvram_set("wl0_chanspec","6u");
-			nvram_set("wl0_channel","6");
-			nvram_set("wl0_nbw","40");
-			nvram_set("wl0_nctrlsb", "upper");
-			nvram_set("wl1_bw_cap", "7");
-			nvram_set("wl1_chanspec", "36/80");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw","80");
-			nvram_set("wl1_nbw_cap","3");
-			nvram_set("wl1_nctrlsb", "lower");
+			set_ac_wifi_channel_defaults();
 
 			/* wifi country settings */
-			nvram_set("0:regrev", "12");
-			nvram_set("1:regrev", "12");
-			nvram_set("0:ccode", "SG");
-			nvram_set("1:ccode", "SG");
+			set_sg_wifi_country_defaults();
 
 			/* 2.4 GHz and 5 GHz defaults */
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
@@ -10445,20 +9311,7 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et0");
-			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+			set_dualband_network_defaults();
 
 			/* GMAC3 variables */
 			nvram_set("stop_gmac3", "1"); 				/* disable gmac3 (blackbox!) */
@@ -10479,15 +9332,7 @@ static int init_nvram(void)
 			nvram_set("1:macaddr", s);				/* set WL mac for wl1 (1:) - 5GHz low - eth2 */
 			nvram_set("wl1_hwaddr", s);
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
 			/* wl0 (0:) - 2,4GHz */
@@ -10531,10 +9376,7 @@ static int init_nvram(void)
 			nvram_set("wan_ifnames", "vlan2");
 			nvram_set("wan_ifnameX", "vlan2");
 			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth1 eth2");
-			nvram_set("wl_ifname", "eth1");
-			nvram_set("wl0_ifname", "eth1");
-			nvram_set("wl1_ifname", "eth2");
+			set_dualband_wireless_ifnames();
 			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
 			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
 
@@ -10557,15 +9399,7 @@ static int init_nvram(void)
 			nvram_set("1:macaddr", s);				/* set WL mac for wl1 (1:) - 5GHz low - eth2 */
 			nvram_set("wl1_hwaddr", s);
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
 			/* wl0 (0:) - 2,4GHz */
@@ -10639,15 +9473,7 @@ static int init_nvram(void)
 			nvram_set("2:macaddr", s);				/* set WL mac for wl2 (2:) - 5GHz high - eth3 */
 			nvram_set("wl2_hwaddr", s);
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
 			/* wl0 (0:) - 2,4GHz */
@@ -10762,20 +9588,7 @@ static int init_nvram(void)
 			nvram_set("lan_invert", "1");
 			nvram_set("vlan1hwname", "et0");
 			nvram_set("vlan2hwname", "et0");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1 wl2");
-			nvram_set("lan_ifnames", "vlan1 eth2 eth1 eth3");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth2 eth1 eth3");
-			nvram_set("wl_ifname", "eth2");
-			nvram_set("wl0_ifname", "eth2");
-			nvram_set("wl1_ifname", "eth1");
-			nvram_set("wl2_ifname", "eth3");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
-			nvram_set("wl2_vifnames", "wl2.1 wl2.2 wl2.3");
+			set_triband_network_defaults();
 
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
@@ -10789,15 +9602,7 @@ static int init_nvram(void)
 			nvram_set("2:macaddr", s);				/* fix WL mac for wl2 (2:) - 5GHz high (second one) - eth3 */
 			nvram_set("wl2_hwaddr", s);
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
 			/* wl0 (1:) - 2,4GHz */
@@ -11078,20 +9883,7 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("vlan1hwname", "et2"); /* SPECIAL case: for R8000 we use the gmac3 default setup (et2) but disabled and copy et2macaddr to et0macaddr */
 			nvram_set("vlan2hwname", "et2");
-			nvram_set("lan_ifname", "br0");
-			nvram_set("landevs", "vlan1 wl0 wl1 wl2");
-			nvram_set("lan_ifnames", "vlan1 eth2 eth1 eth3");
-			nvram_set("wan_ifnames", "vlan2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("wandevs", "vlan2");
-			nvram_set("wl_ifnames", "eth2 eth1 eth3");
-			nvram_set("wl_ifname", "eth2");
-			nvram_set("wl0_ifname", "eth2");
-			nvram_set("wl1_ifname", "eth1");
-			nvram_set("wl2_ifname", "eth3");
-			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
-			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
-			nvram_set("wl2_vifnames", "wl2.1 wl2.2 wl2.3");
+			set_triband_network_defaults();
 
 			/* GMAC3 variables */
 			nvram_set("fwd_cpumap", "d:x:2:169:1 d:l:5:169:1 d:u:5:163:0");
@@ -11112,15 +9904,7 @@ static int init_nvram(void)
 			nvram_set("2:macaddr", s);				/* fix WL mac for wl2 (2:) - 5GHz low - eth3 */
 			nvram_set("wl2_hwaddr", s);
 
-			/* usb3.0 settings */
-			nvram_set("usb_usb3", "0");
-			nvram_set("xhci_ports", "1-1");
-			nvram_set("ehci_ports", "2-1 2-2");
-			nvram_set("ohci_ports", "3-1 3-2");
-
-			/* misc settings */
-			nvram_set("boot_wait", "on");
-			nvram_set("wait_time", "3");
+			set_usb_boot_defaults();
 
 			/* wifi settings/channels */
 			/* wl0 (1:) - 2,4GHz */
@@ -11713,7 +10497,7 @@ static void sysinit(void)
 
 	stime(&tm);
 
-	static const char *mkd[] = { "/tmp/etc", "/tmp/var", "/tmp/home", "/tmp/mnt", "/tmp/splashd",
+	static const char *mkd[] = { "/tmp/etc", "/tmp/var", "/tmp/home", "/tmp/mnt", "/tmp/splashd", "/tmp/httpd",
 	                             "/tmp/share", "/tmp/var/wwwext", "/tmp/var/wwwext/cgi-bin",
 	                             "/var/webmon", "/var/log", "/var/run", "/var/tmp", "/var/lib", "/var/lib/misc",
 	                             "/var/spool", "/var/spool/cron", "/var/spool/cron/crontabs",
@@ -11741,8 +10525,8 @@ static void sysinit(void)
 			if (de->d_name[0] == '.')
 				continue;
 
-			snprintf(s, sizeof(s), "%s/%s", "/rom/etc", de->d_name);
-			snprintf(t, sizeof(t), "%s/%s", "/etc", de->d_name);
+			snprintf(s, sizeof(s), "/rom/etc/%.246s", de->d_name);
+			snprintf(t, sizeof(t), "/etc/%.250s", de->d_name);
 			symlink(s, t);
 		}
 		closedir(d);
@@ -11755,8 +10539,8 @@ static void sysinit(void)
 			if (de->d_name[0] == '.')
 				continue;
 
-			snprintf(s, sizeof(s), "/usr/codepages/%s", de->d_name);
-			snprintf(t, sizeof(t), "/usr/share/%s", de->d_name);
+			snprintf(s, sizeof(s), "/usr/codepages/%.240s", de->d_name);
+			snprintf(t, sizeof(t), "/usr/share/%.244s", de->d_name);
 			symlink(s, t);
 		}
 		closedir(d);
@@ -11879,14 +10663,14 @@ static void sysinit(void)
 
 	eval("buttons");
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 #ifdef TCONFIG_BCMARM
 	/* stealth mode */
 	if (nvram_match("stealth_mode", "0")) /* start blink_br only if stealth mode is off */
 #endif
 		/* enable LED for LAN / Bridge */
 		eval("blink_br");
-#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+#endif /* TCONFIG_RTNPLUS */
 
 	if (!noconsole)
 		xstart("console");

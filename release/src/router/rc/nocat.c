@@ -53,11 +53,8 @@ void build_nocat_conf(void)
 		snprintf(buffer, sizeof(buffer),"br%d", i);
 
 		if (nvram_match("NC_BridgeLAN", buffer)) {
-			snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-			lanX_ifname = nvram_safe_get(buffer);
-
-			snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-			lanX_ipaddr = nvram_safe_get(buffer);
+			lanX_ifname = bridge_nvram_get(i, "ifname", buffer, sizeof(buffer));
+			lanX_ipaddr = bridge_nvram_get(i, "ipaddr", buffer, sizeof(buffer));
 
 			fprintf(fp, "InternalDevice\t%s\n"
 			            "GatewayAddr\t%s\n", lanX_ifname, lanX_ipaddr);
@@ -155,7 +152,7 @@ void start_nocat(void)
 	char iconfile[255];
 	char *p;
 
-	if ((!nvram_match("NC_enable", "1")) || (!nvram_match("mwan_num", "1")))
+	if ((!nvram_match("NC_enable", "1")) || (mwan_active_num() != 1))
 		return;
 
 	if (serialize_restart("splashd", 1))

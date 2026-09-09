@@ -1,4 +1,4 @@
-/* $Id: iptcrdr.c,v 1.68 2021/11/09 17:54:25 nanard Exp $ */
+/* $Id: iptcrdr.c,v 1.67 2020/11/11 12:09:05 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -241,16 +241,20 @@ get_redirect_desc(unsigned short eport, int proto,
 	{
 		if(p->eport == eport && p->proto == (short)proto)
 		{
-			if(desc)
+			if(desc) {
 				strncpy(desc, p->str, desclen);
+				desc[desclen-1] = '\0';
+			}
 			if(timestamp)
 				*timestamp = p->timestamp;
 			return;
 		}
 	}
 	/* if no description was found, return miniupnpd as default */
-	if(desc)
+	if(desc) {
 		strncpy(desc, "miniupnpd", desclen);
+		desc[desclen-1] = '\0';
+	}
 	if(timestamp)
 		*timestamp = 0;
 }

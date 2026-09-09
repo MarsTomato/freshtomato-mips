@@ -147,32 +147,6 @@ static int mysql_wait_ready(const char *dir, const char *password, int timeout)
 	return ETIMEDOUT;
 }
 
-static int mysql_to_hex(char *dst, size_t dstlen, const char *src)
-{
-	static const char hex[] = "0123456789abcdef";
-	unsigned char c;
-	size_t n;
-
-	if (!dst || (dstlen == 0))
-		return EINVAL;
-
-	if (!src)
-		src = "";
-
-	n = 0;
-	while (*src) {
-		if ((n + 2) >= dstlen)
-			return ENAMETOOLONG;
-
-		c = (unsigned char)*src++;
-		dst[n++] = hex[c >> 4];
-		dst[n++] = hex[c & 0x0f];
-	}
-
-	dst[n] = '\0';
-	return 0;
-}
-
 static int mysql_conf_write_escaped(FILE *fp, const char *key, const char *value)
 {
 	if (fprintf(fp, "%-17s = ", key) < 0)
@@ -189,22 +163,19 @@ static int mysql_conf_write_escaped(FILE *fp, const char *key, const char *value
 
 static void setup_mysql_watchdog(void)
 {
-	FILE *fp;
 	char buffer[64], buffer2[64];
 	int nvi;
 
 	if ((nvi = nvram_get_int("mysql_check_time")) > 0) {
 		snprintf(buffer, sizeof(buffer), mysql_etc_dir"/watchdog.sh");
 
-		if ((fp = fopen(buffer, "w"))) {
-			fprintf(fp, "#!/bin/sh\n"
-			            "[ -z \"$(pidof mysqld)\" -a \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
-			            " logger -t mysql-watchdog mysqld stopped? Starting...\n"
-			            " service mysql restart\n"
-			            "}\n");
-			fclose(fp);
-			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
-
+		if (f_write_string(buffer,
+		                   "#!/bin/sh\n"
+		                   "[ -z \"$(pidof mysqld)\" -a \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
+		                   " logger -t mysql-watchdog mysqld stopped? Starting...\n"
+		                   " service mysql restart\n"
+		                   "}\n",
+		                   0, (S_IRUSR | S_IWUSR | S_IXUSR)) >= 0) {
 			snprintf(buffer2, sizeof(buffer2), "*/%d * * * * %s", nvi, buffer);
 			eval("cru", "a", "CheckMySQL", buffer2);
 		}
@@ -225,6 +196,7 @@ void start_mysql(int force)
 	pid_t pidof_child = 0;
 	unsigned int new_install = 0;
 	char *nginx_docroot = nvram_safe_get("nginx_docroot");
+	const char *password = nvram_safe_get("mysql_passwd");
 	unsigned int anyhost = nvram_get_int("mysql_allow_anyhost");
 
 
@@ -480,7 +452,7 @@ void start_mysql(int force)
 
 		f_write_string(mysql_log, "=========mysql --execute password update====================", FW_APPEND | FW_NEWLINE, 0);
 
-		rc = mysql_to_hex(pass_hex, sizeof(pass_hex), nvram_safe_get("mysql_passwd"));
+		rc = bin2hex(pass_hex, sizeof(pass_hex), password, strlen(password));
 		if (rc != 0) {
 			logmsg(LOG_ERR, "%s: mysql password is too long", __FUNCTION__);
 			killall_tk_period_wait("mysqld", 50);

@@ -1,5 +1,10 @@
 include ../common.mak
 
+# Seven-character commit ID embedded in MOTD during image creation.
+# It may be overridden by the build environment, e.g. GIT_HASH=1234567.
+GIT_HASH ?= $(shell hash=$$(git -C "$(CURDIR)" rev-parse --verify HEAD 2>/dev/null); \
+	if [ -n "$$hash" ]; then printf '%.7s' "$$hash"; else printf 'unknown'; fi)
+
 all:
 
 install:
@@ -68,7 +73,7 @@ else
 endif
 
 # Adblock
-ifeq ($(TCONFIG_HTTPS),y)
+ifeq ($(TCONFIG_ADBLOCK),y)
 # Only include Adblock v2 if it is required (not for MIPS R1)
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
 	install -m 0700 adblock-v2 $(INSTALLDIR)/usr/sbin/adblock
@@ -103,6 +108,7 @@ endif
 
 # MOTD
 	install -m 0700 mymotd $(INSTALLDIR)/usr/sbin
+	sed -i $(INSTALLDIR)/usr/sbin/mymotd -e "s,@GIT_HASH@,$(GIT_HASH),g"
 ifneq ($(TCONFIG_BCMARM),y)
 	sed -i $(INSTALLDIR)/usr/sbin/mymotd -e "/BCMARM-BEGIN/,/BCMARM-END/d"
 else

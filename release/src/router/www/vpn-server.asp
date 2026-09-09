@@ -469,7 +469,7 @@ function disableKeyButtons(num, state) {
 	E('_vpn_keygen_static_vpns'+num+'_button').disabled = state;
 /* KEYGEN-BEGIN */
 	E('_vpn_keygen_vpns'+num+'_button').disabled = state;
-	E('_vpn_dhgen_vpns'+num+'_button').disabled = state;
+	E('_vpn_dhgen_vpns'+num+'_button').disabled = state || E('_f_vpns'+num+'_ecdh').checked;
 /* KEYGEN-END */
 }
 
@@ -894,7 +894,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Status</div>
+<div class="section-title">OpenVPN Server Status</div>
 <div class="section">
 	<div class="fields">
 		<script>

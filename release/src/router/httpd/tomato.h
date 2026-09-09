@@ -38,7 +38,7 @@ extern int rboot;
 extern void exec_service(const char *action);
 extern void wi_generic(char *url, int len, char *boundary);
 extern void common_redirect(void);
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 extern char* get_wl_tempsense(char *buf, const size_t buf_sz);
 #endif
 #ifdef TCONFIG_BCMARM
@@ -123,11 +123,6 @@ extern void asp_pptpd_userol(int argc, char **argv);
 extern void wo_pptpdcmd(char *url);
 #endif
 
-/* wireguard.c */
-#ifdef TCONFIG_WIREGUARD
-extern int wg_status(char *iface);
-#endif
-
 /* devlist.c */
 extern void asp_arplist(int argc, char **argv);
 extern void asp_devlist(int argc, char **argv);
@@ -137,7 +132,9 @@ extern void asp_ctcount(int argc, char **argv);
 extern void asp_ctdump(int argc, char **argv);
 extern void asp_ctrate(int argc, char **argv);
 extern void asp_qrate(int argc, char **argv);
+#ifdef TCONFIG_L7
 extern void asp_layer7(int argc, char **argv);
+#endif
 extern void wo_expct(char *url);
 
 /* wl.c */

@@ -745,7 +745,7 @@ static int numeric_check(char *a)
 {
   char *p;
 
-  if (!a)
+  if (!a || *a == 0)
     return 0;
 
   unhide_metas(a);
@@ -771,11 +771,14 @@ static int strtoul_check(char *a, u32 *res)
   
   if (!numeric_check(a))
     return 0;
+  
   x = strtoul(a, NULL, 10);
-  if (errno || x > UINT32_MAX) {
-    errno = 0;
-    return 0;
-  }
+  if (errno || x > UINT32_MAX)
+    {
+      errno = 0;
+      return 0;
+    }
+  
   *res = (u32)x;
   return 1;
 }
@@ -1383,7 +1386,7 @@ static void dhcp_netid_list_free(struct dhcp_netid_list *netid)
       netid = netid->next;
       /* Note: don't use dhcp_netid_free() here, since that 
 	 frees a list linked on netid->next. Where a netid_list
-	 is used that's because the the ->next pointers in the
+	 is used that's because the ->next pointers in the
 	 netids are being used to temporarily construct 
 	 a list of valid tags. */
       free(tmplist->list->net);
@@ -1471,58 +1474,45 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
   
   while (arg)
     {
+      char *start = arg;
       comma = split(arg);      
-
-      for (cp = arg; *cp; cp++)
+      
+      if (strstr(arg, "option:") == arg)
+	start = arg+7;
+#ifdef HAVE_DHCP6
+      else if (strstr(arg, "option6:") == arg)
+	{
+	  start = arg+8;
+	  is6 = 1;
+	}
+#endif
+      else if (strstr(arg, "option4:") == arg)
+	start = arg+8;
+      
+      for (cp = start; *cp; cp++)
 	if (*cp < '0' || *cp > '9')
 	  break;
       
       if (!*cp)
 	{
-	  new->opt = atoi(arg);
+	  new->opt = atoi(start);
 	  opt_len = 0;
 	  option_ok = 1;
 	  break;
 	}
-      
-      if (strstr(arg, "option:") == arg)
+
+      /* option*:<opt>|<optname> must follow tag and vendor string. */
+      if (start != arg)
 	{
-	  if ((new->opt = lookup_dhcp_opt(AF_INET, arg+7)) != -1)
+	  if ((new->opt = lookup_dhcp_opt(is6 ? AF_INET6: AF_INET, start)) != -1)
 	    {
-	      opt_len = lookup_dhcp_len(AF_INET, new->opt);
+	      opt_len = lookup_dhcp_len(is6 ? AF_INET6: AF_INET, new->opt);
 	      /* option:<optname> must follow tag and vendor string. */
 	      if (!(opt_len & OT_INTERNAL) || flags == DHOPT_MATCH)
 		option_ok = 1;
 	    }
 	  break;
 	}
-#ifdef HAVE_DHCP6
-      else if (strstr(arg, "option6:") == arg)
-	{
-	  for (cp = arg+8; *cp; cp++)
-	    if (*cp < '0' || *cp > '9')
-	      break;
-	 
-	  if (!*cp)
-	    {
-	      new->opt = atoi(arg+8);
-	      opt_len = 0;
-	      option_ok = 1;
-	    }
-	  else
-	    {
-	      if ((new->opt = lookup_dhcp_opt(AF_INET6, arg+8)) != -1)
-		{
-		  opt_len = lookup_dhcp_len(AF_INET6, new->opt);
-		  if (!(opt_len & OT_INTERNAL) || flags == DHOPT_MATCH)
-		    option_ok = 1;
-		}
-	    }
-	  /* option6:<opt>|<optname> must follow tag and vendor string. */
-	  is6 = 1;
-	  break;
-	}
-#endif
       else if (strstr(arg, "vendor:") == arg)
 	{
 	  new->u.vendor_class = (unsigned char *)opt_string_alloc(arg+7);
@@ -1701,7 +1691,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	  parse_hex(comma, new->val, digs, (flags & DHOPT_MATCH) ? &new->u.wildcard_mask : NULL, NULL);
 	  new->flags |= DHOPT_HEX;
 	}
-      else if (is_dec)
+      else if (is_dec && !(opt_len & OT_DHCP6_VENDOR))
 	{
 	  int i, val = atoi(comma);
 	  /* assume numeric arg is 1 byte except for
@@ -1905,6 +1895,48 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 	      new->val = newp;
 	      new->len = p - newp;
 	    }
+	  else if (comma && (opt_len & OT_DHCP6_VENDOR))
+	    {
+	      /* First arg is Enterprise ID (4 bytes)
+		 subsequent are length fields (2 bytes each) + string */
+	      int enterprise, i, commas = 1;
+	      unsigned char *p, *newp;
+
+	      for (i = 0; comma[i]; i++)
+		if (comma[i] == ',')
+		  commas++;
+
+	      newp = opt_malloc(strlen(comma)+(2*commas)+4);
+	      p = newp;
+	      arg = comma;
+	      comma = split(arg);
+
+	      if (atoi_check(arg, &enterprise))
+		PUTLONG(enterprise, p);
+	      else
+		goto_err(_("bad or missing enterprise ID in dhcp-option"));
+		  
+	      arg = comma;
+	      comma = split(arg);
+
+	      if (!arg || !*arg)
+	      goto_err(_("missing vendor class in dhcp-option"));
+
+	      while (arg && *arg)
+		{
+		  u16 len = strlen(arg);
+		  unhide_metas(arg);
+		  PUTSHORT(len, p);
+		  memcpy(p, arg, len);
+		  p += len;
+
+		  arg = comma;
+		  comma = split(arg);
+		}
+
+	      new->val = newp;
+	      new->len = p - newp;
+	    }
 	  else if (comma && (opt_len & OT_RFC1035_NAME))
 	    {
 	      unsigned char *p = NULL, *q, *newp, *end;
@@ -1965,7 +1997,7 @@ static int parse_dhcp_opt(char *errstr, char *arg, int flags)
 
   if (flags == DHOPT_PXE_OPT &&  (new->flags & DHOPT_VENDOR))
     goto_err(_("No vendor-encap options allowed in dhcp-option-pxe")); 
-      
+
   if (flags == DHOPT_MATCH)
     {
       if ((new->flags & (DHOPT_ENCAPSULATE | DHOPT_VENDOR)) ||
@@ -2800,7 +2832,7 @@ static int one_opt(int option, char *arg, char *errstr, char *gen_err, int comma
 	break;
       }
       
-    case LOPT_CPE_ID: /* --add-dns-client */
+    case LOPT_CPE_ID: /* --add-cpe-id */
       if (arg)
 	daemon->dns_client_id = opt_string_alloc(arg);
       break;
@@ -5471,9 +5503,20 @@ err:
 static void read_file(char *file, FILE *f, int hard_opt, int from_script)	
 {
   volatile int lineno = 0;
-  char *buff = daemon->namebuff;
+  char *buff;
+  size_t buffsz;
+
+  /* Memory allocation failure longjmps here if mem_recover == 1 */ 
+  if (hard_opt != 0)
+    {
+      setjmp(mem_jmp);
+      mem_recover = 1;
+    }
   
-  while (fgets(buff, MAXDNAMESTR, f))
+  buff = NULL;
+  buffsz = 0;
+
+  while (get_line_alloc(f, &buff, &buffsz))
     {
       int white, i;
       volatile int option;
@@ -5481,15 +5524,7 @@ static void read_file(char *file, FILE *f, int hard_opt, int from_script)
       size_t len;
 
       option = (hard_opt == LOPT_REV_SERV) ? 0 : hard_opt;
-
-      /* Memory allocation failure longjmps here if mem_recover == 1 */ 
-      if (option != 0 || hard_opt == LOPT_REV_SERV)
-	{
-	  if (setjmp(mem_jmp))
-	    continue;
-	  mem_recover = 1;
-	}
-
+      
       arg = NULL;
       lineno++;
       errmess = NULL;
@@ -5949,16 +5984,15 @@ void reread_dhcp(void)
 void read_opts(int argc, char **argv, char *compile_opts)
 {
   size_t argbuf_size = 300;
-  char *argbuf = opt_malloc(argbuf_size);
-  char *buff = opt_malloc(MAXDNAMESTR+1);
+  char *argbuf = safe_malloc(argbuf_size);
   int option, testmode = 0;
   char *arg, *conffile = NULL;
   
   opterr = 0;
-
+  
   daemon = opt_malloc(sizeof(struct daemon));
   memset(daemon, 0, sizeof(struct daemon));
-  daemon->namebuff = buff;
+  daemon->namebuff = safe_malloc(MAXDNAMESTR+1);
   daemon->workspacename = safe_malloc(MAXDNAMESTR+1);
   daemon->addrbuff = safe_malloc(ADDRSTRLEN);
   
@@ -6197,9 +6231,9 @@ void read_opts(int argc, char **argv, char *compile_opts)
   /* create default, if not specified */
   if (daemon->authserver && !daemon->hostmaster)
     {
-      strcpy(buff, "hostmaster.");
-      strcat(buff, daemon->authserver);
-      daemon->hostmaster = opt_string_alloc(buff);
+      strcpy(daemon->namebuff, "hostmaster.");
+      strncat(daemon->namebuff, daemon->authserver, MAXDNAMESTR - strlen(daemon->namebuff));
+      daemon->hostmaster = opt_string_alloc(daemon->namebuff);
     }
 
   if (!daemon->dhcp_pxe_vendors)
@@ -6214,11 +6248,11 @@ void read_opts(int argc, char **argv, char *compile_opts)
     {
       struct mx_srv_record *mx;
       
-      if (gethostname(buff, MAXDNAMESTR) == -1)
+      if (gethostname(daemon->namebuff, MAXDNAMESTR) == -1)
 	die(_("cannot get host-name: %s"), NULL, EC_MISC);
       
       for (mx = daemon->mxnames; mx; mx = mx->next)
-	if (!mx->issrv && hostname_isequal(mx->name, buff))
+	if (!mx->issrv && hostname_isequal(mx->name, daemon->namebuff))
 	  break;
       
       if ((daemon->mxtarget || option_bool(OPT_LOCALMX)) && !mx)
@@ -6227,12 +6261,12 @@ void read_opts(int argc, char **argv, char *compile_opts)
 	  mx->next = daemon->mxnames;
 	  mx->issrv = 0;
 	  mx->target = NULL;
-	  mx->name = opt_string_alloc(buff);
+	  mx->name = opt_string_alloc(daemon->namebuff);
 	  daemon->mxnames = mx;
 	}
       
       if (!daemon->mxtarget)
-	daemon->mxtarget = opt_string_alloc(buff);
+	daemon->mxtarget = opt_string_alloc(daemon->namebuff);
 
       for (mx = daemon->mxnames; mx; mx = mx->next)
 	if (!mx->issrv && !mx->target)
@@ -6247,7 +6281,8 @@ void read_opts(int argc, char **argv, char *compile_opts)
   
   if (option_bool(OPT_RESOLV_DOMAIN))
     {
-      char *line;
+      char *line = NULL;
+      size_t linesz = 0;
       FILE *f;
 
       if (option_bool(OPT_NO_RESOLV) ||
@@ -6258,7 +6293,7 @@ void read_opts(int argc, char **argv, char *compile_opts)
       if (!(f = fopen((daemon->resolv_files)->name, "r")))
 	die(_("failed to read %s: %s"), (daemon->resolv_files)->name, EC_FILE);
       
-      while ((line = fgets(buff, MAXDNAMESTR, f)))
+      while (get_line_alloc(f, &line, &linesz))
 	{
 	  char *token = strtok(line, " \t\n\r");
 	  
@@ -6267,7 +6302,11 @@ void read_opts(int argc, char **argv, char *compile_opts)
 	  
 	  if ((token = strtok(NULL, " \t\n\r")) &&  
 	      (daemon->domain_suffix = canonicalise_opt(token)))
-	    break;
+	    {
+	      /* We don't call get_line_alloc() until it returns false and frees the automatically */
+	      get_line_alloc(NULL, &line, &linesz);
+	      break;
+	    }
 	}
 
       fclose(f);
@@ -6278,7 +6317,7 @@ void read_opts(int argc, char **argv, char *compile_opts)
 
   if (daemon->domain_suffix)
     {
-       /* add domain for any srv record without one. */
+      /* add domain for any srv record without one. */
       struct mx_srv_record *srv;
       
       for (srv = daemon->mxnames; srv; srv = srv->next)
@@ -6288,11 +6327,11 @@ void read_opts(int argc, char **argv, char *compile_opts)
 	  {
 	    if (strlen(srv->name) + 1 + strlen(daemon->domain_suffix) > MAXDNAMESTR)
 	      die(_("srv-host name %s too long after domain appended"), srv->name, EC_MISC);
-	    strcpy(buff, srv->name);
-	    strcat(buff, ".");
-	    strcat(buff, daemon->domain_suffix);
+	    strcpy(daemon->namebuff, srv->name);
+	    strcat(daemon->namebuff, ".");
+	    strcat(daemon->namebuff, daemon->domain_suffix);
 	    free(srv->name);
-	    if (!(srv->name = canonicalise_opt(buff)))
+	    if (!(srv->name = canonicalise_opt(daemon->namebuff)))
 	      die(_("bad srv-host name %s after domain appended"), srv->name, EC_MISC); 
 	  }
     }

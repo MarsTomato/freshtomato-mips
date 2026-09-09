@@ -19,7 +19,9 @@ var countButton = 0;
 
 // -----------------------------------------------------------------------------
 
+/* OUI-BEGIN */
 var xoboui = null;
+/* OUI-END */
 
 Array.prototype.find = function(v) {
 	for (var i = 0; i < this.length; ++i)
@@ -740,6 +742,18 @@ function CompressIPv6Address(ip) {
 	ip = ip.replace(/(:0)+$/, '::');
 	ip = ip.replace(/(?:(?:^|:)0){2,}(?!.*(?:::|(?::0){3,}))/, ':');
 	return ip;
+}
+
+function joinIPv6Addr(a) {
+	var r, i, s;
+
+	r = [];
+	for (i = 0; i < a.length; ++i) {
+		s = CompressIPv6Address(a[i]);
+		if ((s) && (s != '')) r.push(s);
+	}
+
+	return r.join(' ');
 }
 
 function ZeroIPv6PrefixBits(ip, prefix_length) {
@@ -2271,6 +2285,10 @@ function W(s) {
 	document.write(s);
 }
 
+function writeFooter() {
+	W('<div id="footer"><span id="footer-msg"></span><input type="button" value="Save" id="save-button" onclick="save()"><input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();"></div>');
+}
+
 function E(e) {
 	return (typeof(e) == 'string') ? document.getElementById(e) : e;
 }
@@ -2563,7 +2581,9 @@ function navi() {
 			['DHCP/DNS/TFTP',		'dhcpdns.asp'],
 			['Firewall',			'firewall.asp'],
 /* HTTPS-BEGIN */
+/* ADBLOCK-BEGIN */
 			['Adblock',			'adblock.asp'],
+/* ADBLOCK-END */
 /* HTTPS-END */
 			['MAC Addresses',		'mac.asp'],
 			['Miscellaneous',		'misc.asp'],
@@ -2972,6 +2992,16 @@ function toggleVisibility(where, whichone) {
 	}
 }
 
+function restoreVisibility(where, whichone) {
+	if (cookie.get(where+'_'+whichone+'_vis') == '1')
+		toggleVisibility(where, whichone);
+}
+
+function writeToggleSectionTitle(title, whichone, id) {
+	W('<div class="section-title"'+(id ? ' id="'+id+'"' : '')+'>'+title+' <small><i><a href="javascript:toggleVisibility(cprefix,\''+whichone+'\');" id="toggleLink-'+whichone+'"><span id="sesdiv_'+whichone+'_showhide">(Show)</span></a></i></small></div>');
+}
+
+/* OUI-BEGIN */
 function spinOUI(x, which) {
 	E(which).style.display = (x ? 'inline-block' : 'none');
 	if (!x) xoboui = null;
@@ -3013,6 +3043,7 @@ function displayOUI(i) {
 	alert(cmdresult);
 	cmdresult = '';
 }
+/* OUI-END */
 
 function wikiLink() {
 	const url = 'https://wiki.freshtomato.org/doku.php';
@@ -3060,6 +3091,76 @@ function anon_update() {
 		res = 'New version ('+update+') available <a href="https://freshtomato.org/"><b>HERE</b></a>!';
 		W(res);
 	}
+}
+
+function calcWanPortCount() {
+	var count = 0;
+	var maxWan = parseInt(nvram.mwan_num, 10);
+	if (!isFinite(maxWan) || (maxWan < 1))
+		maxWan = 1;
+
+	for (var uidx = 1; uidx <= maxWan; ++uidx) {
+		var u = (uidx > 1) ? uidx : '';
+		var proto = nvram['wan'+u+'_proto'];
+
+		if ((proto != 'disabled')
+/* USB-BEGIN */
+		    && (proto != 'lte') && (proto != 'ppp3g')
+/* USB-END */
+		)
+			++count;
+	}
+
+	return count;
+}
+
+function ethDescClean(s) {
+	return (s || '').replace(/[%\r\n]/g, '').substring(0, 8);
+}
+
+function portDescription(i) {
+	var idx = parseInt(i, 10);
+	if (!isFinite(idx))
+		return i;
+
+	var wanCount = calcWanPortCount();
+
+	if (idx < wanCount)
+		return 'WAN'+idx;
+
+	/* Keep labels in sync between Status > Overview and Advanced > VLAN.
+	 * On 8-port devices the external switch is represented as a grouped
+	 * logical port.
+	 */
+	return 'LAN'+(wanCount > 0 ? ((idx < 5) ? (idx - 1) : '4-7') : ((idx < 5) ? idx : '5-8'));
+}
+
+function displayPortIndex(i) {
+	var idx = parseInt(i, 10);
+	if (!isFinite(idx))
+		return i;
+
+	return idx;
+}
+
+function portCaption(i, shorten) {
+	var idx = parseInt(i, 10);
+
+	if ((idx === 0) && (nvram.model == 'DSL-AC68U'))
+		return 'DLS';
+
+	var orig = portDescription(i);
+
+	if (!shorten)
+		return orig;
+
+	/* Keep captions compact for small VLAN header icons:
+	 * "LAN0" -> "L0", "WAN1" -> "W1", "LAN4-7" -> "L7".
+	 */
+	if (orig && orig.length > 1)
+		return String(orig).charAt(0) + String(orig).charAt(orig.length - 1);
+
+	return orig;
 }
 
 function insOvl() {

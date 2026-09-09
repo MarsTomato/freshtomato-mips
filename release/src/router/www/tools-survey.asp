@@ -778,8 +778,10 @@ sg.populate = function(style, sshow, filter) {
 		else {
 			e.col = '<div><\/div>';
 		}
+/* OUI-BEGIN */
 		if (mac.match(/^(..):(..):(..)/))
 			mac = '<div style="display:none" id="gW_'+i+'">&nbsp; <img src="spin.svg" alt="" style="vertical-align:middle"><\/div><a href="javascript:searchOUI(\''+RegExp.$1+'-'+RegExp.$2+'-'+RegExp.$3+'\','+i+')" title="OUI Search">'+mac+'<\/a>';
+/* OUI-END */
 
 		sg.insert(-1, e, [ '<small>'+seen+'<\/small>', ''+e.col, ''+e.ssid, mac, (e.rssi < 0 ? e.rssi+'' : ''), ''+e.snr,
 		          (e.qual < 0 ? '' : '<small>'+e.qual+'<\/small><br><img src="bar'+MIN(MAX(Math.floor(e.qual / 12), 1), 6)+'.gif" id="bar_'+i+'" alt="">'),
@@ -1086,9 +1088,7 @@ function earlyInit() {
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
+	restoreVisibility(cprefix, 'notes');
 
 	E('expire-time').selectedIndex = cookie.get(cprefix+'_expire_time') || 5;
 	E('ssid-limit').value = cookie.get(cprefix+'_ssid_limit') || 20;
@@ -1230,7 +1230,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<script>

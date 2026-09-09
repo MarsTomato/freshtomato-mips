@@ -129,7 +129,6 @@ void wlconf_pre(void)
 {
 	int unit = 0;
 	char word[128], *next;
-	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
 	char buf[16] = {0};
 	wlc_rev_info_t rev;
 #ifdef TCONFIG_BCMBSD
@@ -137,39 +136,37 @@ void wlconf_pre(void)
 #endif
 
 	foreach (word, nvram_safe_get("wl_ifnames"), next) {
-		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
-
 #ifdef TCONFIG_BCMBSD
-		nvram_set(strlcat_r(prefix, "probresp_sw", tmp, sizeof(tmp)), smart_conn ? "1" : "0"); /* turn On with wireless band steering otherwise Off */
+		nvram_set(wl_nvname("probresp_sw", unit, 0), smart_conn ? "1" : "0"); /* turn On with wireless band steering otherwise Off */
 #endif
 
 		/* for TxBeamforming: get corerev for TxBF check */
 		wl_ioctl(word, WLC_GET_REVINFO, &rev, sizeof(rev));
 		snprintf(buf, sizeof(buf), "%d", rev.corerev);
-		nvram_set(strlcat_r(prefix, "corerev", tmp, sizeof(tmp)), buf);
+		nvram_set(wl_nvname("corerev", unit, 0), buf);
 
 		if (rev.corerev < 40) { /* TxBF unsupported - turn off and hide options (at the GUI) */
 			logmsg(LOG_DEBUG, "*** %s: TxBeamforming not supported for %s", __FUNCTION__, word);
-			nvram_set(strlcat_r(prefix, "txbf_bfr_cap", tmp, sizeof(tmp)), "0"); /* off = 0 */
-			nvram_set(strlcat_r(prefix, "txbf_bfe_cap", tmp, sizeof(tmp)), "0");
-			nvram_set(strlcat_r(prefix, "txbf", tmp, sizeof(tmp)), "0");
-			nvram_set(strlcat_r(prefix, "itxbf", tmp, sizeof(tmp)), "0");
-			nvram_set(strlcat_r(prefix, "txbf_imp", tmp, sizeof(tmp)), "0");
+			nvram_set(wl_nvname("txbf_bfr_cap", unit, 0), "0"); /* off = 0 */
+			nvram_set(wl_nvname("txbf_bfe_cap", unit, 0), "0");
+			nvram_set(wl_nvname("txbf", unit, 0), "0");
+			nvram_set(wl_nvname("itxbf", unit, 0), "0");
+			nvram_set(wl_nvname("txbf_imp", unit, 0), "0");
 		}
 		else {
 			/* nothing to do right now! - use default nvram config or desired user wlan setup */
 			logmsg(LOG_DEBUG, "*** %s: TxBeamforming supported for %s - corerev: %s", __FUNCTION__, word, buf);
-			logmsg(LOG_DEBUG, "*** %s: txbf_bfr_cap for %s = %s", __FUNCTION__, word, nvram_safe_get(strlcat_r(prefix, "txbf_bfr_cap", tmp, sizeof(tmp))));
-			logmsg(LOG_DEBUG, "*** %s: txbf_bfe_cap for %s = %s", __FUNCTION__, word, nvram_safe_get(strlcat_r(prefix, "txbf_bfe_cap", tmp, sizeof(tmp))));
+			logmsg(LOG_DEBUG, "*** %s: txbf_bfr_cap for %s = %s", __FUNCTION__, word, nvram_safe_get(wl_nvname("txbf_bfr_cap", unit, 0)));
+			logmsg(LOG_DEBUG, "*** %s: txbf_bfe_cap for %s = %s", __FUNCTION__, word, nvram_safe_get(wl_nvname("txbf_bfe_cap", unit, 0)));
 		}
 
-		if (nvram_match(strlcat_r(prefix, "nband", tmp, sizeof(tmp)), "1") && /* only for wlX_nband == 1 for 5 GHz */
-		    nvram_match(strlcat_r(prefix, "vreqd", tmp, sizeof(tmp)), "1") &&
-		    nvram_match(strlcat_r(prefix, "nmode", tmp, sizeof(tmp)), "-1")) { /* only for mode AUTO == -1 */
+		if (nvram_match(wl_nvname("nband", unit, 0), "1") && /* only for wlX_nband == 1 for 5 GHz */
+		    nvram_match(wl_nvname("vreqd", unit, 0), "1") &&
+		    nvram_match(wl_nvname("nmode", unit, 0), "-1")) { /* only for mode AUTO == -1 */
 
 #ifdef TCONFIG_BCM714
-			if (nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "1") ||
-			    nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "2")) { /* check turbo/nitro qam on or off ? (keep it simple) */
+			if (nvram_match(wl_nvname("turbo_qam", unit, 0), "1") ||
+			    nvram_match(wl_nvname("turbo_qam", unit, 0), "2")) { /* check turbo/nitro qam on or off ? (keep it simple) */
 				logmsg(LOG_DEBUG, "*** %s: set vht_features 4 for %s", __FUNCTION__, word);
 				eval("wl", "-i", word, "vht_features", "4");
 			}
@@ -182,17 +179,17 @@ void wlconf_pre(void)
 			logmsg(LOG_DEBUG, "*** %s: set vhtmode 1 for %s", __FUNCTION__, word);
 			eval("wl", "-i", word, "vhtmode", "1");
 		}
-		else if (nvram_match(strlcat_r(prefix, "nband", tmp, sizeof(tmp)), "2") && /* only for wlX_nband == 2 for 2,4 GHz */
-		         nvram_match(strlcat_r(prefix, "vreqd", tmp, sizeof(tmp)), "1") &&
-		         nvram_match(strlcat_r(prefix, "nmode", tmp, sizeof(tmp)), "-1")) { /* only for mode AUTO == -1 */
+		else if (nvram_match(wl_nvname("nband", unit, 0), "2") && /* only for wlX_nband == 2 for 2,4 GHz */
+		         nvram_match(wl_nvname("vreqd", unit, 0), "1") &&
+		         nvram_match(wl_nvname("nmode", unit, 0), "-1")) { /* only for mode AUTO == -1 */
 
 
-			if (nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "1")) { /* check turbo qam on or off ? */
+			if (nvram_match(wl_nvname("turbo_qam", unit, 0), "1")) { /* check turbo qam on or off ? */
 				logmsg(LOG_DEBUG, "*** %s: set vht_features 3 for %s", __FUNCTION__, word);
 				eval("wl", "-i", word, "vht_features", "3");
 			}
 #ifdef TCONFIG_BCM714
-			else if (nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "2")) { /* check nitro qam on or off ? */
+			else if (nvram_match(wl_nvname("turbo_qam", unit, 0), "2")) { /* check nitro qam on or off ? */
 				logmsg(LOG_DEBUG, "*** %s: set vht_features 7 for %s", __FUNCTION__, word);
 				eval("wl", "-i", word, "vht_features", "7");
 			}
@@ -246,7 +243,6 @@ static void set_lan_hostname(const char *wan_hostname)
 		/* derive from et0 mac address */
 		s = nvram_get("lan_hwaddr");
 		if (s && strlen(s) >= 17) {
-			memset(buf, 0, sizeof(buf));
 			snprintf(buf, sizeof(buf), "FT-%c%c%c%c%c%c%c%c%c%c%c%c", s[0], s[1], s[3], s[4], s[6], s[7], s[9], s[10], s[12], s[13], s[15], s[16]);
 
 			if ((f = fopen("/proc/sys/kernel/hostname", "w"))) {
@@ -262,10 +258,8 @@ static void set_lan_hostname(const char *wan_hostname)
 		fprintf(f, "127.0.0.1 localhost\n");
 
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			memset(buf, 0, sizeof(buf));
-			snprintf(buf, sizeof(buf), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+			get_bridge_nvram_key(i, "ipaddr", buf, sizeof(buf));
 			if ((s = nvram_get(buf)) && (*s)) {
-				memset(buf2, 0, sizeof(buf2));
 				snprintf(buf2, sizeof(buf2), "%d", i);
 				fprintf(f, "%s %s %s-lan%s\n", s, (i == 0 ? lan_hostname : ""), lan_hostname, (i == 0 ? "" : buf2));
 			}
@@ -372,12 +366,12 @@ static int wlconf(char *ifname, int unit, int subunit)
 #ifdef TCONFIG_BCMARM
 	int phytype;
 	char buf[8] = {0};
-	char tmp[128] = {0};
 #endif
 #ifdef TCONFIG_BCMBSD
 	char word[128], *next;
-	char prefix[] = "wlXXXXXXX_";
-	char prefix2[] = "wlXXXXXXX_";
+	char prefix[] = "wlXXXXXXXXXX_";
+	char prefix2[] = "wlXXXXXXXXXX_";
+	char tmp[128] = {0};
 	char tmp2[128];
 	int wlif_count = 0;
 	int i = 0;
@@ -389,21 +383,23 @@ static int wlconf(char *ifname, int unit, int subunit)
 
 	logmsg(LOG_DEBUG, "*** %s: wlconf: ifname %s unit %d subunit %d", __FUNCTION__, ifname, unit, subunit);
 
-#ifndef TCONFIG_BCMARM
-	/* Tomato MIPS needs a little help here: wlconf() will not validate/restore all per-interface related variables right now; */
+#ifdef TCONFIG_MIPS_RTAC
+	/*
+	 * RT-AC uses a prebuilt wlconf which does not perform the full
+	 * per-interface defaults validation done by the RT/RT-N sources.
+	 * Keep the nvram applet pre-validation for this platform only.
+	 */
 	snprintf(wl, sizeof(wl), "--wl%d", unit);
-	eval("nvram", "validate", wl); /* sync wl_ and wlX ; (MIPS does not use nvram_tuple router_defaults; ARM branch does ... ) */
-	memset(wl, 0, sizeof(wl)); /* reset */
+	eval("nvram", "validate", wl);
+	memset(wl, 0, sizeof(wl));
 #endif
 
 #ifdef TCONFIG_BCMARM
 	/* set phytype */
 	if ((subunit == -1) && !wl_ioctl(ifname, WLC_GET_PHYTYPE, &phytype, sizeof(phytype))) {
-		snprintf(wl, sizeof(wl), "wl%d_", unit);
 		snprintf(buf, sizeof(buf), "%s", WLCONF_PHYTYPE2STR(phytype));
-		nvram_set(strlcat_r(wl, "phytype", tmp, sizeof(tmp)), buf);
-		logmsg(LOG_DEBUG, "*** %s: wlconf: %s = %s", __FUNCTION__, tmp, buf);
-		memset(wl, 0, sizeof(wl)); /* reset */
+		nvram_set(wl_nvname("phytype", unit, 0), buf);
+		logmsg(LOG_DEBUG, "*** %s: wlconf: wl%d_phytype = %s", __FUNCTION__, unit, buf);
 	}
 #endif
 	
@@ -571,7 +567,8 @@ static void start_emf(char *lan_ifname)
 	}
 	else {
 		logmsg(LOG_INFO, "EMF for %s is started", lan_ifname);
-		nvram_set(strlcat_r(lan_ifname, "_emf_active", tmp, sizeof(tmp)), "1"); /* set active */
+		/* EMF state is stored under the interface-scoped "<ifname>_emf_active" key. */
+		prefix_nvram_set(lan_ifname, "emf_active", "1", tmp, sizeof(tmp)); /* set active */
 	}
 }
 
@@ -581,7 +578,7 @@ static void stop_emf(char *lan_ifname)
 	char tmp[32] = {0};
 
 	/* check if emf is active for lan_ifname */
-	if (lan_ifname == NULL || !nvram_get_int(strlcat_r(lan_ifname, "_emf_active", tmp, sizeof(tmp))))
+	if (lan_ifname == NULL || !prefix_nvram_get_int(lan_ifname, "emf_active", tmp, sizeof(tmp)))
 		return;
 
 	/* Stop EMF for this LAN / brX */
@@ -596,7 +593,7 @@ static void stop_emf(char *lan_ifname)
 	}
 	else {
 		logmsg(LOG_INFO, "EMF for %s is stopped", lan_ifname);
-		nvram_set(strlcat_r(lan_ifname, "_emf_active", tmp, sizeof(tmp)), "0"); /* set NOT active */
+		prefix_nvram_set(lan_ifname, "emf_active", "0", tmp, sizeof(tmp)); /* set NOT active */
 	}
 }
 #endif /* TCONFIG_EMF */
@@ -865,9 +862,8 @@ void restart_wl(void)
 
 	char tmp[32];
 	char br;
-	char prefix[16] = {0};
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	int wlan_cnt = 0;
 	int wlan_5g_cnt = 0;
 	char blink_wlan_ifname[32];
@@ -876,7 +872,7 @@ void restart_wl(void)
 	int wlan_52g_cnt = 0;
 	char blink_wlan_52g_ifname[32];
 #endif /* TCONFIG_AC3200 */
-#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+#endif /* TCONFIG_RTNPLUS */
 #ifdef TCONFIG_BCMARM
 	/* get router model */
 	int model = get_model();
@@ -894,23 +890,10 @@ void restart_wl(void)
 #endif
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br != 0)
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
-
-		strlcpy(tmp, "lan", sizeof(tmp));
-		strlcat(tmp, bridge, sizeof(tmp));
-		strlcat(tmp, "_ifname", sizeof(tmp));
-		lan_ifname = nvram_safe_get(tmp);
+		lan_ifname = bridge_nvram_get(br, "ifname", tmp, sizeof(tmp));
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
-			strlcpy(tmp, "lan", sizeof(tmp));
-			strlcat(tmp, bridge, sizeof(tmp));
-			strlcat(tmp, "_ifnames", sizeof(tmp));
-
-			if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
+			if ((lan_ifnames = strdup(bridge_nvram_get(br, "ifnames", tmp, sizeof(tmp)))) != NULL) {
 				p = lan_ifnames;
 				while ((ifname = strsep(&p, " ")) != NULL) {
 					while (*ifname == ' ')
@@ -923,8 +906,7 @@ void restart_wl(void)
 					/* ignore disabled wl vifs */
 					if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
 						char nv[40];
-						snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", ifname);
-						if (!nvram_get_int(nv))
+						if (!prefix_nvram_get_int(ifname, "bss_enabled", nv, sizeof(nv) - 1))
 							continue;
 						if (get_ifname_unit(ifname, &unit, &subunit) < 0)
 							continue;
@@ -933,16 +915,14 @@ void restart_wl(void)
 					else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
 						continue;
 
-					memset(prefix, 0, sizeof(prefix));
-					snprintf(prefix, sizeof(prefix), "wl%d_", unit);
-					if (nvram_match(strlcat_r(prefix, "radio", tmp, sizeof(tmp)), "0")) {
+					if (nvram_match(wl_nvname("radio", unit, 0), "0")) {
 						eval("wlconf", ifname, "down");
 					}
 					else {
 						eval("wlconf", ifname, "start"); /* start wl iface */
 					}
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 					/* Enable WLAN LEDs if wireless interface is enabled */
 					if (nvram_get_int(wl_nvname("radio", unit, 0))) {
 						if ((wlan_cnt == 0) && (wlan_5g_cnt == 0)
@@ -982,7 +962,7 @@ void restart_wl(void)
 						}
 #endif /* TCONFIG_AC3200 */
 					}
-#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+#endif /* TCONFIG_RTNPLUS */
 				}
 				free(lan_ifnames);
 			}
@@ -1021,7 +1001,7 @@ void restart_wl(void)
 	}
 #endif /* TCONFIG_BCMARM */
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	/* Finally: start blink (traffic "control" of LED) if only one unit (for each wlan) is enabled [AND stealth mode is off - ARM] */
 	if (nvram_get_int("blink_wl")
 #ifdef TCONFIG_BCMARM
@@ -1037,7 +1017,7 @@ void restart_wl(void)
 			eval("blink", blink_wlan_52g_ifname, "52g", "10", "8192");
 #endif
 	}
-#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+#endif /* TCONFIG_RTNPLUS */
 }
 
 void stop_lan_wl(void)
@@ -1054,21 +1034,9 @@ void stop_lan_wl(void)
 #endif
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br !=0 )
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
+		lan_ifname = bridge_nvram_get(br, "ifname", tmp, sizeof(tmp));
 
-		strlcpy(tmp, "lan", sizeof(tmp));
-		strlcat(tmp, bridge, sizeof(tmp));
-		strlcat(tmp, "_ifname", sizeof(tmp));
-		lan_ifname = nvram_safe_get(tmp);
-
-		strlcpy(tmp, "lan", sizeof(tmp));
-		strlcat(tmp, bridge, sizeof(tmp));
-		strlcat(tmp, "_ifnames", sizeof(tmp));
-		if ((wl_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
+		if ((wl_ifnames = strdup(bridge_nvram_get(br, "ifnames", tmp, sizeof(tmp)))) != NULL) {
 			p = wl_ifnames;
 			while ((ifname = strsep(&p, " ")) != NULL) {
 				while (*ifname == ' ')
@@ -1123,16 +1091,7 @@ void start_lan_wl(void)
 	foreach_wif(0, NULL, set_wlmac);
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br != 0)
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
-
-		strlcpy(tmp, "lan", sizeof(tmp));
-		strlcat(tmp, bridge, sizeof(tmp));
-		strlcat(tmp, "_ifname", sizeof(tmp));
-		lan_ifname = nvram_safe_get(tmp);
+		lan_ifname = bridge_nvram_get(br, "ifname", tmp, sizeof(tmp));
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
 #ifdef TCONFIG_EMF
@@ -1141,18 +1100,11 @@ void start_lan_wl(void)
 				eval("igs", "add", "bridge", lan_ifname);
 			}
 #endif
-			strlcpy(tmp, "lan", sizeof(tmp));
-			strlcat(tmp, bridge, sizeof(tmp));
-			strlcat(tmp, "_ipaddr", sizeof(tmp));
-			inet_aton(nvram_safe_get(tmp), (struct in_addr *)&ip);
-
-			strlcpy(tmp, "lan", sizeof(tmp));
-			strlcat(tmp, bridge, sizeof(tmp));
-			strlcat(tmp, "_ifnames", sizeof(tmp));
+			inet_aton(bridge_nvram_get(br, "ipaddr", tmp, sizeof(tmp)), (struct in_addr *)&ip);
 
 			sta = 0;
 
-			if ((wl_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
+			if ((wl_ifnames = strdup(bridge_nvram_get(br, "ifnames", tmp, sizeof(tmp)))) != NULL) {
 				p = wl_ifnames;
 				while ((ifname = strsep(&p, " ")) != NULL) {
 					while (*ifname == ' ')
@@ -1165,8 +1117,7 @@ void start_lan_wl(void)
 					/* ignore disabled wl vifs */
 					if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
 						char nv[40];
-						snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", ifname);
-						if (!nvram_get_int(nv))
+						if (!prefix_nvram_get_int(ifname, "bss_enabled", nv, sizeof(nv) - 1))
 							continue;
 						if (get_ifname_unit(ifname, &unit, &subunit) < 0)
 							continue;
@@ -1380,7 +1331,6 @@ int wl_sta_prepare(void)
 	int mwan_num;
 	int wan_unit;
 	char wan_prefix[] = "wanXX";
-	char wl_prefix[8];
 	int wl_unit = 0;
 	int i;
 	char buffer[32];
@@ -1392,8 +1342,7 @@ int wl_sta_prepare(void)
 
 	/* quick pre-check for non-sta setups (help FT with CTF on!) */
 	foreach (word, nvram_safe_get("wl_ifnames"), next) {
-		snprintf(wl_prefix, sizeof(wl_prefix), "wl%d_", wl_unit);
-		if (nvram_match(strlcat_r(wl_prefix, "mode", tmp, sizeof(tmp)), "sta")) {
+		if (nvram_match(wl_nvname("mode", wl_unit, 0), "sta")) {
 			sta = 1; /* found! */
 		}
 		wl_unit++;
@@ -1406,16 +1355,14 @@ int wl_sta_prepare(void)
 		goto CLEANUP;
 	}
 
-	mwan_num = nvram_get_int("mwan_num");
-	if (mwan_num < 1 || mwan_num > MWAN_MAX)
-		mwan_num = 1;
+	mwan_num = mwan_active_num();
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, wan_prefix);
 
 		store_wan_if_to_nvram(wan_prefix); /* prepare wan setup very early now! */
 
-		wl_sta = nvram_safe_get(strlcat_r(wan_prefix, "_ifname", tmp, sizeof(tmp)));
+		wl_sta = wan_nvram_get(wan_unit, "ifname", tmp, sizeof(tmp));
 
 		/* Check interface len */
 		if (!strlen(wl_sta))
@@ -1428,11 +1375,9 @@ int wl_sta_prepare(void)
 			if (wl_ioctl(wl_sta, WLC_GET_INSTANCE, &wl_unit, sizeof(wl_unit)))
 				return 0;
 
-			snprintf(wl_prefix, sizeof(wl_prefix), "wl%d_", wl_unit);
-
-			if (nvram_match(strlcat_r(wl_prefix, "mode", tmp, sizeof(tmp)), "sta") &&
-			    nvram_match(strlcat_r(wl_prefix, "radio", tmp, sizeof(tmp)), "1") &&
-			    nvram_match(strlcat_r(wl_prefix, "bss_enabled", tmp, sizeof(tmp)), "1")) { /* check for sta interface */
+			if (nvram_match(wl_nvname("mode", wl_unit, 0), "sta") &&
+			    nvram_match(wl_nvname("radio", wl_unit, 0), "1") &&
+			    nvram_match(wl_nvname("bss_enabled", wl_unit, 0), "1")) { /* check for sta interface */
 				logmsg(LOG_INFO, "Wireless WAN found: %s - wl%d", wl_sta, wl_unit);
 				sta = 1;
 				break;
@@ -1443,12 +1388,9 @@ int wl_sta_prepare(void)
 	/* check bridges and remove sta interface from the interface list */
 	if (sta) {
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			memset(buffer, 0, sizeof(buffer));
-			snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+			get_bridge_nvram_key(i, "ifname", buffer, sizeof(buffer));
 			if (strcmp(nvram_safe_get(buffer), "") != 0) { /* check brX */
-				memset(buffer, 0, sizeof(buffer));
-				memset(tmp, 0, sizeof(tmp));
-				snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifnames" : "lan%d_ifnames"), i);
+				get_bridge_nvram_key(i, "ifnames", buffer, sizeof(buffer));
 				snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get(buffer));
 
 				if (!remove_from_list(wl_sta, tmp, sizeof(tmp))) {
@@ -1469,7 +1411,6 @@ CLEANUP:
 	/* case 2: setup/interface changed */
 	else if (sta && !nvram_match("wlc_ifname", wl_sta)) {
 		wlc = nvram_safe_get("wlc_ifname");
-		memset(tmp, 0, sizeof(tmp));
 		snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("lan_ifnames"));
 
 		if (!add_to_list(wlc, tmp, sizeof(tmp))) {
@@ -1484,7 +1425,6 @@ CLEANUP:
 	/* case 4: no client anymore */
 	else if (!sta && strlen(nvram_safe_get("wlc_ifname"))) {
 		wlc = nvram_safe_get("wlc_ifname");
-		memset(tmp, 0, sizeof(tmp));
 		snprintf(tmp, sizeof(tmp), "%s", nvram_safe_get("lan_ifnames"));
 
 		if (!add_to_list(wlc, tmp, sizeof(tmp))) {
@@ -1519,7 +1459,7 @@ void enable_ipv6(int enable)
 				/* do nothing */
 			}
 			else {
-				snprintf(s, sizeof(s), "ipv6/conf/%s/disable_ipv6", dirent->d_name);
+				snprintf(s, sizeof(s), "ipv6/conf/%.104s/disable_ipv6", dirent->d_name);
 				f_write_procsysnet(s, enable ? "0" : "1");
 			}
 		}
@@ -1616,34 +1556,22 @@ void start_lan(void)
 	enable_ipv6(ipv6_enabled());  /* tell Kernel to disable/enable IPv6 for most interfaces */
 #endif
 
-#if !defined(TCONFIG_BLINK) && !defined(TCONFIG_BCMARM) /* RT only */
+#ifndef TCONFIG_RTNPLUS /* RT only */
 	int vlan0tag = nvram_get_int("vlan0tag");
 #endif
 
 	for (br = 0; br <= BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br != 0)
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
-
 		if ((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
 			return;
 
-		strlcpy(tmp, "lan", sizeof(tmp));
-		strlcat(tmp, bridge, sizeof(tmp));
-		strlcat(tmp, "_ifname", sizeof(tmp));
-		lan_ifname = strdup(nvram_safe_get(tmp));
+		lan_ifname = strdup(bridge_nvram_get(br, "ifname", tmp, sizeof(tmp)));
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
 			logmsg(LOG_DEBUG, "*** %s: setting up the bridge %s", __FUNCTION__, lan_ifname);
 
 			eval("brctl", "addbr", lan_ifname);
 			eval("brctl", "setfd", lan_ifname, "0");
-			strlcpy(tmp, "lan", sizeof(tmp));
-			strlcat(tmp, bridge, sizeof(tmp));
-			strlcat(tmp, "_stp", sizeof(tmp));
-			eval("brctl", "stp", lan_ifname, nvram_safe_get(tmp));
+			eval("brctl", "stp", lan_ifname, bridge_nvram_get(br, "stp", tmp, sizeof(tmp)));
 
 #ifdef TCONFIG_EMF
 			if (nvram_get_int("emf_enable")) {
@@ -1652,18 +1580,12 @@ void start_lan(void)
 			}
 #endif
 
-			strlcpy(tmp, "lan", sizeof(tmp));
-			strlcat(tmp, bridge, sizeof(tmp));
-			strlcat(tmp, "_ipaddr", sizeof(tmp));
-			inet_aton(nvram_safe_get(tmp), (struct in_addr *)&ip);
+			inet_aton(bridge_nvram_get(br, "ipaddr", tmp, sizeof(tmp)), (struct in_addr *)&ip);
 
 			hwaddrset = 0;
 			sta = 0;
 
-			strlcpy(tmp, "lan", sizeof(tmp));
-			strlcat(tmp, bridge, sizeof(tmp));
-			strlcat(tmp, "_ifnames", sizeof(tmp));
-			if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
+			if ((lan_ifnames = strdup(bridge_nvram_get(br, "ifnames", tmp, sizeof(tmp)))) != NULL) {
 				p = lan_ifnames;
 				while ((iftmp = strsep(&p, " ")) != NULL) {
 					while (*iftmp == ' ')
@@ -1676,8 +1598,7 @@ void start_lan(void)
 
 					/* ignore disabled wl vifs */
 					if (strncmp(ifname, "wl", 2) == 0 && strchr(ifname, '.')) {
-						snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", ifname);
-						if (!nvram_get_int(nv))
+						if (!prefix_nvram_get_int(ifname, "bss_enabled", nv, sizeof(nv) - 1))
 							continue;
 						if (get_ifname_unit(ifname, &unit, &subunit) < 0)
 							continue;
@@ -1692,7 +1613,7 @@ void start_lan(void)
 						if (sscanf(ifname, "vlan%d", &vid) == 1) {
 							snprintf(tmp, sizeof(tmp), "vlan%dvid", vid);
 							vid_map = nvram_get_int(tmp);
-#if !defined(TCONFIG_BLINK) && !defined(TCONFIG_BCMARM) /* RT only */
+#ifndef TCONFIG_RTNPLUS /* RT only */
 							if ((vid_map < 1) || (vid_map > 4094)) vid_map = vlan0tag | vid;
 #else
 							if ((vid_map < 1) || (vid_map > 4094)) vid_map = vid;
@@ -1813,9 +1734,7 @@ void start_lan(void)
 
 		/* Get current LAN hardware address */
 		strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
-		strlcpy(tmp, "lan", sizeof(tmp));
-		strlcat(tmp, bridge, sizeof(tmp));
-		strlcat(tmp, "_hwaddr", sizeof(tmp));
+		get_bridge_nvram_key(br, "hwaddr", tmp, sizeof(tmp));
 		if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) {
 			nvram_set(tmp, ether_etoa((const unsigned char *)ifr.ifr_hwaddr.sa_data, eabuf));
 		}
@@ -1826,13 +1745,17 @@ void start_lan(void)
 		set_et_qos_mode();
 
 		/* bring up and configure LAN interface */
-		strlcpy(tmp, "lan", sizeof(tmp));
-		strlcat(tmp, bridge, sizeof(tmp));
-		strlcat(tmp, "_ipaddr", sizeof(tmp));
-		strlcpy(tmp2, "lan", sizeof(tmp2));
-		strlcat(tmp2, bridge, sizeof(tmp2));
-		strlcat(tmp2, "_netmask", sizeof(tmp2));
+		get_bridge_nvram_key(br, "ipaddr", tmp, sizeof(tmp));
+		get_bridge_nvram_key(br, "netmask", tmp2, sizeof(tmp2));
 		ifconfig(lan_ifname, IFUP | IFF_ALLMULTI, nvram_safe_get(tmp), nvram_safe_get(tmp2));
+
+#ifdef TCONFIG_IPV6
+		/* 0.0.0.0 marks a pure L2 bridge; keep the kernel from creating IPv6 addresses on it. */
+		if (nvram_match(tmp, "0.0.0.0")) {
+			snprintf(nv, sizeof(nv), "ipv6/conf/%s/disable_ipv6", lan_ifname);
+			f_write_procsysnet(nv, "1");
+		}
+#endif
 
 		config_loopback();
 		do_static_routes(1);
@@ -1844,7 +1767,7 @@ void start_lan(void)
 			char *gateway = nvram_safe_get("lan_gateway") ;
 			if ((*gateway) && (strcmp(gateway, "0.0.0.0") != 0)) {
 				int tries = 5;
-				while ((route_add(lan_ifname, 0, "0.0.0.0", gateway, "0.0.0.0") != 0) && (tries-- > 0))
+				while (route_error_retryable(route_add(lan_ifname, 0, "0.0.0.0", gateway, "0.0.0.0")) && (tries-- > 0))
 					sleep(1);
 
 				logmsg(LOG_DEBUG, "*** %s: add gateway=%s tries=%d", __FUNCTION__, gateway, tries);
@@ -1872,7 +1795,7 @@ void stop_lan(void)
 	char br;
 	int vid, vid_map;
 	char *iftmp;
-#if !defined(TCONFIG_BLINK) && !defined(TCONFIG_BCMARM) /* RT only */
+#ifndef TCONFIG_RTNPLUS /* RT only */
 	int vlan0tag = nvram_get_int("vlan0tag");
 #endif
 
@@ -1891,23 +1814,11 @@ void stop_lan(void)
 #endif
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		char bridge[2] = "0";
-		if (br != 0)
-			bridge[0] += br;
-		else
-			memset(bridge, 0, sizeof(bridge));
-
-		strlcpy(tmp, "lan", sizeof(tmp));
-		strlcat(tmp, bridge, sizeof(tmp));
-		strlcat(tmp, "_ifname", sizeof(tmp));
-		lan_ifname = nvram_safe_get(tmp);
+		lan_ifname = bridge_nvram_get(br, "ifname", tmp, sizeof(tmp));
 		ifconfig(lan_ifname, 0, NULL, NULL);
 
 		if (strncmp(lan_ifname, "br", 2) == 0) {
-			strlcpy(tmp, "lan", sizeof(tmp));
-			strlcat(tmp, bridge, sizeof(tmp));
-			strlcat(tmp, "_ifnames", sizeof(tmp));
-			if ((lan_ifnames = strdup(nvram_safe_get(tmp))) != NULL) {
+			if ((lan_ifnames = strdup(bridge_nvram_get(br, "ifnames", tmp, sizeof(tmp)))) != NULL) {
 				p = lan_ifnames;
 				while ((iftmp = strsep(&p, " ")) != NULL) {
 					while (*iftmp == ' ')
@@ -1921,7 +1832,7 @@ void stop_lan(void)
 						if (sscanf(ifname, "vlan%d", &vid) == 1) {
 							snprintf(tmp, sizeof(tmp), "vlan%dvid", vid);
 							vid_map = nvram_get_int(tmp);
-#if !defined(TCONFIG_BLINK) && !defined(TCONFIG_BCMARM) /* RT only */
+#ifndef TCONFIG_RTNPLUS /* RT only */
 							if ((vid_map < 1) || (vid_map > 4094)) vid_map = vlan0tag | vid;
 #else
 							if ((vid_map < 1) || (vid_map > 4094)) vid_map = vid;
@@ -1956,19 +1867,15 @@ void stop_lan(void)
 	logmsg(LOG_DEBUG, "*** OUT %s: %d", __FUNCTION__, __LINE__);
 }
 
-static int is_sta(int idx, int unit, int subunit, void *param)
-{
-	return (nvram_match(wl_nvname("mode", unit, subunit), "sta") && (nvram_match(wl_nvname("bss_enabled", unit, subunit), "1")));
-}
-
 void do_static_routes(int add)
 {
 	char *buf;
 	char *p, *q;
 	char *dest, *mask, *gateway, *metric, *if_tmp, *ifname;
-	int r, found_lan;
+	int r, err, found_lan, proto;
 	unsigned int i;
-	char name[8], ip[16], proto_key[16], ip_key[32], if_key[16];
+	unsigned int mwan_num = add ? mwan_active_num() : mwan_configured_num();
+	char name[8], ip[16], if_key[32];
 	char *modem_ip, *end;
 	unsigned char c;
 
@@ -1980,20 +1887,18 @@ void do_static_routes(int add)
 	else
 		nvram_unset("routes_static_saved");
 
-	ifname = nvram_safe_get("wan_ifname"); /* default */
 	p = buf;
 	while ((q = strsep(&p, ">")) != NULL) {
 		if (vstrsep(q, "<", &dest, &gateway, &mask, &metric, &if_tmp) < 5)
 			continue;
 
+		ifname = nvram_safe_get("wan_ifname"); /* default for each route */
 		found_lan = 0;
 		for (i = 0; i < BRIDGE_COUNT; i++) {
 			/* LAN, LAN1, LAN2, LAN3 set in advanced-routing.asp */
-			memset(name, 0, sizeof(name));
 			snprintf(name, sizeof(name), (i == 0 ? "LAN" : "LAN%u"), i);
 			if (strcmp(if_tmp, name) == 0) {
-				memset(if_key, 0, sizeof(if_key));
-				snprintf(if_key, sizeof(if_key), (i == 0 ? "lan_ifname" : "lan%u_ifname"), i);
+				get_bridge_nvram_key(i, "ifname", if_key, sizeof(if_key));
 				ifname = nvram_safe_get(if_key); /* set */
 				found_lan = 1;
 				break;
@@ -2006,19 +1911,15 @@ void do_static_routes(int add)
 			 */
 			for (i = 1; i <= MWAN_MAX; i++) {
 				/* WAN, WAN2, WAN3, WAN4 set in advanced-routing.asp */
-				memset(name, 0, sizeof(name));
 				snprintf(name, sizeof(name), (i == 1 ? "WAN" : "WAN%u"), i);
 				if (strcmp(if_tmp, name) == 0) {
-					memset(if_key, 0, sizeof(if_key));
 					snprintf(if_key, sizeof(if_key), (i == 1 ? "wan_iface" : "wan%u_iface"), i);
 					ifname = nvram_safe_get(if_key); /* set */
 					break;
 				}
 				/* MAN, MAN2, MAN3, MAN4 set in advanced-routing.asp */
-				memset(name, 0, sizeof(name));
 				snprintf(name, sizeof(name), (i == 1 ? "MAN" : "MAN%u"), i);
 				if (strcmp(if_tmp, name) == 0) {
-					memset(if_key, 0, sizeof(if_key));
 					snprintf(if_key, sizeof(if_key), (i == 1 ? "wan_ifname" : "wan%u_ifname"), i);
 					ifname = nvram_safe_get(if_key); /* set */
 					break;
@@ -2026,45 +1927,49 @@ void do_static_routes(int add)
 			}
 		}
 
-		logmsg(LOG_WARNING, "Static route %s: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", (add ? "added" : "deleted"), ifname, metric, dest, gateway, mask);
 
 		if (add) {
 			for (r = 3; r >= 0; --r) {
-				if (route_add(ifname, atoi(metric), dest, gateway, mask) == 0)
+				err = route_add(ifname, atoi(metric), dest, gateway, mask);
+				if (err == 0) {
+					logmsg(LOG_WARNING, "Static route added: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
+					break;
+				}
+				if (err == EEXIST) {
+					logmsg(LOG_DEBUG, "Static route already exists: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
+					break;
+				}
+
+				if (!route_error_retryable(err))
 					break;
 
-				sleep(1);
+				if (r > 0)
+					sleep(1);
 			}
 		}
-		else
-			route_del(ifname, atoi(metric), dest, gateway, mask);
+		else {
+			if (route_del(ifname, atoi(metric), dest, gateway, mask) > 0)
+				logmsg(LOG_WARNING, "Static route deleted: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
+		}
 	}
 	free(buf);
 
-	for (i = 1; i <= MWAN_MAX; i++) {
-		memset(name, 0, sizeof(name));
-		snprintf(name, sizeof(name), (i == 1 ? "wan" : "wan%u"), i);
-
-		memset(proto_key, 0, sizeof(proto_key));
-		memset(ip_key, 0, sizeof(ip_key));
-		memset(if_key, 0, sizeof(if_key));
-		snprintf(proto_key, sizeof(proto_key), "%s_proto", name);
-		snprintf(ip_key, sizeof(ip_key), "%s_modem_ipaddr", name);
-		snprintf(if_key, sizeof(if_key), "%s_ifname", name);
-
-		if (!(nvram_match(proto_key, "pppoe") || nvram_match(proto_key, "dhcp") || nvram_match(proto_key, "static")))
+	for (i = 1; i <= mwan_num; i++) {
+		get_wan_prefix(i, name);
+		proto = get_wanx_proto(name);
+		if ((proto != WP_PPPOE) && (proto != WP_DHCP) && (proto != WP_STATIC))
 			continue;
 
-		modem_ip = nvram_safe_get(ip_key);
-		if ((!modem_ip) || (!*modem_ip) || (nvram_match(ip_key, "0.0.0.0")) || (foreach_wif(1, NULL, is_sta)))
+		modem_ip = prefix_nvram_get(name, "modem_ipaddr", if_key, sizeof(if_key));
+		if ((!modem_ip) || (!*modem_ip) || (nvram_match(if_key, "0.0.0.0")) || (foreach_wif(1, NULL, is_sta)))
 			continue;
 
 		end = rindex(modem_ip, '.') + 1;
 		c = atoi(end);
-		memset(ip, 0, sizeof(ip));
 		snprintf(ip, sizeof(ip), "%.*s%hhu", (end - modem_ip), modem_ip, (unsigned char)(c ^ 1 ^ ((c & 2) ^ ((c & 1) << 1))));
 
-		eval("ip", "addr", add ? "add" : "del", ip, "peer", modem_ip, "dev", nvram_safe_get(if_key));
+		eval("ip", "addr", add ? "add" : "del", ip, "peer", modem_ip, "dev",
+		     prefix_nvram_get(name, "ifname", if_key, sizeof(if_key)));
 	}
 }
 
@@ -2267,7 +2172,7 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 	char s[32], f[64];
 	char ifname[16];
 	char *amode, sec[16];
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	char clap_hwaddr[32];
 #endif
 
@@ -2332,7 +2237,7 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 					break;
 
 				snprintf(sec, sizeof(sec), "%s", nvram_safe_get(wl_nvname("akm", unit, subunit)));
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 				snprintf(clap_hwaddr, sizeof(clap_hwaddr), "%s", nvram_safe_get(wl_nvname("clap_hwaddr", unit, subunit))); /* get ap mac addr for the FT client to connect to */
 #endif
 
@@ -2349,7 +2254,7 @@ static int radio_join(int idx, int unit, int subunit, void *param)
 				else
 					amode = "open";
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 				if (strlen(clap_hwaddr) >= 17) /* BSSID=MAC (xx:xx:xx:xx:xx:xx) to scan and join */
 					eval("wl", "-i", ifname, "join", nvram_safe_get(wl_nvname("ssid", unit, subunit)), "imode", "bss", "amode", amode, "-b", clap_hwaddr);
 				else /* default case */

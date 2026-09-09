@@ -21,7 +21,9 @@
 
 //	<% nvram(''); %>
 
+/* L7-BEGIN */
 //	<% layer7(); %>
+/* L7-END */
 
 //	<% nvramseq("rrules", "rrule%d", 0, 99); %>
 
@@ -47,10 +49,12 @@ rule[3] *= 1;
 rule[4] *= 1;
 rule[8] *= 1;
 
+/* L7-BEGIN */
 layer7.sort();
 for (i = 0; i < layer7.length; ++i)
 	layer7[i] = [layer7[i],layer7[i]];
 layer7.unshift(['','Layer 7 (disabled)']);
+/* L7-END */
 
 var ipp2p = [[0,'IPP2P (disabled)'],[0xFFFF,'All IPP2P Filters'],[1,'AppleJuice'],[2,'Ares'],[4,'BitTorrent'],[8,'Direct Connect'],[16,'eDonkey'],[32,'Gnutella'],
              [64,'Kazaa'],[128,'Mute'],[4096,'PPLive/UUSee'],[256,'SoulSeek'],[512,'Waste'],[1024,'WinMX'],[2048,'XDCC'],[8192,'Xunlei/QQCyclone']];
@@ -144,7 +148,12 @@ bpg.setup = function() {
 		{ type: 'select', prefix: '<div class="box2">', suffix: '<\/div>', options: [['a','Any Port'],['d','Dst Port'],['s','Src Port'],['x','Src or Dst']] },
 		{ type: 'text', prefix: '<div class="box3">', suffix: '<\/div>', maxlen: 32 },
 		{ type: 'select', prefix: '<div class="box4">', suffix: '<\/div>', options: ipp2p },
+/* L7-BEGIN */
 		{ type: 'select', prefix: '<div class="box5">', suffix: '<\/div>', options: layer7 },
+/* L7-END */
+/* L7-NO-BEGIN */
+		{ type: 'custom', custom: '<input type="hidden" value="">' },
+/* L7-NO-END */
 		{ type: 'select', prefix: '<div class="box6">', suffix: '<\/div>', options: [[0,'Any Address'],[1,'Dst IP'],[2,'Src IP']] },
 		{ type: 'text', prefix: '<div class="box7">', suffix: '<\/div>', maxlen: 64 }
 		] } ] );
@@ -226,8 +235,10 @@ bpg.dataToView = function(data) {
 			}
 		}
 	}
+/* L7-BEGIN */
 	else if (data[4] != '')
 		s += ', L7: '+data[4];
+/* L7-END */
 
 	return [s];
 }
@@ -300,6 +311,7 @@ function remove() {
 
 function verifyFields(focused, quiet) {
 	var b, e;
+	var block_type = E('_f_block_type').value;
 
 	tgHideIcons();
 
@@ -307,10 +319,10 @@ function verifyFields(focused, quiet) {
 	elem.display(PR('_f_sched_sun'), !E('_f_sched_everyday').checked);
 
 	b = E('rt_norm').checked;
-	elem.display(PR('_f_comp_all'), PR('_f_block_all'), b);
+	elem.display(PR('_f_comp_all'), PR('_f_block_type'), b);
 
 	elem.display(PR('res-comp-grid'), b && E('_f_comp_all').value != 0);
-	elem.display(PR('res-bp-grid'), PR('_f_block_http'), PR('_f_activex'), b && !E('_f_block_all').checked);
+	elem.display(PR('res-bp-grid'), PR('_f_block_http'), PR('_f_activex'), b && (block_type != 2));
 
 	ferror.clear('_f_comp_all');
 
@@ -372,10 +384,11 @@ function save() {
 		else
 			data.push('');
 
-		if (fom._f_block_all.checked)
+		if (fom._f_block_type.value == 2)
 			data.push('', '', '0');
 		else {
 			var check = 0;
+
 			a = bpg.getAllData();
 			check += a.length;
 			b = [];
@@ -390,24 +403,29 @@ function save() {
 			data.push(a);
 
 			n = 0;
+			/* Value 1 is "All Except..." (Whitelist Mode) */
+			if (fom._f_block_type.value == 1)
+				n |= 8;
+
 			if (fom._f_activex.checked)
-				n = 1;
+				n |= 1;
 			if (fom._f_flash.checked)
 				n |= 2;
 			if (fom._f_java.checked)
 				n |= 4;
 
 			data.push(n);
-			
-			if (((check + n) == 0) && (data[0] == 1)) {
-				alert('Please specify what items should be blocked');
+
+			/* Check against (n & 7) so the bit-8 whitelist flag doesn't false-trigger a pass */
+			if ((check == 0 && (n & 7) == 0) && (data[0] == 1)) {
+				alert('Please specify what items should be blocked or allowed');
 				return;
 			}
 		}
 	}
 	else {
 		data.push('~');
-		data.push('', '', '', '0');
+		data.push('', '', '0');
 	}
 
 	data.push(fom._f_desc.value);
@@ -433,7 +451,6 @@ function earlyInit() {
 
 	cg.setup();
 	var count = bpg.setup();
-	E('_f_block_all').checked = (count == 0) && (rule[7].search(/[^\s\r\n]/) == -1) && (rule[8] == 0);
 
 	verifyFields(null, 1);
 	insOvl();
@@ -494,7 +511,7 @@ function init() {
 			{ title: '', name: 'f_type', id: 'rt_wl', type: 'radio', suffix: ' Disable Wireless', value: (rule[5] == '~') },
 			{ title: 'Applies To', name: 'f_comp_all', type: 'select', options: [[0,'All Computers / Devices'],[1,'The Following...'],[2,'All Except...']], value: 0 },
 			{ title: '&nbsp;', text: '<div class="tomato-grid" id="res-comp-grid"><\/div>' },
-			{ title: 'Blocked Resources', name: 'f_block_all', type: 'checkbox', suffix: ' Block All Internet Access', value: 0 },
+			{ title: 'Blocked Resources', name: 'f_block_type', type: 'select', options: [[0, 'The Following...'], [1, 'All Except...'], [2, 'Block all Internet access']], value: (rule[8] & 8) ? 1 : ((rule[6] == '' && rule[7] == '' && rule[8] == 0) ? 2 : 0) },
 				{ title: 'Port / Application', indent: 2, text: '<div class="tomato-grid" id="res-bp-grid"><\/div>' },
 				{ title: 'HTTP Request', indent: 2, name: 'f_block_http', type: 'textarea', value: rule[7] },
 				{ title: 'HTTP Requested Files', indent: 2, multi: [

@@ -28,6 +28,325 @@ breaking changes, and mappings for the large list of deprecated functions.
 
 [Migration guide]: https://github.com/openssl/openssl/tree/master/doc/man7/migration_guide.pod
 
+### Changes between 3.0.21 and 3.0.22 [25 Aug 2026]
+
+ * Fixed heap buffer overflow in CMS key unwrapping.
+
+   Severity: Moderate
+
+   Issue summary: OpenSSL CMS decryption sizes the key-unwrap output buffer
+   based on querying the unwrapped key size, but the AES-WRAP-PAD unwrap
+   primitive can write and cleanse more bytes than that query reports, causing
+   an 8-byte out-of-bounds heap write.
+
+   Impact summary: An attacker who supplies a crafted CMS message can trigger
+   a deterministic 8-byte out-of-bounds heap write when the victim decrypts it
+   with `CMS_decrypt()`, corrupting the heap and typically resulting in a Denial
+   of Service.
+
+   Reported by: Bhabani Sankar Das and Filipe Casal (Trail of Bits).
+
+   ([CVE-2026-63072])
+
+   *Daniel Kubec*
+
+ * Fixed invalid pointer dereference in CMP server via crafted `protectionAlg`.
+
+   Severity: Moderate
+
+   Issue Summary: The OpenSSL Certificate Management Protocol (CMP)
+   password-based protection verification only checks whether
+   the `protectionAlg` parameter was not NULL and not its ASN.1 type,
+   before treating it as a `PBMParameter`.  A crafted message can contain
+   a parameter of a different type, which is then dereferenced as an invalid
+   pointer.
+
+   Impact summary: A remote, unauthenticated attacker can crash an application
+   acting as a CMP server that accepts PBM-protected messages, or a CMP client
+   talking to a malicious or intercepted CMP server, resulting in a Denial
+   of Service.
+
+   Reported by: Ying Dong and Bhabani Sankar Das.
+
+   ([CVE-2026-63076])
+
+   *Daniel Kubec*
+
+ * Fixed excessive memory use buffering DTLS records for a future epoch.
+
+   Severity: Low
+
+   Issue summary: Receiving a DTLS record for a future epoch while a handshake
+   is in progress causes OpenSSL to buffer far more memory than the record
+   itself requires.
+
+   Impact summary: A peer can use a small amount of network traffic to make
+   an OpenSSL DTLS endpoint retain a disproportionately large amount of memory,
+   which may lead to a Denial of Service.
+
+   Reported by: Amazon Web Services.
+
+   ([CVE-2026-54874])
+
+   *Matt Caswell*
+
+ * Fixed CMP indefinite cache growth of `extraCerts`.
+
+   Severity: Low
+
+   Issue Summary: The OpenSSL Certificate Management Protocol (CMP) caches
+   additional certificates (`extraCerts`) sent in a CMP message, but never
+   expunges them (for instance, if they are invalid).  If a server reuses
+   an `OSSL_CMP_CTX` object frequently, this cache of `extraCerts` may grow
+   unboundedly, and a malicious client may flood a CMP server with requests
+   driving this growth.
+
+   Impact Summary: Users utilizing a CMP server that reuses a single
+   `OSSL_CMP_CTX` object for the lifetime of a server process may observe
+   unbounded memory growth in the event a malicious client repeatedly sends
+   requests containing unique extra certificates, which may lead to OOM
+   conditions.
+
+   Reported by: Pavol Zacik (Red Hat).
+
+   ([CVE-2026-63074])
+
+   *Neil Horman*
+
+ * Fixed possibility of AEAD forgeries with empty ciphertext when using
+   `EVP_Cipher()`.
+
+   Severity: Low
+
+   Issue summary: ChaCha20-Poly1305 and AES-OCB decryption with an empty
+   ciphertext can report success without verifying the supplied authentication
+   tag when the operation is finalized by calling the `EVP_Cipher()` function.
+
+   Impact summary: Applications calling `EVP_Cipher()` on an empty ciphertext
+   and expecting the call to check the AEAD tag may accept forged messages.
+
+   Reported by: Billy Brumley (Rochester Institute of Technology).
+
+   ([CVE-2026-75803])
+   <!-- https://github.com/openssl/openssl/pull/32417 -->
+
+   *Billy Bob Brumley*
+
+ * Added support for selecting assembly code paths for LLVM-based Intel's `icx`
+   compiler.
+   <!-- https://github.com/openssl/openssl/pull/31578 -->
+
+   *Wolfgang Beck*
+
+ * Updated compliance with TLS 1.3 session ticket lifetime requirements.
+   TLS 1.3 clients now cap `ticket_lifetime_hint` to 7 days (604800 seconds)
+   when processing new session ticket messages, in accordance
+   with [RFC 8446 Section 4.6.1].
+   <!-- https://github.com/openssl/openssl/pull/31174 -->
+
+   *Abel Thomas*
+
+ * Fixed checking of authentication tags for empty ciphertexts for AEAD ciphers
+   in CCM cipher mode.
+   <!-- https://github.com/openssl/openssl/pull/32427 -->
+
+   *Mounir IDRASSI*
+
+### Changes between 3.0.20 and 3.0.21 [9 Jun 2026]
+
+ * Fixed heap use-after-free in `PKCS7_verify()`.
+
+   Severity: High
+
+   Issue summary: A specially crafted PKCS#7 or S/MIME signed message could
+   trigger a use-after-free during PKCS#7 signature verification.
+
+   Impact summary: A use-after-free may result in process crashes, heap
+   corruption, or, potentially, remote code execution.
+
+   Reported by: Thai Duong (Calif.io in collaboration with Claude
+   and Anthropic Research).
+
+   ([CVE-2026-45447])
+
+   *Igor Ustinov*
+
+ * Fixed CMS `AuthEnvelopedData` processing may accept forged messages.
+
+   Severity: Moderate
+
+   Issue Summary: Cryptographic Message Services (CMS) processing fails
+   to perform sufficient input validation on the cipher and tag length fields
+   of `AuthEnvelopedData` containers, leading to various potential compromises.
+
+   Impact Summary: Attackers making use of these vulnerabilities may achieve
+   key-equivalent functionality for a given CMS recipient and/or bypass
+   integrity validation for a given message.
+
+   Reported by: Asim Viladi Oglu Manizada, Alex Gaynor (Anthropic),
+   Ying Dong, and Haiyang Huang.
+
+   ([CVE-2026-34182])
+
+   *Neil Horman*
+
+ * Fixed AES-OCB IV ignored on `EVP_Cipher()` path.
+
+   Severity: Moderate
+
+   Issue summary: When an application drives an AES-OCB context through
+   the public `EVP_Cipher()` one-shot interface, the application-supplied
+   initialisation vector (IV) is silently discarded.
+
+   Impact summary: Every message encrypted under the same key uses the same
+   effective nonce regardless of the IV supplied by the caller, resulting
+   in `(key, nonce)` reuse and loss of confidentiality.  If the same code path
+   is used to compute the authentication tag, the tag depends only
+   on the `(key, IV)` pair and not on the plaintext or ciphertext, allowing
+   universal forgery of arbitrary ciphertext from a single captured message.
+
+   Reported by: Alex Gaynor (Anthropic).
+
+   ([CVE-2026-45445])
+
+   *Viktor Dukhovni*
+
+ * Fixed possible heap buffer overflow in ASN.1 multibyte string conversion.
+
+   Severity: Low
+
+   Issue summary: A signed integer overflow when sizing the destination
+   buffer for Unicode output in `ASN1_mbstring_ncopy()` can lead to a heap
+   buffer overflow.
+
+   Impact summary: A heap buffer overflow may lead to a crash or possibly
+   attacker controlled code execution or other undefined behaviour.
+
+   Reported by: Zehua Qiao and Jinwen He.
+
+   ([CVE-2026-7383])
+
+   *Viktor Dukhovni*
+
+ * Fixed out-of-bounds read in CMS password-based decryption.
+
+   Severity: Low
+
+   Issue summary: When CMS password-based decryption ([RFC 3211]/PWRI key
+   unwrap) processes attacker-supplied CMS data, an attacker-chosen stream-mode
+   KEK cipher can trigger a heap out-of-bounds read in `kek_unwrap_key()`.
+
+   Impact summary: A heap buffer over-read may trigger a crash, which leads
+   to Denial of Service for an application if the input buffer ends at a memory
+   page boundary and the following page is unmapped.  There is no information
+   disclosure, as the over-read bytes are not revealed to the attacker.
+
+   Reported by: Bhabani Sankar Das and Haruki Oyama (Waseda University).
+
+   ([CVE-2026-9076])
+
+   *Nikola Pajkovský*
+
+ * Fixed heap buffer over-read in ASN.1 content parsing.
+
+   Severity: Low
+
+   Issue summary: Parsing a crafted DER-encoded ASN.1 structure with a primitive
+   element whose content exceeds 2 gigabytes in length may cause a heap buffer
+   over-read on 64-bit Unix and Unix-like platforms.
+
+   Impact summary: The heap buffer over-read may crash the application (Denial
+   of Service) or to load into the decoded ASN.1 object contents of memory
+   beyond the end of the input buffer.  More typically, such ASN.1 elements
+   would instead be truncated.
+
+   Reported by: Frank Buss.
+
+   ([CVE-2026-34180])
+
+   *Viktor Dukhovni*
+
+ * Fixed possible NULL dereference in password-dased CMS decryption.
+
+   Severity: Low
+
+   Issue summary: A specially crafted password-encrypted CMS message
+   could trigger a NULL pointer dereference during CMS decryption.
+
+   Impact summary: This NULL pointer dereference could lead to an application
+   crash and a Denial of Service.
+
+   Reported by: Mayank Jangid, Kushal Khemka, Hari Priandana,
+   Bhabani Sankar Das, and Qifan Zhang (Palo Alto Networks).
+
+   ([CVE-2026-42766])
+
+   *Igor Ustinov*
+
+ * Fixed FFC-DH peer validation uses attacker-supplied `q`.
+
+   Severity: Low
+
+   Issue summary: When `EVP_PKEY_derive_set_peer()` is called with a DHX (X9.42)
+   peer key, the peer key is not properly checked for the subgroup membership.
+
+   Impact summary: A malicious peer which presents an X9.42 key carrying
+   the victim's `p` and `g` parameters, a forged `q = r` (a small prime factor
+   of the cofactor `(p − 1)/q_local`), and a public value `Y` of order `r` can
+   recover the victim's private key after a small number of key exchange
+   attempts.
+
+   Reported by: Alex Gaynor (Anthropic).
+
+   ([CVE-2026-42770])
+
+   *Alex Gaynor (Anthropic), Viktor Dukhovni, and Norbert Pócs*
+
+ * Fixed incorrect tag processing for empty messages in AES-GCM-SIV
+   and AES-SIV modes.
+
+   Severity: Low
+
+   Issue summary: The implementations of AES-SIV ([RFC 5297]) and AES-GCM-SIV
+   ([RFC 8452]) mishandle the authentication of AAD (Additional Authenticated
+   Data) with an empty ciphertext, allowing forgery of such messages.
+
+   Impact summary: An attacker can forge empty messages with arbitrary AAD
+   to the victim's application using these ciphers.
+
+   Reported by: Alex Gaynor (Anthropic).
+
+   ([CVE-2026-45446])
+
+   *Dmitry Belyavskiy (Red Hat)*
+
+ * Fixed excessive allocation of the handshake message buffer (aka HollowByte).
+
+   Previously, we would allocate a buffer large enough to hold the full size of
+   an incoming handshake message as advertised by the peer. This could be quite
+   large (although it is bounded, e.g. for ClientHello this is approximately
+   128 KiB). If the peer then fails to send the full handshake message, then the
+   endpoint is left waiting for the remainder of the message to arrive and the
+   memory is still allocated (i.e. a Slowloris attack). To prevent this, we
+   incrementally grow the buffer as we receive the data.
+
+   This issue was reported by Okta Red Team.
+   <!-- https://github.com/openssl/openssl/pull/30794 -->
+
+   *Matt Caswell*
+
+ * Fixed TLS 1.3 server not sending `NewSessionTicket` message
+   after ciphersuite mismatch.
+   <!-- https://github.com/openssl/openssl/pull/30626 -->
+
+   *Daniel Kubec*
+
+ * Implemented validation of the minimal length of PSK identity
+   being of at least one byte long, as required per [RFC 8446].
+   <!-- https://github.com/openssl/openssl/pull/31058 -->
+
+   *Matt Caswell*
+
 ### Changes between 3.0.19 and 3.0.20 [7 Apr 2026]
 
  * Fixed incorrect failure handling in RSA KEM RSASVE encapsulation.
@@ -20526,6 +20845,8 @@ ndif
 [CVE-2025-69419]: https://openssl-library.org/news/vulnerabilities/#CVE-2025-69419
 [CVE-2025-69420]: https://openssl-library.org/news/vulnerabilities/#CVE-2025-69420
 [CVE-2025-69421]: https://openssl-library.org/news/vulnerabilities/#CVE-2025-69421
+[CVE-2026-7383]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-7383
+[CVE-2026-9076]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-9076
 [CVE-2026-22795]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-22795
 [CVE-2026-22796]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-22796
 [CVE-2026-28387]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-28387
@@ -20534,4 +20855,21 @@ ndif
 [CVE-2026-28390]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-28390
 [CVE-2026-31789]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-31789
 [CVE-2026-31790]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-31790
+[CVE-2026-34180]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-34180
+[CVE-2026-34182]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-34182
+[CVE-2026-42766]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-42766
+[CVE-2026-42770]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-42770
+[CVE-2026-45445]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-45445
+[CVE-2026-45446]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-45446
+[CVE-2026-45447]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-45447
+[CVE-2026-54874]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-54874
+[CVE-2026-63072]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-63072
+[CVE-2026-63074]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-63074
+[CVE-2026-63076]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-63076
+[CVE-2026-75803]: https://openssl-library.org/news/vulnerabilities/#CVE-2026-75803
 [RFC 2578 (STD 58), section 3.5]: https://datatracker.ietf.org/doc/html/rfc2578#section-3.5
+[RFC 3211]: https://datatracker.ietf.org/doc/html/rfc3211
+[RFC 5297]: https://datatracker.ietf.org/doc/html/rfc5297
+[RFC 8446]: https://datatracker.ietf.org/doc/html/rfc8446
+[RFC 8446 Section 4.6.1]: https://datatracker.ietf.org/doc/html/rfc8446#section-4.6.1
+[RFC 8452]: https://datatracker.ietf.org/doc/html/rfc8452

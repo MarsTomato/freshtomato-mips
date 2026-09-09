@@ -52,6 +52,9 @@ static int register_poll(struct uloop_fd *fd, unsigned int flags)
 	if (flags & ULOOP_EDGE_TRIGGER)
 		ev.events |= EPOLLET;
 
+	if (flags & ULOOP_PRIORITY)
+		ev.events |= EPOLLPRI;
+
 	ev.data.ptr = fd;
 
 	return epoll_ctl(poll_fd, op, fd->fd, &ev);
@@ -85,7 +88,7 @@ static int uloop_fetch_events(int timeout)
 				uloop_fd_delete(u);
 		}
 
-		if(!(events[n].events & (EPOLLRDHUP|EPOLLIN|EPOLLOUT|EPOLLERR|EPOLLHUP))) {
+		if(!(events[n].events & (EPOLLRDHUP|EPOLLIN|EPOLLOUT|EPOLLERR|EPOLLHUP|EPOLLPRI))) {
 			cur->fd = NULL;
 			continue;
 		}
@@ -98,6 +101,9 @@ static int uloop_fetch_events(int timeout)
 
 		if(events[n].events & EPOLLOUT)
 			ev |= ULOOP_WRITE;
+
+		if(events[n].events & EPOLLPRI)
+			ev |= ULOOP_PRIORITY;
 
 		cur->events = ev;
 	}
@@ -162,14 +168,14 @@ err:
 
 static int timer_remove(struct uloop_interval *tm)
 {
-	int ret = __uloop_fd_delete(&tm->priv.ufd);
+	if (!tm->priv.ufd.registered)
+		return -1;
 
-	if (ret == 0) {
-		close(tm->priv.ufd.fd);
-		memset(&tm->priv.ufd, 0, sizeof(tm->priv.ufd));
-	}
+	uloop_fd_delete(&tm->priv.ufd);
+	close(tm->priv.ufd.fd);
+	memset(&tm->priv.ufd, 0, sizeof(tm->priv.ufd));
 
-	return ret;
+	return 0;
 }
 
 static int64_t timer_next(struct uloop_interval *tm)

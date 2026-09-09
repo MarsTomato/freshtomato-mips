@@ -1254,19 +1254,14 @@ void warn_bound_listeners(void)
   int advice = 0;
 
   for (iface = daemon->interfaces; iface; iface = iface->next)
-    if (!iface->dns_auth)
+    if (!iface->dns_auth && !iface->warned &&
+	iface->addr.sa.sa_family == AF_INET && !private_net(iface->addr.in.sin_addr, 1))
       {
-	if (iface->addr.sa.sa_family == AF_INET)
-	  {
-	    if (!private_net(iface->addr.in.sin_addr, 1))
-	      {
-		inet_ntop(AF_INET, &iface->addr.in.sin_addr, daemon->addrbuff, ADDRSTRLEN);
-		iface->warned = advice = 1;
-		my_syslog(LOG_WARNING, 
-			  _("LOUD WARNING: listening on %s may accept requests via interfaces other than %s"),
-			  daemon->addrbuff, iface->name);
-	      }
-	  }
+	inet_ntop(AF_INET, &iface->addr.in.sin_addr, daemon->addrbuff, ADDRSTRLEN);
+	iface->warned = advice = 1;
+	my_syslog(LOG_WARNING, 
+		  _("LOUD WARNING: listening on %s may accept requests via interfaces other than %s"),
+		  daemon->addrbuff, iface->name);
       }
   
   if (advice)
@@ -1462,7 +1457,7 @@ static struct serverfd *allocate_sfd(union mysockaddr *addr, char *intname, unsi
   
   /* when using random ports, servers which would otherwise use
      the INADDR_ANY/port0 socket have sfd set to NULL, this is 
-     anything without an explictly set source port. */
+     anything without an explicitly set source port. */
   if (!daemon->osport)
     {
       errno = 0;
@@ -1699,19 +1694,19 @@ void check_servers(int no_loop_check)
 int reload_servers(char *fname)
 {
   FILE *f;
-  char *line;
+  char *line = NULL;
+  size_t linesz = 0;
   int gotone = 0;
 
-  /* buff happens to be MAXDNAMESTR long... */
   if (!(f = fopen(fname, "r")))
     {
       my_syslog(LOG_ERR, _("failed to read %s: %s"), fname, strerror(errno));
       return 0;
     }
-   
+  
   mark_servers(SERV_FROM_RESOLV);
-    
-  while ((line = fgets(daemon->namebuff, MAXDNAMESTR, f)))
+  
+  while (get_line_alloc(f, &line, &linesz))
     {
       union mysockaddr addr, source_addr;
       char *token = strtok(line, " \t\n\r");

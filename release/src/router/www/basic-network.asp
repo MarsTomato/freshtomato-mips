@@ -45,8 +45,12 @@ function refresh_sta_list() {
 
 var lg = new TomatoGrid();
 lg.setup = function() {
-	this.init('lan-grid', '', 4, [
-		{ type: 'select', options: [[0,'0'],[1,'1'],[2,'2'],[3,'3']], prefix: '<div class="centered">', suffix: '<\/div>' },
+	var bridge_options = [];
+	for (var i = 0; i <= MAX_BRIDGE_ID; ++i)
+		bridge_options.push([i, i.toString()]);
+
+	this.init('lan-grid', '', MAX_BRIDGE_ID + 1, [
+		{ type: 'select', options: bridge_options, prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'text', maxlen: 15, size: 17 },
 		{ type: 'text', maxlen: 15, size: 17 },
@@ -67,8 +71,10 @@ lg.setup = function() {
 					nvram['dhcpd'+j+'_endip'] = getAddress('0.0.0.50', n);
 				}
 			}
-			lg.insertData(-1, [i.toString(), nvram['lan'+j+'_stp'], nvram['lan'+j+'_ipaddr'], nvram['lan'+j+'_netmask'], (nvram['lan'+j+'_proto'] == 'dhcp') ? 1 : 0, nvram['dhcpd'+j+'_startip'], 
-			                   nvram['dhcpd'+j+'_endip'], (nvram['lan'+j+'_proto'] == 'dhcp') ? (((nvram['dhcp'+j+'_lease']) * 1 == 0) ? '1440' : (nvram['dhcp'+j+'_lease']).toString()) : '']) ;
+			var l2Only = (nvram['lan'+j+'_ipaddr'] == '0.0.0.0');
+			lg.insertData(-1, [i.toString(), nvram['lan'+j+'_stp'], nvram['lan'+j+'_ipaddr'], l2Only ? '' : nvram['lan'+j+'_netmask'], l2Only ? 0 : ((nvram['lan'+j+'_proto'] == 'dhcp') ? 1 : 0),
+			                   l2Only ? '' : nvram['dhcpd'+j+'_startip'], l2Only ? '' : nvram['dhcpd'+j+'_endip'],
+			                   (!l2Only && (nvram['lan'+j+'_proto'] == 'dhcp')) ? (((nvram['dhcp'+j+'_lease']) * 1 == 0) ? '1440' : (nvram['dhcp'+j+'_lease']).toString()) : '']) ;
 			numBridges++;
 		}
 	}
@@ -80,6 +86,11 @@ lg.setup = function() {
 }
 
 lg.dataToView = function(data) {
+	if (data[2].toString() == '0.0.0.0') {
+		return ['br'+data[0],
+			(data[1].toString() == '1') ? '&#x2b50' : '', 'L2 only', '-', '', '-', ''];
+	}
+
 	return ['br'+data[0],
 		(data[1].toString() == '1') ? '&#x2b50' : '', data[2], data[3],
 		(data[4].toString() == '1') ? '&#x2b50' : '',
@@ -201,6 +212,9 @@ lg.countOverlappingNetworks = function (ip) {
 	var data = this.getAllData();
 	var total = 0;
 	for (var i = 0; i < data.length; ++i) {
+		if (data[i][2] == '0.0.0.0')
+			continue;
+
 		var net = getNetworkAddress(data[i][2], data[i][3]);
 		var brd = getBroadcastAddress(net, data[i][3]);
 		total += (net != '0.0.0.0' ? (((aton(ip) <= aton(brd)) && (aton(ip) >= aton(net))) ? 1 : 0) : 0);
@@ -230,6 +244,7 @@ lg.verifyFields = function(row, quiet) {
 		ok = 0;
 /* if we have a properly defined IP address - 0.0.0.0 is NOT a valid IP address for our intents/purposes! */
 	if ((f[2].value != '') && (f[2].value != '0.0.0.0')) {
+		f[3].disabled = 0;
 /* allow DHCP to be enabled */
 		f[4].disabled = 0;
 /* validate netmask */
@@ -267,6 +282,17 @@ lg.verifyFields = function(row, quiet) {
 		}
 	}
 	else {
+		if (f[2].value == '0.0.0.0') {
+			f[3].value = '';
+			f[3].disabled = 1;
+			f[5].value = '';
+			f[6].value = '';
+			f[7].value = '';
+			ferror.clear(f[3]);
+		}
+		else
+			f[3].disabled = 0;
+
 		f[4].checked = 0;
 		f[4].disabled = 1;
 	}
@@ -387,6 +413,75 @@ for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		max_channel.push(0);
 		refresher.push(null);
 	}
+}
+
+function updateWanProtoOptions() {
+	var enabledAfter = [];
+	var curr_mwan_num = parseInt(E('_mwan_num').value, 10);
+	var haveEnabledAfter = 0;
+	var disabledBefore = 0;
+	var i, u, uidx, proto;
+
+	if (isNaN(curr_mwan_num) || (curr_mwan_num < 1))
+		curr_mwan_num = 1;
+	else if (curr_mwan_num > MAXWAN_NUM)
+		curr_mwan_num = MAXWAN_NUM;
+
+	/*
+	 * WANs must form one continuous enabled prefix followed by an optional
+	 * disabled suffix. Examples: ON/ON/OFF and ON/OFF/OFF are valid;
+	 * ON/OFF/ON is not.
+	 */
+	for (uidx = curr_mwan_num; uidx >= 1; --uidx) {
+		u = (uidx > 1) ? uidx : '';
+		proto = E('_wan'+u+'_proto');
+		enabledAfter[uidx] = haveEnabledAfter;
+		if (proto.value != 'disabled')
+			haveEnabledAfter = 1;
+	}
+
+	for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
+		u = (uidx > 1) ? uidx : '';
+		proto = E('_wan'+u+'_proto');
+
+		for (i = 0; i < proto.options.length; ++i) {
+			if (proto.options[i].value == 'disabled')
+				proto.options[i].disabled = enabledAfter[uidx];
+			else
+				proto.options[i].disabled = disabledBefore;
+		}
+
+		if (proto.value == 'disabled')
+			disabledBefore = 1;
+	}
+}
+
+function verifyWanProtoOrder(quiet) {
+	var curr_mwan_num = parseInt(E('_mwan_num').value, 10);
+	var disabledSeen = 0;
+	var ok = 1;
+	var u, uidx, proto;
+
+	if (isNaN(curr_mwan_num) || (curr_mwan_num < 1))
+		curr_mwan_num = 1;
+	else if (curr_mwan_num > MAXWAN_NUM)
+		curr_mwan_num = MAXWAN_NUM;
+
+	for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
+		u = (uidx > 1) ? uidx : '';
+		proto = E('_wan'+u+'_proto');
+		ferror.clear(proto);
+
+		if (disabledSeen && (proto.value != 'disabled')) {
+			ferror.set(proto, 'WANs must be enabled consecutively. Enable the preceding WAN or disable this WAN.', quiet);
+			ok = 0;
+		}
+
+		if (proto.value == 'disabled')
+			disabledSeen = 1;
+	}
+
+	return ok;
 }
 
 function verifyFields(focused, quiet) {
@@ -693,6 +788,10 @@ function verifyFields(focused, quiet) {
 
 		}
 	}
+
+	updateWanProtoOptions();
+	if (!verifyWanProtoOrder(quiet))
+		ok = 0;
 
 	for (uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
@@ -1713,6 +1812,14 @@ function save() {
 		}
 
 		j = (parseInt(d[i][0]) == 0) ? '' : d[i][0].toString();
+		if (d[i][2] == '0.0.0.0') {
+			d[i][3] = '';
+			d[i][4] = 0;
+			d[i][5] = '';
+			d[i][6] = '';
+			d[i][7] = '';
+		}
+
 		fom['lan'+j+'_ifname'].value = 'br'+d[i][0];
 		fom['lan'+j+'_stp'].value = d[i][1];
 		fom['lan'+j+'_ipaddr'].value = d[i][2];
@@ -1736,8 +1843,8 @@ REMOVE-END */
 
 	e = E('footer-msg');
 	d = fixIP(fom['lan_ipaddr'].value);
-	if ((fom['lan_ifname'].value != 'br0') || (!d)) {
-		e.innerHTML = 'Bridge br0 must be always defined';
+	if ((fom['lan_ifname'].value != 'br0') || (!d) || (d == '0.0.0.0')) {
+		e.innerHTML = 'Bridge br0 must be always defined with an IPv4 address';
 		e.style.display = 'inline-block';
 		setTimeout(
 			function() {
@@ -1833,16 +1940,11 @@ REMOVE-END */
 
 function earlyInit() {
 	var mwan = E('_mwan_num');
-	if (nvram.wan_ifnameX.length < 1)
-		mwan.options[0].disabled = 1;
-	if (nvram.wan2_ifnameX.length < 1)
-		mwan.options[1].disabled = 1;
-/* MULTIWAN-BEGIN */
-	if (nvram.wan3_ifnameX.length < 1)
-		mwan.options[2].disabled = 1;
-	if (nvram.wan4_ifnameX.length < 1)
-		mwan.options[3].disabled = 1;
-/* MULTIWAN-END */
+	for (var uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
+		var u = (uidx > 1) ? uidx : '';
+		if (nvram['wan'+u+'_ifnameX'].length < 1)
+			mwan.options[uidx - 1].disabled = 1;
+	}
 
 	verifyFields(null, 1);
 	insOvl();
@@ -1919,12 +2021,13 @@ function init() {
 		}
 	}
 	ckdst = nvram.mwan_ckdst.split(',');
+	var mwanOptions = [];
+	for (var uidx = 1; uidx <= MAXWAN_NUM; ++uidx)
+		mwanOptions.push([uidx.toString(), uidx+' WAN']);
+
 	createFieldTable('', [
-		{ title: 'Number of logical WANs', name: 'mwan_num', type: 'select', options: [['1','1 WAN'],['2','2 WAN']
-/* MULTIWAN-BEGIN */
-											   ,['3','3 WAN'],['4','4 WAN']
-/* MULTIWAN-END */
-			], value: nvram.mwan_num, suffix: '&nbsp; <small>Please configure <a href="advanced-vlan.asp">VLAN<\/a> first<\/small>' },
+		{ title: 'Number of logical WANs', name: 'mwan_num', type: 'select', options: mwanOptions,
+			value: nvram.mwan_num, suffix: '&nbsp; <small>Please configure <a href="advanced-vlan.asp">VLAN<\/a> first<\/small>' },
 		{ title: 'Tune route cache', name: 'f_mwan_tune_gc', type: 'checkbox', suffix: '&nbsp; <small>for multiwan in load balancing mode<\/small>', value: (nvram['mwan_tune_gc'] == 1) },
 		{ title: 'Check connections every', name: 'mwan_cktime', type: 'select', options: [
 			['0','Disabled'],['30','30 seconds'],['60','1 minute*'],['120','2 minutes'],['180','3 minutes'],
@@ -2037,6 +2140,7 @@ function init() {
 <div class="section-title" id="section-lan">LAN</div>
 <div class="section">
 <div class="tomato-grid" id="lan-grid"></div>
+<div><small><b>Note:</b> Set a secondary bridge IP address to 0.0.0.0 to use it as L2 only. Netmask and DHCP settings are cleared automatically.</small></div>
 <script>
 	lg.setup();
 
@@ -2191,11 +2295,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

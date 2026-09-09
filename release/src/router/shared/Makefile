@@ -36,17 +36,18 @@ OBJS = shutils.o wl.o wl_linux.o linux_timer.o defaults.o id.o misc.o \
        led.o version.o base64.o files.o strings.o process.o
 
 # RT-N+
-ifeq ($(or $(TCONFIG_BLINK),$(TCONFIG_BCMARM)),y)
+ifeq ($(TCONFIG_RTNPLUS),y)
  OBJS += nvparse.o
 endif
 
 ifeq ($(TCONFIG_USB),y)
- OBJS += usb.o \
-        $(TOP)/busybox/util-linux/volume_id/linux_swap.o \
-        $(TOP)/busybox/util-linux/volume_id/ext.o \
-        $(TOP)/busybox/util-linux/volume_id/util2.o \
-        $(TOP)/busybox/util-linux/volume_id/fat.o \
-        $(TOP)/busybox/util-linux/volume_id/ntfs.o
+ OBJS += bb_uuid.o \
+         usb.o \
+         $(TOP)/busybox/util-linux/volume_id/linux_swap.o \
+         $(TOP)/busybox/util-linux/volume_id/ext.o \
+         $(TOP)/busybox/util-linux/volume_id/util2.o \
+         $(TOP)/busybox/util-linux/volume_id/fat.o \
+         $(TOP)/busybox/util-linux/volume_id/ntfs.o
  ifeq ($(TCONFIG_BCMARM),y)
   OBJS += $(TOP)/busybox/util-linux/volume_id/exfat.o
  endif

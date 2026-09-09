@@ -11,7 +11,7 @@
  *
  */
 
-//	<% nvram("router_name,wan_domain,wan_hostname,wan_dns,lan_hwaddr,lan_proto,lan_ipaddr,dhcpd_startip,dhcpd_endip,lan_netmask,wl_security_mode,wl_crypto,wl_mode,wl_wds_enable,wl_hwaddr,wl_net_mode,wl_radio,wl_channel,lan_gateway,wl_ssid,wl_closed,wl_nband,t_model_name,t_features,lan_ifname,lan_ifnames,wan_ifnames,tomatoanon_enable,tomatoanon_answer,lan_desc,wan_ppp_get_ip,wan_pptp_dhcp,wan_pptp_server_ip,wan_ipaddr_buf,wan_gateway,wan_gateway_get,wan_get_domain,wan_hwaddr,wan_ipaddr,wan_netmask,wan_proto,wan_run_mtu,wan_sta,mwan_num,wan_modem_type,wan_hilink_ip,wan_status_script,mwan_cktime,wan_weight,wan_ck_pause,dnscrypt_proxy,dnscrypt_priority,stubby_proxy,stubby_priority"); %>
+//	<% nvram("router_name,wan_domain,wan_hostname,wan_dns,lan_hwaddr,lan_proto,lan_ipaddr,dhcpd_startip,dhcpd_endip,lan_netmask,wl_security_mode,wl_crypto,wl_mode,wl_wds_enable,wl_hwaddr,wl_net_mode,wl_radio,wl_channel,lan_gateway,wl_ssid,wl_closed,wl_nband,t_model_name,t_features,lan_ifname,lan_ifnames,wan_ifnames,tomatoanon_enable,tomatoanon_answer,lan_desc,wan_ppp_get_ip,wan_pptp_dhcp,wan_pptp_server_ip,wan_ipaddr_buf,wan_gateway,wan_gateway_get,wan_get_domain,wan_hwaddr,wan_ipaddr,wan_netmask,wan_proto,wan_run_mtu,wan_sta,mwan_num,wan_modem_type,wan_hilink_ip,wan_status_script,mwan_cktime,wan_weight,wan_ck_pause,dnscrypt_proxy,dnscrypt_priority,stubby_proxy,stubby_priority,eth_desc"); %>
 //	<% nvstat(); %>
 //	<% etherstates(); %>
 //	<% anonupdate(); %>
@@ -49,12 +49,34 @@ else if (last_wan_proto != nvram.wan_proto)
 	reloadPage();
 
 stats.flashsize = sysinfo.flashsize+' MB';
+/* BCMARM-BEGIN */
+stats.cpumhz = sysinfo.cpuclk+'-core)';
+/* BCMARM-END */
+/* BCMARM-NO-BEGIN */
 stats.cpumhz = sysinfo.cpuclk+' MHz';
+/* BCMARM-NO-END */
 stats.cputemp = sysinfo.cputemp+'°';
 stats.systemtype = sysinfo.systemtype;
 stats.cfeversion = sysinfo.cfeversion;
 stats.cpuload = ((sysinfo.loads[0] / 65536.0).toFixed(2)+'<small> / </small> '+(sysinfo.loads[1] / 65536.0).toFixed(2)+'<small> / </small>'+(sysinfo.loads[2] / 65536.0).toFixed(2));
 stats.uptime = sysinfo.uptime_s;
+/* BCMARM-BEGIN */
+stats.freqcpu = nvram.clkfreq;
+
+var total_jiffies = 0;
+var jiffylist = sysinfo.jiffies.split(' ');
+for (i = 0; i < jiffylist.length; ++i)
+	total_jiffies += parseInt(jiffylist[i]);
+
+var diff_idle = jiffylist[3] - lastjiffiesidle;
+var diff_total = total_jiffies - lastjiffiestotal;
+lastjiffiesusage = (1000*(diff_total-diff_idle)/diff_total)/10;
+
+lastjiffiestotal = total_jiffies;
+lastjiffiesidle = jiffylist[3];
+
+stats.cpupercent = lastjiffiesusage.toFixed(2)+'%<div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(lastjiffiesusage.toFixed(2))+';width:'+lastjiffiesusage.toFixed(2)+'%"></div></div></div>';
+/* BCMARM-END */
 /* RTNPLUS-BEGIN */
 stats.wlsense = sysinfo.wlsense;
 /* RTNPLUS-END */
@@ -131,14 +153,12 @@ stats.ip6_duid = ((typeof(sysinfo.ip6_duid) != 'undefined') ? sysinfo.ip6_duid :
 stats.ip6_wan = ((typeof(sysinfo.ip6_wan) != 'undefined') ? sysinfo.ip6_wan : '')+'';
 stats.ip6_wan_dns1 = ((typeof(sysinfo.ip6_wan_dns1) != 'undefined') ? sysinfo.ip6_wan_dns1 : '')+'';
 stats.ip6_wan_dns2 = ((typeof(sysinfo.ip6_wan_dns2) != 'undefined') ? sysinfo.ip6_wan_dns2 : '')+'';
-stats.ip6_lan = ((typeof(sysinfo.ip6_lan) != 'undefined') ? sysinfo.ip6_lan : '')+'';
-stats.ip6_lan_ll = ((typeof(sysinfo.ip6_lan_ll) != 'undefined') ? sysinfo.ip6_lan_ll : '')+'';
-stats.ip6_lan1 = ((typeof(sysinfo.ip6_lan1) != 'undefined') ? sysinfo.ip6_lan1 : '')+'';
-stats.ip6_lan1_ll = ((typeof(sysinfo.ip6_lan1_ll) != 'undefined') ? sysinfo.ip6_lan1_ll : '')+'';
-stats.ip6_lan2 = ((typeof(sysinfo.ip6_lan2) != 'undefined') ? sysinfo.ip6_lan2 : '')+'';
-stats.ip6_lan2_ll = ((typeof(sysinfo.ip6_lan2_ll) != 'undefined') ? sysinfo.ip6_lan2_ll : '')+'';
-stats.ip6_lan3 = ((typeof(sysinfo.ip6_lan3) != 'undefined') ? sysinfo.ip6_lan3 : '')+'';
-stats.ip6_lan3_ll = ((typeof(sysinfo.ip6_lan3_ll) != 'undefined') ? sysinfo.ip6_lan3_ll : '')+'';
+for (var bridgeId = 0; bridgeId <= MAX_BRIDGE_ID; ++bridgeId) {
+	var bridgeSuffix = (bridgeId == 0) ? '' : bridgeId.toString();
+	var ip6Lan = 'ip6_lan'+bridgeSuffix;
+	stats[ip6Lan] = ((typeof(sysinfo[ip6Lan]) != 'undefined') ? sysinfo[ip6Lan] : '')+'';
+	stats[ip6Lan+'_ll'] = ((typeof(sysinfo[ip6Lan+'_ll']) != 'undefined') ? sysinfo[ip6Lan+'_ll'] : '')+'';
+}
 /* IPV6-END */
 
 /* WL stats */

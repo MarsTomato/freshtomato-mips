@@ -537,6 +537,38 @@ size_t safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 	return ret;
 }
 
+#if defined(TCONFIG_NGINX) || defined(TCONFIG_TOR)
+/*
+ * Convert arbitrary binary data to a NUL-terminated lowercase hexadecimal
+ * string. The source may contain zero bytes.
+ *
+ * Returns 0 on success, EINVAL for invalid arguments, or ENAMETOOLONG when
+ * the destination buffer cannot hold two hex characters per source byte plus
+ * the terminating NUL.
+ */
+int bin2hex(char *dst, size_t dstlen, const void *src, size_t srclen)
+{
+	static const char hex[] = "0123456789abcdef";
+	const unsigned char *p = src;
+	size_t i;
+
+	if (!dst || (dstlen == 0) || (!src && (srclen != 0)))
+		return EINVAL;
+
+	if (srclen > ((dstlen - 1) / 2))
+		return ENAMETOOLONG;
+
+	for (i = 0; i < srclen; ++i) {
+		dst[i * 2] = hex[p[i] >> 4];
+		dst[(i * 2) + 1] = hex[p[i] & 0x0f];
+	}
+
+	dst[srclen * 2] = '\0';
+
+	return 0;
+}
+#endif
+
 /* ether_atoe() helper */
 static int hexval(unsigned char c)
 {
@@ -553,12 +585,13 @@ static int hexval(unsigned char c)
 /*
  * Convert Ethernet address string representation to binary data
  *
- * @param  a  string in xx:xx:xx:xx:xx:xx notation
+ * @param  a  string in xx:xx:xx:xx:xx:xx or xx-xx-xx-xx-xx-xx notation
  * @param  e  binary data
  * @return    TRUE if conversion was successful and FALSE otherwise
  */
 int ether_atoe(const char *a, unsigned char *e)
 {
+	char sep = '\0';
 	int i;
 
 	if (!a || !e)
@@ -575,8 +608,16 @@ int ether_atoe(const char *a, unsigned char *e)
 		a += 2;
 
 		if (i < ETHER_ADDR_LEN - 1) {
-			if (*a++ != ':')
+			if (i == 0) {
+				sep = *a;
+				if (sep != ':' && sep != '-')
+					goto fail;
+			}
+			else if (*a != sep) {
 				goto fail;
+			}
+
+			a++;
 		}
 		else if (*a) {
 			goto fail;
@@ -1345,7 +1386,7 @@ char *wl_ether_etoa(const struct ether_addr *n)
 #endif /* CONFIG_BCMWL5 */
 
 /* Find partition with defined name and return partition number as an integer */
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 int getMTD(const char *name)
 {
 	char line[128], dev[32], size[32], esize[32], part_name[64];
@@ -1374,7 +1415,7 @@ int getMTD(const char *name)
 
 	return device;
 }
-#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+#endif /* TCONFIG_RTNPLUS */
 
 /*
  * Return the process ID for a process started with the specified pathname.
@@ -1448,6 +1489,165 @@ pid_t get_pid_by_name(const char *name)
 	return pid;
 }
 #endif /* TCONFIG_BCMBSD */
+
+#ifdef TCONFIG_WIREGUARD
+int wg_status(char *iface)
+{
+	FILE *fp;
+	char buffer[BUF_SIZE_64];
+	int status;
+
+	status = 0;
+
+	if ((iface == NULL) || (*iface == '\0'))
+		return 0;
+
+	snprintf(buffer, BUF_SIZE_64, "/sys/class/net/%s/operstate", iface);
+
+	if ((fp = fopen(buffer, "r"))) {
+		if (fgets(buffer, BUF_SIZE_64, fp)) {
+			buffer[strcspn(buffer, "\n")] = 0;
+			if ((strcmp(buffer, "unknown") == 0) || (strcmp(buffer, "up") == 0))
+				status = 1;
+		}
+		fclose(fp);
+	}
+
+	return status;
+}
+#endif
+
+static int tc_qdisc_line_matches(const char *line, const char *kind)
+{
+	const char *p;
+	size_t len;
+
+	if ((line == NULL) || (kind == NULL) || (*kind == '\0'))
+		return 0;
+
+	p = strstr(line, "qdisc ");
+	if (p == NULL)
+		return 0;
+
+	p += 6;
+	len = strlen(kind);
+
+	if (strncmp(p, kind, len) != 0)
+		return 0;
+
+	p += len;
+	if ((*p != ' ') && (*p != '\t'))
+		return 0;
+
+	if (strstr(line, " 1:") == NULL)
+		return 0;
+
+	if (strstr(line, " root") == NULL)
+		return 0;
+
+	return 1;
+}
+
+static int tc_qdisc_status(const char *dev, const char *kind1, const char *kind2)
+{
+	FILE *fp;
+	char path[64], line[256];
+	char *argv[6];
+	int status;
+
+	status = 0;
+
+	if ((dev == NULL) || (*dev == '\0'))
+		return 0;
+
+	snprintf(path, sizeof(path), "/tmp/.tc_qdisc_status.%d", (int)getpid());
+
+	argv[0] = "tc";
+	argv[1] = "qdisc";
+	argv[2] = "show";
+	argv[3] = "dev";
+	argv[4] = (char *)dev;
+	argv[5] = NULL;
+
+	if (_eval(argv, path, 0, NULL) != 0) {
+		unlink(path);
+		return 0;
+	}
+
+	fp = fopen(path, "r");
+	if (fp != NULL) {
+		while (fgets(line, sizeof(line), fp) != NULL) {
+			if ((tc_qdisc_line_matches(line, kind1)) || (tc_qdisc_line_matches(line, kind2))) {
+				status = 1;
+				break;
+			}
+		}
+		fclose(fp);
+	}
+
+	unlink(path);
+
+	return status;
+}
+
+int bwlimit_status(void)
+{
+	return tc_qdisc_status("br0", "htb", NULL);
+}
+
+static int qos_prefix_status(char *prefix)
+{
+	const char *wanface;
+
+	if ((prefix == NULL) || (*prefix == '\0'))
+		return 0;
+
+	wanface = get_wanface(prefix);
+	if ((wanface == NULL) || (*wanface == '\0'))
+		return 0;
+
+	return tc_qdisc_status(wanface, "htb", "cake");
+}
+
+int qos_status(void)
+{
+	char prefix[16];
+	int i;
+
+	for (i = 1; i <= MWAN_MAX; i++) {
+		get_wan_prefix(i, prefix);
+		if (qos_prefix_status(prefix))
+			return 1;
+	}
+
+	return 0;
+}
+
+unsigned int mwan_configured_num(void)
+{
+	int configured = nvram_get_int("mwan_num");
+
+	if ((configured < 1) || (configured > MWAN_MAX))
+		configured = 1;
+
+	return (unsigned int)configured;
+}
+
+unsigned int mwan_active_num(void)
+{
+	char prefix[16];
+	unsigned int i;
+	unsigned int configured = mwan_configured_num();
+
+	for (i = 1; i <= configured; ++i) {
+		get_wan_prefix(i, prefix);
+
+		if (get_wanx_proto(prefix) == WP_DISABLED)
+			break;
+	}
+
+	return i - 1;
+}
 
 /* ============================ UNUSED ============================ */
 
@@ -1539,22 +1739,6 @@ char *file2str(const char *path)
 	}
 
 	return fd2str(fd);
-}
-
-/*
- * Waits for a file descriptor to change status or unblocked signal
- * @param  fd       file descriptor
- * @param  timeout  seconds to wait before timing out or 0 for no timeout
- * @return          1 if descriptor changed status or 0 if timed out or -1 on error
- */
-int waitfor(int fd, int timeout)
-{
-	fd_set rfds;
-	struct timeval tv = { timeout, 0 };
-
-	FD_ZERO(&rfds);
-	FD_SET(fd, &rfds);
-	return select(fd + 1, &rfds, NULL, NULL, (timeout > 0) ? &tv : NULL);
 }
 
 int kill_pidfile_s_rm(char *pidfile, int sig)

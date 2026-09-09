@@ -205,9 +205,7 @@ function earlyInit() {
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
+	restoreVisibility(cprefix, 'notes');
 
 	eventHandler();
 	up.initPage(250, 5);
@@ -252,7 +250,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Status</div>
+<div class="section-title">BitTorrent Client Status</div>
 <div class="section">
 	<div class="fields">
 		<span id="_transmission_notice"></span><input type="button" id="_transmission_button" value="">
@@ -380,7 +378,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<li><b>Enable on Start</b> - Caution! If your router only has 32MB of RAM, you'll have to use swap.</li>
@@ -398,11 +396,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

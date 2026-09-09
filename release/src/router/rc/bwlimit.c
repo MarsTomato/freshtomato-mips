@@ -123,11 +123,8 @@ void ipt_bwlimit(int chain)
 			snprintf(buffer, sizeof(buffer), "bwl_lan%d_enable", i);
 			if (nvram_get_int(buffer) == 1) {
 
-				snprintf(buffer, sizeof(buffer), "lan%d_ipaddr", i);
-				lanX_ipaddr = nvram_safe_get(buffer);
-
-				snprintf(buffer, sizeof(buffer), "lan%d_netmask", i);
-				lanX_mask = nvram_safe_get(buffer);
+				lanX_ipaddr = (char *)bridge_nvram_get(i, "ipaddr", buffer, sizeof(buffer));
+				lanX_mask = (char *)bridge_nvram_get(i, "netmask", buffer, sizeof(buffer));
 
 				ipt_write("-A POSTROUTING ! -s %s/%s -d %s/%s -j MARK --set-mark 0x%d0/0xf0\n"
 				          "-A PREROUTING -s %s/%s ! -d %s/%s -j MARK --set-mark 0x%d0/0xf0\n",
@@ -184,7 +181,6 @@ void ipt_bwlimit(int chain)
 			continue;
 		
 		address_checker(&address_type, ipaddr_old, ipaddr, sizeof(ipaddr));
-		memset(seq, 0, sizeof(seq));
 		snprintf(seq, sizeof(seq), "0x%x/0xff00000", iSeq << 20);
 		iSeq++;
 
@@ -334,7 +330,27 @@ void start_bwlimit(void)
 	            "\t\ttc qdisc del dev %s root 2>/dev/null\n"
 	            "\t}\n"
 	            "\n"
+#ifdef TCONFIG_BCMARM
+	            /*
+	             * Linux bridge devices have tx_queue_len=0. The ARM kernel's
+	             * HTB implementation copies that value when the qdisc is
+	             * created and clamps its unclassified/direct queue to only
+	             * two packets. Router-local traffic, including Samba output,
+	             * is intentionally not marked by BWL and therefore uses this
+	             * direct queue.
+	             *
+	             * Temporarily give br0 a normal queue length while HTB is
+	             * initialized, then restore the administrator's original
+	             * value. HTB keeps the copied value internally.
+	             */
+	            "\tBR0_TXQLEN=\"$(cat /sys/class/net/br0/tx_queue_len 2>/dev/null)\"\n"
+	            "\t[ -n \"$BR0_TXQLEN\" ] || BR0_TXQLEN=0\n"
+	            "\tifconfig br0 txqueuelen 1000\n"
+#endif
 	            "\t$TQA root handle 1: htb\n"
+#ifdef TCONFIG_BCMARM
+	            "\tifconfig br0 txqueuelen \"$BR0_TXQLEN\"\n"
+#endif
 	            "\t$TCA parent 1: classid 1:1 htb rate %skbit\n"
 	            "\n"
 	            "\t[ \"$(nvram get qos_enable)\" == \"0\" ] && {\n"

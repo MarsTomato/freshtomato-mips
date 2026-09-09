@@ -19,6 +19,7 @@
 
 #ifndef _shutils_h_
 #define _shutils_h_
+#include <stdio.h>
 #include <shared.h>
 
 #define sin_addr(s) (((struct sockaddr_in *)(s))->sin_addr)
@@ -37,6 +38,10 @@ extern int eval_cmdline(const char *cmd, const char *path, int timeout, int *ppi
 
 extern size_t safe_fread(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 extern size_t safe_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+
+#if defined(TCONFIG_NGINX) || defined(TCONFIG_TOR)
+extern int bin2hex(char *dst, size_t dstlen, const void *src, size_t srclen);
+#endif
 
 extern int ether_atoe(const char *a, unsigned char *e);
 extern char *ether_etoa(const unsigned char *e, char *a);
@@ -142,7 +147,6 @@ extern void cprintf(const char *format, ...);
 #if 0
 extern char *fd2str(int fd);
 extern char *file2str(const char *path);
-extern int waitfor(int fd, int timeout); /* see rc/init.c */
 extern int kill_pidfile_s_rm(char *pidfile, int sig);
 extern int get_ipconfig_index(char *eth_ifname);
 extern int set_ipconfig_index(char *eth_ifname, int index);

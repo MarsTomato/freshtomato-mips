@@ -31,7 +31,7 @@ libnvram.so: nvram_linux.o $(if $(TCONFIG_BCMARM),,nvram_convert.o)
 	$(SIZECHECK)
 	$(CPTMP)
 
-nvram: libnvram.so $(if $(TCONFIG_BCMARM),main.o,nvram.o defaults.o)
+nvram: libnvram.so $(if $(TCONFIG_BCMARM),main.o,nvram.o defaults_aux.o)
 	@echo " [nvram$(BCMEX)] CC $@"
 	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 	$(SIZECHECK)

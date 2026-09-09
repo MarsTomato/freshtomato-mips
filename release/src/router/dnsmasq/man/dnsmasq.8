@@ -154,6 +154,9 @@ allows the log file to be rotated without stopping dnsmasq.
 .B --log-debug
 Enable extra logging intended for debugging rather than information.
 .TP
+.B --log-malloc
+Enable logging of memory allocation and release, for debugging.
+.TP
 .B --log-async[=<lines>]
 Enable asynchronous logging and optionally set the limit on the
 number of lines
@@ -171,12 +174,18 @@ Specify an alternate path for dnsmasq to record its process-id in. Normally /var
 .B \-u, --user=<username>
 Specify the userid to which dnsmasq will change after startup. Dnsmasq must normally be started as root, but it will drop root 
 privileges after startup by changing id to another user. Normally this user is "nobody" but that 
-can be over-ridden with this switch.
+can be over-ridden with this switch. 
 .TP
 .B \-g, --group=<groupname> 
 Specify the group which dnsmasq will run
 as. The default is "dip", if available, to facilitate access to
-/etc/ppp/resolv.conf which is not normally world readable.
+/etc/ppp/resolv.conf which is not normally world readable. If "dip" is not available, the default becomes
+the main group associated with the uid specified by
+.B --user
+, or "nobody".
+Specifying
+.B --group
+without an argument inhibits any change to the gid of the process, even to the defaults.
 .TP
 .B \-v, --version
 Print the version number.
@@ -865,7 +874,7 @@ will be logged. If this coincides with DNS not functioning, it
 is necessary to disable the feature. As at version 2.91, 0x20 encoding
 is disabled by default, and must be enabled with --do-0x20-encode. The default
 may change in the future, so to be sure of its status after an upgrade, set --do-0x20-encode
-or --no-0x20-encode in your config. --no-0x20-encode overrides --do-x20-encode or a future default
+or --no-0x20-encode in your config. --no-0x20-encode overrides --do-0x20-encode or a future default
 0x20-encode enable.
 .TP
 .B --use-stale-cache[=<max TTL excess in s>]
@@ -1038,7 +1047,10 @@ options. If the lease time is given, then leases
 will be given for that length of time. The lease time is in seconds,
 or minutes (eg 45m) or hours (eg 1h) or days (2d) or weeks (1w) or "infinite". If not given,
 the default lease time is one hour for IPv4 and one day for IPv6. The
-minimum lease time is two minutes. For IPv6 ranges, the lease time
+minimum lease time is two minutes. An explicitly configured lease time also
+affects IPv6 router advertisements: it acts as a ceiling on the advertised
+prefix lifetimes. For constructed ranges it also acts as a floor, unless the
+prefix is being deprecated. For IPv6 ranges, the lease time
 maybe "deprecated"; this sets the preferred lifetime sent in a DHCP
 lease or router advertisement to zero, which causes clients to use
 other addresses, if available, for new connections as a prelude to renumbering.
@@ -1326,7 +1338,7 @@ have exactly the same effect as
 options containing the same information. /etc/ethers is re-read when 
 dnsmasq receives SIGHUP. IPv6 addresses are NOT read from /etc/ethers.
 .TP
-.B \-O, --dhcp-option=[tag:<tag>,[tag:<tag>,]][encap:<opt>,][vi-encap:<enterprise>,][vendor:[<vendor-class>],][<opt>|option:<opt-name>|option6:<opt>|option6:<opt-name>],[<value>[,<value>]]
+.B \-O, --dhcp-option=[tag:<tag>,[tag:<tag>,]][encap:<opt>,][vi-encap:<enterprise>,][vendor:[<vendor-class>],][<opt>|option:<opt>|option:<opt-name>|option4:<opt>|option4:<optname>|option6:<opt>|option6:<opt-name>],[<value>[,<value>]]
 Send various extra options to DHCP clients. By default,
 dnsmasq sends some standard options to DHCP clients, the netmask and
 broadcast address are set to the same as the host running dnsmasq, and
@@ -1345,6 +1357,13 @@ For example, to set the default route option to 192.168.4.4, use
 and to set the time-server address to 192.168.0.4, use
 \fB--dhcp-option=42,192.168.0.4\fP or
 \fB--dhcp-option=option:ntp-server,192.168.0.4\fP.
+
+The above examples are backwards compatible, for consistency with IPV6, the time-server example
+may also be given as
+\fB--dhcp-option=option:42,192.168.0.4\fP or
+\fB--dhcp-option=option4:42,192.168.0.4\fP or
+\fB--dhcp-option=option4:ntp-server,192.168.0.4\fP
+
 The special address 0.0.0.0 means "the address of the system running dnsmasq".
 
 An option without data is valid, and includes just the option without data.
@@ -1369,11 +1388,14 @@ described in RFC 3442.
 IPv6 options are specified using the \fBoption6:\fP
 keyword, followed by the option number or option name. The IPv6 option
 name space is disjoint from the IPv4 option name space. IPv6 addresses
-in options must be bracketed with square brackets, eg. 
-\fB --dhcp-option=option6:ntp-server,[1234::56]\fP. 
+in options must be bracketed with square brackets, eg. \fB --dhcp-option=option6:sntp-server,[1234::56]\fP or
+ --dhcp-option=option6:31,[1234::56]. 
 For IPv6, [::] means "the global address of
 the machine running dnsmasq", whilst [fd00::] is replaced with the
-ULA, if it exists, and [fe80::] with the link-local address.
+ULA, if it exists, and [fe80::] with the link-local address. The vendorclass option
+is special for DHCPv6, since it requires an enterprise number which must appear as a decimal number
+before the class(es). eg. \fB --dhcp-option=option6:vendor-class,343,HTTPClient\fP
+
 
 Be careful: data-type suitability for the option number sent is not checked.
 It is quite possible to persuade dnsmasq to generate illegal DHCP packets with
@@ -1899,7 +1921,12 @@ DNSMASQ_CLIENT_ID if the host provided a client-id.
 
 DNSMASQ_CIRCUIT_ID, DNSMASQ_SUBSCRIBER_ID, DNSMASQ_REMOTE_ID if a
 DHCP relay-agent added any of these options.
- 
+
+DNSMASQ_CPEWAN_OUI, DNSMASQ_CPEWAN_SERIAL, DNSMASQ_CPEWAN_CLASS from
+an RFC3925 Vendor-Identifying Vendor-Specific Information Option
+containing the Broadband Forum enterprise number and options
+defined in TR-069.
+
 If the client provides vendor-class, DNSMASQ_VENDOR_CLASS.
 
 For IPv6 only:
@@ -1922,7 +1949,17 @@ only  supplied for
 since these data are not held in dnsmasq's lease
 database.
 
-
+Please note that the environment options DNSMASQ_USER_CLASS0..DNSMASQ_USER_CLASSn, 
+DNSMASQ_VENDOR_CLASS0..DNSMASQ_VENDOR_CLASSn,
+DNSMASQ_VENDOR_CLASS,
+DNSMASQ_CIRCUIT_ID, DNSMASQ_SUBSCRIBER_ID, DNSMASQ_REMOTE_ID,
+DNSMASQ_CPEWAN_OUI, DNSMASQ_CPEWAN_SERIAL, DNSMASQ_CPEWAN_CLASS,
+DNSMASQ_MUD_URL all contain values which are derived directly from untrusted data recieved
+from clients. Be very careful with quoting when using these values, lest an attacker sends
+a vendor class of "rm -rf /". Note also that the RFCs defining these options tend to simply
+define them an opaque data: the implication but not the letter of the definition is
+printable strings. In practise, dnsmasq passes all octets except zero, which is treated
+as a terminator.
 
 All file descriptors are
 closed except stdin, which is open to /dev/null, and stdout and stderr which capture output for logging by dnsmasq. 
@@ -2701,7 +2738,7 @@ IPv4 and IPv6 addresses from /etc/hosts (and
 and 
 .B --interface-name
 and
-.B ---dynamic-host
+.B --dynamic-host
 provided the address falls into one of the subnets specified in the
 .B --auth-zone.
 .PP

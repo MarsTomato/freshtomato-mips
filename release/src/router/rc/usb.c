@@ -111,7 +111,7 @@ static void remove_usb_storage_module(void)
 	modprobe_r("vfat");
 	modprobe_r("fat");
 	modprobe_r("exfat");
-#if defined(TCONFIG_UFSDA) || defined(TCONFIG_UFSDN)
+#if defined(TCONFIG_UFSDA) || defined(TCONFIG_UFSD)
 	modprobe_r("ufsd");
 #endif
 #ifdef TCONFIG_TUXERA
@@ -409,10 +409,10 @@ void start_usb(void)
 				modprobe("exfat");
 #endif
 
-#if defined(TCONFIG_UFSDA) || defined(TCONFIG_UFSDN)
+#ifdef TCONFIG_UFSDA
 			if (nvram_get_int("usb_fs_ntfs") && nvram_match("usb_ntfs_driver", "paragon"))
 				modprobe("ufsd");
-#elif TCONFIG_UFSD
+#elif defined(TCONFIG_UFSD)
 			if (nvram_get_int("usb_fs_ntfs"))
 				modprobe("ufsd");
 #endif
@@ -641,7 +641,9 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 				snprintf(options, sizeof(options), nvram_safe_get("usb_ext_opt"));
 		}
 		else if (strcmp(type, "vfat") == 0) {
-			if (nvram_invmatch("smbd_cset", ""))
+			if (nvram_match("smbd_cset", "utf8"))
+				snprintf(options, sizeof(options), "utf8");
+			else if (nvram_invmatch("smbd_cset", ""))
 				snprintf(options, sizeof(options), "iocharset=%s%s", isdigit(nvram_get("smbd_cset")[0]) ? "cp" : "", nvram_get("smbd_cset"));
 
 			if (nvram_invmatch("smbd_cpage", "")) {
@@ -711,7 +713,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 # ifdef TCONFIG_BCMARM
 					if (nvram_match("usb_ntfs_driver", "ntfs3g"))
 						ret = eval("ntfs-3g", "-o", options, mnt_dev, mnt_dir);
-#  if defined(TCONFIG_UFSDA) || defined(TCONFIG_UFSDN)
+#  ifdef TCONFIG_UFSDA
 					else if (nvram_match("usb_ntfs_driver", "paragon"))
 						ret = eval("mount", "-t", "ufsd", "-o", options, "-o", "force", mnt_dev, mnt_dir);
 #  endif
@@ -1096,6 +1098,10 @@ static inline void usbled_proc(char *device, int add)
 {
 	char *p;
 	char param[32];
+
+	if (!device || !*device)
+		return;
+
 #if defined(CONFIG_BCMWL6) || defined (TCONFIG_BLINK)
 	DIR *usb1 = NULL;
 	DIR *usb2 = NULL;
@@ -1321,11 +1327,12 @@ void hotplug_usb(void)
 	int is_block = strcmp(getenv("SUBSYSTEM") ? : "", "block") == 0;
 	char *scsi_host = getenv("SCSI_HOST");
 
-	logmsg(LOG_DEBUG, "*** %s: %s hotplug INTERFACE=%s ACTION=%s PRODUCT=%s HOST=%s DEVICE=%s\n", __FUNCTION__, getenv("SUBSYSTEM") ? : "USB", interface, action, product, scsi_host, device);
+	logmsg(LOG_DEBUG, "*** %s: %s hotplug INTERFACE=%s ACTION=%s PRODUCT=%s HOST=%s DEVICE=%s\n", __FUNCTION__, getenv("SUBSYSTEM") ? : "USB", interface ? : "", action ? : "", product ? : "", scsi_host ? : "", device ? : "");
 
 	if (!nvram_get_int("usb_enable"))
 		return;
-	if ((!action) || ((!interface || !product) && !is_block))
+
+	if ((!action) || ((!interface || !product) && !is_block) || (is_block && !device))
 		return;
 
 	if (scsi_host)
@@ -1333,7 +1340,11 @@ void hotplug_usb(void)
 
 	if (!wait_action_idle(10)) return;
 
+	if (strcmp(action, "add") != 0 && strcmp(action, "remove") != 0)
+		return;
+
 	add = (strcmp(action, "add") == 0);
+
 	if (add && (strncmp(interface ? : "", "TOMATO/", 7) != 0)) {
 		if (!is_block && device)
 			logmsg(LOG_DEBUG, "*** %s: attached USB device %s [INTERFACE=%s PRODUCT=%s]", __FUNCTION__, device, interface, product);

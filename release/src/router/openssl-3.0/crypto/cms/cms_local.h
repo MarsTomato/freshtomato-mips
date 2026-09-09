@@ -371,6 +371,9 @@ DECLARE_ASN1_ITEM(CMS_EncryptedContentInfo)
 DECLARE_ASN1_ITEM(CMS_IssuerAndSerialNumber)
 DECLARE_ASN1_ITEM(CMS_Attributes_Sign)
 DECLARE_ASN1_ITEM(CMS_Attributes_Verify)
+/* The authAttrs AAD encoding matches the signed-attributes one */
+#define CMS_Attributes_AadEncrypt_it CMS_Attributes_Sign_it
+#define CMS_Attributes_AadDecrypt_it CMS_Attributes_Verify_it
 DECLARE_ASN1_ITEM(CMS_RecipientInfo)
 DECLARE_ASN1_ITEM(CMS_PasswordRecipientInfo)
 DECLARE_ASN1_ALLOC_FUNCTIONS(CMS_IssuerAndSerialNumber)
@@ -429,7 +432,7 @@ int ossl_cms_set1_ias(CMS_IssuerAndSerialNumber **pias, X509 *cert);
 int ossl_cms_set1_keyid(ASN1_OCTET_STRING **pkeyid, X509 *cert);
 
 BIO *ossl_cms_EncryptedContent_init_bio(CMS_EncryptedContentInfo *ec,
-    const CMS_CTX *ctx);
+    const CMS_CTX *ctx, int auth);
 BIO *ossl_cms_EncryptedData_init_bio(const CMS_ContentInfo *cms);
 int ossl_cms_EncryptedContent_init(CMS_EncryptedContentInfo *ec,
     const EVP_CIPHER *cipher,

@@ -22,6 +22,11 @@
 <script src="interfaces.js?rel=<% version(); %>"></script>
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script src="ethernet-icon.js?rel=<% version(); %>"></script>
+<!-- BCMARM-BEGIN -->
+<script>
+var lastjiffiestotal = 0, lastjiffiesidle = 0, lastjiffiesusage = 100;
+</script>
+<!-- BCMARM-END -->
 <script src="status-data.jsx?_http_id=<% nv(http_id); %>"></script>
 <!-- USB-BEGIN -->
 <script src="wwan_parser.js?rel=<% version(); %>"></script>
@@ -41,6 +46,7 @@ var bgmo = {'disabled':'-','mixed':'Auto','b-only':'B Only','g-only':'G Only','b
 	    ,'nac-mixed':'N/AC Mixed','ac-only':'AC Only'
 /* BCMWL6-END */
 };
+
 var updateWWANTimers = [], customStatusTimers = [], show_dhcpc = [], show_codi = [], show_radio = [];
 var cprefix = 'status_overview';
 var u;
@@ -217,20 +223,27 @@ function c(id, htm) {
 	E(id).cells[1].innerHTML = htm;
 }
 
-function calcWanPortCount() {
-	var count = 0;
-
-	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
-		var u = (uidx > 1) ? uidx : '';
-		if ((nvram['wan'+u+'_proto'] != 'disabled')
-/* USB-BEGIN */
-		    && (nvram['wan'+u+'_proto'] != 'lte') && (nvram['wan'+u+'_proto'] != 'ppp3g')
-/* USB-END */
-		)
-			++count;
+function ethDescKey(ev, e) {
+	ev = ev || window.event;
+	if (((ev.which || ev.keyCode) == 13 || (ev.keyCode == 27)) && e) {
+		e.blur();
+		return false;
 	}
+	return true;
+}
 
-	return count;
+function editEthDesc(i) {
+	var e = E('ethdesc_'+i);
+	if (!e)
+		return false;
+
+	e.focus();
+	try {
+		e.select();
+	}
+	catch (ex) {
+	}
+	return false;
 }
 
 function ethstates() {
@@ -239,32 +252,38 @@ function ethstates() {
 		return 0;
 
 	var state = [];
-	var u, uidx, code = '', v = 0;
+	var ed = (nvram.eth_desc || '').split('%');
+	var uidx, displayIndex, code = '';
 	var portsDiv = E('ports');
 
 	if (!portsDiv._ether_ports_built) {
 		code ='<div class="section-title">Ethernet Ports State<\/div><div class="section"><table class="fields"><tr>';
 
-		/* WANs */
-		v = calcWanPortCount();
-		for (uidx = 0; uidx < v; ++uidx)
-			code += '<td class="title indent2"><b>WAN'+uidx+'<\/b><\/td>';
-		/* LANs - both cases: 4 Ports OR 8 Ports for RT-AC88U with RTL8365MB switch (EXTSW=y) */
-		for (uidx = v; uidx <= MAX_PORT_ID; ++uidx)
-			code += '<td class="title indent2"><b>LAN'+(v > 0 ? ((uidx < 5) ? (uidx - 1) : '4-7' ) : ((uidx < 5) ? (uidx) : '5-8' ))+'<\/b><\/td>';
+		for (uidx = 0; uidx <= MAX_PORT_ID; ++uidx) {
+			displayIndex = displayPortIndex(uidx);
+			code += '<td class="title indent2"><input type="text" id="ethdesc_'+displayIndex+'" maxlength="12" value="'+escapeHTML(ethDescClean(ed[displayIndex]))+'" placeholder="Click to edit" title="Click to edit" onkeydown="return ethDescKey(event, this)" onblur="saveEthDesc()" style="text-align:center;width:7em;max-width:100%;border:0;background:transparent;cursor:pointer"><\/td>';
+		}
+		code += '<td class="content"><\/td><\/tr><tr>';
+
+		for (uidx = 0; uidx <= MAX_PORT_ID; ++uidx) {
+			displayIndex = displayPortIndex(uidx);
+			code += '<td class="title indent2"><b>'+portCaption(displayIndex)+'<\/b><\/td>';
+		}
 
 		code += '<td class="content"><\/td><\/tr><tr>';
 		for (uidx = 0; uidx <= MAX_PORT_ID; ++uidx) {
-			code += '<td class="title indent2"><span class="eth-icon" id="ethsvg_'+uidx+'"><\/span><span id="ethcap_'+uidx+'"><\/span><\/td>';
+			displayIndex = displayPortIndex(uidx);
+			code += '<td class="title indent2" onclick="return editEthDesc('+displayIndex+')" title="Click to edit port name" style="cursor:pointer"><span class="eth-icon" id="ethsvg_'+displayIndex+'"><\/span><span id="ethcap_'+displayIndex+'"><\/span><\/td>';
 		}
 
-		code += '<td class="content"><\/td><\/tr><tr><td class="title indent1" colspan="6" style="text-align:right">&raquo; <a href="basic-network.asp">Configure ⚙️<\/a><\/td><\/tr><\/table><\/div>';
+		code += '<td class="content"><\/td><\/tr><tr><td class="title indent1" colspan="'+(MAX_PORT_ID + 2)+'" style="text-align:right">&raquo; <a href="basic-network.asp">Configure ⚙️<\/a><\/td><\/tr><\/table><\/div>';
 		portsDiv.innerHTML = code;
 		portsDiv._ether_ports_built = 1;
 	}
 
 	for (uidx = 0; uidx <= MAX_PORT_ID; ++uidx) {
-		port = etherstates['port'+uidx];
+		displayIndex = displayPortIndex(uidx);
+		port = etherstates['port'+displayIndex];
 		if (port === undefined) continue;
 		state = _ethstates(port);
 		var p = (state[0] || '').split('_');
@@ -272,18 +291,37 @@ function ethstates() {
 		var du = p[2] || '';
 		var spn = parseInt(sp, 10);
 		if (!isFinite(spn) || (spn <= 0)) spn = 0;
-		sp = '' + spn;
+		sp = ''+spn;
 		du = (du || '').toUpperCase();
 		if ((du !== 'FD') && (du !== 'HD')) du = 'HD';
-		var o = E('ethsvg_' + uidx);
-		var captionText = renderEthIcon(o, sp, du, '');
+		var capText = portCaption(displayIndex);
+		var o = E('ethsvg_'+displayIndex);
+		renderEthIcon(o, sp, du, '');
 		if (o)
-			o.title = state[1] || '';
+			o.title = state[1] || capText;
 
-		var cap = E('ethcap_' + uidx);
+		var cap = E('ethcap_'+displayIndex);
 		if (cap)
 			cap.innerHTML = (stats.lan_desc == '1') ? (state[1] || '') : '';
 	}
+}
+
+function saveEthDesc() {
+	var i, e, v, d = [];
+	for (i = 0; i <= MAX_PORT_ID; ++i) {
+		e = E('ethdesc_'+i);
+		if (!e) continue;
+		v = ethDescClean(e.value);
+		if (e.value != v) e.value = v;
+		d.push(v);
+	}
+	d = d.join('%');
+	if ((nvram.eth_desc || '') == d)
+		return;
+
+	nvram.eth_desc = d;
+	var cmd = new XmlHttp();
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(('nvram set eth_desc="'+d.replace(/["\\$`]/g, '\\$&')+'"\nnvram commit').replace(/\r/g, '')));
 }
 
 function anon_enable() {
@@ -302,9 +340,15 @@ function show() {
 	anon_update();
 
 	c('cpu', stats.cpuload);
+/* BCMARM-BEGIN */
+	c('cpupercent', stats.cpupercent);
+/* BCMARM-END */
 /* RTNPLUS-BEGIN */
 	c('wlsense', stats.wlsense);
 /* RTNPLUS-END */
+/* BCMARM-BEGIN */
+	c('temps', stats.cputemp + 'C / ' + Math.round(stats.cputemp.slice(0, -1) * 1.8 + 32) + '°F');
+/* BCMARM-END */
 	c('uptime', stats.uptime);
 	c('time', stats.time);
 	c('memory', stats.memory);
@@ -320,22 +364,14 @@ function show() {
 	elem.display('ip6_wan_dns1', stats.ip6_wan_dns1 != '');
 	c('ip6_wan_dns2', stats.ip6_wan_dns2);
 	elem.display('ip6_wan_dns2', stats.ip6_wan_dns2 != '');
-	c('ip6_lan', stats.ip6_lan);
-	elem.display('ip6_lan', stats.ip6_lan != '');
-	c('ip6_lan_ll', stats.ip6_lan_ll);
-	elem.display('ip6_lan_ll', stats.ip6_lan_ll != '');
-	c('ip6_lan1', stats.ip6_lan1);
-	elem.display('ip6_lan1', stats.ip6_lan1 != '');
-	c('ip6_lan1_ll', stats.ip6_lan1_ll);
-	elem.display('ip6_lan1_ll', stats.ip6_lan1_ll != '');
-	c('ip6_lan2', stats.ip6_lan2);
-	elem.display('ip6_lan2', stats.ip6_lan2 != '');
-	c('ip6_lan2_ll', stats.ip6_lan2_ll);
-	elem.display('ip6_lan2_ll', stats.ip6_lan2_ll != '');
-	c('ip6_lan3', stats.ip6_lan3);
-	elem.display('ip6_lan3', stats.ip6_lan3 != '');
-	c('ip6_lan3_ll', stats.ip6_lan3_ll);
-	elem.display('ip6_lan3_ll', stats.ip6_lan3_ll != '');
+	for (var bridgeId = 0; bridgeId <= MAX_BRIDGE_ID; ++bridgeId) {
+		var bridgeSuffix = (bridgeId == 0) ? '' : bridgeId.toString();
+		var ip6Lan = 'ip6_lan'+bridgeSuffix;
+		c(ip6Lan, stats[ip6Lan]);
+		elem.display(ip6Lan, stats[ip6Lan] != '');
+		c(ip6Lan+'_ll', stats[ip6Lan+'_ll']);
+		elem.display(ip6Lan+'_ll', stats[ip6Lan+'_ll'] != '');
+	}
 /* IPV6-END */
 
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
@@ -503,18 +539,32 @@ function init() {
 		{ title: 'Model', text: nvram.t_model_name },
 		{ title: 'Bootloader (CFE)', text: stats.cfeversion },
 		{ title: 'Chipset', text: stats.systemtype },
+/* BCMARM-BEGIN */
+		{ title: 'CPU Frequency', text: stats.cpumhz, suffix: ' <small>(dual-core)<\/small>' },
+/* BCMARM-END */
+/* BCMARM-NO-BEGIN */
 		{ title: 'CPU Frequency', text: stats.cpumhz },
+/* BCMARM-NO-END */
 		{ title: 'Flash Size', text: stats.flashsize },
 		null,
 		{ title: 'Time', rid: 'time', text: stats.time },
 		{ title: 'Uptime', rid: 'uptime', text: stats.uptime },
 		{ title: 'CPU Load <small>(1 / 5 / 15 mins)<\/small>', rid: 'cpu', text: stats.cpuload },
+/* BCMARM-BEGIN */
+		{ title: 'CPU Usage', rid: 'cpupercent', text: stats.cpupercent },
+/* BCMARM-END */
 		{ title: 'Used / Total RAM', rid: 'memory', text: stats.memory },
 		{ title: 'Used / Total Swap', rid: 'swap', text: stats.swap, hidden: (stats.swap == '') },
 		{ title: 'Used / Total NVRAM', rid: 'nvram_stat', text: scaleSize(nvstat.size - nvstat.free)+' / '+scaleSize(nvstat.size)+' <small>('+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%)<\/small><div class="progress-wrapper"><div class="progress-container"><div class="progress-bar" style="background-color:'+setColor(((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2))+';width:'+((nvstat.size - nvstat.free) / nvstat.size * 100.0).toFixed(2)+'%"><\/div><\/div><\/div>' }
-/* RTNPLUS-BEGIN */
+/* BCMARM-BEGIN */
 		,null,
-		{ title: 'Wireless Temperature', rid: 'wlsense', text: stats.wlsense }
+		{ title: 'CPU Temperature', rid: 'temps', text: stats.cputemp + 'C / ' + Math.round(stats.cputemp.slice(0, -1) * 1.8 + 32) + '°F' }
+/* BCMARM-END */
+/* RTNPLUS-BEGIN */
+/* BCMARM-NO-BEGIN */
+		,null
+/* BCMARM-NO-END */
+		,{ title: 'Wireless Temperature', rid: 'wlsense', text: stats.wlsense }
 /* RTNPLUS-END */
 	]);
 </script>
@@ -593,7 +643,8 @@ function init() {
 	for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 		var j = (i == 0) ? '' : i.toString();
 		if (nvram['lan'+j+'_ifname'].length > 0) {
-			if (nvram['lan'+j+'_proto'] == 'dhcp') {
+			var l2Only = (nvram['lan'+j+'_ipaddr'] == '0.0.0.0');
+			if (!l2Only && (nvram['lan'+j+'_proto'] == 'dhcp')) {
 				if ((!fixIP(nvram.dhcpd_startip)) || (!fixIP(nvram.dhcpd_endip))) {
 					var x = nvram['lan'+j+'_ipaddr'].split('.').splice(0, 3).join('.')+'.';
 					nvram['dhcpd'+j+'_startip'] = x + 2;
@@ -604,30 +655,44 @@ function init() {
 			}
 			else {
 				s += ((s.length > 0) && (s.charAt(s.length - 1) != ' ')) ? '<br>' : '';
-				s += '<b>br'+i+'<\/b> (LAN'+i+') - Disabled';
+				s += '<b>br'+i+'<\/b> (LAN'+i+') - '+(l2Only ? 'Disabled (L2 only)' : 'Disabled');
 			}
 			t += ((t.length > 0) && (t.charAt(t.length - 1) != ' ')) ? '<br>' : '';
-			t += '<b>br'+i+'<\/b> (LAN'+i+') - '+nvram['lan'+j+'_ipaddr']+'/'+numberOfBitsOnNetMask(nvram['lan'+j+'_netmask']);
+			t += '<b>br'+i+'<\/b> (LAN'+i+') - ';
+			if (l2Only)
+				t += 'L2 only';
+			else {
+				t += nvram['lan'+j+'_ipaddr'];
+				if (fixIP(nvram['lan'+j+'_netmask']))
+					t += '/'+numberOfBitsOnNetMask(nvram['lan'+j+'_netmask']);
+			}
 		}
 	}
 
-	createFieldTable('', [
+	var lanFields = [
 		{ title: 'Router MAC Address', text: nvram.lan_hwaddr },
 		{ title: 'Router IP Addresses', text: t },
-		{ title: 'Gateway', text: nvram.lan_gateway, ignore: nvram.wan_proto != 'disabled' },
+		{ title: 'Gateway', text: nvram.lan_gateway, ignore: nvram.wan_proto != 'disabled' }
+	];
 /* IPV6-BEGIN */
-		{ title: 'LAN (br0) IPv6 Address', rid: 'ip6_lan', text: stats.ip6_lan, hidden: (stats.ip6_lan == '') },
-		{ title: 'LAN (br0) IPv6 LL Address', rid: 'ip6_lan_ll', text: stats.ip6_lan_ll, hidden: (stats.ip6_lan_ll == '') },
-		{ title: 'LAN1 (br1) IPv6 Address', rid: 'ip6_lan1', text: stats.ip6_lan1, hidden: (stats.ip6_lan1 == '') },
-		{ title: 'LAN1 (br1) IPv6 LL Address', rid: 'ip6_lan1_ll', text: stats.ip6_lan1_ll, hidden: (stats.ip6_lan1_ll == '') },
-		{ title: 'LAN2 (br2) IPv6 Address', rid: 'ip6_lan2', text: stats.ip6_lan2, hidden: (stats.ip6_lan2 == '') },
-		{ title: 'LAN2 (br2) IPv6 LL Address', rid: 'ip6_lan2_ll', text: stats.ip6_lan2_ll, hidden: (stats.ip6_lan2_ll == '') },
-		{ title: 'LAN3 (br3) IPv6 Address', rid: 'ip6_lan3', text: stats.ip6_lan3, hidden: (stats.ip6_lan3 == '') },
-		{ title: 'LAN3 (br3) IPv6 LL Address', rid: 'ip6_lan3_ll', text: stats.ip6_lan3_ll, hidden: (stats.ip6_lan3_ll == '') },
+	for (var i = 0 ; i <= MAX_BRIDGE_ID; i++) {
+		var j = (i == 0) ? '' : i.toString();
+		var ip6Rid = 'ip6_lan'+j;
+		var ip6LlRid = ip6Rid+'_ll';
+		var ip6Address = stats[ip6Rid] || '';
+		var ip6LlAddress = stats[ip6LlRid] || '';
+		var l2Only = (nvram['lan'+j+'_ipaddr'] == '0.0.0.0');
+		var title = 'LAN'+j+' (br'+i+') IPv6';
+
+		lanFields.push({ title: title+' Address', rid: ip6Rid, text: ip6Address, hidden: (ip6Address == '') || l2Only });
+		lanFields.push({ title: title+' LL Address', rid: ip6LlRid, text: ip6LlAddress, hidden: (ip6LlAddress == '') || l2Only });
+	}
 /* IPV6-END */
+	lanFields.push(
 		{ title: 'DNS', rid: 'dns', text: nvram.wan_dns, ignore: nvram.wan_proto != 'disabled' },
 		{ title: 'DHCP', text: s }
-	]);
+	);
+	createFieldTable('', lanFields);
 </script>
 </div>
 

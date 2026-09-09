@@ -112,10 +112,10 @@ function verifyFields(focused, quiet) {
 /* TFTP-BEGIN */
 	v = E('_f_dnsmasq_tftp').checked;
 	vis._dnsmasq_tftp_path = v;
-	vis._f_dnsmasq_pxelan = v;
-	vis._f_dnsmasq_pxelan1 = v;
-	vis._f_dnsmasq_pxelan2 = v;
-	vis._f_dnsmasq_pxelan3 = v;
+	for (i = 0; i <= MAX_BRIDGE_ID; ++i) {
+		a = (i == 0 ? '' : i.toString());
+		vis['_f_dnsmasq_pxelan'+a] = v;
+	}
 
 	if (v && !v_length('_dnsmasq_tftp_path', quiet, 0, 128))
 		return 0;
@@ -274,19 +274,83 @@ function verifyFields(focused, quiet) {
 	return 1;
 }
 
-/* IPV6-BEGIN */
-function joinIPv6Addr(a) {
-	var r, i, s;
 
-	r = [];
-	for (i = 0; i < a.length; ++i) {
-		s = CompressIPv6Address(a[i]);
-		if ((s) && (s != '')) r.push(s);
+function addService(fom, service) {
+	if (fom._service.value == '*')
+		return;
+
+	if (fom._service.value.length)
+		fom._service.value += ',';
+
+	fom._service.value += service;
+}
+
+function finishSave(fom, retries) {
+	/* Wait for the first asynchronous submit to complete. */
+	if (form.xhttp) {
+		setTimeout(() => finishSave(fom, retries), 500);
+		return;
 	}
 
-	return r.join(' ');
+	/* Allow slower routers a little more time to restart dnsmasq. */
+	if (!isup.dnsmasq && retries > 0) {
+		setTimeout(() => finishSave(fom, retries - 1), 1000);
+		return;
+	}
+
+	fom.dnsmasq_safe.value = isup.dnsmasq ? 0 : 1;
+
+	/*
+	 * dnsmasq has already been restarted successfully by the first submit.
+	 * Start a fresh service list so it is not restarted a second time.
+	 */
+	fom._service.value = '';
+
+	if ((fom.dhcpc_minpkt.value != nvram.dhcpc_minpkt) || (fom.dhcpc_custom.value != nvram.dhcpc_custom)) {
+		nvram.dhcpc_minpkt = fom.dhcpc_minpkt.value;
+		nvram.dhcpc_custom = fom.dhcpc_custom.value;
+		fom._service.value = '*'; /* special case: restart all */
+	}
+	else if (fom.dnsmasq_safe.value == 1) {
+		addService(fom, 'dnsmasq-restart'); /* start dnsmasq if safe mode is set */
+	}
+
+	if (fom.dns_intcpt.value != nvram.dns_intcpt) {
+		nvram.dns_intcpt = fom.dns_intcpt.value;
+		addService(fom, 'firewall-restart'); /* special case: restart FW */
+	}
+
+	if (fom.wan_wins.value != nvram.wan_wins) { /* special case: restart vpnservers/pptpd if up */
+		nvram.wan_wins = fom.wan_wins.value;
+/* OPENVPN-BEGIN */
+		for (var i = 1; i <= OVPN_SERVER_COUNT; ++i) {
+			if (isup['vpnserver'+i])
+				addService(fom, 'vpnserver'+i+'-restart');
+		}
+/* OPENVPN-END */
+/* PPTPD-BEGIN */
+		if (isup.pptpd)
+			addService(fom, 'pptpd-restart');
+/* PPTPD-END */
+	}
+/* MDNS-BEGIN */
+	if ((fom.mdns_enable.value != nvram.mdns_enable) || (fom.mdns_reflector.value != nvram.mdns_reflector)) {
+		nvram.mdns_enable = fom.mdns_enable.value;
+		nvram.mdns_reflector = fom.mdns_reflector.value;
+		if (fom.mdns_enable.value == 1)
+			addService(fom, 'mdns-restart'); /* special case: re/start avahi */
+		else
+			addService(fom, 'mdns-stop'); /* special case: stop avahi */
+	}
+/* MDNS-END */
+	fom.dnsmasq_norestart.value = 0;
+	form.submit(fom, 1);
+
+	if (fom.dnsmasq_safe.value == 1)
+		alert('Warning! Dnsmasq Custom configuration contains a disruptive syntax error.\nThe Custom configuration is now excluded to allow dnsmasq to operate');
+
+	waitforme = 0; /* now you can leave the page... */
 }
-/* IPV6-END */
 
 function save() {
 	if (!verifyFields(null, 0))
@@ -297,17 +361,15 @@ function save() {
 	fom.dhcpd_dmdns.value = fom._f_dhcpd_dmdns.checked ? 1 : 0;
 	fom.dhcpd_gwmode.value = fom._f_dhcpd_gwmode.checked ? 1 : 0;
 	fom.dhcpc_minpkt.value = fom._f_dhcpc_minpkt.checked ? 1 : 0;
-	fom.dhcpd_ostatic.value = fom._f_dhcpd_ostatic.checked ? 1 : 0;
-	fom.dhcpd1_ostatic.value = fom._f_dhcpd1_ostatic.checked ? 1 : 0;
-	fom.dhcpd2_ostatic.value = fom._f_dhcpd2_ostatic.checked ? 1 : 0;
-	fom.dhcpd3_ostatic.value = fom._f_dhcpd3_ostatic.checked ? 1 : 0;
+	for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+		var p = i ? i : '';
+		fom['dhcpd'+p+'_ostatic'].value = fom['_f_dhcpd'+p+'_ostatic'].checked ? 1 : 0;
+	}
 	fom.dnsmasq_gen_names.value = fom._f_dnsmasq_gen_names.checked ? 1 : 0;
-	fom.wan_addget.value = fom._f_wan_addget.checked ? 1 : 0;
-	fom.wan2_addget.value = fom._f_wan2_addget.checked ? 1 : 0;
-/* MULTIWAN-BEGIN */
-	fom.wan3_addget.value = fom._f_wan3_addget.checked ? 1 : 0;
-	fom.wan4_addget.value = fom._f_wan4_addget.checked ? 1 : 0;
-/* MULTIWAN-END */
+	for (var uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
+		var u = (uidx > 1) ? uidx : '';
+		fom['wan'+u+'_addget'].value = fom['_f_wan'+u+'_addget'].checked ? 1 : 0;
+	}
 	fom.dns_norebind.value = fom._f_dns_norebind.checked ? 1 : 0;
 	fom.dns_fwd_local.value = fom._f_dns_fwd_local.checked ? 1 : 0;
 	fom.dns_intcpt.value = fom._f_dns_intcpt.checked ? 1 : 0;
@@ -388,10 +450,10 @@ function save() {
 /* STUBBY-END */
 /* TFTP-BEGIN */
 	fom.dnsmasq_tftp.value = fom._f_dnsmasq_tftp.checked ? 1 : 0;
-	fom.dnsmasq_pxelan.value = fom._f_dnsmasq_pxelan.checked ? 1 : 0;
-	fom.dnsmasq_pxelan1.value = fom._f_dnsmasq_pxelan1.checked ? 1 : 0;
-	fom.dnsmasq_pxelan2.value = fom._f_dnsmasq_pxelan2.checked ? 1 : 0;
-	fom.dnsmasq_pxelan3.value = fom._f_dnsmasq_pxelan3.checked ? 1 : 0;
+	for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+		var p = i ? i : '';
+		fom['dnsmasq_pxelan'+p].value = fom['_f_dnsmasq_pxelan'+p].checked ? 1 : 0;
+	}
 /* TFTP-END */
 
 	/* check configuration of dnsmasq first */
@@ -401,67 +463,12 @@ function save() {
 	fom._service.value = 'dnsmasq-restart';
 	form.submit(fom, 1);
 
-	/* timeout of 5 seconds should be enough also for slower routers. I hope... */
-	setTimeout(() => {
-		if (!isup.dnsmasq) /* if not up, use safe mode */
-			fom.dnsmasq_safe.value = 1;
-
-		if ((fom.dhcpc_minpkt.value != nvram.dhcpc_minpkt) || (fom.dhcpc_custom.value != nvram.dhcpc_custom)) {
-			nvram.dhcpc_minpkt = fom.dhcpc_minpkt.value;
-			nvram.dhcpc_custom = fom.dhcpc_custom.value;
-			fom._service.value = '*'; /* special case: restart all */
-		}
-		else if (fom.dnsmasq_safe.value == 1) {
-			fom._service.value = 'dnsmasq-restart'; /* start dnsmasq if safe mode is set */
-		}
-
-		if (fom.dns_intcpt.value != nvram.dns_intcpt) {
-			nvram.dns_intcpt = fom.dns_intcpt.value;
-			if (fom._service.value != '*')
-				fom._service.value += ',firewall-restart'; /* special case: restart FW */
-		}
-
-		if (fom.wan_wins.value != nvram.wan_wins) { /* special case: restart vpnservers/pptpd if up */
-			nvram.wan_wins = fom.wan_wins.value;
-			if (fom._service.value != '*') {
-/* OPENVPN-BEGIN */
-				if (isup.vpnserver1)
-					fom._service.value += ',vpnserver1-restart';
-				if (isup.vpnserver2)
-					fom._service.value += ',vpnserver2-restart';
-/* OPENVPN-END */
-/* PPTPD-BEGIN */
-				if (isup.pptpd)
-					fom._service.value += ',pptpd-restart';
-/* PPTPD-END */
-			}
-		}
-/* MDNS-BEGIN */
-		if ((fom.mdns_enable.value != nvram.mdns_enable) || (fom.mdns_reflector.value != nvram.mdns_reflector)) {
-			nvram.mdns_enable = fom.mdns_enable.value;
-			nvram.mdns_reflector = fom.mdns_reflector.value;
-			if (fom._service.value != '*') {
-				if (fom.mdns_enable.value == 1)
-					fom._service.value += ',mdns-restart'; /* special case: re/start avahi */
-				else
-					fom._service.value += ',mdns-stop'; /* special case: stop avahi */
-			}
-		}
-/* MDNS-END */
-		fom.dnsmasq_norestart.value = 0;
-		form.submit(fom, 1);
-
-		if (fom.dnsmasq_safe.value == 1)
-			alert('Warning! Dnsmasq Custom configuration contains a disruptive syntax error.\nThe Custom configuration is now excluded to allow dnsmasq to operate');
-
-		waitforme = 0; /* now you can leave the page... */
-	}, 5000);
+	/* Check the result after five seconds and retry briefly on slower routers. */
+	setTimeout(() => finishSave(fom, 5), 5000);
 }
 
 function init() {
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
+	restoreVisibility(cprefix, 'notes');
 
 	var e = E('_dnsmasq_custom');
 	height = getComputedStyle(e).height.slice(0, -2);
@@ -492,17 +499,17 @@ function init() {
 <input type="hidden" name="_service">
 <input type="hidden" name="dhcpd_dmdns">
 <input type="hidden" name="dhcpc_minpkt">
-<input type="hidden" name="dhcpd_ostatic">
-<input type="hidden" name="dhcpd1_ostatic">
-<input type="hidden" name="dhcpd2_ostatic">
-<input type="hidden" name="dhcpd3_ostatic">
 <input type="hidden" name="dhcpd_gwmode">
-<input type="hidden" name="wan_addget">
-<input type="hidden" name="wan2_addget">
-<!-- MULTIWAN-BEGIN -->
-<input type="hidden" name="wan3_addget">
-<input type="hidden" name="wan4_addget">
-<!-- MULTIWAN-END -->
+<script>
+	for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+		var p = i ? i : '';
+		W('<input type="hidden" name="dhcpd'+p+'_ostatic">');
+	}
+	for (var uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
+		var u = (uidx > 1) ? uidx : '';
+		W('<input type="hidden" name="wan'+u+'_addget">');
+	}
+</script>
 <input type="hidden" name="dns_norebind">
 <input type="hidden" name="dns_fwd_local">
 <input type="hidden" name="dns_intcpt">
@@ -541,10 +548,12 @@ function init() {
 <!-- MDNS-END -->
 <!-- TFTP-BEGIN -->
 <input type="hidden" name="dnsmasq_tftp">
-<input type="hidden" name="dnsmasq_pxelan">
-<input type="hidden" name="dnsmasq_pxelan1">
-<input type="hidden" name="dnsmasq_pxelan2">
-<input type="hidden" name="dnsmasq_pxelan3">
+<script>
+	for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+		var p = i ? i : '';
+		W('<input type="hidden" name="dnsmasq_pxelan'+p+'">');
+	}
+</script>
 <!-- TFTP-END -->
 <input type="hidden" name="dnsmasq_safe">
 <input type="hidden" name="dnsmasq_norestart">
@@ -654,7 +663,27 @@ function init() {
 	<script>
 		dns_ip6 = nvram.ipv6_dns_lan.split(/\s+/);
 
-		createFieldTable('', [
+		var wanDnsFields = [];
+		for (var uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
+			var u = (uidx > 1) ? uidx : '';
+			wanDnsFields.push({
+				title: 'WAN'+(uidx - 1), indent: 2,
+				name: 'f_wan'+u+'_addget', type: 'checkbox',
+				value: nvram['wan'+u+'_addget'] == 1
+			});
+		}
+
+		var staticLeaseFields = [];
+		for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+			var p = i ? i : '';
+			staticLeaseFields.push({
+				title: 'LAN'+i+' (br'+i+')', indent: 2,
+				name: 'f_dhcpd'+p+'_ostatic', type: 'checkbox',
+				value: nvram['dhcpd'+p+'_ostatic'] == 1
+			});
+		}
+
+		var serverFields = [
 			{ title: 'Use internal DNS', name: 'f_dhcpd_dmdns', type: 'checkbox', value: nvram.dhcpd_dmdns == 1 },
 				{ title: 'Debug Mode', indent: 2, name: 'f_dnsmasq_debug', type: 'checkbox', value: nvram.dnsmasq_debug == 1 },
 			{ title: 'Use received DNS with user-entered DNS'
@@ -663,20 +692,12 @@ function init() {
 			 , suffix: '<small>inactive when using dncrypt-proxy/Stubby with No-Resolv option<\/small>'
 /* DNSCRYPT-END */
 /* STUBBY-END */
-			},
-				{ title: 'WAN0', indent: 2, name: 'f_wan_addget', type: 'checkbox', value: nvram.wan_addget == 1 },
-				{ title: 'WAN1', indent: 2, name: 'f_wan2_addget', type: 'checkbox', value: nvram.wan2_addget == 1 },
-/* MULTIWAN-BEGIN */
-				{ title: 'WAN2', indent: 2, name: 'f_wan3_addget', type: 'checkbox', value: nvram.wan3_addget == 1 },
-				{ title: 'WAN3', indent: 2, name: 'f_wan4_addget', type: 'checkbox', value: nvram.wan4_addget == 1 },
-/* MULTIWAN-END */
+			}
+		].concat(wanDnsFields, [
 			{ title: 'Intercept DNS port', name: 'f_dns_intcpt', type: 'checkbox', value: nvram.dns_intcpt == 1 },
 			{ title: 'Use user-entered gateway if WAN is disabled', name: 'f_dhcpd_gwmode', type: 'checkbox', value: nvram.dhcpd_gwmode == 1 },
-			{ title: 'Ignore DHCP requests from unknown devices' },
-				{ title: 'LAN0 (br0)', indent: 2, name: 'f_dhcpd_ostatic', type: 'checkbox', value: nvram.dhcpd_ostatic == 1 },
-				{ title: 'LAN1 (br1)', indent: 2, name: 'f_dhcpd1_ostatic', type: 'checkbox', value: nvram.dhcpd1_ostatic == 1 },
-				{ title: 'LAN2 (br2)', indent: 2, name: 'f_dhcpd2_ostatic', type: 'checkbox', value: nvram.dhcpd2_ostatic == 1 },
-				{ title: 'LAN3 (br3)', indent: 2, name: 'f_dhcpd3_ostatic', type: 'checkbox', value: nvram.dhcpd3_ostatic == 1 },
+			{ title: 'Ignore DHCP requests from unknown devices' }
+		]).concat(staticLeaseFields, [
 			{ title: 'Generate a name for DHCP clients which do not otherwise have one', name: 'f_dnsmasq_gen_names', type: 'checkbox', value: nvram.dnsmasq_gen_names == 1 },
 /* TOR-BEGIN */
 			{ title: 'Resolve .onion using Tor<br>(<a href="advanced-tor.asp" class="new_window">enable/start Tor first<\/a>)', name: 'f_dnsmasq_onion_support', type: 'checkbox', suffix: ' <small>note: disables \'DNS Rebind protection\'<\/small>', value: nvram.dnsmasq_onion_support == 1 },
@@ -704,6 +725,8 @@ function init() {
 				{ title: 'Enable reflector', indent: 2, name: 'f_mdns_reflector', type: 'checkbox', value: nvram.mdns_reflector == 1 }
 /* MDNS-END */
 		]);
+
+		createFieldTable('', serverFields);
 	</script>
 </div>
 
@@ -713,14 +736,21 @@ function init() {
 <div class="section-title">TFTP Server</div>
 <div class="section">
 	<script>
-		createFieldTable('', [
+		var tftpFields = [
 			{ title: 'Enable TFTP', name: 'f_dnsmasq_tftp', type: 'checkbox', value: nvram.dnsmasq_tftp == 1 },
-				{ title: 'TFTP root path', indent: 2, name: 'dnsmasq_tftp_path', type: 'text', maxlen: 128, size: 90, placeholder: '/mnt/sda1', value: nvram.dnsmasq_tftp_path },
-				{ title: 'PXE on LAN0 (br0)', indent: 2, name: 'f_dnsmasq_pxelan', type: 'checkbox', value: nvram.dnsmasq_pxelan == 1 },
-				{ title: 'PXE on LAN1 (br1)', indent: 2, name: 'f_dnsmasq_pxelan1', type: 'checkbox', value: nvram.dnsmasq_pxelan1 == 1 },
-				{ title: 'PXE on LAN2 (br2)', indent: 2, name: 'f_dnsmasq_pxelan2', type: 'checkbox', value: nvram.dnsmasq_pxelan2 == 1 },
-				{ title: 'PXE on LAN3 (br3)', indent: 2, name: 'f_dnsmasq_pxelan3', type: 'checkbox', value: nvram.dnsmasq_pxelan3 == 1 }
-		]);
+				{ title: 'TFTP root path', indent: 2, name: 'dnsmasq_tftp_path', type: 'text', maxlen: 128, size: 90, placeholder: '/mnt/sda1', value: nvram.dnsmasq_tftp_path }
+		];
+
+		for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+			var p = i ? i : '';
+			tftpFields.push({
+				title: 'PXE on LAN'+i+' (br'+i+')', indent: 2,
+				name: 'f_dnsmasq_pxelan'+p, type: 'checkbox',
+				value: nvram['dnsmasq_pxelan'+p] == 1
+			});
+		}
+
+		createFieldTable('', tftpFields);
 	</script>
 </div>
 <!-- TFTP-END -->
@@ -743,7 +773,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');" id="toggleLink-notes"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<script>writeToggleSectionTitle('Notes', 'notes');</script>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<i>DHCP / DNS Client (WAN):</i><br>
 	<ul>

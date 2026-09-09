@@ -61,37 +61,28 @@ typedef enum ovpn_type
 static void write_ovpn_cstats_rules(FILE *fp, const char *iface, const char *dir)
 {
 	struct in_addr ipaddr, netmask, network;
-	char lanN_ifname[] = "lanXX_ifname";
-	char lanN_ipaddr[] = "lanXX_ipaddr";
-	char lanN_netmask[] = "lanXX_netmask";
-	char lanN[] = "lanXX";
+	char key[32], lanN[12];
 	char netaddrnetmask[] = "255.255.255.255/255.255.255.255";
-	char bridge[2];
+	char *netmask_str;
 	char br;
 
 	if (!nvram_match("cstats_enable", "1"))
 		return;
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
-		bridge[0] = br ? '0' + br : '\0';
-		bridge[1] = '\0';
-
-		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
-		if (strcmp(nvram_safe_get(lanN_ifname), "") == 0)
+		if (!*bridge_nvram_get(br, "ifname", key, sizeof(key)))
 			continue;
 
-		snprintf(lanN_ipaddr, sizeof(lanN_ipaddr), "lan%s_ipaddr", bridge);
-		snprintf(lanN_netmask, sizeof(lanN_netmask), "lan%s_netmask", bridge);
-		snprintf(lanN, sizeof(lanN), "lan%s", bridge);
-
-		if (!inet_aton(nvram_safe_get(lanN_ipaddr), &ipaddr))
+		if (!inet_aton(bridge_nvram_get(br, "ipaddr", key, sizeof(key)), &ipaddr))
 			continue;
 
-		if (!inet_aton(nvram_safe_get(lanN_netmask), &netmask))
+		netmask_str = bridge_nvram_get(br, "netmask", key, sizeof(key));
+		if (!inet_aton(netmask_str, &netmask))
 			continue;
 
 		network.s_addr = ipaddr.s_addr & netmask.s_addr;
-		snprintf(netaddrnetmask, sizeof(netaddrnetmask), "%s/%s", inet_ntoa(network), nvram_safe_get(lanN_netmask));
+		get_bridge_prefix(br, lanN, sizeof(lanN));
+		snprintf(netaddrnetmask, sizeof(netaddrnetmask), "%s/%s", inet_ntoa(network), netmask_str);
 
 		fprintf(fp, "iptables -I FORWARD %s %s -m account --aaddr %s --aname %s\n", dir, iface, netaddrnetmask, lanN);
 	}
@@ -656,7 +647,8 @@ void start_ovpn_client(int unit)
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	/* Spread clients on cpu 1,0 or 1,2,3,0 (in that order) */
-	snprintf(cpulist, sizeof(cpulist), "%d", (unit & cpu_num));
+	cpulist[0] = '0' + (unit & cpu_num);
+	cpulist[1] = '\0';
 	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret)
@@ -818,9 +810,10 @@ void start_ovpn_server(int unit)
 				for (i = 1; i < BRIDGE_COUNT; i++) {
 					snprintf(buffer2, BUF_SIZE_32, "br%d", i);
 					if (nvram_contains_word(buffer, buffer2)) {
-						snprintf(buffer2, BUF_SIZE_32, "lan%d_ipaddr", i);
+						/* Keep nvram_get() semantics; only centralize lanN key naming. */
+						get_bridge_nvram_key(i, "ipaddr", buffer2, BUF_SIZE_32);
 						br_ipaddr = nvram_get(buffer2);
-						snprintf(buffer2, BUF_SIZE_32, "lan%d_netmask", i);
+						get_bridge_nvram_key(i, "netmask", buffer2, BUF_SIZE_32);
 						br_netmask = nvram_get(buffer2);
 						break;
 					}
@@ -847,9 +840,7 @@ void start_ovpn_server(int unit)
 	}
 
 	/* Proto */
-	mwan_num = nvram_get_int("mwan_num"); /* check active WANs num */
-	if (mwan_num < 1)
-		mwan_num = 1;
+	mwan_num = mwan_active_num(); /* check active WANs num */
 
 	snprintf(buffer, BUF_SIZE, "vpns%d_proto", unit);
 	fprintf(fp, "proto %s\n", nvram_safe_get(buffer)); /* full dual-stack functionality starting with OpenVPN 2.4.0 */
@@ -890,12 +881,16 @@ void start_ovpn_server(int unit)
 
 			for (i = 0; i < BRIDGE_COUNT; i++) {
 				if (plan & (1 << i)) {
+					char *lan_ipaddr, *lan_netmask;
 					int ret3 = 0, ret4 = 0;
 
-					ret3 = sscanf(getNVRAMVar((i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i), "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
-					ret4 = sscanf(getNVRAMVar((i == 0 ? "lan_netmask" : "lan%d_netmask"), i), "%d.%d.%d.%d", &nm[0], &nm[1], &nm[2], &nm[3]);
+					/* Shared bridge lookup keeps the lan_* / lanN_* convention in one place. */
+					lan_ipaddr = bridge_nvram_get(i, "ipaddr", buffer2, BUF_SIZE_32);
+					lan_netmask = bridge_nvram_get(i, "netmask", buffer2, BUF_SIZE_32);
+					ret3 = sscanf(lan_ipaddr, "%d.%d.%d.%d", &ip[0], &ip[1], &ip[2], &ip[3]);
+					ret4 = sscanf(lan_netmask, "%d.%d.%d.%d", &nm[0], &nm[1], &nm[2], &nm[3]);
 					if (ret3 == 4 && ret4 == 4) {
-						fprintf(fp, "push \"route %d.%d.%d.%d %s\"\n", ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], getNVRAMVar((i == 0 ? "lan_netmask" : "lan%d_netmask"), i));
+						fprintf(fp, "push \"route %d.%d.%d.%d %s\"\n", ip[0]&nm[0], ip[1]&nm[1], ip[2]&nm[2], ip[3]&nm[3], lan_netmask);
 						push_lan[i] = 1; /* IPv4 LANX will be pushed */
 					}
 				}
@@ -1005,8 +1000,8 @@ void start_ovpn_server(int unit)
 			/* check if LANX will be pushed --> if YES, push the suitable DNS Server address */
 			for (i = 0; i < BRIDGE_COUNT; i++) {
 				if (push_lan[i] == 1) { /* push IPv4 LANx DNS */
-					snprintf(buffer, BUF_SIZE, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-					fprintf(fp, "push \"dhcp-option DNS %s\"\n", nvram_safe_get(buffer));
+					fprintf(fp, "push \"dhcp-option DNS %s\"\n",
+					        bridge_nvram_get(i, "ipaddr", buffer, BUF_SIZE));
 					dont_push_active = 1;
 				}
 			}
@@ -1014,9 +1009,10 @@ void start_ovpn_server(int unit)
 			/* check what LAN is active before push DNS */
 			if (dont_push_active == 0) {
 				for (i = 0; i < BRIDGE_COUNT; i++) {
-					snprintf(buffer, BUF_SIZE, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-					if (strcmp(nvram_safe_get(buffer), "") != 0) {
-						fprintf(fp, "push \"dhcp-option DNS %s\"\n", nvram_safe_get(buffer));
+					char *lan_ipaddr = bridge_nvram_get(i, "ipaddr", buffer, BUF_SIZE);
+
+					if (*lan_ipaddr) {
+						fprintf(fp, "push \"dhcp-option DNS %s\"\n", lan_ipaddr);
 						break;
 					}
 				}
@@ -1266,7 +1262,8 @@ void start_ovpn_server(int unit)
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	/* Spread servers on cpu 1,0 or 1,2 (in that order) */
-	snprintf(cpulist, sizeof(cpulist), "%d", (unit & cpu_num));
+	cpulist[0] = '0' + (unit & cpu_num);
+	cpulist[1] = '\0';
 	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret)
@@ -1469,7 +1466,7 @@ void write_ovpn_dnsmasq_config(FILE *fp)
 
 		/* check for .conf files */
 		if (sscanf(fn, "client%d.con%c", &num, &ch) == 2 && ch == 'f') {
-			snprintf(buf, BUF_SIZE, "%s/%s", OVPN_DNS_DIR, fn);
+			snprintf(buf, BUF_SIZE, "%s/%.238s", OVPN_DNS_DIR, fn);
 			if (fappend(fp, buf) == -1) {
 				logmsg(LOG_WARNING, "fappend failed for %s (%s)", buf, strerror(errno));
 				continue;
@@ -1501,7 +1498,7 @@ int write_ovpn_resolv(FILE *fp)
 			continue;
 
 		if (sscanf(fn, "client%d.resol%c", &num, &ch) == 2 && ch == 'v') {
-			snprintf(buf, BUF_SIZE, "%s/%s", OVPN_DNS_DIR, fn);
+			snprintf(buf, BUF_SIZE, "%s/%.238s", OVPN_DNS_DIR, fn);
 			if (fappend(fp, buf) == -1) {
 				logmsg(LOG_WARNING, "fappend failed for %s (%s)", buf, strerror(errno));
 				continue;

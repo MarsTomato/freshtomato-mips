@@ -31,7 +31,7 @@
 #define LOGMSG_DISABLE		DISABLE_SYSLOG_OSM
 #define LOGMSG_NVDEBUG		"wl_debug"
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
  #define WLC_SCAN_RESULT_BUF_LEN_TOMATO WLC_SCAN_RESULT_BUF_LEN /* 32 * 1024 */
 #else
  #define WLC_SCAN_RESULT_BUF_LEN_TOMATO WLC_IOCTL_MAXLEN /* 8192 */
@@ -930,7 +930,7 @@ void asp_wlscan(int argc, char **argv)
 		return;
 	}
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 	sleep(3); /* dual-/tri-band router - scan result for 5 GHz survey after ~3 sec available - we need to wait... */
 #else
 	sleep(1); /* only 2,4 GHz - scan result after ~1 sec available */
@@ -1449,14 +1449,12 @@ static int print_wif(int idx, int unit, int subunit, void *param)
 		snprintf(unit_str, sizeof(unit_str), "%d", unit);
 
 		max_no_vifs = 1;
-		wl_iovar_get(nvram_safe_get(wl_nvname("ifname", unit, 0)), "cap", (void *)caps, WLC_IOCTL_SMLEN);
-		foreach(cap, caps, next) {
-			if (!strcmp(cap, "mbss16"))
-				max_no_vifs = 16;
-			if (!strcmp(cap, "mbss8"))
-				max_no_vifs = 8;
-			if (!strcmp(cap, "mbss4"))
-				max_no_vifs = 4;
+		if (wl_iovar_get(nvram_safe_get(wl_nvname("ifname", unit, 0)), "cap", (void *)caps, WLC_IOCTL_SMLEN) == 0) {
+			foreach(cap, caps, next) {
+				if (!strcmp(cap, "mbss16")) max_no_vifs = 16;
+				if (!strcmp(cap, "mbss8"))  max_no_vifs = 8;
+				if (!strcmp(cap, "mbss4"))  max_no_vifs = 4;
+			}
 		}
 	}
 
@@ -1552,7 +1550,7 @@ void asp_wlcountries(int argc, char **argv)
 	web_puts("];\n");
 }
 
-#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#ifdef TCONFIG_RTNPLUS /* RT-N+ */
 int mround(float val)
 {
 	return (int)(val + 0.5);
@@ -1657,4 +1655,4 @@ char* get_wl_tempsense(char *buf, const size_t buf_sz)
 
 	return buf;
 }
-#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
+#endif /* TCONFIG_RTNPLUS */

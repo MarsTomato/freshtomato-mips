@@ -52,8 +52,7 @@ static void prep_qosstr(char *prefix)
 	char buf[8];
 
 	for (i = 1; i <= MWAN_MAX; i++) {
-		memset(buf, 0, sizeof(buf));
-		snprintf(buf, sizeof(buf), (i == 1 ? "wan" : "wan%d"), i);
+		get_wan_prefix(i, buf);
 		if (!strcmp(prefix, buf)) {
 			snprintf(buf, sizeof(buf), (i == 1 ? "/etc/wan_qos" : "/etc/wan%d_qos"), i);
 			strlcpy(qosfn, buf, sizeof(qosfn));
@@ -114,8 +113,10 @@ void ipt_qos(void)
 	unsigned long prev_max;
 	const char *qface;
 	int sizegroup;
+	int sizechain;
 	int class_flag;
 	int rule_num;
+	unsigned int mwan_num;
 	int wanup[MWAN_MAX];
 #ifndef TCONFIG_BCMARM
 	int qosDevNumStr = 0;
@@ -126,9 +127,23 @@ void ipt_qos(void)
 	if (!nvram_get_int("qos_enable"))
 		return;
 
+#ifdef TCONFIG_BCMARM
+	/*
+	 * QoS Details and Transfer Rates require per-connection byte counters.
+	 * Enable conntrack accounting explicitly when requested instead of
+	 * relying on xt_connbytes to enable it as a side effect.
+	 */
+	if (nvram_get_int("qos_stats"))
+		f_write_procsysnet("netfilter/nf_conntrack_acct", "1");
+#endif
+
+	mwan_num = mwan_active_num();
+	memset(wanup, 0, sizeof(wanup));
+
 	inuse = 0;
 	class_flag = 0;
 	sizegroup = 0;
+	sizechain = 0;
 	prev_max = 0;
 	rule_num = 0;
 
@@ -224,8 +239,11 @@ void ipt_qos(void)
 		memset(app, 0, sizeof(app));
 		if (ipt_ipp2p(ipp2p, app, sizeof(app)))
 			v4v6_ok &= ~IPT_V6;
-		else
+		else {
+#ifdef TCONFIG_L7
 			ipt_layer7(layer7, app, sizeof(app));
+#endif
+		}
 
 		if (app[0]) {
 			v4v6_ok &= ~IPT_V6; /* L7 for IPv6 not working either! */
@@ -250,7 +268,8 @@ void ipt_qos(void)
 				else {
 					max = strtoul(p, NULL, 10);
 					snprintf(saddr + strlen(saddr), sizeof(saddr) - strlen(saddr), "%lu:%lu", min * 1024, (max * 1024) - 1);
-					if (!sizegroup) {
+					if (!sizechain) {
+						sizechain = 1;
 						/* create table of connbytes sizes, pass appropriate connections there and only continue processing them if mark was wiped */
 						ip46t_write(ipv6_enabled,
 						            ":QOSSIZE - [0:0]\n"
@@ -343,8 +362,7 @@ void ipt_qos(void)
 	ip46t_write(ipv6_enabled, "-A QOSO -j CONNMARK --set-mark 0x%x/0xff00f\n", class_num);
 	ip46t_write(ipv6_enabled, "-A QOSO -j RETURN\n");
 
-	for (i = 2; i <= MWAN_MAX; i++) { /* always add rules for 1st WAN, so doesn't matter if it's up */
-		memset(s, 0, sizeof(s));
+	for (i = 2; i <= (int)mwan_num; i++) { /* always add rules for 1st WAN, so doesn't matter if it's up */
 		snprintf(s, sizeof(s), "wan%d", i);
 		wanup[i - 1] = check_wanup(s);
 	}
@@ -352,7 +370,7 @@ void ipt_qos(void)
 	/* tc in tomato can only match from fw in filter using PACKET (not connection) mark.
 	 * Copy the connection mark to packet mark in POSTROUTING (to apply egress qos)
 	 */
-	for (i = 1; i <= MWAN_MAX; i++) {
+	for (i = 1; i <= (int)mwan_num; i++) {
 		if ((wanup[i - 1]) || (i == 1)) {
 			qface = wanfaces[i - 1].iface[0].name;
 			ipt_write("-A FORWARD -o %s -j QOSO\n"
@@ -372,7 +390,6 @@ void ipt_qos(void)
 #endif /* TCONFIG_IPV6 */
 
 	inuse |= (1 << i) | 1; /* default and highest are always built */
-	memset(s, 0, sizeof(s));
 	snprintf(s, sizeof(s), "%d", inuse);
 	nvram_set("qos_inuse", s);
 
@@ -401,7 +418,7 @@ void ipt_qos(void)
 			/* tc in tomato can only match from fw in filter using PACKET (not connection) mark.
 			 * Copy the connection mark to packet mark in PREROUTING (to apply ingress qos)
 			 */
-			for (j = 1; j <= MWAN_MAX; j++) {
+			for (j = 1; j <= (int)mwan_num; j++) {
 				if ((wanup[j - 1]) || (j == 1)) {
 					qface = wanfaces[j - 1].iface[0].name;
 					ipt_write("-A PREROUTING -i %s -j CONNMARK --restore-mark --mask 0xf\n", qface);
@@ -416,7 +433,7 @@ void ipt_qos(void)
 #endif /* TCONFIG_PPTPD */
 
 			if (nvram_get_int("qos_udp")) {
-				for (j = 1; j <= MWAN_MAX; j++) {
+				for (j = 1; j <= (int)mwan_num; j++) {
 					if ((wanup[j - 1]) || (j == 1)) {
 						qface = wanfaces[j - 1].iface[0].name;
 						qosDevNumStr = j - 1;
@@ -425,7 +442,7 @@ void ipt_qos(void)
 				}
 			}
 			else {
-				for (j = 1; j <= MWAN_MAX; j++) {
+				for (j = 1; j <= (int)mwan_num; j++) {
 					if ((wanup[j - 1]) || (j == 1)) {
 						qface = wanfaces[j - 1].iface[0].name;
 						qosDevNumStr = j - 1;
@@ -491,11 +508,8 @@ void start_qos(char *prefix)
 	x = nvram_get_int("ne_vegas");
 	if (x) {
 		char alpha[10], beta[10], gamma[10];
-		memset(alpha, 0, sizeof(alpha));
 		snprintf(alpha, sizeof(alpha), "alpha=%d", nvram_get_int("ne_valpha"));
-		memset(beta, 0, sizeof(beta));
 		snprintf(beta, sizeof(beta), "beta=%d", nvram_get_int("ne_vbeta"));
-		memset(gamma, 0, sizeof(gamma));
 		snprintf(gamma, sizeof(gamma), "gamma=%d", nvram_get_int("ne_vgamma"));
 		modprobe("tcp_vegas", alpha, beta, gamma);
 		f_write_procsysnet("ipv4/tcp_congestion_control", "vegas");
@@ -515,7 +529,7 @@ void start_qos(char *prefix)
 		return;
 
 	qosDefaultClassId = (nvram_get_int("qos_default") + 1) * 10;
-	incomingBWkbps = strtoul(nvram_safe_get(strlcat_r(prefix, "_qos_ibw", tmp, sizeof(tmp))), NULL, 10);
+	incomingBWkbps = strtoul(prefix_nvram_get(prefix, "qos_ibw", tmp, sizeof(tmp)), NULL, 10);
 
 	prep_qosstr(prefix);
 
@@ -536,9 +550,9 @@ void start_qos(char *prefix)
 	else
 		burst_leaf[0] = 0;
 
-	mtu = strtoul(nvram_safe_get(strlcat_r(prefix, "_mtu", tmp, sizeof(tmp))), NULL, 10);
-	bw = strtoul(nvram_safe_get(strlcat_r(prefix, "_qos_obw", tmp, sizeof(tmp))), NULL, 10);
-	overhead = strtoul(nvram_safe_get(strlcat_r(prefix, "_qos_overhead", tmp, sizeof(tmp))), NULL, 10);
+	mtu = strtoul(prefix_nvram_get(prefix, "mtu", tmp, sizeof(tmp)), NULL, 10);
+	bw = strtoul(prefix_nvram_get(prefix, "qos_obw", tmp, sizeof(tmp)), NULL, 10);
+	overhead = strtoul(prefix_nvram_get(prefix, "qos_overhead", tmp, sizeof(tmp)), NULL, 10);
 	r2q = 10;
 
 	if ((bw * 1000) / (8 * r2q) < mtu) {
@@ -592,7 +606,7 @@ void start_qos(char *prefix)
 		if (overhead > 0)
 			fprintf(f, " overhead %u", overhead);
 
-		switch (nvram_get_int(strlcat_r(prefix, "_qos_encap", tmp, sizeof(tmp)))) {
+		switch (prefix_nvram_get_int(prefix, "qos_encap", tmp, sizeof(tmp))) {
 			case 1:
 				cake_encap_root = " atm";
 				break;
@@ -642,7 +656,7 @@ void start_qos(char *prefix)
 			fprintf(f, " overhead %u", overhead);
 
 			/* HTB only supports ATM value */
-			if (nvram_get_int(strlcat_r(prefix, "_qos_encap", tmp, sizeof(tmp))))
+			if (prefix_nvram_get_int(prefix, "qos_encap", tmp, sizeof(tmp)))
 #ifdef TCONFIG_BCMARM
 				fprintf(f, " linklayer atm");
 #else
@@ -692,7 +706,7 @@ void start_qos(char *prefix)
 				fprintf(f, " overhead %u", overhead);
 
 				/* HTB only supports ATM value */
-				if (nvram_get_int(strlcat_r(prefix, "_qos_encap", tmp, sizeof(tmp))))
+				if (prefix_nvram_get_int(prefix, "qos_encap", tmp, sizeof(tmp)))
 #ifdef TCONFIG_BCMARM
 					fprintf(f, " linklayer atm");
 #else
@@ -824,7 +838,7 @@ void start_qos(char *prefix)
 					fprintf(f, " overhead %u", overhead);
 
 					/* HTB only supports ATM value */
-					if (nvram_get_int(strlcat_r(prefix, "_qos_encap", tmp, sizeof(tmp))))
+					if (prefix_nvram_get_int(prefix, "qos_encap", tmp, sizeof(tmp)))
 #ifdef TCONFIG_BCMARM
 						fprintf(f, " linklayer atm");
 #else

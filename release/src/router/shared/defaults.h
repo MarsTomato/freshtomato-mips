@@ -1,0 +1,53 @@
+/*
+ * defaults.h
+ *
+ * Copyright (C) 2026 FreshTomato
+ * https://freshtomato.org/
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ * MA 02111-1307 USA
+ *
+ */
+
+
+#ifndef __SHARED_DEFAULTS_H__
+#define __SHARED_DEFAULTS_H__
+
+#include <tomato_config.h>
+#include <typedefs.h>
+#include <bcmnvram.h>
+
+extern struct nvram_tuple router_defaults[];
+extern struct nvram_tuple rstats_defaults[];
+extern struct nvram_tuple cstats_defaults[];
+extern struct nvram_tuple upnp_defaults[];
+
+#ifdef TCONFIG_FTP
+extern struct nvram_tuple ftp_defaults[];
+#endif
+
+#ifdef TCONFIG_SNMP
+extern struct nvram_tuple snmp_defaults[];
+#endif
+
+#ifdef TCONFIG_BCMBSD
+extern struct nvram_tuple bsd_defaults[];
+#endif
+
+char *nvram_default_get(const char *name);
+void nvram_validate_all(char *prefix, bool restore);
+void nvram_restore_var(char *prefix, char *name);
+
+#endif /* __SHARED_DEFAULTS_H__ */

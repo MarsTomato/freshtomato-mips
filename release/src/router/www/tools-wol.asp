@@ -22,7 +22,11 @@
 
 //	<% nvram("dhcpd_static,lan_ifname"); %>
 
-var lan_ifnames = [nvram.lan_ifname, nvram.lan1_ifname, nvram.lan2_ifname, nvram.lan3_ifname];
+var lan_ifnames = [];
+for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
+	var suffix = (i > 0) ? i : '';
+	lan_ifnames.push(nvram['lan'+suffix+'_ifname']);
+}
 var refresher = null;
 var running = 0;
 
@@ -62,7 +66,7 @@ wg.populate = function() {
 	var q = nvram.dhcpd_static.split('>');
 	for (i = 0; i < q.length; ++i) {
 		var e = q[i].split('<');
-		if (e.length == 4 && e[1] != '') {
+		if (e.length >= 4 && e[1] != '') {
 			var m = e[0].split(',');
 			for (j = 0; j < m.length; ++j) {
 				s.push([m[j], e[1], e[2]]);

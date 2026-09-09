@@ -375,7 +375,6 @@ static void update_dnsmasq_ipset(const char *tag, domain_list_t *list, const int
 
 		/* extract domain */
 		*pos = '\0';
-		memset(domain_entry, 0, BUF_SIZE_128);
 		strlcpy(domain_entry, line + 7, BUF_SIZE_128);
 
 		/* normalize dnsmasq wildcard entries (.example.com -> example.com) */
@@ -1200,15 +1199,58 @@ static int wg_set_peer_keepalive(char *iface, char *pubkey, char *keepalive)
 	return 0;
 }
 
+/*
+ * Internal peers normally omit the port and inherit the local interface
+ * port. Preserve an explicitly configured port and format bare IPv6
+ * addresses using WireGuard's [address]:port syntax.
+ */
+static int wg_format_peer_endpoint(const char *endpoint, const char *port, char *buffer, const size_t size)
+{
+	const char *first_colon, *last_colon, *close_bracket;
+	int n;
+
+	if (endpoint[0] == '[') {
+		close_bracket = strrchr(endpoint, ']');
+		if (close_bracket && close_bracket[1] == ':')
+			n = snprintf(buffer, size, "%s", endpoint);
+		else if (close_bracket && close_bracket[1] == '\0')
+			n = snprintf(buffer, size, "%s:%s", endpoint, port);
+		else
+			n = snprintf(buffer, size, "%s", endpoint);
+	}
+	else {
+		first_colon = strchr(endpoint, ':');
+		last_colon = strrchr(endpoint, ':');
+
+		if (first_colon && first_colon == last_colon)
+			n = snprintf(buffer, size, "%s", endpoint); /* IPv4/FQDN with explicit port */
+		else if (first_colon)
+			n = snprintf(buffer, size, "[%s]:%s", endpoint, port); /* bare IPv6 */
+		else
+			n = snprintf(buffer, size, "%s:%s", endpoint, port);
+	}
+
+	if (n < 0 || (size_t)n >= size) {
+		logmsg(LOG_WARNING, "wireguard peer endpoint is too long: %s", endpoint);
+		return -1;
+	}
+
+	return 0;
+}
+
 static int wg_set_peer_endpoint(const int unit, char *iface, char *pubkey, const char *endpoint)
 {
 	wg_script_ctx_t *ctx = &wg_script_ctx[unit];
-	char buffer[BUF_SIZE_64];
+	char buffer[BUF_SIZE_128];
 
-	if (atoi(getNVRAMVar("wg%d_com", unit)) == 3) /* 'External - VPN Provider' */
-		snprintf(buffer, BUF_SIZE_64, "%s", endpoint);
-	else
-		snprintf(buffer, BUF_SIZE_64, "%s:%s", endpoint, ctx->port);
+	if (atoi(getNVRAMVar("wg%d_com", unit)) == 3) { /* 'External - VPN Provider' */
+		if (strlcpy(buffer, endpoint, sizeof(buffer)) >= sizeof(buffer)) {
+			logmsg(LOG_WARNING, "wireguard peer endpoint is too long: %s", endpoint);
+			return -1;
+		}
+	}
+	else if (wg_format_peer_endpoint(endpoint, ctx->port, buffer, sizeof(buffer)))
+		return -1;
 
 	if (eval("wg", "set", iface, "peer", pubkey, "endpoint", buffer)) {
 		logmsg(LOG_WARNING, "command failed: wg set %s peer %s endpoint %s", iface, pubkey, buffer);
@@ -1232,7 +1274,7 @@ static void wg_route_peer(const int unit, char *iface, char *route, char *table,
 	}
 	else {
 		if (add)
-			wg_script_add(unit, WG_SCRIPT_START, "run_cmd --msg \"%s\" ip route replace %s dev %s", msg, route, iface);
+			wg_script_add(unit, WG_SCRIPT_START, "run_cmd --msg \"%s\" ip route add %s dev %s", msg, route, iface);
 		else
 			wg_script_add(unit, WG_SCRIPT_STOP,  "run_cmd ip route delete %s dev %s", route, iface);
 	}
@@ -2222,7 +2264,7 @@ void write_wg_dnsmasq_config(FILE* fp)
 			continue;
 
 		if (sscanf(fn, "wg%d.con%c", &num, &ch) == 2 && ch == 'f') {
-			snprintf(buf, BUF_SIZE, "%s/%s", WG_DNS_DIR, fn);
+			snprintf(buf, BUF_SIZE, "%s/%.236s", WG_DNS_DIR, fn);
 			if (fappend(fp, buf) == -1) {
 				logmsg(LOG_WARNING, "fappend failed for %s (%s)", buf, strerror(errno));
 				continue;

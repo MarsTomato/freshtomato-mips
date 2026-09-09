@@ -20,9 +20,11 @@
 
 <script>
 
-//	<% nvram("qos_enable,qos_classnames,qos_orules"); %>
+//	<% nvram("qos_enable,qos_mode,qos_classnames,qos_orules,qos_cake_prio_mode,qos_classify"); %>
 
+/* L7-BEGIN */
 //	<% layer7(); %>
+/* L7-END */
 
 function show() {
 	elem.setInnerHTML('notice_container', '<div id="notice">'+isup.notice_iptables.replace(/\n/g, '<br>')+'<\/div><br style="clear:both">');
@@ -30,6 +32,25 @@ function show() {
 }
 
 var abc = nvram.qos_classnames.split(' ');
+
+/* BCMARM-BEGIN */
+if (nvram.qos_mode == 2) {
+	var position;
+	if (nvram.qos_cake_prio_mode == 1 || nvram.qos_cake_prio_mode == 4)
+		position = 7;
+	else if (nvram.qos_cake_prio_mode == 2)
+		position = 3;
+	else if (nvram.qos_cake_prio_mode == 3)
+		position = 2;
+
+	for (var i = 0; i < position + 1; i++) {
+		var p = i+1;
+		abc[i] = 'Priority '+p;
+	}
+	for (var i = position + 1; i < abc.length; i++)
+		abc[i] = '- unused -';
+}
+/* BCMARM-END */
 
 var ipp2p = [[0,'IPP2P (disabled)'],[0xFFF,'All IPP2P filters'],[1,'AppleJuice'],[2,'Ares'],[4,'BitTorrent'],[8,'Direct Connect'],
              [16,'eDonkey'],[32,'Gnutella'],[64,'Kazaa'],[128,'Mute'],[256,'SoulSeek'],[512,'Waste'],[1024,'WinMX'],[2048,'XDCC']];
@@ -39,10 +60,12 @@ var dscp = [['','DSCP (any)'],['0x00','BE'],['0x08','CS1'],['0x10','CS2'],['0x18
 for (var i = 1; i < dscp.length - 1; ++i)
 	dscp[i][1] = 'DSCP Class '+dscp[i][1];
 
+/* L7-BEGIN */
 layer7.sort();
 for (i = 0; i < layer7.length; ++i)
 	layer7[i] = [layer7[i],layer7[i]];
 layer7.unshift(['', 'Layer 7 (disabled)']);
+/* L7-END */
 
 var class1 = [[-1,'Disabled']];
 for (i = 0; i < 10; ++i)
@@ -101,7 +124,12 @@ qosg.setup = function() {
 			{ type: 'text', maxlen: 130, prefix: '<div class="x2c">', suffix: '<\/div>' },
 
 			{ type: 'select', prefix: '<div class="x3a">', suffix: '<\/div>', options: ipp2p },
+/* L7-BEGIN */
 			{ type: 'select', prefix: '<div class="x3b">', suffix: '<\/div>', options: layer7 },
+/* L7-END */
+/* L7-NO-BEGIN */
+			{ type: 'custom', custom: '<input type="hidden" value="">' },
+/* L7-NO-END */
 
 			{ type: 'select', prefix: '<div class="x4a">', suffix: '<\/div>', options: dscp },
 			{ type: 'text', maxlen: 4, prefix: '<div class="x4b">', suffix: '<\/div>' },
@@ -170,8 +198,10 @@ qosg.dataToView = function(data) {
 			}
 
 	}
+/* L7-BEGIN */
 	else if (data[6] != '')
 		b.push('L7: '+data[6]);
+/* L7-END */
 
 	if (data[9] != '') {
 		s = dscpClass(data[9]);
@@ -345,6 +375,12 @@ function save() {
 function earlyInit() {
 	if (nvram.qos_enable != 1)
 		E('qos-note1').style.display = 'block';
+/* BCMARM-BEGIN */
+	else if (nvram.qos_enable == 1 && nvram.qos_mode == 2 && nvram.qos_cake_prio_mode == 0)
+		E('qos-note2').style.display = 'block';
+	else if (nvram.qos_enable == 1 && nvram.qos_mode == 1 && nvram.qos_classify == 0)
+		E('qos-note3').style.display = 'block';
+/* BCMARM-END */
 	else
 		E('qos-cl-grid').style.display = 'block';
 
@@ -380,6 +416,10 @@ function init() {
 
 <div class="section-title">Traffic classification</div>
 <div class="note-disabled" id="qos-note1"><b>QoS disabled.</b><br><br><a href="qos-settings.asp">Enable &raquo;</a></div>
+<!-- BCMARM-BEGIN -->
+<div class="note-disabled" id="qos-note2"><b>CAKE is currently set in single class queue mode, in single class an automatic fair usage policy per IP is applied and classification settings not used.</b></div>
+<div class="note-disabled" id="qos-note3"><b>QoS classification is disabled.</b></div>
+<!-- BCMARM-END -->
 
 <!-- / / / -->
 
@@ -393,11 +433,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

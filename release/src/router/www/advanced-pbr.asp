@@ -21,11 +21,9 @@ No part of this file may be used without permission.
 
 //	<% nvram("pbr_rules,t_model_name,os_version"); %>
 
-var class1 = [[1,'WAN0'],[2,'WAN1']
-/* MULTIWAN-BEGIN */
-             ,[3,'WAN2'],[4,'WAN3']
-/* MULTIWAN-END */
-             ];
+var class1 = [];
+for (var i = 0; i < MAXWAN_NUM; ++i)
+	class1.push([i + 1, 'WAN' + i]);
 
 function getOUTifdesc(outif) {
 	var i;
@@ -282,9 +280,7 @@ function init() {
 <div class="section-title">Rules</div>
 <div class="section">
 	<div class="tomato-grid" id="pbr-grid"></div>
-	<input type="button" value="Backup" id="backup-button" onclick="backupGrid()">
-	<input type="button" value="Restore" id="restore-button" onclick="restoreGrid()">
-	<input type="button" value="Clear Table" id="clear-button" onclick="clearGrid()">
+	<script>writeGridButtons();</script>
 </div>
 
 <!-- / / / -->
@@ -298,11 +294,7 @@ function init() {
 
 <!-- / / / -->
 
-<div id="footer">
-	<span id="footer-msg"></span>
-	<input type="button" value="Save" id="save-button" onclick="save()">
-	<input type="button" value="Cancel" id="cancel-button" onclick="reloadPage();">
-</div>
+<script>writeFooter();</script>
 
 </td></tr>
 </table>

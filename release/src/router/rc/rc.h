@@ -135,6 +135,7 @@ static inline int is_psta(int idx, int unit, int subunit, void *param)
 /* rc.c */
 typedef void (*_tf_ipt_write)(const char *format, ... );
 typedef void (*_tf_ip6t_write)(const char *format, ... );
+extern int is_sta(int idx, int unit, int subunit, void *param);
 extern void chains_log_detection(void);
 extern void fix_chain_in_drop(void);
 extern int env2nv(char *env, char *nv);
@@ -161,7 +162,8 @@ static inline int ifconfig(const char *name, int flags, const char *addr, const 
 	return _ifconfig(name, flags, addr, netmask, NULL, 0);
 }
 extern int route_add(char *name, int metric, char *dst, char *gateway, char *genmask);
-extern void route_del(char *name, int metric, char *dst, char *gateway, char *genmask);
+extern int route_error_retryable(int err);
+extern int route_del(char *name, int metric, char *dst, char *gateway, char *genmask);
 extern void config_loopback(void);
 extern void start_vlan(void);
 extern void stop_vlan(void);
@@ -314,6 +316,7 @@ extern void set_tz(void);
 extern void start_ntpd(void);
 extern void stop_ntpd(void);
 extern int ntpd_synced_main(int argc, char *argv[]);
+extern int ntpd_restart_main(int argc, char *argv[]);
 extern void check_services(void);
 extern void exec_service(void);
 extern int service_main(int argc, char *argv[]);
@@ -338,7 +341,7 @@ extern void start_ipv6(void);
 extern void stop_ipv6(void);
 #endif /* TCONFIG_IPV6 */
 #ifdef TCONFIG_BCMBSD
-extern int start_bsd(void);
+extern void start_bsd(void);
 extern void stop_bsd(void);
 #endif /* TCONFIG_BCMBSD */
 #ifdef TCONFIG_MDNS
@@ -397,7 +400,9 @@ extern char lanface[BRIDGE_COUNT][IFNAMSIZ + 1];
 extern char wan6face[];
 #endif
 extern char lan_cclass[];
+#ifdef TCONFIG_L7
 extern char **layer7_in;
+#endif
 extern void enable_ip_forward(void);
 extern int ipv6_enabled;
 extern void ipt_write(const char *format, ...);
@@ -414,7 +419,9 @@ extern void ipt_log_unresolved(const char *addr, const char *addrtype, const cha
 extern int ipt_addr(char *addr, int maxlen, const char *s, const char *dir, int af, int strict, const char *categ, const char *name);
 extern int ipt_dscp(const char *v, char *opt, const size_t buf_sz);
 extern int ipt_ipp2p(const char *v, char *opt, const size_t buf_sz);
+#ifdef TCONFIG_L7
 extern int ipt_layer7(const char *v, char *opt, const size_t buf_sz);
+#endif
 #define ipt_source_strict(s, src, categ, name) ipt_addr(src, 64, s, "src", IPT_V4, 1, categ, name)
 #define ipt_source(s, src, categ, name) ipt_addr(src, 64, s, "src", IPT_V4, 0, categ, name)
 extern int start_firewall(void);
@@ -474,6 +481,7 @@ static inline void stop_ddns(void) { };
 #endif
 
 /* misc.c */
+extern int lan_ifname_for_ipv4(const char *ip, char *ifname, size_t len);
 extern void usage_exit(const char *cmd, const char *help) __attribute__ ((noreturn));
 #define modprobe(mod, args...) ({ char *argv[] = { "modprobe", "-s", mod, ## args, NULL }; _eval(argv, NULL, 0, NULL); })
 extern int modprobe_r(const char *mod);
@@ -517,7 +525,7 @@ extern int mtd_unlock_erase_main(int argc, char *argv[]);
 /* buttons.c */
 extern int buttons_main(int argc, char *argv[]);
 
-#if defined(TCONFIG_BCMARM) || defined(TCONFIG_BLINK)
+#ifdef TCONFIG_RTNPLUS
 /* blink.c */
 extern int blink_main(int argc, char *argv[]);
 
@@ -584,6 +592,9 @@ extern void stop_snmp(void);
 
 /* tor.c */
 #ifdef TCONFIG_TOR
+extern int tor_runtime_enabled(void);
+extern void tor_runtime_set(int enabled);
+extern int tor_newnym(void);
 extern void start_tor(int force);
 extern void stop_tor(void);
 #endif
